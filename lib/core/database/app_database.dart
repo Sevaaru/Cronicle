@@ -83,7 +83,9 @@ class AppDatabase extends _$AppDatabase {
     return (select(libraryEntries)
           ..where((t) {
             var expr = t.kind.equals(kindCode);
-            if (status != null) expr = expr & t.status.equals(status);
+            if (status != null) {
+              expr = expr & t.status.upper().equals(status.toUpperCase());
+            }
             return expr;
           })
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
@@ -93,7 +95,9 @@ class AppDatabase extends _$AppDatabase {
   Stream<List<LibraryEntry>> watchAllLibrary({String? status}) {
     return (select(libraryEntries)
           ..where((t) {
-            if (status != null) return t.status.equals(status);
+            if (status != null) {
+              return t.status.upper().equals(status.toUpperCase());
+            }
             return const Constant(true);
           })
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
@@ -110,6 +114,36 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<LibraryEntry>> getAllLibraryEntries() {
     return select(libraryEntries).get();
+  }
+
+  Future<LibraryEntry?> getLibraryEntryById(int id) {
+    return (select(libraryEntries)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
+  Future<void> incrementProgress(int entryId) async {
+    final entry = await getLibraryEntryById(entryId);
+    if (entry == null) return;
+    final current = entry.progress ?? 0;
+    if (entry.totalEpisodes != null && current >= entry.totalEpisodes!) return;
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        progress: Value(current + 1),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  /// Normaliza todos los status a uppercase para corregir entries guardados con lowercase.
+  Future<void> normalizeStatuses() async {
+    final all = await select(libraryEntries).get();
+    for (final entry in all) {
+      final upper = entry.status.toUpperCase();
+      if (entry.status != upper) {
+        await (update(libraryEntries)..where((t) => t.id.equals(entry.id)))
+            .write(LibraryEntriesCompanion(status: Value(upper)));
+      }
+    }
   }
 
   Future<List<KeyValueEntry>> getAllKeyValues() {

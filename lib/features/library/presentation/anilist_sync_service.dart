@@ -17,50 +17,66 @@ Future<int> importAnilistToLocal({
     graphql.fetchUserMediaList(token, userName, type: 'MANGA'),
   ]);
 
+  // Deduplicar por mediaId para evitar duplicados de listas custom
+  final seen = <String>{};
   int count = 0;
+
   for (final entry in [...results[0], ...results[1]]) {
-    final media = entry['media'] as Map<String, dynamic>? ?? {};
-    final title = media['title'] as Map<String, dynamic>? ?? {};
-    final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
-    final mediaType = media['type'] as String?;
-    final kind = mediaType == 'MANGA' ? MediaKind.manga : MediaKind.anime;
+    try {
+      final media = entry['media'] as Map<String, dynamic>? ?? {};
+      final mediaId = media['id']?.toString();
+      if (mediaId == null || mediaId.isEmpty) continue;
 
-    final totalEp = kind == MediaKind.manga
-        ? media['chapters'] as int?
-        : media['episodes'] as int?;
+      final mediaType = media['type'] as String?;
+      final kind = mediaType == 'MANGA' ? MediaKind.manga : MediaKind.anime;
+      final dedupeKey = '${kind.code}_$mediaId';
+      if (seen.contains(dedupeKey)) continue;
+      seen.add(dedupeKey);
 
-    await db.upsertLibraryEntry(LibraryEntriesCompanion(
-      kind: drift.Value(kind.code),
-      externalId: drift.Value(media['id'].toString()),
-      title: drift.Value(
-        (title['english'] as String?) ??
-            (title['romaji'] as String?) ??
-            'Unknown',
-      ),
-      posterUrl: drift.Value(coverImage['large'] as String?),
-      status: drift.Value(entry['status'] as String? ?? 'PLANNING'),
-      score: drift.Value(entry['score'] as int?),
-      progress: drift.Value(entry['progress'] as int?),
-      totalEpisodes: drift.Value(totalEp),
-      notes: drift.Value(entry['notes'] as String?),
-      updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
-    ));
-    count++;
+      final title = media['title'] as Map<String, dynamic>? ?? {};
+      final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
+
+      final totalEp = kind == MediaKind.manga
+          ? (media['chapters'] as num?)?.toInt()
+          : (media['episodes'] as num?)?.toInt();
+
+      await db.upsertLibraryEntry(LibraryEntriesCompanion(
+        kind: drift.Value(kind.code),
+        externalId: drift.Value(mediaId),
+        title: drift.Value(
+          (title['english'] as String?) ??
+              (title['romaji'] as String?) ??
+              'Unknown',
+        ),
+        posterUrl: drift.Value(coverImage['large'] as String?),
+        status: drift.Value(entry['status'] as String? ?? 'PLANNING'),
+        score: drift.Value((entry['score'] as num?)?.toInt()),
+        progress: drift.Value((entry['progress'] as num?)?.toInt()),
+        totalEpisodes: drift.Value(totalEp),
+        notes: drift.Value(entry['notes'] as String?),
+        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+      ));
+      count++;
+    } catch (_) {
+      // Saltar entries con datos corruptos para no romper la importación completa
+      continue;
+    }
   }
   return count;
 }
 
 /// Muestra el diálogo de primera sincronización con Anilist.
-Future<void> showAnilistSyncDialog({
+/// Devuelve true si se realizó la importación/merge.
+Future<bool> showAnilistSyncDialog({
   required BuildContext context,
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,
   required String token,
 }) async {
   final viewer = await graphql.fetchViewer(token);
-  if (viewer == null) return;
+  if (viewer == null) return false;
   final userName = viewer['name'] as String? ?? '';
-  if (userName.isEmpty || !context.mounted) return;
+  if (userName.isEmpty || !context.mounted) return false;
 
   final choice = await showDialog<String>(
     context: context,
@@ -111,26 +127,27 @@ Future<void> showAnilistSyncDialog({
     },
   );
 
-  if (choice == null || choice == 'skip' || !context.mounted) return;
+  if (choice == null || choice == 'skip' || !context.mounted) return false;
 
-  // Show loading
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const AlertDialog(
-      content: Row(
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 16),
-          Text('Sincronizando...'),
-        ],
+    builder: (_) => const PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Sincronizando...'),
+          ],
+        ),
       ),
     ),
   );
 
   try {
     if (choice == 'import') {
-      // Borrar locales de anime/manga antes de importar
       final existing = await db.getAllLibraryEntries();
       for (final e in existing) {
         if (e.kind == MediaKind.anime.code || e.kind == MediaKind.manga.code) {
@@ -147,18 +164,20 @@ Future<void> showAnilistSyncDialog({
     );
 
     if (context.mounted) {
-      Navigator.pop(context); // close loading
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Importados $count títulos de Anilist')),
       );
     }
+    return true;
   } catch (e) {
     if (context.mounted) {
-      Navigator.pop(context); // close loading
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al sincronizar: $e')),
       );
     }
+    return false;
   }
 }
 

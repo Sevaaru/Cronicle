@@ -265,7 +265,7 @@ class _FeedListState extends State<_FeedList> {
   }
 }
 
-class _ActivityCard extends StatelessWidget {
+class _ActivityCard extends ConsumerWidget {
   const _ActivityCard({required this.activity});
 
   final FeedActivity activity;
@@ -295,113 +295,202 @@ class _ActivityCard extends StatelessWidget {
     return '${(diff.inDays / 7).floor()}sem';
   }
 
+  Future<void> _handleLike(BuildContext context, WidgetRef ref) async {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicia sesión en Anilist para dar like')),
+      );
+      return;
+    }
+    final graphql = ref.read(anilistGraphqlProvider);
+    final actId = int.tryParse(activity.id);
+    if (actId == null) return;
+
+    final isLiked = await graphql.toggleLike(actId, token);
+    final updated = activity.copyWith(
+      isLiked: isLiked,
+      likeCount: isLiked
+          ? activity.likeCount + 1
+          : (activity.likeCount - 1).clamp(0, 999999),
+    );
+
+    // Actualizar en el provider correspondiente
+    try { ref.read(anilistFeedProvider.notifier).updateActivity(updated); } catch (_) {}
+    try { ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).updateActivity(updated); } catch (_) {}
+    try { ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).updateActivity(updated); } catch (_) {}
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          if (activity.mediaId != null) {
-            context.push('/media/${activity.mediaId}?kind=${activity.source.code}');
-          }
-        },
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              backgroundImage: activity.userAvatarUrl != null
-                  ? CachedNetworkImageProvider(activity.userAvatarUrl!)
-                  : null,
-              child: activity.userAvatarUrl == null
-                  ? Text(
-                      activity.userName.isNotEmpty
-                          ? activity.userName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurface,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              if (activity.mediaId != null) {
+                context.push('/media/${activity.mediaId}?kind=${activity.source.code}');
+              }
+            },
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: activity.userId != null
+                      ? () => context.push('/user/${activity.userId}')
+                      : null,
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    backgroundImage: activity.userAvatarUrl != null
+                        ? CachedNetworkImageProvider(activity.userAvatarUrl!)
+                        : null,
+                    child: activity.userAvatarUrl == null
+                        ? Text(
+                            activity.userName.isNotEmpty
+                                ? activity.userName[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurface,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          activity.userName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: GestureDetector(
+                              onTap: activity.userId != null
+                                  ? () => context.push('/user/${activity.userId}')
+                                  : null,
+                              child: Text(
+                                activity.userName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            _sourceIcon(activity.source),
+                            size: 13,
+                            color: _sourceColor(activity.source, colorScheme),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _timeAgo(activity.createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        _sourceIcon(activity.source),
-                        size: 13,
-                        color: _sourceColor(activity.source, colorScheme),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _timeAgo(activity.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 3),
+                      RichText(
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurface,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: activity.action,
+                              style: TextStyle(color: colorScheme.onSurfaceVariant),
+                            ),
+                            const TextSpan(text: ' '),
+                            TextSpan(
+                              text: activity.mediaTitle,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  RichText(
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurface,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: activity.action,
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                        const TextSpan(text: ' '),
-                        TextSpan(
-                          text: activity.mediaTitle,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                ),
+                if (activity.mediaPosterUrl != null) ...[
+                  const SizedBox(width: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: activity.mediaPosterUrl!,
+                      width: 45,
+                      height: 64,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-            if (activity.mediaPosterUrl != null) ...[
-              const SizedBox(width: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CachedNetworkImage(
-                  imageUrl: activity.mediaPosterUrl!,
-                  width: 45,
-                  height: 64,
-                  fit: BoxFit.cover,
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const SizedBox(width: 42),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _handleLike(context, ref),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        activity.isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 16,
+                        color: activity.isLiked ? Colors.red.shade400 : colorScheme.onSurfaceVariant,
+                      ),
+                      if (activity.likeCount > 0) ...[
+                        const SizedBox(width: 4),
+                        Text('${activity.likeCount}',
+                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => context.push('/activity/${activity.id}/replies'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.chat_bubble_outline,
+                          size: 15, color: colorScheme.onSurfaceVariant),
+                      if (activity.replyCount > 0) ...[
+                        const SizedBox(width: 4),
+                        Text('${activity.replyCount}',
+                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -24,12 +24,16 @@ mixin _$FeedActivity {
   String get id => throw _privateConstructorUsedError;
   MediaKind get source => throw _privateConstructorUsedError;
   String get userName => throw _privateConstructorUsedError;
+  int? get userId => throw _privateConstructorUsedError;
   String? get userAvatarUrl => throw _privateConstructorUsedError;
   String get action => throw _privateConstructorUsedError;
   String get mediaTitle => throw _privateConstructorUsedError;
   String? get mediaPosterUrl => throw _privateConstructorUsedError;
   int? get mediaId => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
+  int get likeCount => throw _privateConstructorUsedError;
+  int get replyCount => throw _privateConstructorUsedError;
+  bool get isLiked => throw _privateConstructorUsedError;
 
   /// Serializes this FeedActivity to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -52,12 +56,16 @@ abstract class $FeedActivityCopyWith<$Res> {
     String id,
     MediaKind source,
     String userName,
+    int? userId,
     String? userAvatarUrl,
     String action,
     String mediaTitle,
     String? mediaPosterUrl,
     int? mediaId,
     DateTime createdAt,
+    int likeCount,
+    int replyCount,
+    bool isLiked,
   });
 }
 
@@ -79,12 +87,16 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
     Object? id = null,
     Object? source = null,
     Object? userName = null,
+    Object? userId = freezed,
     Object? userAvatarUrl = freezed,
     Object? action = null,
     Object? mediaTitle = null,
     Object? mediaPosterUrl = freezed,
     Object? mediaId = freezed,
     Object? createdAt = null,
+    Object? likeCount = null,
+    Object? replyCount = null,
+    Object? isLiked = null,
   }) {
     return _then(
       _value.copyWith(
@@ -100,6 +112,10 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
                 ? _value.userName
                 : userName // ignore: cast_nullable_to_non_nullable
                       as String,
+            userId: freezed == userId
+                ? _value.userId
+                : userId // ignore: cast_nullable_to_non_nullable
+                      as int?,
             userAvatarUrl: freezed == userAvatarUrl
                 ? _value.userAvatarUrl
                 : userAvatarUrl // ignore: cast_nullable_to_non_nullable
@@ -124,6 +140,18 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            likeCount: null == likeCount
+                ? _value.likeCount
+                : likeCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            replyCount: null == replyCount
+                ? _value.replyCount
+                : replyCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            isLiked: null == isLiked
+                ? _value.isLiked
+                : isLiked // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -143,12 +171,16 @@ abstract class _$$FeedActivityImplCopyWith<$Res>
     String id,
     MediaKind source,
     String userName,
+    int? userId,
     String? userAvatarUrl,
     String action,
     String mediaTitle,
     String? mediaPosterUrl,
     int? mediaId,
     DateTime createdAt,
+    int likeCount,
+    int replyCount,
+    bool isLiked,
   });
 }
 
@@ -169,12 +201,16 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
     Object? id = null,
     Object? source = null,
     Object? userName = null,
+    Object? userId = freezed,
     Object? userAvatarUrl = freezed,
     Object? action = null,
     Object? mediaTitle = null,
     Object? mediaPosterUrl = freezed,
     Object? mediaId = freezed,
     Object? createdAt = null,
+    Object? likeCount = null,
+    Object? replyCount = null,
+    Object? isLiked = null,
   }) {
     return _then(
       _$FeedActivityImpl(
@@ -190,6 +226,10 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
             ? _value.userName
             : userName // ignore: cast_nullable_to_non_nullable
                   as String,
+        userId: freezed == userId
+            ? _value.userId
+            : userId // ignore: cast_nullable_to_non_nullable
+                  as int?,
         userAvatarUrl: freezed == userAvatarUrl
             ? _value.userAvatarUrl
             : userAvatarUrl // ignore: cast_nullable_to_non_nullable
@@ -214,6 +254,18 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        likeCount: null == likeCount
+            ? _value.likeCount
+            : likeCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        replyCount: null == replyCount
+            ? _value.replyCount
+            : replyCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        isLiked: null == isLiked
+            ? _value.isLiked
+            : isLiked // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -226,12 +278,16 @@ class _$FeedActivityImpl implements _FeedActivity {
     required this.id,
     required this.source,
     required this.userName,
+    this.userId,
     this.userAvatarUrl,
     required this.action,
     required this.mediaTitle,
     this.mediaPosterUrl,
     this.mediaId,
     required this.createdAt,
+    this.likeCount = 0,
+    this.replyCount = 0,
+    this.isLiked = false,
   });
 
   factory _$FeedActivityImpl.fromJson(Map<String, dynamic> json) =>
@@ -244,6 +300,8 @@ class _$FeedActivityImpl implements _FeedActivity {
   @override
   final String userName;
   @override
+  final int? userId;
+  @override
   final String? userAvatarUrl;
   @override
   final String action;
@@ -255,10 +313,19 @@ class _$FeedActivityImpl implements _FeedActivity {
   final int? mediaId;
   @override
   final DateTime createdAt;
+  @override
+  @JsonKey()
+  final int likeCount;
+  @override
+  @JsonKey()
+  final int replyCount;
+  @override
+  @JsonKey()
+  final bool isLiked;
 
   @override
   String toString() {
-    return 'FeedActivity(id: $id, source: $source, userName: $userName, userAvatarUrl: $userAvatarUrl, action: $action, mediaTitle: $mediaTitle, mediaPosterUrl: $mediaPosterUrl, mediaId: $mediaId, createdAt: $createdAt)';
+    return 'FeedActivity(id: $id, source: $source, userName: $userName, userId: $userId, userAvatarUrl: $userAvatarUrl, action: $action, mediaTitle: $mediaTitle, mediaPosterUrl: $mediaPosterUrl, mediaId: $mediaId, createdAt: $createdAt, likeCount: $likeCount, replyCount: $replyCount, isLiked: $isLiked)';
   }
 
   @override
@@ -270,6 +337,7 @@ class _$FeedActivityImpl implements _FeedActivity {
             (identical(other.source, source) || other.source == source) &&
             (identical(other.userName, userName) ||
                 other.userName == userName) &&
+            (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.userAvatarUrl, userAvatarUrl) ||
                 other.userAvatarUrl == userAvatarUrl) &&
             (identical(other.action, action) || other.action == action) &&
@@ -279,7 +347,12 @@ class _$FeedActivityImpl implements _FeedActivity {
                 other.mediaPosterUrl == mediaPosterUrl) &&
             (identical(other.mediaId, mediaId) || other.mediaId == mediaId) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.likeCount, likeCount) ||
+                other.likeCount == likeCount) &&
+            (identical(other.replyCount, replyCount) ||
+                other.replyCount == replyCount) &&
+            (identical(other.isLiked, isLiked) || other.isLiked == isLiked));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -289,12 +362,16 @@ class _$FeedActivityImpl implements _FeedActivity {
     id,
     source,
     userName,
+    userId,
     userAvatarUrl,
     action,
     mediaTitle,
     mediaPosterUrl,
     mediaId,
     createdAt,
+    likeCount,
+    replyCount,
+    isLiked,
   );
 
   /// Create a copy of FeedActivity
@@ -316,12 +393,16 @@ abstract class _FeedActivity implements FeedActivity {
     required final String id,
     required final MediaKind source,
     required final String userName,
+    final int? userId,
     final String? userAvatarUrl,
     required final String action,
     required final String mediaTitle,
     final String? mediaPosterUrl,
     final int? mediaId,
     required final DateTime createdAt,
+    final int likeCount,
+    final int replyCount,
+    final bool isLiked,
   }) = _$FeedActivityImpl;
 
   factory _FeedActivity.fromJson(Map<String, dynamic> json) =
@@ -334,6 +415,8 @@ abstract class _FeedActivity implements FeedActivity {
   @override
   String get userName;
   @override
+  int? get userId;
+  @override
   String? get userAvatarUrl;
   @override
   String get action;
@@ -345,6 +428,12 @@ abstract class _FeedActivity implements FeedActivity {
   int? get mediaId;
   @override
   DateTime get createdAt;
+  @override
+  int get likeCount;
+  @override
+  int get replyCount;
+  @override
+  bool get isLiked;
 
   /// Create a copy of FeedActivity
   /// with the given fields replaced by the non-null parameter values.

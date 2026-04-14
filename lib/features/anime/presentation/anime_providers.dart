@@ -76,6 +76,7 @@ FeedActivity _mapActivity(Map<String, dynamic> a) {
     id: a['id'].toString(),
     source: kind,
     userName: user['name'] as String? ?? '',
+    userId: user['id'] as int?,
     userAvatarUrl: avatar['medium'] as String?,
     action: action,
     mediaTitle: (title['english'] as String?) ??
@@ -86,6 +87,9 @@ FeedActivity _mapActivity(Map<String, dynamic> a) {
     createdAt: DateTime.fromMillisecondsSinceEpoch(
       ((a['createdAt'] as int?) ?? 0) * 1000,
     ),
+    likeCount: a['likeCount'] as int? ?? 0,
+    replyCount: a['replyCount'] as int? ?? 0,
+    isLiked: a['isLiked'] as bool? ?? false,
   );
 }
 
@@ -108,11 +112,12 @@ class AnilistFeed extends _$AnilistFeed {
 
   Future<List<FeedActivity>> _fetchPage() async {
     final graphql = ref.read(anilistGraphqlProvider);
+    final token = await ref.read(anilistTokenProvider.future);
     final results = await Future.wait([
       graphql.fetchRecentActivityByType(
-          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage),
+          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token),
       graphql.fetchRecentActivityByType(
-          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage),
+          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token),
     ]);
     if (results[0].length < _perPage && results[1].length < _perPage) {
       _hasMore = false;
@@ -141,6 +146,15 @@ class AnilistFeed extends _$AnilistFeed {
       state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
     }
   }
+
+  void updateActivity(FeedActivity updated) {
+    final list = state.valueOrNull;
+    if (list == null) return;
+    state = AsyncData([
+      for (final a in list)
+        if (a.id == updated.id) updated else a,
+    ]);
+  }
 }
 
 @riverpod
@@ -160,10 +174,12 @@ class AnilistFeedByType extends _$AnilistFeedByType {
 
   Future<List<FeedActivity>> _fetchPage() async {
     final graphql = ref.read(anilistGraphqlProvider);
+    final token = await ref.read(anilistTokenProvider.future);
     final raw = await graphql.fetchRecentActivityByType(
       activityType: activityType,
       page: _page,
       perPage: _perPage,
+      token: token,
     );
     if (raw.length < _perPage) _hasMore = false;
     return raw.map(_mapActivity).toList();
@@ -182,6 +198,15 @@ class AnilistFeedByType extends _$AnilistFeedByType {
       _page--;
       state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
     }
+  }
+
+  void updateActivity(FeedActivity updated) {
+    final list = state.valueOrNull;
+    if (list == null) return;
+    state = AsyncData([
+      for (final a in list)
+        if (a.id == updated.id) updated else a,
+    ]);
   }
 }
 

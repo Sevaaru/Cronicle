@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
@@ -13,7 +14,6 @@ import 'package:cronicle/cronicle_app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Captura automática del token de Anilist tras OAuth redirect (web)
   await _handleAnilistOAuthCallback();
 
   try {
@@ -25,6 +25,11 @@ Future<void> main() async {
   }
 
   final prefs = await SharedPreferences.getInstance();
+
+  // Normalizar status de entries guardados con lowercase
+  try {
+    await AppDatabase().normalizeStatuses();
+  } catch (_) {}
 
   runApp(
     ProviderScope(

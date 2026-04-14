@@ -30,6 +30,7 @@ class AnilistGraphqlDatasource {
   Future<List<Map<String, dynamic>>> fetchRecentActivity({
     int page = 1,
     int perPage = 25,
+    String? token,
   }) async {
     const query = r'''
       query ($page: Int, $perPage: Int) {
@@ -40,12 +41,17 @@ class AnilistGraphqlDatasource {
               status
               progress
               createdAt
+              likeCount
+              replyCount
+              isLiked
               media {
                 id
+                type
                 title { romaji english }
                 coverImage { large }
               }
               user {
+                id
                 name
                 avatar { medium }
               }
@@ -57,7 +63,7 @@ class AnilistGraphqlDatasource {
     final data = await _post(query, variables: {
       'page': page,
       'perPage': perPage,
-    });
+    }, token: token);
     final activities =
         (data['data']?['Page']?['activities'] as List?)?.cast<Map<String, dynamic>>() ??
             [];
@@ -188,6 +194,7 @@ class AnilistGraphqlDatasource {
     required String activityType,
     int page = 1,
     int perPage = 25,
+    String? token,
   }) async {
     const query = r'''
       query ($page: Int, $perPage: Int, $type: ActivityType) {
@@ -198,6 +205,9 @@ class AnilistGraphqlDatasource {
               status
               progress
               createdAt
+              likeCount
+              replyCount
+              isLiked
               media {
                 id
                 type
@@ -205,6 +215,7 @@ class AnilistGraphqlDatasource {
                 coverImage { large }
               }
               user {
+                id
                 name
                 avatar { medium }
               }
@@ -217,12 +228,51 @@ class AnilistGraphqlDatasource {
       'page': page,
       'perPage': perPage,
       'type': activityType,
-    });
+    }, token: token);
     final activities =
         (data['data']?['Page']?['activities'] as List?)
                 ?.cast<Map<String, dynamic>>() ??
             [];
     return activities.where((a) => a['media'] != null).toList();
+  }
+
+  /// Toggle like on an activity. Requires auth token.
+  Future<bool> toggleLike(int activityId, String token) async {
+    const query = r'''
+      mutation ($id: Int, $type: LikeableType) {
+        ToggleLikeV2(id: $id, type: $type) {
+          ... on ListActivity { id isLiked likeCount }
+        }
+      }
+    ''';
+    final data = await _post(query,
+        variables: {'id': activityId, 'type': 'ACTIVITY'}, token: token);
+    return data['data']?['ToggleLikeV2']?['isLiked'] as bool? ?? false;
+  }
+
+  /// Fetch replies for an activity.
+  Future<List<Map<String, dynamic>>> fetchActivityReplies(int activityId, {String? token}) async {
+    const query = r'''
+      query ($activityId: Int) {
+        Page(page: 1, perPage: 25) {
+          activityReplies(activityId: $activityId) {
+            id
+            text(asHtml: false)
+            likeCount
+            createdAt
+            user {
+              id
+              name
+              avatar { medium }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'activityId': activityId}, token: token);
+    return (data['data']?['Page']?['activityReplies'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
   }
 
   /// Fetch user media list by type (ANIME or MANGA). Requires token.
@@ -287,6 +337,99 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(query, token: token);
     return data['data']?['Viewer'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch a public user profile by ID.
+  Future<Map<String, dynamic>?> fetchUserProfile(int userId, {String? token}) async {
+    const query = r'''
+      query ($id: Int) {
+        User(id: $id) {
+          id
+          name
+          about
+          avatar { large medium }
+          bannerImage
+          siteUrl
+          isFollowing
+          isFollower
+          statistics {
+            anime {
+              count
+              meanScore
+              minutesWatched
+              episodesWatched
+              genres(sort: COUNT_DESC, limit: 5) { genre count }
+              statuses { status count }
+            }
+            manga {
+              count
+              meanScore
+              chaptersRead
+              volumesRead
+              genres(sort: COUNT_DESC, limit: 5) { genre count }
+              statuses { status count }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': userId}, token: token);
+    return data['data']?['User'] as Map<String, dynamic>?;
+  }
+
+  /// Save (create/update) a media list entry on Anilist.
+  /// [score] expects POINT_10 format (0-10), converted to scoreRaw (0-100).
+  Future<Map<String, dynamic>?> saveMediaListEntry({
+    required int mediaId,
+    required String token,
+    String? status,
+    int? score,
+    int? progress,
+    String? notes,
+  }) async {
+    const query = r'''
+      mutation ($mediaId: Int, $status: MediaListStatus, $scoreRaw: Int, $progress: Int, $notes: String) {
+        SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $scoreRaw, progress: $progress, notes: $notes) {
+          id
+          status
+          score(format: POINT_10)
+          progress
+          notes
+        }
+      }
+    ''';
+    final variables = <String, dynamic>{'mediaId': mediaId};
+    if (status != null) variables['status'] = status;
+    if (score != null) variables['scoreRaw'] = score * 10;
+    if (progress != null) variables['progress'] = progress;
+    if (notes != null) variables['notes'] = notes;
+
+    final data = await _post(query, variables: variables, token: token);
+    return data['data']?['SaveMediaListEntry'] as Map<String, dynamic>?;
+  }
+
+  /// Delete a media list entry from Anilist by list entry ID.
+  Future<void> deleteMediaListEntry(int entryId, String token) async {
+    const query = r'''
+      mutation ($id: Int) {
+        DeleteMediaListEntry(id: $id) { deleted }
+      }
+    ''';
+    await _post(query, variables: {'id': entryId}, token: token);
+  }
+
+  /// Toggle follow on a user.
+  Future<bool> toggleFollow(int userId, String token) async {
+    const query = r'''
+      mutation ($userId: Int) {
+        ToggleFollow(userId: $userId) {
+          id
+          isFollowing
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'userId': userId}, token: token);
+    return data['data']?['ToggleFollow']?['isFollowing'] as bool? ?? false;
   }
 
   /// Fetch full user profile with statistics.

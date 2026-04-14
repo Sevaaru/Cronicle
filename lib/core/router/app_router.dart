@@ -4,11 +4,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
 import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
+import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
@@ -110,6 +112,20 @@ GoRouter appRouter(AppRouterRef ref) {
             mediaId: id,
             kind: MediaKind.fromCode(kindCode),
           );
+        },
+      ),
+      GoRoute(
+        path: '/user/:id',
+        builder: (context, state) {
+          final userId = int.parse(state.pathParameters['id']!);
+          return UserProfilePage(userId: userId);
+        },
+      ),
+      GoRoute(
+        path: '/activity/:id/replies',
+        builder: (context, state) {
+          final activityId = int.parse(state.pathParameters['id']!);
+          return ActivityRepliesPage(activityId: activityId);
         },
       ),
     ],

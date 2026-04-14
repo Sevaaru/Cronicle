@@ -21,6 +21,17 @@ const _statusFilters = [
   ('REPEATING', 'Repitiendo', Icons.replay_rounded),
 ];
 
+enum _SortField {
+  updatedAt('Última actualización', Icons.update),
+  title('Nombre', Icons.sort_by_alpha),
+  score('Puntuación', Icons.star_outline),
+  progress('Progreso', Icons.trending_up);
+
+  const _SortField(this.label, this.icon);
+  final String label;
+  final IconData icon;
+}
+
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
 
@@ -31,6 +42,8 @@ class LibraryPage extends ConsumerStatefulWidget {
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   MediaKind? _selectedKind; // null = all
   String? _selectedStatus;
+  _SortField _sortField = _SortField.updatedAt;
+  bool _sortAsc = false;
   bool _statusInitialized = false;
   bool _syncChecked = false;
 
@@ -108,7 +121,63 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 6),
+          // Sort bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(Icons.sort, size: 16, color: cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: SizedBox(
+                    height: 32,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, _) => const SizedBox(width: 4),
+                      itemCount: _SortField.values.length,
+                      itemBuilder: (context, i) {
+                        final field = _SortField.values[i];
+                        final selected = _sortField == field;
+                        return FilterChip(
+                          selected: selected,
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(field.icon, size: 12),
+                              const SizedBox(width: 3),
+                              Text(field.label, style: const TextStyle(fontSize: 10)),
+                              if (selected) ...[
+                                const SizedBox(width: 2),
+                                Icon(
+                                  _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 11,
+                                ),
+                              ],
+                            ],
+                          ),
+                          onSelected: (_) {
+                            setState(() {
+                              if (_sortField == field) {
+                                _sortAsc = !_sortAsc;
+                              } else {
+                                _sortField = field;
+                                _sortAsc = field == _SortField.title;
+                              }
+                            });
+                          },
+                          showCheckmark: false,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
 
           // List
           Expanded(
@@ -137,11 +206,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ),
                   );
                 }
+                final sorted = _sortEntries(entries);
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                  itemCount: entries.length,
+                  itemCount: sorted.length,
                   itemBuilder: (context, i) =>
-                      _EntryCard(entry: entries[i], ref: ref),
+                      _EntryCard(entry: sorted[i], ref: ref),
                 );
               },
             ),
@@ -149,6 +219,25 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         ],
       ),
     );
+  }
+
+  List<LibraryEntry> _sortEntries(List<LibraryEntry> entries) {
+    final list = [...entries];
+    list.sort((a, b) {
+      int cmp;
+      switch (_sortField) {
+        case _SortField.title:
+          cmp = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        case _SortField.score:
+          cmp = (a.score ?? 0).compareTo(b.score ?? 0);
+        case _SortField.progress:
+          cmp = (a.progress ?? 0).compareTo(b.progress ?? 0);
+        case _SortField.updatedAt:
+          cmp = a.updatedAt.compareTo(b.updatedAt);
+      }
+      return _sortAsc ? cmp : -cmp;
+    });
+    return list;
   }
 
   void _checkAnilistSync() {
@@ -167,12 +256,16 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
       if (!mounted) return;
       final graphql = ref.read(anilistGraphqlProvider);
-      await showAnilistSyncDialog(
+      final didSync = await showAnilistSyncDialog(
         context: context,
         graphql: graphql,
         db: db,
         token: token,
       );
+
+      if (didSync && mounted) {
+        ref.invalidate(libraryFilteredProvider(_selectedKind, _selectedStatus));
+      }
     });
   }
 }
@@ -223,6 +316,9 @@ class _EntryCard extends StatelessWidget {
     final kind = MediaKind.fromCode(entry.kind);
     final canNavigate = entry.externalId.isNotEmpty &&
         (kind == MediaKind.anime || kind == MediaKind.manga);
+    final showProgressButton =
+        (kind == MediaKind.anime || kind == MediaKind.manga) &&
+        entry.status == 'CURRENT';
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -302,6 +398,8 @@ class _EntryCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (showProgressButton)
+              _IncrementButton(entry: entry, ref: ref),
             IconButton(
               icon: Icon(Icons.delete_outline, size: 20, color: cs.error.withAlpha(150)),
               onPressed: () => ref.read(databaseProvider).deleteLibraryEntry(entry.id),
@@ -312,10 +410,9 @@ class _EntryCard extends StatelessWidget {
     );
   }
 
-  // Placeholder — no aplica filtro visual extra en la card
   MediaKind? get _selectedKindForCard => null;
 
-  String _statusLabel(String status) => switch (status) {
+  String _statusLabel(String status) => switch (status.toUpperCase()) {
         'CURRENT' => 'Viendo',
         'PLANNING' => 'Planeado',
         'COMPLETED' => 'Completado',
@@ -325,7 +422,7 @@ class _EntryCard extends StatelessWidget {
         _ => status,
       };
 
-  Color _statusColor(String status, ColorScheme cs) => switch (status) {
+  Color _statusColor(String status, ColorScheme cs) => switch (status.toUpperCase()) {
         'CURRENT' => cs.primaryContainer,
         'COMPLETED' => Colors.green.withAlpha(50),
         'PLANNING' => cs.tertiaryContainer,
@@ -334,6 +431,75 @@ class _EntryCard extends StatelessWidget {
         'REPEATING' => Colors.deepPurple.withAlpha(50),
         _ => cs.surfaceContainerHighest,
       };
+}
+
+class _IncrementButton extends StatefulWidget {
+  const _IncrementButton({required this.entry, required this.ref});
+  final LibraryEntry entry;
+  final WidgetRef ref;
+
+  @override
+  State<_IncrementButton> createState() => _IncrementButtonState();
+}
+
+class _IncrementButtonState extends State<_IncrementButton> {
+  bool _busy = false;
+
+  Future<void> _increment() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final db = widget.ref.read(databaseProvider);
+      await db.incrementProgress(widget.entry.id);
+
+      // Sync con Anilist si es anime/manga
+      final kind = MediaKind.fromCode(widget.entry.kind);
+      if (kind == MediaKind.anime || kind == MediaKind.manga) {
+        _syncProgressToAnilist();
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _syncProgressToAnilist() async {
+    try {
+      final token = await widget.ref.read(anilistTokenProvider.future);
+      if (token == null) return;
+      final mediaId = int.tryParse(widget.entry.externalId);
+      if (mediaId == null) return;
+      final newProgress = (widget.entry.progress ?? 0) + 1;
+      final graphql = widget.ref.read(anilistGraphqlProvider);
+      await graphql.saveMediaListEntry(
+        mediaId: mediaId,
+        token: token,
+        progress: newProgress,
+      );
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final atMax = widget.entry.totalEpisodes != null &&
+        (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
+
+    return IconButton(
+      icon: _busy
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+            )
+          : Icon(
+              Icons.add_circle_outline,
+              size: 22,
+              color: atMax ? cs.onSurfaceVariant.withAlpha(80) : cs.primary,
+            ),
+      tooltip: atMax ? 'Completado' : '+1 capítulo/episodio',
+      onPressed: atMax ? null : _increment,
+    );
+  }
 }
 
 IconData _kindIcon(MediaKind kind) => switch (kind) {

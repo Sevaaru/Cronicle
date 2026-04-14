@@ -71,11 +71,12 @@ Future<bool> showAddToLibrarySheet({
   final title = item['title'] as Map<String, dynamic>? ?? {};
   final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
   final isManga = kind == MediaKind.manga;
+  final mediaId = item['id'];
 
   await db.upsertLibraryEntry(
     LibraryEntriesCompanion(
       kind: drift.Value(kind.code),
-      externalId: drift.Value(item['id'].toString()),
+      externalId: drift.Value(mediaId.toString()),
       title: drift.Value(
         (title['english'] as String?) ??
             (title['romaji'] as String?) ??
@@ -91,15 +92,39 @@ Future<bool> showAddToLibrarySheet({
       progress: drift.Value(result.progress),
       totalEpisodes: drift.Value(
         isManga
-            ? (item['chapters'] as int?)
-            : (item['episodes'] as int?),
+            ? (item['chapters'] as num?)?.toInt()
+            : (item['episodes'] as num?)?.toInt(),
       ),
       notes: drift.Value(result.notes),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     ),
   );
 
+  // Sincronizar con Anilist si estamos logueados y es anime/manga
+  if ((kind == MediaKind.anime || kind == MediaKind.manga) && mediaId != null) {
+    _syncEntryToAnilist(ref, mediaId as int, result);
+  }
+
   return true;
+}
+
+/// Envía los cambios a Anilist en background (fire-and-forget).
+void _syncEntryToAnilist(WidgetRef ref, int mediaId, _AddResult result) async {
+  try {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) return;
+    final graphql = ref.read(anilistGraphqlProvider);
+    await graphql.saveMediaListEntry(
+      mediaId: mediaId,
+      token: token,
+      status: result.status,
+      score: result.score,
+      progress: result.progress,
+      notes: result.notes,
+    );
+  } catch (_) {
+    // Sync silencioso, no bloqueamos al usuario
+  }
 }
 
 class _AddResult {
@@ -378,7 +403,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                     final progress = int.tryParse(_progressCtrl.text);
                     final notes = _notesCtrl.text.trim();
                     Navigator.of(context).pop(_AddResult(
-                      status: _status.toLowerCase(),
+                      status: _status,
                       score: _score > 0 ? _score.round() : null,
                       progress: progress != null && progress > 0 ? progress : null,
                       notes: notes.isNotEmpty ? notes : null,

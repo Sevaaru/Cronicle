@@ -11,12 +11,16 @@ class FeedActivity with _$FeedActivity {
     required String id,
     required MediaKind source,
     required String userName,
+    int? userId,
     String? userAvatarUrl,
     required String action,
     required String mediaTitle,
     String? mediaPosterUrl,
     int? mediaId,
     required DateTime createdAt,
+    @Default(0) int likeCount,
+    @Default(0) int replyCount,
+    @Default(false) bool isLiked,
   }) = _FeedActivity;
 
   factory FeedActivity.fromJson(Map<String, dynamic> json) =>
