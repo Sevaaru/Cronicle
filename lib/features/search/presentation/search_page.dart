@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
@@ -332,12 +333,18 @@ class _ResultCard extends StatelessWidget {
         ? (chapters != null ? '$chapters cap' : null)
         : (episodes != null ? '$episodes ep' : null);
 
+    final itemId = item['id'] as int?;
+
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => onAdd(item, kind),
+        onTap: () {
+          if (itemId != null) {
+            context.push('/media/$itemId?kind=${kind.code}');
+          }
+        },
         child: Row(
           children: [
             ClipRRect(

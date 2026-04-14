@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
@@ -103,10 +104,19 @@ class _EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    final canNavigate = entry.externalId.isNotEmpty &&
+        (MediaKind.fromCode(entry.kind) == MediaKind.anime ||
+         MediaKind.fromCode(entry.kind) == MediaKind.manga);
+
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
-      child: Row(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: canNavigate
+            ? () => context.push('/media/${entry.externalId}?kind=${entry.kind}')
+            : null,
+        child: Row(
         children: [
           ClipRRect(
             borderRadius:
@@ -181,6 +191,7 @@ class _EntryCard extends StatelessWidget {
             },
           ),
         ],
+        ),
       ),
     );
   }

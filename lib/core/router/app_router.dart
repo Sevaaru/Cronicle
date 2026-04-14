@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
 import 'package:cronicle/features/games/presentation/games_page.dart';
@@ -10,6 +11,7 @@ import 'package:cronicle/features/movies/presentation/movies_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
+import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 
 part 'app_router.g.dart';
@@ -87,6 +89,19 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthPage(),
+      ),
+      GoRoute(
+        path: '/media/:id',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final kindCode = int.tryParse(
+                  state.uri.queryParameters['kind'] ?? '') ??
+              0;
+          return MediaDetailPage(
+            mediaId: id,
+            kind: MediaKind.fromCode(kindCode),
+          );
+        },
       ),
     ],
   );

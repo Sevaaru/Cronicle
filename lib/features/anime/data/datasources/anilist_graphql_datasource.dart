@@ -107,6 +107,124 @@ class AnilistGraphqlDatasource {
         [];
   }
 
+  /// Fetch full media details by Anilist ID.
+  Future<Map<String, dynamic>?> fetchMediaDetail(int id) async {
+    const query = r'''
+      query ($id: Int) {
+        Media(id: $id) {
+          id
+          type
+          title { romaji english native }
+          coverImage { extraLarge large }
+          bannerImage
+          description(asHtml: false)
+          format
+          status
+          episodes
+          chapters
+          volumes
+          duration
+          season
+          seasonYear
+          startDate { year month day }
+          endDate { year month day }
+          averageScore
+          meanScore
+          popularity
+          favourites
+          genres
+          tags { name rank }
+          studios(isMain: true) { nodes { name } }
+          source
+          countryOfOrigin
+          isAdult
+          nextAiringEpisode { airingAt timeUntilAiring episode }
+          externalLinks { url site icon color }
+          streamingEpisodes { title thumbnail url site }
+          relations {
+            edges {
+              relationType
+              node {
+                id type format
+                title { romaji english }
+                coverImage { large }
+                status
+              }
+            }
+          }
+          recommendations(sort: RATING_DESC, perPage: 8) {
+            nodes {
+              mediaRecommendation {
+                id type
+                title { romaji english }
+                coverImage { large }
+                averageScore
+              }
+            }
+          }
+          reviews(sort: RATING_DESC, perPage: 5) {
+            nodes {
+              id
+              summary
+              score
+              rating
+              ratingAmount
+              user { name avatar { medium } }
+            }
+          }
+          stats {
+            scoreDistribution { score amount }
+            statusDistribution { status amount }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': id});
+    return data['data']?['Media'] as Map<String, dynamic>?;
+  }
+
+  /// Recent public activity for a media type (ANIME_LIST or MANGA_LIST).
+  Future<List<Map<String, dynamic>>> fetchRecentActivityByType({
+    required String activityType,
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($page: Int, $perPage: Int, $type: ActivityType) {
+        Page(page: $page, perPage: $perPage) {
+          activities(type: $type, sort: ID_DESC) {
+            ... on ListActivity {
+              id
+              status
+              progress
+              createdAt
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+              user {
+                name
+                avatar { medium }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      'page': page,
+      'perPage': perPage,
+      'type': activityType,
+    });
+    final activities =
+        (data['data']?['Page']?['activities'] as List?)
+                ?.cast<Map<String, dynamic>>() ??
+            [];
+    return activities.where((a) => a['media'] != null).toList();
+  }
+
   /// Fetch user anime list (requires token).
   Future<List<Map<String, dynamic>>> fetchUserAnimeList(
     String token,

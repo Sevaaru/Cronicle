@@ -319,7 +319,7 @@ class _AnilistSearchProviderElement
   String get type => (origin as AnilistSearchProvider).type;
 }
 
-String _$anilistFeedHash() => r'66233ac73459ccf49be28ed2efd96a6f31b48842';
+String _$anilistFeedHash() => r'6be990c4ca1f69396388f3f5f04ed847cfcce542';
 
 /// See also [anilistFeed].
 @ProviderFor(anilistFeed)
@@ -337,6 +337,253 @@ final anilistFeedProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AnilistFeedRef = AutoDisposeFutureProviderRef<List<FeedActivity>>;
+String _$anilistFeedByTypeHash() => r'bea56e830c6919b5d172d8b79d382b0ec0426cf4';
+
+/// See also [anilistFeedByType].
+@ProviderFor(anilistFeedByType)
+const anilistFeedByTypeProvider = AnilistFeedByTypeFamily();
+
+/// See also [anilistFeedByType].
+class AnilistFeedByTypeFamily extends Family<AsyncValue<List<FeedActivity>>> {
+  /// See also [anilistFeedByType].
+  const AnilistFeedByTypeFamily();
+
+  /// See also [anilistFeedByType].
+  AnilistFeedByTypeProvider call(String activityType) {
+    return AnilistFeedByTypeProvider(activityType);
+  }
+
+  @override
+  AnilistFeedByTypeProvider getProviderOverride(
+    covariant AnilistFeedByTypeProvider provider,
+  ) {
+    return call(provider.activityType);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistFeedByTypeProvider';
+}
+
+/// See also [anilistFeedByType].
+class AnilistFeedByTypeProvider
+    extends AutoDisposeFutureProvider<List<FeedActivity>> {
+  /// See also [anilistFeedByType].
+  AnilistFeedByTypeProvider(String activityType)
+    : this._internal(
+        (ref) => anilistFeedByType(ref as AnilistFeedByTypeRef, activityType),
+        from: anilistFeedByTypeProvider,
+        name: r'anilistFeedByTypeProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistFeedByTypeHash,
+        dependencies: AnilistFeedByTypeFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistFeedByTypeFamily._allTransitiveDependencies,
+        activityType: activityType,
+      );
+
+  AnilistFeedByTypeProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.activityType,
+  }) : super.internal();
+
+  final String activityType;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<FeedActivity>> Function(AnilistFeedByTypeRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistFeedByTypeProvider._internal(
+        (ref) => create(ref as AnilistFeedByTypeRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        activityType: activityType,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<FeedActivity>> createElement() {
+    return _AnilistFeedByTypeProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistFeedByTypeProvider &&
+        other.activityType == activityType;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, activityType.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistFeedByTypeRef on AutoDisposeFutureProviderRef<List<FeedActivity>> {
+  /// The parameter `activityType` of this provider.
+  String get activityType;
+}
+
+class _AnilistFeedByTypeProviderElement
+    extends AutoDisposeFutureProviderElement<List<FeedActivity>>
+    with AnilistFeedByTypeRef {
+  _AnilistFeedByTypeProviderElement(super.provider);
+
+  @override
+  String get activityType => (origin as AnilistFeedByTypeProvider).activityType;
+}
+
+String _$anilistMediaDetailHash() =>
+    r'aad75ffad615d2f84f688cafb73c9dab95d9d350';
+
+/// See also [anilistMediaDetail].
+@ProviderFor(anilistMediaDetail)
+const anilistMediaDetailProvider = AnilistMediaDetailFamily();
+
+/// See also [anilistMediaDetail].
+class AnilistMediaDetailFamily
+    extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// See also [anilistMediaDetail].
+  const AnilistMediaDetailFamily();
+
+  /// See also [anilistMediaDetail].
+  AnilistMediaDetailProvider call(int mediaId) {
+    return AnilistMediaDetailProvider(mediaId);
+  }
+
+  @override
+  AnilistMediaDetailProvider getProviderOverride(
+    covariant AnilistMediaDetailProvider provider,
+  ) {
+    return call(provider.mediaId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistMediaDetailProvider';
+}
+
+/// See also [anilistMediaDetail].
+class AnilistMediaDetailProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// See also [anilistMediaDetail].
+  AnilistMediaDetailProvider(int mediaId)
+    : this._internal(
+        (ref) => anilistMediaDetail(ref as AnilistMediaDetailRef, mediaId),
+        from: anilistMediaDetailProvider,
+        name: r'anilistMediaDetailProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistMediaDetailHash,
+        dependencies: AnilistMediaDetailFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistMediaDetailFamily._allTransitiveDependencies,
+        mediaId: mediaId,
+      );
+
+  AnilistMediaDetailProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.mediaId,
+  }) : super.internal();
+
+  final int mediaId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(AnilistMediaDetailRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistMediaDetailProvider._internal(
+        (ref) => create(ref as AnilistMediaDetailRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        mediaId: mediaId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _AnilistMediaDetailProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistMediaDetailProvider && other.mediaId == mediaId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, mediaId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistMediaDetailRef
+    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `mediaId` of this provider.
+  int get mediaId;
+}
+
+class _AnilistMediaDetailProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with AnilistMediaDetailRef {
+  _AnilistMediaDetailProviderElement(super.provider);
+
+  @override
+  int get mediaId => (origin as AnilistMediaDetailProvider).mediaId;
+}
+
 String _$anilistTokenHash() => r'1dac5649107efbd1e0acae1952c5cc1b05dd6e10';
 
 /// See also [AnilistToken].

@@ -58,35 +58,71 @@ Future<List<Map<String, dynamic>>> anilistSearch(
   return graphql.searchMedia(query, type: type);
 }
 
+FeedActivity _mapActivity(Map<String, dynamic> a) {
+  final media = a['media'] as Map<String, dynamic>;
+  final user = a['user'] as Map<String, dynamic>;
+  final title = media['title'] as Map<String, dynamic>? ?? {};
+  final avatar = user['avatar'] as Map<String, dynamic>? ?? {};
+  final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
+
+  final mediaType = media['type'] as String?;
+  final kind = mediaType == 'MANGA' ? MediaKind.manga : MediaKind.anime;
+
+  String action = (a['status'] as String? ?? 'updated');
+  final progress = a['progress'] as String?;
+  if (progress != null) action = '$action $progress';
+
+  return FeedActivity(
+    id: a['id'].toString(),
+    source: kind,
+    userName: user['name'] as String? ?? '',
+    userAvatarUrl: avatar['medium'] as String?,
+    action: action,
+    mediaTitle: (title['english'] as String?) ??
+        (title['romaji'] as String?) ??
+        'Unknown',
+    mediaPosterUrl: coverImage['large'] as String?,
+    mediaId: media['id'] as int?,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(
+      ((a['createdAt'] as int?) ?? 0) * 1000,
+    ),
+  );
+}
+
 @riverpod
 Future<List<FeedActivity>> anilistFeed(AnilistFeedRef ref) async {
   final graphql = ref.read(anilistGraphqlProvider);
-  final raw = await graphql.fetchRecentActivity(perPage: 30);
-  return raw.map((a) {
-    final media = a['media'] as Map<String, dynamic>;
-    final user = a['user'] as Map<String, dynamic>;
-    final title = media['title'] as Map<String, dynamic>? ?? {};
-    final avatar = user['avatar'] as Map<String, dynamic>? ?? {};
-    final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
+  final animeRaw = await graphql.fetchRecentActivityByType(
+      activityType: 'ANIME_LIST', perPage: 20);
+  final mangaRaw = await graphql.fetchRecentActivityByType(
+      activityType: 'MANGA_LIST', perPage: 20);
 
-    String action = (a['status'] as String? ?? 'updated');
-    final progress = a['progress'] as String?;
-    if (progress != null) action = '$action $progress';
+  final all = [
+    ...animeRaw.map(_mapActivity),
+    ...mangaRaw.map(_mapActivity),
+  ];
+  all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return all;
+}
 
-    return FeedActivity(
-      id: a['id'].toString(),
-      source: MediaKind.anime,
-      userName: user['name'] as String? ?? '',
-      userAvatarUrl: avatar['medium'] as String?,
-      action: action,
-      mediaTitle: (title['english'] as String?) ??
-          (title['romaji'] as String?) ??
-          'Unknown',
-      mediaPosterUrl: coverImage['large'] as String?,
-      mediaId: media['id'] as int?,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(
-        ((a['createdAt'] as int?) ?? 0) * 1000,
-      ),
-    );
-  }).toList();
+@riverpod
+Future<List<FeedActivity>> anilistFeedByType(
+  AnilistFeedByTypeRef ref,
+  String activityType,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final raw = await graphql.fetchRecentActivityByType(
+    activityType: activityType,
+    perPage: 30,
+  );
+  return raw.map(_mapActivity).toList();
+}
+
+@riverpod
+Future<Map<String, dynamic>?> anilistMediaDetail(
+  AnilistMediaDetailRef ref,
+  int mediaId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  return graphql.fetchMediaDetail(mediaId);
 }
