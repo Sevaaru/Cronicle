@@ -8,6 +8,7 @@ import 'package:cronicle/features/feed/presentation/feed_page.dart';
 import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
+import 'package:cronicle/features/profile/presentation/profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
@@ -34,14 +35,16 @@ GoRouter appRouter(AppRouterRef ref) {
             index = 1;
           } else if (location.startsWith('/search')) {
             index = 2;
-          } else if (location.startsWith('/settings')) {
+          } else if (location.startsWith('/profile')) {
             index = 3;
+          } else if (location.startsWith('/settings')) {
+            index = 4;
           }
 
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              final routes = ['/feed', '/library', '/search', '/settings'];
+              final routes = ['/feed', '/library', '/search', '/profile', '/settings'];
               context.go(routes[i]);
             },
             child: child,
@@ -64,6 +67,12 @@ GoRouter appRouter(AppRouterRef ref) {
             path: '/search',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SearchPage(),
+            ),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ProfilePage(),
             ),
           ),
           GoRoute(

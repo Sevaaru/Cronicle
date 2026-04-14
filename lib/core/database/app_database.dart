@@ -79,15 +79,23 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Library helpers
-  Stream<List<LibraryEntry>> watchLibraryByKind(int kindCode) {
+  Stream<List<LibraryEntry>> watchLibraryByKind(int kindCode, {String? status}) {
     return (select(libraryEntries)
-          ..where((t) => t.kind.equals(kindCode))
+          ..where((t) {
+            var expr = t.kind.equals(kindCode);
+            if (status != null) expr = expr & t.status.equals(status);
+            return expr;
+          })
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .watch();
   }
 
-  Stream<List<LibraryEntry>> watchAllLibrary() {
+  Stream<List<LibraryEntry>> watchAllLibrary({String? status}) {
     return (select(libraryEntries)
+          ..where((t) {
+            if (status != null) return t.status.equals(status);
+            return const Constant(true);
+          })
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .watch();
   }

@@ -225,26 +225,33 @@ class AnilistGraphqlDatasource {
     return activities.where((a) => a['media'] != null).toList();
   }
 
-  /// Fetch user anime list (requires token).
-  Future<List<Map<String, dynamic>>> fetchUserAnimeList(
+  /// Fetch user media list by type (ANIME or MANGA). Requires token.
+  Future<List<Map<String, dynamic>>> fetchUserMediaList(
     String token,
-    String userName,
-  ) async {
+    String userName, {
+    required String type,
+  }) async {
     const query = r'''
-      query ($userName: String) {
-        MediaListCollection(userName: $userName, type: ANIME) {
+      query ($userName: String, $type: MediaType) {
+        MediaListCollection(userName: $userName, type: $type) {
           lists {
             name
             entries {
               id
               status
-              score
+              score(format: POINT_10)
               progress
+              progressVolumes
+              notes
               media {
                 id
+                type
                 title { romaji english }
                 coverImage { large }
                 episodes
+                chapters
+                volumes
+                format
               }
             }
           }
@@ -253,7 +260,7 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(
       query,
-      variables: {'userName': userName},
+      variables: {'userName': userName, 'type': type},
       token: token,
     );
     final lists = (data['data']?['MediaListCollection']?['lists'] as List?) ??
@@ -275,6 +282,43 @@ class AnilistGraphqlDatasource {
           id
           name
           avatar { medium }
+        }
+      }
+    ''';
+    final data = await _post(query, token: token);
+    return data['data']?['Viewer'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch full user profile with statistics.
+  Future<Map<String, dynamic>?> fetchViewerProfile(String token) async {
+    const query = r'''
+      query {
+        Viewer {
+          id
+          name
+          about
+          avatar { large medium }
+          bannerImage
+          siteUrl
+          createdAt
+          statistics {
+            anime {
+              count
+              meanScore
+              minutesWatched
+              episodesWatched
+              genres(sort: COUNT_DESC, limit: 5) { genre count meanScore minutesWatched }
+              statuses { status count }
+            }
+            manga {
+              count
+              meanScore
+              chaptersRead
+              volumesRead
+              genres(sort: COUNT_DESC, limit: 5) { genre count meanScore chaptersRead }
+              statuses { status count }
+            }
+          }
         }
       }
     ''';

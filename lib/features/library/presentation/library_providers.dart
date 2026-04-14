@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
 part 'library_providers.g.dart';
@@ -9,14 +10,46 @@ part 'library_providers.g.dart';
 @riverpod
 Stream<List<LibraryEntry>> libraryByKind(
   LibraryByKindRef ref,
-  MediaKind kind,
-) {
+  MediaKind kind, {
+  String? status,
+}) {
   final db = ref.watch(databaseProvider);
-  return db.watchLibraryByKind(kind.code);
+  return db.watchLibraryByKind(kind.code, status: status);
 }
 
 @riverpod
-Stream<List<LibraryEntry>> libraryAll(LibraryAllRef ref) {
+Stream<List<LibraryEntry>> libraryAll(LibraryAllRef ref, {String? status}) {
   final db = ref.watch(databaseProvider);
-  return db.watchAllLibrary();
+  return db.watchAllLibrary(status: status);
+}
+
+@riverpod
+Stream<List<LibraryEntry>> libraryFiltered(
+  LibraryFilteredRef ref,
+  MediaKind? kind,
+  String? status,
+) {
+  final db = ref.watch(databaseProvider);
+  if (kind == null) {
+    return db.watchAllLibrary(status: status);
+  }
+  return db.watchLibraryByKind(kind.code, status: status);
+}
+
+/// Default status filter for the library (stored in SharedPreferences).
+@riverpod
+class DefaultLibraryFilter extends _$DefaultLibraryFilter {
+  static const _key = 'default_library_filter';
+
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getString(_key) ?? 'CURRENT';
+  }
+
+  Future<void> set(String status) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, status);
+    state = status;
+  }
 }

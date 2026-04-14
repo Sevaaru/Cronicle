@@ -442,6 +442,26 @@ class _AnilistMediaDetailProviderElement
   int get mediaId => (origin as AnilistMediaDetailProvider).mediaId;
 }
 
+String _$anilistProfileHash() => r'5db6478c90720d03d1a8f9d9dec4c26f09733e9c';
+
+/// Full Anilist user profile with statistics (requires auth).
+///
+/// Copied from [anilistProfile].
+@ProviderFor(anilistProfile)
+final anilistProfileProvider =
+    AutoDisposeFutureProvider<Map<String, dynamic>?>.internal(
+      anilistProfile,
+      name: r'anilistProfileProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistProfileHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AnilistProfileRef = AutoDisposeFutureProviderRef<Map<String, dynamic>?>;
 String _$anilistTokenHash() => r'1dac5649107efbd1e0acae1952c5cc1b05dd6e10';
 
 /// See also [AnilistToken].

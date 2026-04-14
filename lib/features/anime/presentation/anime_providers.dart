@@ -193,3 +193,12 @@ Future<Map<String, dynamic>?> anilistMediaDetail(
   final graphql = ref.read(anilistGraphqlProvider);
   return graphql.fetchMediaDetail(mediaId);
 }
+
+/// Full Anilist user profile with statistics (requires auth).
+@riverpod
+Future<Map<String, dynamic>?> anilistProfile(AnilistProfileRef ref) async {
+  final token = await ref.watch(anilistTokenProvider.future);
+  if (token == null) return null;
+  final graphql = ref.read(anilistGraphqlProvider);
+  return graphql.fetchViewerProfile(token);
+}

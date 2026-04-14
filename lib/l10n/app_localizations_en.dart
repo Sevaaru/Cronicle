@@ -36,6 +36,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navGames => 'Games';
 
   @override
+  String get navProfile => 'Profile';
+
+  @override
   String get navSettings => 'Settings';
 
   @override

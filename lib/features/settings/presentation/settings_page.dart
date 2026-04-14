@@ -1,18 +1,18 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/backup/backup_repository_provider.dart';
-import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/errors/app_failure.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -85,6 +85,10 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Library default filter
+          _DefaultFilterSection(),
           const SizedBox(height: 12),
 
           // Anilist
@@ -340,30 +344,174 @@ class _AnilistSection extends ConsumerWidget {
                 child: FilledButton.icon(
                   icon: const Icon(Icons.login, size: 18),
                   label: const Text('Conectar Anilist'),
-                  onPressed: () {
-                    if (EnvConfig.anilistClientId.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'ANILIST_CLIENT_ID no configurado. '
-                            'Usa --dart-define al ejecutar.',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    final auth = ref.read(anilistAuthProvider);
-                    launchUrl(
-                      Uri.parse(auth.authorizeUrl),
-                      mode: LaunchMode.externalApplication,
-                    );
-                  },
+                  onPressed: () => _startAnilistLogin(context, ref),
                 ),
               );
             },
           ),
         ],
       ),
+    );
+  }
+
+  void _startAnilistLogin(BuildContext context, WidgetRef ref) {
+    final auth = ref.read(anilistAuthProvider);
+    final controller = TextEditingController();
+    final cs = Theme.of(context).colorScheme;
+
+    // Abre Anilist inmediatamente
+    launchUrl(
+      Uri.parse(auth.authorizeUrl),
+      mode: LaunchMode.externalApplication,
+    );
+
+    // Muestra el diálogo para pegar el token al volver
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.animation_rounded, color: cs.primary, size: 22),
+            const SizedBox(width: 8),
+            const Text('Conectar Anilist'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withAlpha(50),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _StepRow(number: '1', text: 'Autoriza Cronicle en la pestaña que se abrió', cs: cs),
+                  const SizedBox(height: 6),
+                  _StepRow(number: '2', text: 'Copia el token que aparece en pantalla', cs: cs),
+                  const SizedBox(height: 6),
+                  _StepRow(number: '3', text: 'Vuelve aquí y pégalo abajo', cs: cs),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: 'Token de Anilist',
+                hintText: 'Pega el token aquí',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.key, size: 20),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.content_paste_go, size: 20),
+                  tooltip: 'Pegar del portapapeles',
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null) {
+                      controller.text = data!.text!;
+                    }
+                  },
+                ),
+              ),
+              maxLines: 1,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('Conectar'),
+            onPressed: () async {
+              final token = controller.text.trim();
+              if (token.isEmpty) return;
+              await ref.read(anilistTokenProvider.notifier).setToken(token);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: const Text('¡Conectado con Anilist!'),
+                  backgroundColor: Colors.green.shade700,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DefaultFilterSection extends ConsumerWidget {
+  static const _options = [
+    ('CURRENT', 'Viendo'),
+    ('PLANNING', 'Planeado'),
+    ('COMPLETED', 'Completado'),
+    ('PAUSED', 'Pausado'),
+    ('DROPPED', 'Abandonado'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(defaultLibraryFilterProvider);
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Filtro por defecto en Biblioteca',
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(
+            'Al abrir la biblioteca se mostrará este estado',
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _options.map((o) {
+              final selected = current == o.$1;
+              return ChoiceChip(
+                selected: selected,
+                label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+                onSelected: (_) =>
+                    ref.read(defaultLibraryFilterProvider.notifier).set(o.$1),
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.number, required this.text, required this.cs});
+  final String number;
+  final String text;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 10,
+          backgroundColor: cs.primary,
+          child: Text(number, style: TextStyle(fontSize: 11, color: cs.onPrimary, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: cs.onSurface))),
+      ],
     );
   }
 }

@@ -6,7 +6,7 @@ part of 'library_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$libraryByKindHash() => r'5deadd2a436b74e5a071be4db74577c54a5f9567';
+String _$libraryByKindHash() => r'cb37c78deb75ef2411c25c0d9d8090fea8a42cec';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -39,15 +39,15 @@ class LibraryByKindFamily extends Family<AsyncValue<List<LibraryEntry>>> {
   const LibraryByKindFamily();
 
   /// See also [libraryByKind].
-  LibraryByKindProvider call(MediaKind kind) {
-    return LibraryByKindProvider(kind);
+  LibraryByKindProvider call(MediaKind kind, {String? status}) {
+    return LibraryByKindProvider(kind, status: status);
   }
 
   @override
   LibraryByKindProvider getProviderOverride(
     covariant LibraryByKindProvider provider,
   ) {
-    return call(provider.kind);
+    return call(provider.kind, status: provider.status);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -69,9 +69,9 @@ class LibraryByKindFamily extends Family<AsyncValue<List<LibraryEntry>>> {
 class LibraryByKindProvider
     extends AutoDisposeStreamProvider<List<LibraryEntry>> {
   /// See also [libraryByKind].
-  LibraryByKindProvider(MediaKind kind)
+  LibraryByKindProvider(MediaKind kind, {String? status})
     : this._internal(
-        (ref) => libraryByKind(ref as LibraryByKindRef, kind),
+        (ref) => libraryByKind(ref as LibraryByKindRef, kind, status: status),
         from: libraryByKindProvider,
         name: r'libraryByKindProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -81,6 +81,7 @@ class LibraryByKindProvider
         allTransitiveDependencies:
             LibraryByKindFamily._allTransitiveDependencies,
         kind: kind,
+        status: status,
       );
 
   LibraryByKindProvider._internal(
@@ -91,9 +92,11 @@ class LibraryByKindProvider
     required super.debugGetCreateSourceHash,
     required super.from,
     required this.kind,
+    required this.status,
   }) : super.internal();
 
   final MediaKind kind;
+  final String? status;
 
   @override
   Override overrideWith(
@@ -109,6 +112,7 @@ class LibraryByKindProvider
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
         kind: kind,
+        status: status,
       ),
     );
   }
@@ -120,13 +124,16 @@ class LibraryByKindProvider
 
   @override
   bool operator ==(Object other) {
-    return other is LibraryByKindProvider && other.kind == kind;
+    return other is LibraryByKindProvider &&
+        other.kind == kind &&
+        other.status == status;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, kind.hashCode);
+    hash = _SystemHash.combine(hash, status.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -137,6 +144,9 @@ class LibraryByKindProvider
 mixin LibraryByKindRef on AutoDisposeStreamProviderRef<List<LibraryEntry>> {
   /// The parameter `kind` of this provider.
   MediaKind get kind;
+
+  /// The parameter `status` of this provider.
+  String? get status;
 }
 
 class _LibraryByKindProviderElement
@@ -146,25 +156,280 @@ class _LibraryByKindProviderElement
 
   @override
   MediaKind get kind => (origin as LibraryByKindProvider).kind;
+  @override
+  String? get status => (origin as LibraryByKindProvider).status;
 }
 
-String _$libraryAllHash() => r'e4d718950e1fe053ee5f0c38867406a0be5aaad9';
+String _$libraryAllHash() => r'26a55144f980d5222643e2725962e19a7869e9dd';
 
 /// See also [libraryAll].
 @ProviderFor(libraryAll)
-final libraryAllProvider =
-    AutoDisposeStreamProvider<List<LibraryEntry>>.internal(
-      libraryAll,
-      name: r'libraryAllProvider',
+const libraryAllProvider = LibraryAllFamily();
+
+/// See also [libraryAll].
+class LibraryAllFamily extends Family<AsyncValue<List<LibraryEntry>>> {
+  /// See also [libraryAll].
+  const LibraryAllFamily();
+
+  /// See also [libraryAll].
+  LibraryAllProvider call({String? status}) {
+    return LibraryAllProvider(status: status);
+  }
+
+  @override
+  LibraryAllProvider getProviderOverride(
+    covariant LibraryAllProvider provider,
+  ) {
+    return call(status: provider.status);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'libraryAllProvider';
+}
+
+/// See also [libraryAll].
+class LibraryAllProvider extends AutoDisposeStreamProvider<List<LibraryEntry>> {
+  /// See also [libraryAll].
+  LibraryAllProvider({String? status})
+    : this._internal(
+        (ref) => libraryAll(ref as LibraryAllRef, status: status),
+        from: libraryAllProvider,
+        name: r'libraryAllProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$libraryAllHash,
+        dependencies: LibraryAllFamily._dependencies,
+        allTransitiveDependencies: LibraryAllFamily._allTransitiveDependencies,
+        status: status,
+      );
+
+  LibraryAllProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.status,
+  }) : super.internal();
+
+  final String? status;
+
+  @override
+  Override overrideWith(
+    Stream<List<LibraryEntry>> Function(LibraryAllRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: LibraryAllProvider._internal(
+        (ref) => create(ref as LibraryAllRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        status: status,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<LibraryEntry>> createElement() {
+    return _LibraryAllProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LibraryAllProvider && other.status == status;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, status.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LibraryAllRef on AutoDisposeStreamProviderRef<List<LibraryEntry>> {
+  /// The parameter `status` of this provider.
+  String? get status;
+}
+
+class _LibraryAllProviderElement
+    extends AutoDisposeStreamProviderElement<List<LibraryEntry>>
+    with LibraryAllRef {
+  _LibraryAllProviderElement(super.provider);
+
+  @override
+  String? get status => (origin as LibraryAllProvider).status;
+}
+
+String _$libraryFilteredHash() => r'292cf50ec6bb843d7b2a4f528ee2d6437c898362';
+
+/// See also [libraryFiltered].
+@ProviderFor(libraryFiltered)
+const libraryFilteredProvider = LibraryFilteredFamily();
+
+/// See also [libraryFiltered].
+class LibraryFilteredFamily extends Family<AsyncValue<List<LibraryEntry>>> {
+  /// See also [libraryFiltered].
+  const LibraryFilteredFamily();
+
+  /// See also [libraryFiltered].
+  LibraryFilteredProvider call(MediaKind? kind, String? status) {
+    return LibraryFilteredProvider(kind, status);
+  }
+
+  @override
+  LibraryFilteredProvider getProviderOverride(
+    covariant LibraryFilteredProvider provider,
+  ) {
+    return call(provider.kind, provider.status);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'libraryFilteredProvider';
+}
+
+/// See also [libraryFiltered].
+class LibraryFilteredProvider
+    extends AutoDisposeStreamProvider<List<LibraryEntry>> {
+  /// See also [libraryFiltered].
+  LibraryFilteredProvider(MediaKind? kind, String? status)
+    : this._internal(
+        (ref) => libraryFiltered(ref as LibraryFilteredRef, kind, status),
+        from: libraryFilteredProvider,
+        name: r'libraryFilteredProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$libraryFilteredHash,
+        dependencies: LibraryFilteredFamily._dependencies,
+        allTransitiveDependencies:
+            LibraryFilteredFamily._allTransitiveDependencies,
+        kind: kind,
+        status: status,
+      );
+
+  LibraryFilteredProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.kind,
+    required this.status,
+  }) : super.internal();
+
+  final MediaKind? kind;
+  final String? status;
+
+  @override
+  Override overrideWith(
+    Stream<List<LibraryEntry>> Function(LibraryFilteredRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: LibraryFilteredProvider._internal(
+        (ref) => create(ref as LibraryFilteredRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        kind: kind,
+        status: status,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<LibraryEntry>> createElement() {
+    return _LibraryFilteredProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LibraryFilteredProvider &&
+        other.kind == kind &&
+        other.status == status;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, kind.hashCode);
+    hash = _SystemHash.combine(hash, status.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LibraryFilteredRef on AutoDisposeStreamProviderRef<List<LibraryEntry>> {
+  /// The parameter `kind` of this provider.
+  MediaKind? get kind;
+
+  /// The parameter `status` of this provider.
+  String? get status;
+}
+
+class _LibraryFilteredProviderElement
+    extends AutoDisposeStreamProviderElement<List<LibraryEntry>>
+    with LibraryFilteredRef {
+  _LibraryFilteredProviderElement(super.provider);
+
+  @override
+  MediaKind? get kind => (origin as LibraryFilteredProvider).kind;
+  @override
+  String? get status => (origin as LibraryFilteredProvider).status;
+}
+
+String _$defaultLibraryFilterHash() =>
+    r'3927bc801ac465380f89278b6c30d96e5844f810';
+
+/// Default status filter for the library (stored in SharedPreferences).
+///
+/// Copied from [DefaultLibraryFilter].
+@ProviderFor(DefaultLibraryFilter)
+final defaultLibraryFilterProvider =
+    AutoDisposeNotifierProvider<DefaultLibraryFilter, String>.internal(
+      DefaultLibraryFilter.new,
+      name: r'defaultLibraryFilterProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
-          : _$libraryAllHash,
+          : _$defaultLibraryFilterHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef LibraryAllRef = AutoDisposeStreamProviderRef<List<LibraryEntry>>;
+typedef _$DefaultLibraryFilter = AutoDisposeNotifier<String>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

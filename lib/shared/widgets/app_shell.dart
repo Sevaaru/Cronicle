@@ -42,6 +42,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         label: l10n.navSearch,
       ),
       GlassNavItem(
+        icon: Icons.person_outlined,
+        activeIcon: Icons.person_rounded,
+        label: l10n.navProfile,
+      ),
+      GlassNavItem(
         icon: Icons.settings_outlined,
         activeIcon: Icons.settings_rounded,
         label: l10n.navSettings,

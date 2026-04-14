@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
@@ -50,12 +49,10 @@ Future<bool> showAddToLibrarySheet({
 
       if (choice == 'connect' && context.mounted) {
         final auth = ref.read(anilistAuthProvider);
-        if (EnvConfig.anilistClientId.isNotEmpty) {
-          await launchUrl(
-            Uri.parse(auth.authorizeUrl),
-            mode: LaunchMode.externalApplication,
-          );
-        }
+        await launchUrl(
+          Uri.parse(auth.authorizeUrl),
+          mode: LaunchMode.externalApplication,
+        );
       }
     }
   }

@@ -152,6 +152,12 @@ abstract class AppLocalizations {
   /// **'Juegos'**
   String get navGames;
 
+  /// No description provided for @navProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil'**
+  String get navProfile;
+
   /// No description provided for @navSettings.
   ///
   /// In es, this message translates to:

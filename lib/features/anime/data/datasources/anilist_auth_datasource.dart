@@ -1,7 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:cronicle/core/config/env_config.dart';
-
 /// Manages Anilist OAuth tokens via secure storage.
 class AnilistAuthDatasource {
   AnilistAuthDatasource(this._storage);
@@ -10,12 +8,14 @@ class AnilistAuthDatasource {
   static const _tokenKey = 'anilist_access_token';
   static const _userNameKey = 'anilist_user_name';
 
-  /// OAuth authorize URL for Anilist implicit grant.
-  String get authorizeUrl {
-    final clientId = EnvConfig.anilistClientId;
-    return 'https://anilist.co/api/v2/oauth/authorize'
-        '?client_id=$clientId&response_type=token';
-  }
+  static const anilistClientId = '39257';
+
+  /// Authorize URL — sin redirect_uri para que Anilist use el registrado.
+  /// Si el redirect registrado es el callback, redirige automáticamente.
+  /// Si es el de PIN, muestra la página para copiar el token.
+  String get authorizeUrl =>
+      'https://anilist.co/api/v2/oauth/authorize'
+      '?client_id=$anilistClientId&response_type=token';
 
   Future<String?> getToken() => _storage.read(key: _tokenKey);
 

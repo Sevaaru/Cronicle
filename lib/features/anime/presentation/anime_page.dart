@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
@@ -31,20 +30,10 @@ class _AnimePageState extends ConsumerState<AnimePage> {
 
   Future<void> _connectAnilist() async {
     final auth = ref.read(anilistAuthProvider);
-    final url = auth.authorizeUrl;
-    if (EnvConfig.anilistClientId.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'ANILIST_CLIENT_ID no configurado. '
-            'Usa --dart-define=ANILIST_CLIENT_ID=... al ejecutar.',
-          ),
-        ),
-      );
-      return;
-    }
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    await launchUrl(
+      Uri.parse(auth.authorizeUrl),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> anime) async {
