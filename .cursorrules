@@ -1,0 +1,14 @@
+- Strict Clean Architecture: presentation → domain → data (never the reverse).
+- State: Riverpod 2.5+ with AsyncNotifier / Notifier; prefer `@riverpod` + codegen (`riverpod_generator`, `build_runner`).
+- Never use `setState` for app state; use Riverpod only.
+- Immutable models: `freezed` and/or `json_serializable` as appropriate.
+- APIs: separate RemoteDataSource + LocalDataSource, Repository, UseCases in each feature.
+- Domain errors: `fpdart` Either (`AppResult<T>`) or an explicit Result type; map to UI in presentation.
+- Offline-first: read local DB first, sync when connectivity allows (`connectivity_plus` + repositories).
+- Navigation: `GoRouter` (see `lib/core/router/app_router.dart`).
+- UI: Material 3, responsive, **dark mode by default** (user can switch in Settings).
+- Naming: camelCase variables, PascalCase types/classes.
+- Comments: English for non-obvious or cross-cutting logic only.
+- Secrets (TMDB, Twitch/IGDB, OAuth client IDs): `--dart-define` or untracked env files; never commit keys.
+- Codegen: run `dart run build_runner watch` or `build` after changing `@DriftDatabase`, `@riverpod`, `freezed`, etc.
+- Google Sign-In uses `google_sign_in` 7.x: `GoogleSignIn.instance.initialize()` once in `main`, then `authenticate` / `authorizationClient` for scopes (e.g. Drive `appDataFolder`).
