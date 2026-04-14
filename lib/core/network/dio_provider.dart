@@ -7,8 +7,8 @@ part 'dio_provider.g.dart';
 Dio dio(DioRef ref) {
   final dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
     ),
   );
   assert(() {

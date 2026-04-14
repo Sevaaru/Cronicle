@@ -4,11 +4,15 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:cronicle/core/backup/backup_repository_provider.dart';
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/errors/app_failure.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
+import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -81,6 +85,10 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+
+          // Anilist
+          _AnilistSection(),
           const SizedBox(height: 12),
 
           // Google account
@@ -260,5 +268,102 @@ class SettingsPage extends ConsumerWidget {
     };
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+class _AnilistSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tokenAsync = ref.watch(anilistTokenProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.animation_rounded, size: 20, color: cs.primary),
+              const SizedBox(width: 8),
+              Text('Anilist', style: Theme.of(context).textTheme.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Sincroniza tu lista de anime y manga',
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          tokenAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (_, _) => const Text('Error al verificar token'),
+            data: (token) {
+              if (token != null) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 18, color: Colors.green.shade400),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Conectado',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.logout, size: 18),
+                        label: const Text('Desconectar Anilist'),
+                        onPressed: () async {
+                          await ref.read(anilistTokenProvider.notifier).clearToken();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Desconectado de Anilist')),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.login, size: 18),
+                  label: const Text('Conectar Anilist'),
+                  onPressed: () {
+                    if (EnvConfig.anilistClientId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'ANILIST_CLIENT_ID no configurado. '
+                            'Usa --dart-define al ejecutar.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final auth = ref.read(anilistAuthProvider);
+                    launchUrl(
+                      Uri.parse(auth.authorizeUrl),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 }

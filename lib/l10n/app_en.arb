@@ -25,7 +25,7 @@
   "googleSignOut": "Sign out of Google",
   "backupTitle": "Google Drive backup",
   "backupStubMessage": "Full backup to the app data folder will be available in a future version.",
-  "feedTitle": "Global Activity",
+  "feedTitle": "Home",
   "feedEmpty": "No recent activity.",
   "feedRetry": "Retry",
   "libraryEmpty": "Your list is empty.",

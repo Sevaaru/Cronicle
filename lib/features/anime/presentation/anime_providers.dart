@@ -90,35 +90,102 @@ FeedActivity _mapActivity(Map<String, dynamic> a) {
 }
 
 @riverpod
-Future<List<FeedActivity>> anilistFeed(AnilistFeedRef ref) async {
-  final graphql = ref.read(anilistGraphqlProvider);
-  final animeRaw = await graphql.fetchRecentActivityByType(
-      activityType: 'ANIME_LIST', perPage: 20);
-  final mangaRaw = await graphql.fetchRecentActivityByType(
-      activityType: 'MANGA_LIST', perPage: 20);
+class AnilistFeed extends _$AnilistFeed {
+  static const _perPage = 15;
+  int _animePage = 1;
+  int _mangaPage = 1;
+  bool _hasMore = true;
 
-  final all = [
-    ...animeRaw.map(_mapActivity),
-    ...mangaRaw.map(_mapActivity),
-  ];
-  all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-  return all;
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<FeedActivity>> build() async {
+    _animePage = 1;
+    _mangaPage = 1;
+    _hasMore = true;
+    return _fetchPage();
+  }
+
+  Future<List<FeedActivity>> _fetchPage() async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final results = await Future.wait([
+      graphql.fetchRecentActivityByType(
+          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage),
+      graphql.fetchRecentActivityByType(
+          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage),
+    ]);
+    if (results[0].length < _perPage && results[1].length < _perPage) {
+      _hasMore = false;
+    }
+    final items = [
+      ...results[0].map(_mapActivity),
+      ...results[1].map(_mapActivity),
+    ];
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || state.isLoading) return;
+    _animePage++;
+    _mangaPage++;
+    final prev = state.valueOrNull ?? [];
+    state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
+    try {
+      final next = await _fetchPage();
+      if (next.isEmpty) _hasMore = false;
+      state = AsyncData([...prev, ...next]);
+    } catch (e, st) {
+      _animePage--;
+      _mangaPage--;
+      state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
+    }
+  }
 }
 
 @riverpod
-Future<List<FeedActivity>> anilistFeedByType(
-  AnilistFeedByTypeRef ref,
-  String activityType,
-) async {
-  final graphql = ref.read(anilistGraphqlProvider);
-  final raw = await graphql.fetchRecentActivityByType(
-    activityType: activityType,
-    perPage: 30,
-  );
-  return raw.map(_mapActivity).toList();
+class AnilistFeedByType extends _$AnilistFeedByType {
+  static const _perPage = 15;
+  int _page = 1;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<FeedActivity>> build(String activityType) async {
+    _page = 1;
+    _hasMore = true;
+    return _fetchPage();
+  }
+
+  Future<List<FeedActivity>> _fetchPage() async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final raw = await graphql.fetchRecentActivityByType(
+      activityType: activityType,
+      page: _page,
+      perPage: _perPage,
+    );
+    if (raw.length < _perPage) _hasMore = false;
+    return raw.map(_mapActivity).toList();
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || state.isLoading) return;
+    _page++;
+    final prev = state.valueOrNull ?? [];
+    state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
+    try {
+      final next = await _fetchPage();
+      if (next.isEmpty) _hasMore = false;
+      state = AsyncData([...prev, ...next]);
+    } catch (e, st) {
+      _page--;
+      state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
+    }
+  }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<Map<String, dynamic>?> anilistMediaDetail(
   AnilistMediaDetailRef ref,
   int mediaId,

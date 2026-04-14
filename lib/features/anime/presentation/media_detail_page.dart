@@ -4,12 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:cronicle/core/database/app_database.dart';
-import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:drift/drift.dart' as drift;
 
 class MediaDetailPage extends ConsumerWidget {
   const MediaDetailPage({
@@ -190,7 +188,11 @@ class _DetailContent extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+
+                // Add to library button
+                _AddToLibraryButton(media: media, kind: kind),
+                const SizedBox(height: 12),
 
                 // Score section
                 if (score != null || meanScore != null)
@@ -287,9 +289,6 @@ class _DetailContent extends StatelessWidget {
 
                 // Score distribution
                 _buildScoreDistribution(colorScheme),
-
-                // Add to library button
-                _AddToLibraryButton(media: media, kind: kind),
 
                 const SizedBox(height: 100),
               ],
@@ -772,34 +771,13 @@ class _AddToLibraryButton extends ConsumerWidget {
           icon: const Icon(Icons.add),
           label: const Text('Añadir a biblioteca'),
           onPressed: () async {
-            final db = ref.read(databaseProvider);
-            final title = media['title'] as Map<String, dynamic>? ?? {};
-            final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
-            final isManga = (media['type'] as String?) == 'MANGA';
-
-            await db.upsertLibraryEntry(
-              LibraryEntriesCompanion(
-                kind: drift.Value(kind.code),
-                externalId: drift.Value(media['id'].toString()),
-                title: drift.Value(
-                  (title['english'] as String?) ??
-                      (title['romaji'] as String?) ??
-                      'Unknown',
-                ),
-                posterUrl: drift.Value(
-                  (coverImage['extraLarge'] as String?) ??
-                      (coverImage['large'] as String?),
-                ),
-                status: const drift.Value('planning'),
-                totalEpisodes: drift.Value(
-                  isManga
-                      ? (media['chapters'] as int?)
-                      : (media['episodes'] as int?),
-                ),
-                updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
-              ),
+            final added = await showAddToLibrarySheet(
+              context: context,
+              ref: ref,
+              item: media,
+              kind: kind,
             );
-            if (!context.mounted) return;
+            if (!context.mounted || !added) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Añadido a la biblioteca')),
             );

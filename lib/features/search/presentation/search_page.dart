@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'package:cronicle/core/database/app_database.dart';
-import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:drift/drift.dart' as drift;
 
 enum _SearchFilter {
   all,
@@ -56,29 +54,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
-    final db = ref.read(databaseProvider);
-    final title = item['title'] as Map<String, dynamic>? ?? {};
-    final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
-
-    await db.upsertLibraryEntry(
-      LibraryEntriesCompanion(
-        kind: drift.Value(kind.code),
-        externalId: drift.Value(item['id'].toString()),
-        title: drift.Value(
-          (title['english'] as String?) ??
-              (title['romaji'] as String?) ??
-              (item['name'] as String?) ??
-              'Unknown',
-        ),
-        posterUrl: drift.Value(coverImage['large'] as String?),
-        status: const drift.Value('planning'),
-        totalEpisodes: drift.Value(
-          (item['episodes'] as int?) ?? (item['chapters'] as int?),
-        ),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
-      ),
+    final added = await showAddToLibrarySheet(
+      context: context,
+      ref: ref,
+      item: item,
+      kind: kind,
     );
-    if (!mounted) return;
+    if (!mounted || !added) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Añadido a la biblioteca')),
     );

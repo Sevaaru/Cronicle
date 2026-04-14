@@ -52,7 +52,13 @@ class AppDatabase extends _$AppDatabase {
       );
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'cronicle.db');
+    return driftDatabase(
+      name: 'cronicle.db',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.dart.js'),
+      ),
+    );
   }
 
   // Key-value helpers

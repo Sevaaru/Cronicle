@@ -85,7 +85,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'La copia completa a la carpeta de datos de la app estará disponible en una próxima versión.';
 
   @override
-  String get feedTitle => 'Actividad Global';
+  String get feedTitle => 'Inicio';
 
   @override
   String get feedEmpty => 'No hay actividad reciente.';

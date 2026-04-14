@@ -319,148 +319,8 @@ class _AnilistSearchProviderElement
   String get type => (origin as AnilistSearchProvider).type;
 }
 
-String _$anilistFeedHash() => r'6be990c4ca1f69396388f3f5f04ed847cfcce542';
-
-/// See also [anilistFeed].
-@ProviderFor(anilistFeed)
-final anilistFeedProvider =
-    AutoDisposeFutureProvider<List<FeedActivity>>.internal(
-      anilistFeed,
-      name: r'anilistFeedProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$anilistFeedHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef AnilistFeedRef = AutoDisposeFutureProviderRef<List<FeedActivity>>;
-String _$anilistFeedByTypeHash() => r'bea56e830c6919b5d172d8b79d382b0ec0426cf4';
-
-/// See also [anilistFeedByType].
-@ProviderFor(anilistFeedByType)
-const anilistFeedByTypeProvider = AnilistFeedByTypeFamily();
-
-/// See also [anilistFeedByType].
-class AnilistFeedByTypeFamily extends Family<AsyncValue<List<FeedActivity>>> {
-  /// See also [anilistFeedByType].
-  const AnilistFeedByTypeFamily();
-
-  /// See also [anilistFeedByType].
-  AnilistFeedByTypeProvider call(String activityType) {
-    return AnilistFeedByTypeProvider(activityType);
-  }
-
-  @override
-  AnilistFeedByTypeProvider getProviderOverride(
-    covariant AnilistFeedByTypeProvider provider,
-  ) {
-    return call(provider.activityType);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'anilistFeedByTypeProvider';
-}
-
-/// See also [anilistFeedByType].
-class AnilistFeedByTypeProvider
-    extends AutoDisposeFutureProvider<List<FeedActivity>> {
-  /// See also [anilistFeedByType].
-  AnilistFeedByTypeProvider(String activityType)
-    : this._internal(
-        (ref) => anilistFeedByType(ref as AnilistFeedByTypeRef, activityType),
-        from: anilistFeedByTypeProvider,
-        name: r'anilistFeedByTypeProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$anilistFeedByTypeHash,
-        dependencies: AnilistFeedByTypeFamily._dependencies,
-        allTransitiveDependencies:
-            AnilistFeedByTypeFamily._allTransitiveDependencies,
-        activityType: activityType,
-      );
-
-  AnilistFeedByTypeProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.activityType,
-  }) : super.internal();
-
-  final String activityType;
-
-  @override
-  Override overrideWith(
-    FutureOr<List<FeedActivity>> Function(AnilistFeedByTypeRef provider) create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: AnilistFeedByTypeProvider._internal(
-        (ref) => create(ref as AnilistFeedByTypeRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        activityType: activityType,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeFutureProviderElement<List<FeedActivity>> createElement() {
-    return _AnilistFeedByTypeProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is AnilistFeedByTypeProvider &&
-        other.activityType == activityType;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, activityType.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin AnilistFeedByTypeRef on AutoDisposeFutureProviderRef<List<FeedActivity>> {
-  /// The parameter `activityType` of this provider.
-  String get activityType;
-}
-
-class _AnilistFeedByTypeProviderElement
-    extends AutoDisposeFutureProviderElement<List<FeedActivity>>
-    with AnilistFeedByTypeRef {
-  _AnilistFeedByTypeProviderElement(super.provider);
-
-  @override
-  String get activityType => (origin as AnilistFeedByTypeProvider).activityType;
-}
-
 String _$anilistMediaDetailHash() =>
-    r'aad75ffad615d2f84f688cafb73c9dab95d9d350';
+    r'17dd9cd3f5738bef49acde282bd7c25f5d2dc374';
 
 /// See also [anilistMediaDetail].
 @ProviderFor(anilistMediaDetail)
@@ -500,8 +360,7 @@ class AnilistMediaDetailFamily
 }
 
 /// See also [anilistMediaDetail].
-class AnilistMediaDetailProvider
-    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+class AnilistMediaDetailProvider extends FutureProvider<Map<String, dynamic>?> {
   /// See also [anilistMediaDetail].
   AnilistMediaDetailProvider(int mediaId)
     : this._internal(
@@ -549,7 +408,7 @@ class AnilistMediaDetailProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+  FutureProviderElement<Map<String, dynamic>?> createElement() {
     return _AnilistMediaDetailProviderElement(this);
   }
 
@@ -569,14 +428,13 @@ class AnilistMediaDetailProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin AnilistMediaDetailRef
-    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+mixin AnilistMediaDetailRef on FutureProviderRef<Map<String, dynamic>?> {
   /// The parameter `mediaId` of this provider.
   int get mediaId;
 }
 
 class _AnilistMediaDetailProviderElement
-    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    extends FutureProviderElement<Map<String, dynamic>?>
     with AnilistMediaDetailRef {
   _AnilistMediaDetailProviderElement(super.provider);
 
@@ -600,5 +458,165 @@ final anilistTokenProvider =
     );
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
+String _$anilistFeedHash() => r'b81f77d1dddb003477e40647d02134e11e163f92';
+
+/// See also [AnilistFeed].
+@ProviderFor(AnilistFeed)
+final anilistFeedProvider =
+    AutoDisposeAsyncNotifierProvider<AnilistFeed, List<FeedActivity>>.internal(
+      AnilistFeed.new,
+      name: r'anilistFeedProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistFeedHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$AnilistFeed = AutoDisposeAsyncNotifier<List<FeedActivity>>;
+String _$anilistFeedByTypeHash() => r'22aea107ebbcb498b1ef674ea36ce0f24ec70388';
+
+abstract class _$AnilistFeedByType
+    extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
+  late final String activityType;
+
+  FutureOr<List<FeedActivity>> build(String activityType);
+}
+
+/// See also [AnilistFeedByType].
+@ProviderFor(AnilistFeedByType)
+const anilistFeedByTypeProvider = AnilistFeedByTypeFamily();
+
+/// See also [AnilistFeedByType].
+class AnilistFeedByTypeFamily extends Family<AsyncValue<List<FeedActivity>>> {
+  /// See also [AnilistFeedByType].
+  const AnilistFeedByTypeFamily();
+
+  /// See also [AnilistFeedByType].
+  AnilistFeedByTypeProvider call(String activityType) {
+    return AnilistFeedByTypeProvider(activityType);
+  }
+
+  @override
+  AnilistFeedByTypeProvider getProviderOverride(
+    covariant AnilistFeedByTypeProvider provider,
+  ) {
+    return call(provider.activityType);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistFeedByTypeProvider';
+}
+
+/// See also [AnilistFeedByType].
+class AnilistFeedByTypeProvider
+    extends
+        AutoDisposeAsyncNotifierProviderImpl<
+          AnilistFeedByType,
+          List<FeedActivity>
+        > {
+  /// See also [AnilistFeedByType].
+  AnilistFeedByTypeProvider(String activityType)
+    : this._internal(
+        () => AnilistFeedByType()..activityType = activityType,
+        from: anilistFeedByTypeProvider,
+        name: r'anilistFeedByTypeProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistFeedByTypeHash,
+        dependencies: AnilistFeedByTypeFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistFeedByTypeFamily._allTransitiveDependencies,
+        activityType: activityType,
+      );
+
+  AnilistFeedByTypeProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.activityType,
+  }) : super.internal();
+
+  final String activityType;
+
+  @override
+  FutureOr<List<FeedActivity>> runNotifierBuild(
+    covariant AnilistFeedByType notifier,
+  ) {
+    return notifier.build(activityType);
+  }
+
+  @override
+  Override overrideWith(AnilistFeedByType Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistFeedByTypeProvider._internal(
+        () => create()..activityType = activityType,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        activityType: activityType,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<AnilistFeedByType, List<FeedActivity>>
+  createElement() {
+    return _AnilistFeedByTypeProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistFeedByTypeProvider &&
+        other.activityType == activityType;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, activityType.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistFeedByTypeRef
+    on AutoDisposeAsyncNotifierProviderRef<List<FeedActivity>> {
+  /// The parameter `activityType` of this provider.
+  String get activityType;
+}
+
+class _AnilistFeedByTypeProviderElement
+    extends
+        AutoDisposeAsyncNotifierProviderElement<
+          AnilistFeedByType,
+          List<FeedActivity>
+        >
+    with AnilistFeedByTypeRef {
+  _AnilistFeedByTypeProviderElement(super.provider);
+
+  @override
+  String get activityType => (origin as AnilistFeedByTypeProvider).activityType;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

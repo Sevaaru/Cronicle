@@ -251,7 +251,7 @@ abstract class AppLocalizations {
   /// No description provided for @feedTitle.
   ///
   /// In es, this message translates to:
-  /// **'Actividad Global'**
+  /// **'Inicio'**
   String get feedTitle;
 
   /// No description provided for @feedEmpty.

@@ -70,6 +70,30 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     }
   }
 
+  void _loadMore() {
+    switch (_filter) {
+      case _FeedFilter.all:
+        ref.read(anilistFeedProvider.notifier).loadMore();
+      case _FeedFilter.anime:
+        ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).loadMore();
+      case _FeedFilter.manga:
+        ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).loadMore();
+      default:
+        break;
+    }
+  }
+
+  bool get _hasMore {
+    return switch (_filter) {
+      _FeedFilter.all => ref.read(anilistFeedProvider.notifier).hasMore,
+      _FeedFilter.anime =>
+        ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).hasMore,
+      _FeedFilter.manga =>
+        ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).hasMore,
+      _ => false,
+    };
+  }
+
   bool get _isPlaceholderFilter =>
       _filter == _FeedFilter.movie ||
       _filter == _FeedFilter.tv ||
@@ -82,7 +106,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appTitle),
+        title: Text(l10n.feedTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -92,7 +116,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       ),
       body: Column(
         children: [
-          // Filter chips
           SizedBox(
             height: 40,
             child: ListView.separated(
@@ -140,6 +163,8 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                 : _FeedList(
                     feedAsync: _getFilteredFeed(),
                     onRefresh: _invalidateFeed,
+                    onLoadMore: _loadMore,
+                    hasMore: _hasMore,
                     l10n: l10n,
                   ),
           ),
@@ -149,22 +174,55 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   }
 }
 
-class _FeedList extends StatelessWidget {
+class _FeedList extends StatefulWidget {
   const _FeedList({
     required this.feedAsync,
     required this.onRefresh,
+    required this.onLoadMore,
+    required this.hasMore,
     required this.l10n,
   });
 
   final AsyncValue<List<FeedActivity>> feedAsync;
   final VoidCallback onRefresh;
+  final VoidCallback onLoadMore;
+  final bool hasMore;
   final AppLocalizations l10n;
+
+  @override
+  State<_FeedList> createState() => _FeedListState();
+}
+
+class _FeedListState extends State<_FeedList> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!widget.hasMore) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final current = _scrollController.position.pixels;
+    if (current >= maxScroll - 200) {
+      widget.onLoadMore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return feedAsync.when(
+    return widget.feedAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(
         child: Column(
@@ -172,26 +230,34 @@ class _FeedList extends StatelessWidget {
           children: [
             Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
             const SizedBox(height: 12),
-            Text(l10n.errorNetwork),
+            Text(widget.l10n.errorNetwork),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: onRefresh,
-              child: Text(l10n.feedRetry),
+              onPressed: widget.onRefresh,
+              child: Text(widget.l10n.feedRetry),
             ),
           ],
         ),
       ),
       data: (activities) {
         if (activities.isEmpty) {
-          return Center(child: Text(l10n.feedEmpty));
+          return Center(child: Text(widget.l10n.feedEmpty));
         }
         return RefreshIndicator(
-          onRefresh: () async => onRefresh(),
+          onRefresh: () async => widget.onRefresh(),
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-            itemCount: activities.length,
-            itemBuilder: (context, i) =>
-                _ActivityCard(activity: activities[i]),
+            itemCount: activities.length + (widget.hasMore ? 1 : 0),
+            itemBuilder: (context, i) {
+              if (i >= activities.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              return _ActivityCard(activity: activities[i]);
+            },
           ),
         );
       },

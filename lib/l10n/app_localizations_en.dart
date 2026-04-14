@@ -85,7 +85,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full backup to the app data folder will be available in a future version.';
 
   @override
-  String get feedTitle => 'Global Activity';
+  String get feedTitle => 'Home';
 
   @override
   String get feedEmpty => 'No recent activity.';
