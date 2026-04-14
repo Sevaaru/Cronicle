@@ -7,6 +7,7 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -159,18 +160,21 @@ class _ProfileContent extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      image: banner != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(banner),
-                              fit: BoxFit.cover,
-                              colorFilter: ColorFilter.mode(
-                                  Colors.black.withAlpha(80), BlendMode.darken),
-                            )
-                          : null,
-                      color: banner == null ? cs.primaryContainer : null,
+                  GestureDetector(
+                    onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
+                    child: Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        image: banner != null
+                            ? DecorationImage(
+                                image: CachedNetworkImageProvider(banner),
+                                fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                    Colors.black.withAlpha(80), BlendMode.darken),
+                              )
+                            : null,
+                        color: banner == null ? cs.primaryContainer : null,
+                      ),
                     ),
                   ),
                   Positioned(
@@ -178,19 +182,22 @@ class _ProfileContent extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: cs.surface, width: 4),
-                          ),
-                          child: CircleAvatar(
-                            radius: 38,
-                            backgroundImage:
-                                avatar != null ? CachedNetworkImageProvider(avatar) : null,
-                            child: avatar == null
-                                ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                    style: const TextStyle(fontSize: 28))
-                                : null,
+                        GestureDetector(
+                          onTap: avatar != null ? () => showFullscreenImage(context, avatar) : null,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cs.surface, width: 4),
+                            ),
+                            child: CircleAvatar(
+                              radius: 38,
+                              backgroundImage:
+                                  avatar != null ? CachedNetworkImageProvider(avatar) : null,
+                              child: avatar == null
+                                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontSize: 28))
+                                  : null,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 14),

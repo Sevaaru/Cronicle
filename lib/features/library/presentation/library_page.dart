@@ -283,6 +283,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                             .removeEntry(entries[i].id);
                         ref.read(databaseProvider).deleteLibraryEntry(entries[i].id);
                       },
+                      onProgressUpdated: () {
+                        ref.invalidate(paginatedLibraryProvider(_params));
+                      },
                     );
                   },
                 );
@@ -436,12 +439,14 @@ class _EntryCard extends StatelessWidget {
     required this.entry,
     required this.ref,
     required this.onDelete,
+    required this.onProgressUpdated,
     this.selectedKind,
   });
 
   final LibraryEntry entry;
   final WidgetRef ref;
   final VoidCallback onDelete;
+  final VoidCallback onProgressUpdated;
   final MediaKind? selectedKind;
 
   @override
@@ -535,7 +540,7 @@ class _EntryCard extends StatelessWidget {
               ),
             ),
             if (showProgressButton)
-              _IncrementButton(entry: entry, ref: ref),
+              _IncrementButton(entry: entry, ref: ref, onUpdated: onProgressUpdated),
             IconButton(
               icon: Icon(Icons.delete_outline, size: 20, color: cs.error.withAlpha(150)),
               onPressed: onDelete,
@@ -561,9 +566,10 @@ class _EntryCard extends StatelessWidget {
 // Increment button
 // ---------------------------------------------------------------------------
 class _IncrementButton extends StatefulWidget {
-  const _IncrementButton({required this.entry, required this.ref});
+  const _IncrementButton({required this.entry, required this.ref, required this.onUpdated});
   final LibraryEntry entry;
   final WidgetRef ref;
+  final VoidCallback onUpdated;
 
   @override
   State<_IncrementButton> createState() => _IncrementButtonState();
@@ -578,6 +584,7 @@ class _IncrementButtonState extends State<_IncrementButton> {
     try {
       final db = widget.ref.read(databaseProvider);
       await db.incrementProgress(widget.entry.id);
+      widget.onUpdated();
       final kind = MediaKind.fromCode(widget.entry.kind);
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();

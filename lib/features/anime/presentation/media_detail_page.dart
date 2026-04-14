@@ -9,6 +9,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
 class MediaDetailPage extends ConsumerWidget {
   const MediaDetailPage({
@@ -81,38 +82,49 @@ class _DetailContent extends StatelessWidget {
 
     final bool isManga = (media['type'] as String?) == 'MANGA';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return CustomScrollView(
       slivers: [
         SliverAppBar(
           expandedHeight: banner != null ? 220 : 160,
           pinned: true,
+          iconTheme: IconThemeData(
+            color: banner != null ? Colors.white : (isDark ? Colors.white : Colors.black),
+          ),
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(
               fit: StackFit.expand,
               children: [
                 if (banner != null)
-                  CachedNetworkImage(
-                    imageUrl: banner,
-                    fit: BoxFit.cover,
-                    color: Colors.black45,
-                    colorBlendMode: BlendMode.darken,
+                  GestureDetector(
+                    onTap: () => showFullscreenImage(context, banner),
+                    child: CachedNetworkImage(
+                      imageUrl: banner,
+                      fit: BoxFit.cover,
+                      color: Colors.black45,
+                      colorBlendMode: BlendMode.darken,
+                    ),
                   )
                 else
                   Container(color: colorScheme.surfaceContainerHighest),
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: 0,
-                  height: 80,
+                  bottom: -1,
+                  height: 100,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.transparent,
+                          colorScheme.surface.withAlpha(0),
+                          colorScheme.surface.withAlpha(40),
+                          colorScheme.surface.withAlpha(120),
                           colorScheme.surface,
                         ],
+                        stops: const [0.0, 0.3, 0.7, 1.0],
                       ),
                     ),
                   ),
@@ -132,13 +144,16 @@ class _DetailContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (poster != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: poster,
-                          width: 100,
-                          height: 145,
-                          fit: BoxFit.cover,
+                      GestureDetector(
+                        onTap: () => showFullscreenImage(context, poster),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: CachedNetworkImage(
+                            imageUrl: poster,
+                            width: 100,
+                            height: 145,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     const SizedBox(width: 14),
@@ -332,6 +347,7 @@ class _DetailContent extends StatelessWidget {
   }
 
   Widget _buildStreamingLinks(ColorScheme cs, AppLocalizations l10n) {
+    final isDark = cs.brightness == Brightness.dark;
     final links = (media['externalLinks'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final streaming = (media['streamingEpisodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
@@ -347,22 +363,43 @@ class _DetailContent extends StatelessWidget {
           runSpacing: 8,
           children: links.where((l) => l['url'] != null).map((link) {
             final color = link['color'] as String?;
-            Color? bgColor;
+            Color? siteColor;
             if (color != null && color.startsWith('#')) {
-              bgColor = Color(int.parse('FF${color.substring(1)}', radix: 16));
+              siteColor = Color(int.parse('FF${color.substring(1)}', radix: 16));
             }
+
+            Color labelColor;
+            if (siteColor != null) {
+              final luminance = siteColor.computeLuminance();
+              if (!isDark && luminance > 0.6) {
+                labelColor = HSLColor.fromColor(siteColor)
+                    .withLightness(0.3)
+                    .toColor();
+              } else {
+                labelColor = siteColor;
+              }
+            } else {
+              labelColor = cs.primary;
+            }
+
             return ActionChip(
               avatar: link['icon'] != null
-                  ? CachedNetworkImage(
-                      imageUrl: link['icon'] as String,
-                      width: 18,
-                      height: 18,
-                      errorWidget: (_, _, _) => const Icon(Icons.link, size: 16),
+                  ? ColorFiltered(
+                      colorFilter: isDark
+                          ? const ColorFilter.mode(Colors.transparent, BlendMode.dst)
+                          : ColorFilter.mode(
+                              cs.onSurface.withAlpha(200), BlendMode.srcIn),
+                      child: CachedNetworkImage(
+                        imageUrl: link['icon'] as String,
+                        width: 18,
+                        height: 18,
+                        errorWidget: (_, _, _) => Icon(Icons.link, size: 16, color: labelColor),
+                      ),
                     )
-                  : const Icon(Icons.link, size: 16),
+                  : Icon(Icons.link, size: 16, color: labelColor),
               label: Text(
                 link['site'] as String? ?? 'Link',
-                style: TextStyle(fontSize: 12, color: bgColor ?? cs.primary),
+                style: TextStyle(fontSize: 12, color: labelColor),
               ),
               onPressed: () => launchUrl(Uri.parse(link['url'] as String)),
               visualDensity: VisualDensity.compact,

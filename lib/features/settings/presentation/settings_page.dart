@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -17,6 +19,7 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/core/utils/google_web_button.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -95,47 +98,7 @@ class SettingsPage extends ConsumerWidget {
           _AnilistSection(),
           const SizedBox(height: 12),
 
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.navAuth,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () async {
-                    try {
-                      await googleSignIn.authenticate(
-                        scopeHint: const [
-                          'email',
-                          'https://www.googleapis.com/auth/drive.appdata',
-                        ],
-                      );
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.connectedWithGoogle)),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.errorWithMessage(e))),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.login),
-                  label: Text(l10n.googleSignIn),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    await googleSignIn.signOut();
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: Text(l10n.googleSignOut),
-                ),
-              ],
-            ),
-          ),
+          _GoogleSection(googleSignIn: googleSignIn),
           const SizedBox(height: 12),
 
           GlassCard(
@@ -587,5 +550,66 @@ class _StepRow extends StatelessWidget {
         Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: cs.onSurface))),
       ],
     );
+  }
+}
+
+class _GoogleSection extends StatelessWidget {
+  const _GoogleSection({required this.googleSignIn});
+  final GoogleSignIn googleSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.navAuth, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 12),
+          if (kIsWeb)
+            _GoogleWebButton()
+          else
+            FilledButton.icon(
+              onPressed: () async {
+                try {
+                  await googleSignIn.authenticate(
+                    scopeHint: const [
+                      'email',
+                      'https://www.googleapis.com/auth/drive.appdata',
+                    ],
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.connectedWithGoogle)),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.errorWithMessage(e))),
+                  );
+                }
+              },
+              icon: const Icon(Icons.login),
+              label: Text(l10n.googleSignIn),
+            ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () async {
+              await googleSignIn.signOut();
+            },
+            icon: const Icon(Icons.logout),
+            label: Text(l10n.googleSignOut),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoogleWebButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return buildGoogleWebButton(context);
   }
 }
