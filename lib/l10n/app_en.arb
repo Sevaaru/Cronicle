@@ -102,7 +102,9 @@
   "searchErrorIn": "Error in {section}: {error}",
 
   "addToLibrary": "Add to library",
+  "editLibraryEntry": "Edit entry",
   "addedToLibrary": "Added to library",
+  "entryUpdated": "Entry updated",
 
   "profileTitle": "Profile",
   "profileLocalUser": "Local user",

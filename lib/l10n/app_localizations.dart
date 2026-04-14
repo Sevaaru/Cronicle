@@ -620,11 +620,23 @@ abstract class AppLocalizations {
   /// **'Añadir a biblioteca'**
   String get addToLibrary;
 
+  /// No description provided for @editLibraryEntry.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar entrada'**
+  String get editLibraryEntry;
+
   /// No description provided for @addedToLibrary.
   ///
   /// In es, this message translates to:
   /// **'Añadido a la biblioteca'**
   String get addedToLibrary;
+
+  /// No description provided for @entryUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrada actualizada'**
+  String get entryUpdated;
 
   /// No description provided for @profileTitle.
   ///

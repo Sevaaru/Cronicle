@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -41,11 +43,21 @@ class MediaDetailPage extends ConsumerWidget {
   }
 }
 
-class _DetailContent extends StatelessWidget {
+class _DetailContent extends StatefulWidget {
   const _DetailContent({required this.media, required this.kind});
 
   final Map<String, dynamic> media;
   final MediaKind kind;
+
+  @override
+  State<_DetailContent> createState() => _DetailContentState();
+}
+
+class _DetailContentState extends State<_DetailContent> {
+  bool _collapsed = false;
+
+  Map<String, dynamic> get media => widget.media;
+  MediaKind get kind => widget.kind;
 
   @override
   Widget build(BuildContext context) {
@@ -84,14 +96,27 @@ class _DetailContent extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return CustomScrollView(
+    final bool showWhiteArrow = banner != null && !_collapsed;
+    final arrowColor = showWhiteArrow ? Colors.white : (isDark ? Colors.white : Colors.black);
+
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification) {
+          final offset = notification.metrics.pixels;
+          final expandedHeight = (banner != null ? 220.0 : 160.0) - kToolbarHeight;
+          final isNowCollapsed = offset > expandedHeight * 0.6;
+          if (isNowCollapsed != _collapsed) {
+            setState(() => _collapsed = isNowCollapsed);
+          }
+        }
+        return false;
+      },
+      child: CustomScrollView(
       slivers: [
         SliverAppBar(
           expandedHeight: banner != null ? 220 : 160,
           pinned: true,
-          iconTheme: IconThemeData(
-            color: banner != null ? Colors.white : (isDark ? Colors.white : Colors.black),
-          ),
+          iconTheme: IconThemeData(color: arrowColor),
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(
               fit: StackFit.expand,
@@ -300,6 +325,7 @@ class _DetailContent extends StatelessWidget {
           ),
         ),
       ],
+    ),
     );
   }
 
@@ -784,34 +810,68 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-class _AddToLibraryButton extends ConsumerWidget {
+class _AddToLibraryButton extends ConsumerStatefulWidget {
   const _AddToLibraryButton({required this.media, required this.kind});
   final Map<String, dynamic> media;
   final MediaKind kind;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AddToLibraryButton> createState() => _AddToLibraryButtonState();
+}
+
+class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
+  LibraryEntry? _existing;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExisting();
+  }
+
+  Future<void> _checkExisting() async {
+    final db = ref.read(databaseProvider);
+    final mediaId = widget.media['id'];
+    if (mediaId == null) {
+      setState(() => _loaded = true);
+      return;
+    }
+    final entry = await db.getLibraryEntryByKindAndExternalId(
+      widget.kind.code,
+      mediaId.toString(),
+    );
+    if (mounted) setState(() { _existing = entry; _loaded = true; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isEdit = _existing != null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SizedBox(
         width: double.infinity,
-        child: FilledButton.icon(
-          icon: const Icon(Icons.add),
-          label: Text(l10n.addToLibrary),
-          onPressed: () async {
-            final added = await showAddToLibrarySheet(
-              context: context,
-              ref: ref,
-              item: media,
-              kind: kind,
-            );
-            if (!context.mounted || !added) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.addedToLibrary)),
-            );
-          },
-        ),
+        child: _loaded
+            ? FilledButton.icon(
+                icon: Icon(isEdit ? Icons.edit : Icons.add),
+                label: Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
+                onPressed: () async {
+                  final saved = await showAddToLibrarySheet(
+                    context: context,
+                    ref: ref,
+                    item: widget.media,
+                    kind: widget.kind,
+                    existingEntry: _existing,
+                  );
+                  if (!context.mounted || !saved) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(isEdit ? l10n.entryUpdated : l10n.addedToLibrary)),
+                  );
+                  _checkExisting();
+                },
+              )
+            : const SizedBox.shrink(),
       ),
     );
   }

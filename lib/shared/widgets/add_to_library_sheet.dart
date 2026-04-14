@@ -44,6 +44,7 @@ Future<bool> showAddToLibrarySheet({
   required WidgetRef ref,
   required Map<String, dynamic> item,
   required MediaKind kind,
+  LibraryEntry? existingEntry,
 }) async {
   final db = ref.read(databaseProvider);
 
@@ -73,7 +74,7 @@ Future<bool> showAddToLibrarySheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _AddToLibrarySheet(item: item, kind: kind),
+    builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry),
   );
 
   if (result == null) return false;
@@ -177,19 +178,31 @@ class _AnilistPromptDialog extends StatelessWidget {
 }
 
 class _AddToLibrarySheet extends StatefulWidget {
-  const _AddToLibrarySheet({required this.item, required this.kind});
+  const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry});
   final Map<String, dynamic> item;
   final MediaKind kind;
+  final LibraryEntry? existingEntry;
 
   @override
   State<_AddToLibrarySheet> createState() => _AddToLibrarySheetState();
 }
 
 class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
-  String _status = 'PLANNING';
-  double _score = 0;
-  final _progressCtrl = TextEditingController(text: '0');
-  final _notesCtrl = TextEditingController();
+  late String _status;
+  late double _score;
+  late final TextEditingController _progressCtrl;
+  late final TextEditingController _notesCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existingEntry;
+    _status = e?.status ?? 'PLANNING';
+    _score = (e?.score ?? 0).toDouble();
+    if (_score > 10) _score = _score / 10;
+    _progressCtrl = TextEditingController(text: '${e?.progress ?? 0}');
+    _notesCtrl = TextEditingController(text: e?.notes ?? '');
+  }
 
   bool get _isManga => widget.kind == MediaKind.manga;
 
@@ -217,13 +230,16 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
         '';
     final countLabel = _isManga ? l10n.addToListChapters : l10n.addToListEpisodes;
 
+    final isEdit = widget.existingEntry != null;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomPad),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +257,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               const SizedBox(height: 16),
 
               Text(
-                l10n.addToListTitle,
+                isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,

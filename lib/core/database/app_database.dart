@@ -161,6 +161,12 @@ class AppDatabase extends _$AppDatabase {
         .getSingleOrNull();
   }
 
+  Future<LibraryEntry?> getLibraryEntryByKindAndExternalId(int kindCode, String externalId) {
+    return (select(libraryEntries)
+          ..where((t) => t.kind.equals(kindCode) & t.externalId.equals(externalId)))
+        .getSingleOrNull();
+  }
+
   Future<void> incrementProgress(int entryId) async {
     final entry = await getLibraryEntryById(entryId);
     if (entry == null) return;

@@ -291,7 +291,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addToLibrary => 'Add to library';
 
   @override
+  String get editLibraryEntry => 'Edit entry';
+
+  @override
   String get addedToLibrary => 'Added to library';
+
+  @override
+  String get entryUpdated => 'Entry updated';
 
   @override
   String get profileTitle => 'Profile';

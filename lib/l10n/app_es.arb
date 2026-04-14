@@ -113,7 +113,9 @@
   "@searchErrorIn": { "placeholders": { "section": {}, "error": {} } },
 
   "addToLibrary": "Añadir a biblioteca",
+  "editLibraryEntry": "Editar entrada",
   "addedToLibrary": "Añadido a la biblioteca",
+  "entryUpdated": "Entrada actualizada",
 
   "profileTitle": "Perfil",
   "profileLocalUser": "Usuario local",
