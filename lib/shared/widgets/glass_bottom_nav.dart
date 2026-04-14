@@ -59,7 +59,9 @@ class GlassBottomNav extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? colorScheme.primaryContainer
+                                    ? (isDark
+                                        ? colorScheme.primaryContainer
+                                        : colorScheme.primary.withAlpha(30))
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -67,7 +69,9 @@ class GlassBottomNav extends StatelessWidget {
                                 selected ? item.activeIcon : item.icon,
                                 size: 22,
                                 color: selected
-                                    ? colorScheme.onPrimaryContainer
+                                    ? (isDark
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.primary)
                                     : colorScheme.onSurfaceVariant,
                               ),
                             ),
@@ -80,7 +84,9 @@ class GlassBottomNav extends StatelessWidget {
                                     ? FontWeight.w600
                                     : FontWeight.w400,
                                 color: selected
-                                    ? colorScheme.onSurface
+                                    ? (isDark
+                                        ? colorScheme.onSurface
+                                        : colorScheme.primary)
                                     : colorScheme.onSurfaceVariant,
                               ),
                               maxLines: 1,

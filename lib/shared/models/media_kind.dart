@@ -1,3 +1,5 @@
+import 'package:cronicle/l10n/app_localizations.dart';
+
 enum MediaKind {
   anime(0),
   movie(1),
@@ -10,20 +12,12 @@ enum MediaKind {
 
   static MediaKind fromCode(int code) =>
       MediaKind.values.firstWhere((e) => e.code == code);
-
-  String get label => switch (this) {
-        MediaKind.anime => 'Anime',
-        MediaKind.movie => 'Películas',
-        MediaKind.tv => 'Series',
-        MediaKind.game => 'Juegos',
-        MediaKind.manga => 'Manga',
-      };
-
-  String get labelEn => switch (this) {
-        MediaKind.anime => 'Anime',
-        MediaKind.movie => 'Movies',
-        MediaKind.tv => 'TV',
-        MediaKind.game => 'Games',
-        MediaKind.manga => 'Manga',
-      };
 }
+
+String mediaKindLabel(MediaKind kind, AppLocalizations l10n) => switch (kind) {
+      MediaKind.anime => l10n.mediaKindAnime,
+      MediaKind.movie => l10n.mediaKindMovie,
+      MediaKind.tv => l10n.mediaKindTv,
+      MediaKind.game => l10n.mediaKindGame,
+      MediaKind.manga => l10n.mediaKindManga,
+    };

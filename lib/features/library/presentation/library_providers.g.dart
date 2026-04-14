@@ -431,5 +431,148 @@ final defaultLibraryFilterProvider =
     );
 
 typedef _$DefaultLibraryFilter = AutoDisposeNotifier<String>;
+String _$paginatedLibraryHash() => r'6f34ef14dc8467cf20ec58e2f10ebe29b0249327';
+
+abstract class _$PaginatedLibrary
+    extends BuildlessAutoDisposeAsyncNotifier<List<LibraryEntry>> {
+  late final LibraryPageParams params;
+
+  FutureOr<List<LibraryEntry>> build(LibraryPageParams params);
+}
+
+/// See also [PaginatedLibrary].
+@ProviderFor(PaginatedLibrary)
+const paginatedLibraryProvider = PaginatedLibraryFamily();
+
+/// See also [PaginatedLibrary].
+class PaginatedLibraryFamily extends Family<AsyncValue<List<LibraryEntry>>> {
+  /// See also [PaginatedLibrary].
+  const PaginatedLibraryFamily();
+
+  /// See also [PaginatedLibrary].
+  PaginatedLibraryProvider call(LibraryPageParams params) {
+    return PaginatedLibraryProvider(params);
+  }
+
+  @override
+  PaginatedLibraryProvider getProviderOverride(
+    covariant PaginatedLibraryProvider provider,
+  ) {
+    return call(provider.params);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'paginatedLibraryProvider';
+}
+
+/// See also [PaginatedLibrary].
+class PaginatedLibraryProvider
+    extends
+        AutoDisposeAsyncNotifierProviderImpl<
+          PaginatedLibrary,
+          List<LibraryEntry>
+        > {
+  /// See also [PaginatedLibrary].
+  PaginatedLibraryProvider(LibraryPageParams params)
+    : this._internal(
+        () => PaginatedLibrary()..params = params,
+        from: paginatedLibraryProvider,
+        name: r'paginatedLibraryProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$paginatedLibraryHash,
+        dependencies: PaginatedLibraryFamily._dependencies,
+        allTransitiveDependencies:
+            PaginatedLibraryFamily._allTransitiveDependencies,
+        params: params,
+      );
+
+  PaginatedLibraryProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.params,
+  }) : super.internal();
+
+  final LibraryPageParams params;
+
+  @override
+  FutureOr<List<LibraryEntry>> runNotifierBuild(
+    covariant PaginatedLibrary notifier,
+  ) {
+    return notifier.build(params);
+  }
+
+  @override
+  Override overrideWith(PaginatedLibrary Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: PaginatedLibraryProvider._internal(
+        () => create()..params = params,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        params: params,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<PaginatedLibrary, List<LibraryEntry>>
+  createElement() {
+    return _PaginatedLibraryProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PaginatedLibraryProvider && other.params == params;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, params.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin PaginatedLibraryRef
+    on AutoDisposeAsyncNotifierProviderRef<List<LibraryEntry>> {
+  /// The parameter `params` of this provider.
+  LibraryPageParams get params;
+}
+
+class _PaginatedLibraryProviderElement
+    extends
+        AutoDisposeAsyncNotifierProviderElement<
+          PaginatedLibrary,
+          List<LibraryEntry>
+        >
+    with PaginatedLibraryRef {
+  _PaginatedLibraryProviderElement(super.provider);
+
+  @override
+  LibraryPageParams get params => (origin as PaginatedLibraryProvider).params;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -80,6 +80,33 @@ class AnilistGraphqlDatasource {
     return searchMedia(search, type: 'MANGA');
   }
 
+  /// Fetch trending/popular media by type.
+  Future<List<Map<String, dynamic>>> fetchPopular({required String type}) async {
+    const query = r'''
+      query ($type: MediaType) {
+        Page(page: 1, perPage: 20) {
+          media(type: $type, sort: TRENDING_DESC) {
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            episodes
+            chapters
+            volumes
+            averageScore
+            status
+            format
+            genres
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'type': type});
+    return (data['data']?['Page']?['media'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+  }
+
   /// Search Anilist media by type (ANIME or MANGA).
   Future<List<Map<String, dynamic>>> searchMedia(
     String search, {
@@ -190,16 +217,18 @@ class AnilistGraphqlDatasource {
   }
 
   /// Recent public activity for a media type (ANIME_LIST or MANGA_LIST).
+  /// If [isFollowing] is true, only shows activity from users the viewer follows.
   Future<List<Map<String, dynamic>>> fetchRecentActivityByType({
     required String activityType,
     int page = 1,
     int perPage = 25,
     String? token,
+    bool isFollowing = false,
   }) async {
     const query = r'''
-      query ($page: Int, $perPage: Int, $type: ActivityType) {
+      query ($page: Int, $perPage: Int, $type: ActivityType, $isFollowing: Boolean) {
         Page(page: $page, perPage: $perPage) {
-          activities(type: $type, sort: ID_DESC) {
+          activities(type: $type, sort: ID_DESC, isFollowing: $isFollowing) {
             ... on ListActivity {
               id
               status
@@ -228,6 +257,7 @@ class AnilistGraphqlDatasource {
       'page': page,
       'perPage': perPage,
       'type': activityType,
+      'isFollowing': isFollowing ? true : null,
     }, token: token);
     final activities =
         (data['data']?['Page']?['activities'] as List?)
@@ -339,7 +369,7 @@ class AnilistGraphqlDatasource {
     return data['data']?['Viewer'] as Map<String, dynamic>?;
   }
 
-  /// Fetch a public user profile by ID.
+  /// Fetch a public user profile by ID, including favourites.
   Future<Map<String, dynamic>?> fetchUserProfile(int userId, {String? token}) async {
     const query = r'''
       query ($id: Int) {
@@ -352,6 +382,14 @@ class AnilistGraphqlDatasource {
           siteUrl
           isFollowing
           isFollower
+          favourites {
+            anime(perPage: 10) {
+              nodes { id title { romaji english } coverImage { large } }
+            }
+            manga(perPage: 10) {
+              nodes { id title { romaji english } coverImage { large } }
+            }
+          }
           statistics {
             anime {
               count
@@ -375,6 +413,44 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(query, variables: {'id': userId}, token: token);
     return data['data']?['User'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch recent activity of a specific user.
+  Future<List<Map<String, dynamic>>> fetchUserActivity(int userId, {String? token}) async {
+    const query = r'''
+      query ($userId: Int) {
+        Page(page: 1, perPage: 15) {
+          activities(userId: $userId, sort: ID_DESC) {
+            ... on ListActivity {
+              id
+              status
+              progress
+              createdAt
+              likeCount
+              replyCount
+              isLiked
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+              user {
+                id
+                name
+                avatar { medium }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'userId': userId}, token: token);
+    final activities =
+        (data['data']?['Page']?['activities'] as List?)
+                ?.cast<Map<String, dynamic>>() ??
+            [];
+    return activities.where((a) => a['media'] != null).toList();
   }
 
   /// Save (create/update) a media list entry on Anilist.
@@ -444,6 +520,14 @@ class AnilistGraphqlDatasource {
           bannerImage
           siteUrl
           createdAt
+          favourites {
+            anime(perPage: 10) {
+              nodes { id title { romaji english } coverImage { large } }
+            }
+            manga(perPage: 10) {
+              nodes { id title { romaji english } coverImage { large } }
+            }
+          }
           statistics {
             anime {
               count

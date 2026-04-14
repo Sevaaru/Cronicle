@@ -31,7 +31,7 @@ class DriveBackupRepository implements BackupRepository {
     try {
       final driveApi = await _getDriveApi();
       if (driveApi == null) {
-        return left(const GoogleDriveFailure('No autenticado con Google'));
+        return left(const GoogleDriveFailure('Not authenticated with Google'));
       }
 
       final existing = await driveApi.files.list(
@@ -66,7 +66,7 @@ class DriveBackupRepository implements BackupRepository {
     try {
       final driveApi = await _getDriveApi();
       if (driveApi == null) {
-        return left(const GoogleDriveFailure('No autenticado con Google'));
+        return left(const GoogleDriveFailure('Not authenticated with Google'));
       }
 
       final fileList = await driveApi.files.list(
@@ -76,7 +76,7 @@ class DriveBackupRepository implements BackupRepository {
       );
 
       if (fileList.files == null || fileList.files!.isEmpty) {
-        return left(const GoogleDriveFailure('No hay backup'));
+        return left(const GoogleDriveFailure('No backup found'));
       }
 
       final response = await driveApi.files.get(

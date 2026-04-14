@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
@@ -21,15 +22,16 @@ class MediaDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final detailAsync = ref.watch(anilistMediaDetailProvider(mediaId));
 
     return Scaffold(
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(l10n.errorWithMessage(e))),
         data: (media) {
           if (media == null) {
-            return const Center(child: Text('No se encontraron datos'));
+            return Center(child: Text(l10n.mediaNoData));
           }
           return _DetailContent(media: media, kind: kind);
         },
@@ -46,6 +48,7 @@ class _DetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final title = media['title'] as Map<String, dynamic>? ?? {};
     final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
@@ -80,7 +83,6 @@ class _DetailContent extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // Banner + poster header
         SliverAppBar(
           expandedHeight: banner != null ? 220 : 160,
           pinned: true,
@@ -126,7 +128,6 @@ class _DetailContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Poster + title row
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -190,11 +191,9 @@ class _DetailContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Add to library button
                 _AddToLibraryButton(media: media, kind: kind),
                 const SizedBox(height: 12),
 
-                // Score section
                 if (score != null || meanScore != null)
                   GlassCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -203,49 +202,46 @@ class _DetailContent extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         if (score != null)
-                          _StatColumn(Icons.star, Colors.amber.shade600, '$score%', 'Nota media'),
+                          _StatColumn(Icons.star, Colors.amber.shade600, '$score%', l10n.statMeanScore),
                         if (meanScore != null && meanScore != score)
-                          _StatColumn(Icons.bar_chart, colorScheme.primary, '$meanScore%', 'Media'),
+                          _StatColumn(Icons.bar_chart, colorScheme.primary, '$meanScore%', l10n.statMeanScore),
                         if (popularity != null)
-                          _StatColumn(Icons.trending_up, Colors.teal, _formatNumber(popularity), 'Popularidad'),
+                          _StatColumn(Icons.trending_up, Colors.teal, _formatNumber(popularity), l10n.statPopularity),
                         if (favourites != null)
-                          _StatColumn(Icons.favorite, Colors.redAccent, _formatNumber(favourites), 'Favoritos'),
+                          _StatColumn(Icons.favorite, Colors.redAccent, _formatNumber(favourites), l10n.statFavourites),
                       ],
                     ),
                   ),
 
-                // Info grid
                 GlassCard(
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Información', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                      Text(l10n.mediaInfo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 24,
                         runSpacing: 6,
                         children: [
-                          if (!isManga && episodes != null) _InfoPill('Episodios', '$episodes'),
-                          if (isManga && chapters != null) _InfoPill('Capítulos', '$chapters'),
-                          if (isManga && volumes != null) _InfoPill('Volúmenes', '$volumes'),
-                          if (duration != null) _InfoPill('Duración', '$duration min/ep'),
-                          if (season != null && seasonYear != null) _InfoPill('Temporada', '$season $seasonYear'),
-                          if (source != null) _InfoPill('Fuente', source.replaceAll('_', ' ')),
-                          if (startDate != null) _InfoPill('Inicio', _formatDate(startDate)),
-                          if (endDate != null) _InfoPill('Fin', _formatDate(endDate)),
+                          if (!isManga && episodes != null) _InfoPill(l10n.mediaEpisodes, '$episodes'),
+                          if (isManga && chapters != null) _InfoPill(l10n.mediaChapters, '$chapters'),
+                          if (isManga && volumes != null) _InfoPill(l10n.mediaVolumes, '$volumes'),
+                          if (duration != null) _InfoPill(l10n.mediaDuration, '$duration min/ep'),
+                          if (season != null && seasonYear != null) _InfoPill(l10n.mediaSeason, '$season $seasonYear'),
+                          if (source != null) _InfoPill(l10n.mediaSource, source.replaceAll('_', ' ')),
+                          if (startDate != null) _InfoPill(l10n.mediaStart, _formatDate(startDate)),
+                          if (endDate != null) _InfoPill(l10n.mediaEnd, _formatDate(endDate)),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // Airing info
                 if (media['nextAiringEpisode'] != null)
-                  _buildAiringCard(media['nextAiringEpisode'] as Map<String, dynamic>, colorScheme),
+                  _buildAiringCard(media['nextAiringEpisode'] as Map<String, dynamic>, colorScheme, l10n),
 
-                // Genres
                 if (genres.isNotEmpty) ...[
                   Wrap(
                     spacing: 6,
@@ -261,9 +257,8 @@ class _DetailContent extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
 
-                // Description
                 if (description != null && description.isNotEmpty) ...[
-                  const Text('Sinopsis', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(l10n.mediaSynopsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 6),
                   Text(
                     _cleanHtml(description),
@@ -272,23 +267,17 @@ class _DetailContent extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
 
-                // Studios (anime only)
-                _buildStudios(colorScheme),
+                _buildStudios(colorScheme, l10n),
 
-                // Streaming / external links
-                _buildStreamingLinks(colorScheme),
+                _buildStreamingLinks(colorScheme, l10n),
 
-                // Relations
                 _buildRelations(context, colorScheme),
 
-                // Recommendations
                 _buildRecommendations(context, colorScheme),
 
-                // Reviews
-                _buildReviews(colorScheme),
+                _buildReviews(colorScheme, l10n),
 
-                // Score distribution
-                _buildScoreDistribution(colorScheme),
+                _buildScoreDistribution(colorScheme, l10n),
 
                 const SizedBox(height: 100),
               ],
@@ -299,7 +288,7 @@ class _DetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAiringCard(Map<String, dynamic> next, ColorScheme cs) {
+  Widget _buildAiringCard(Map<String, dynamic> next, ColorScheme cs, AppLocalizations l10n) {
     final episode = next['episode'] as int?;
     final timeUntil = next['timeUntilAiring'] as int?;
     if (episode == null || timeUntil == null) return const SizedBox.shrink();
@@ -315,7 +304,7 @@ class _DetailContent extends StatelessWidget {
           Icon(Icons.schedule, color: cs.primary, size: 20),
           const SizedBox(width: 10),
           Text(
-            'Ep $episode en ${days}d ${hours}h',
+            l10n.mediaNextEp(episode, days, hours),
             style: TextStyle(fontWeight: FontWeight.w600, color: cs.primary),
           ),
         ],
@@ -323,7 +312,7 @@ class _DetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStudios(ColorScheme cs) {
+  Widget _buildStudios(ColorScheme cs, AppLocalizations l10n) {
     final studios = media['studios'] as Map<String, dynamic>?;
     final nodes = (studios?['nodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (nodes.isEmpty) return const SizedBox.shrink();
@@ -332,7 +321,7 @@ class _DetailContent extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Text('Estudio: ', style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+          Text(l10n.mediaStudio, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
           Text(
             nodes.map((s) => s['name']).join(', '),
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -342,7 +331,7 @@ class _DetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStreamingLinks(ColorScheme cs) {
+  Widget _buildStreamingLinks(ColorScheme cs, AppLocalizations l10n) {
     final links = (media['externalLinks'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final streaming = (media['streamingEpisodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
@@ -351,7 +340,7 @@ class _DetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Dónde ver', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        Text(l10n.mediaWhere, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -386,6 +375,7 @@ class _DetailContent extends StatelessWidget {
   }
 
   Widget _buildRelations(BuildContext context, ColorScheme cs) {
+    final l10n = AppLocalizations.of(context)!;
     final relations = media['relations'] as Map<String, dynamic>?;
     final edges = (relations?['edges'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (edges.isEmpty) return const SizedBox.shrink();
@@ -393,7 +383,7 @@ class _DetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Relacionados', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        Text(l10n.mediaRelated, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
         SizedBox(
           height: 160,
@@ -466,6 +456,7 @@ class _DetailContent extends StatelessWidget {
   }
 
   Widget _buildRecommendations(BuildContext context, ColorScheme cs) {
+    final l10n = AppLocalizations.of(context)!;
     final recs = media['recommendations'] as Map<String, dynamic>?;
     final nodes = (recs?['nodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final validRecs = nodes
@@ -477,7 +468,7 @@ class _DetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Recomendaciones', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        Text(l10n.mediaRecommendations, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
         SizedBox(
           height: 155,
@@ -542,7 +533,7 @@ class _DetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildReviews(ColorScheme cs) {
+  Widget _buildReviews(ColorScheme cs, AppLocalizations l10n) {
     final reviews = media['reviews'] as Map<String, dynamic>?;
     final nodes = (reviews?['nodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (nodes.isEmpty) return const SizedBox.shrink();
@@ -550,7 +541,7 @@ class _DetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Reviews', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        Text(l10n.mediaReviews, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
         ...nodes.map((review) {
           final user = review['user'] as Map<String, dynamic>? ?? {};
@@ -577,7 +568,7 @@ class _DetailContent extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        user['name'] as String? ?? 'Anónimo',
+                        user['name'] as String? ?? l10n.mediaAnonymous,
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ),
@@ -615,7 +606,7 @@ class _DetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildScoreDistribution(ColorScheme cs) {
+  Widget _buildScoreDistribution(ColorScheme cs, AppLocalizations l10n) {
     final stats = media['stats'] as Map<String, dynamic>?;
     final scoreDist = (stats?['scoreDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (scoreDist.isEmpty) return const SizedBox.shrink();
@@ -628,7 +619,7 @@ class _DetailContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Distribución de notas', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        Text(l10n.mediaScoreDistribution, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
         GlassCard(
           padding: const EdgeInsets.all(14),
@@ -763,13 +754,14 @@ class _AddToLibraryButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
           icon: const Icon(Icons.add),
-          label: const Text('Añadir a biblioteca'),
+          label: Text(l10n.addToLibrary),
           onPressed: () async {
             final added = await showAddToLibrarySheet(
               context: context,
@@ -779,7 +771,7 @@ class _AddToLibraryButton extends ConsumerWidget {
             );
             if (!context.mounted || !added) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Añadido a la biblioteca')),
+              SnackBar(content: Text(l10n.addedToLibrary)),
             );
           },
         ),

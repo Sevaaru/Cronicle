@@ -9,28 +9,67 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
-const _statusFilters = [
-  (null, 'Todo', Icons.list_alt_rounded),
-  ('CURRENT', 'Viendo', Icons.play_arrow_rounded),
-  ('PLANNING', 'Planeado', Icons.bookmark_add_outlined),
-  ('COMPLETED', 'Completado', Icons.check_circle_outline),
-  ('PAUSED', 'Pausado', Icons.pause_circle_outline),
-  ('DROPPED', 'Abandonado', Icons.cancel_outlined),
-  ('REPEATING', 'Repitiendo', Icons.replay_rounded),
-];
+const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
+
+String _statusLabel(String? key, AppLocalizations l10n) => switch (key) {
+  null => l10n.statusAll,
+  'CURRENT' => l10n.statusCurrent,
+  'PLANNING' => l10n.statusPlanning,
+  'COMPLETED' => l10n.statusCompleted,
+  'PAUSED' => l10n.statusPaused,
+  'DROPPED' => l10n.statusDropped,
+  'REPEATING' => l10n.statusRepeating,
+  _ => key,
+};
+
+IconData _statusIcon(String? key) => switch (key) {
+  null => Icons.list_alt_rounded,
+  'CURRENT' => Icons.play_arrow_rounded,
+  'PLANNING' => Icons.bookmark_add_outlined,
+  'COMPLETED' => Icons.check_circle_outline,
+  'PAUSED' => Icons.pause_circle_outline,
+  'DROPPED' => Icons.cancel_outlined,
+  'REPEATING' => Icons.replay_rounded,
+  _ => Icons.list_alt_rounded,
+};
+
+String _currentStatusLabel(String status, MediaKind? kind, AppLocalizations l10n) {
+  final upper = status.toUpperCase();
+  if (upper == 'CURRENT') {
+    if (kind == MediaKind.manga) return l10n.statusCurrentManga;
+    if (kind == MediaKind.anime) return l10n.statusCurrentAnime;
+    return l10n.statusCurrent;
+  }
+  return switch (upper) {
+    'PLANNING' => l10n.statusPlanning,
+    'COMPLETED' => l10n.statusCompleted,
+    'DROPPED' => l10n.statusDropped,
+    'PAUSED' => l10n.statusPaused,
+    'REPEATING' => l10n.statusRepeating,
+    _ => status,
+  };
+}
 
 enum _SortField {
-  updatedAt('Última actualización', Icons.update),
-  title('Nombre', Icons.sort_by_alpha),
-  score('Puntuación', Icons.star_outline),
-  progress('Progreso', Icons.trending_up);
+  updatedAt(Icons.update, 'updatedAt'),
+  title(Icons.sort_by_alpha, 'title'),
+  score(Icons.star_outline, 'score'),
+  progress(Icons.trending_up, 'progress');
 
-  const _SortField(this.label, this.icon);
-  final String label;
+  const _SortField(this.icon, this.dbKey);
   final IconData icon;
+  final String dbKey;
 }
+
+String _sortLabel(_SortField f, AppLocalizations l10n) => switch (f) {
+  _SortField.updatedAt => l10n.sortRecent,
+  _SortField.title => l10n.sortName,
+  _SortField.score => l10n.sortScore,
+  _SortField.progress => l10n.sortProgress,
+};
 
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
@@ -40,122 +79,143 @@ class LibraryPage extends ConsumerStatefulWidget {
 }
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
-  MediaKind? _selectedKind; // null = all
+  MediaKind? _selectedKind;
   String? _selectedStatus;
   _SortField _sortField = _SortField.updatedAt;
   bool _sortAsc = false;
   bool _statusInitialized = false;
   bool _syncChecked = false;
 
+  final _scrollController = ScrollController();
+
+  LibraryPageParams get _params => LibraryPageParams(
+        kindCode: _selectedKind?.code,
+        status: _selectedStatus,
+        orderBy: _sortField.dbKey,
+        ascending: _sortAsc,
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final max = _scrollController.position.maxScrollExtent;
+    final cur = _scrollController.position.pixels;
+    if (cur >= max - 300) {
+      try {
+        final notifier = ref.read(paginatedLibraryProvider(_params).notifier);
+        if (notifier.hasMore && !notifier.isLoadingMore) {
+          notifier.loadMore();
+        }
+      } catch (_) {}
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
-    // Inicializar status con el default de ajustes (una sola vez)
     if (!_statusInitialized) {
       final defaultFilter = ref.read(defaultLibraryFilterProvider);
       _selectedStatus = defaultFilter;
       _statusInitialized = true;
     }
 
-    // Comprobar sincronización con Anilist al entrar
     _checkAnilistSync();
 
-    final listAsync = ref.watch(libraryFilteredProvider(_selectedKind, _selectedStatus));
+    final listAsync = ref.watch(paginatedLibraryProvider(_params));
+    bool hasMore;
+    try {
+      hasMore = ref.read(paginatedLibraryProvider(_params).notifier).hasMore;
+    } catch (_) {
+      hasMore = false;
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Biblioteca')),
+      appBar: AppBar(title: Text(l10n.libraryTitle)),
       body: Column(
         children: [
-          // Media kind chips
           SizedBox(
-            height: 38,
-            child: ListView(
+            height: 40,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                _KindChip(
-                  label: 'Todo',
-                  icon: Icons.grid_view_rounded,
-                  selected: _selectedKind == null,
-                  onTap: () => setState(() => _selectedKind = null),
-                  cs: cs,
-                ),
-                const SizedBox(width: 6),
-                for (final kind in MediaKind.values) ...[
-                  _KindChip(
-                    label: kind.label,
-                    icon: _kindIcon(kind),
-                    selected: _selectedKind == kind,
-                    onTap: () => setState(() => _selectedKind = kind),
-                    cs: cs,
-                  ),
-                  const SizedBox(width: 6),
-                ],
-              ],
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemCount: MediaKind.values.length + 1,
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  return _buildChip(
+                    label: l10n.filterAll,
+                    icon: Icons.grid_view_rounded,
+                    selected: _selectedKind == null,
+                    onTap: () => setState(() => _selectedKind = null),
+                  );
+                }
+                final kind = MediaKind.values[i - 1];
+                return _buildChip(
+                  label: mediaKindLabel(kind, l10n),
+                  icon: _kindIcon(kind),
+                  selected: _selectedKind == kind,
+                  onTap: () => setState(() => _selectedKind = kind),
+                );
+              },
             ),
           ),
           const SizedBox(height: 6),
 
-          // Status filters
-          SizedBox(
-            height: 34,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: _statusFilters.map((f) {
-                final selected = _selectedStatus == f.$1;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    selected: selected,
-                    label: Text(f.$2, style: const TextStyle(fontSize: 11)),
-                    avatar: Icon(f.$3, size: 14),
-                    onSelected: (_) => setState(() => _selectedStatus = f.$1),
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          // Sort bar
+          // Status dropdown + Sort chips
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                Icon(Icons.sort, size: 16, color: cs.onSurfaceVariant),
-                const SizedBox(width: 6),
+                // Status dropdown
+                _StatusDropdown(
+                  value: _selectedStatus,
+                  label: _statusLabel(_selectedStatus, l10n),
+                  icon: _statusIcon(_selectedStatus),
+                  cs: cs,
+                  onChanged: (v) => setState(() => _selectedStatus = v),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 1, height: 24,
+                  color: cs.outlineVariant.withAlpha(60),
+                ),
+                const SizedBox(width: 8),
+                // Sort chips
                 Expanded(
                   child: SizedBox(
-                    height: 32,
+                    height: 36,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      separatorBuilder: (_, _) => const SizedBox(width: 4),
+                      separatorBuilder: (_, _) => const SizedBox(width: 6),
                       itemCount: _SortField.values.length,
                       itemBuilder: (context, i) {
                         final field = _SortField.values[i];
                         final selected = _sortField == field;
-                        return FilterChip(
+                        return _buildChip(
+                          label: _sortLabel(field, l10n),
+                          icon: field.icon,
                           selected: selected,
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(field.icon, size: 12),
-                              const SizedBox(width: 3),
-                              Text(field.label, style: const TextStyle(fontSize: 10)),
-                              if (selected) ...[
-                                const SizedBox(width: 2),
-                                Icon(
+                          trailing: selected
+                              ? Icon(
                                   _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                                  size: 11,
-                                ),
-                              ],
-                            ],
-                          ),
-                          onSelected: (_) {
+                                  size: 12,
+                                )
+                              : null,
+                          onTap: () {
                             setState(() {
                               if (_sortField == field) {
                                 _sortAsc = !_sortAsc;
@@ -165,10 +225,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                               }
                             });
                           },
-                          showCheckmark: false,
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                         );
                       },
                     ),
@@ -177,13 +233,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // List
           Expanded(
             child: listAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
+              error: (e, _) => Center(child: Text(l10n.errorWithMessage(e))),
               data: (entries) {
                 if (entries.isEmpty) {
                   return Center(
@@ -193,25 +249,42 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         Icon(Icons.inbox_rounded, size: 48,
                             color: cs.onSurfaceVariant.withAlpha(80)),
                         const SizedBox(height: 12),
-                        Text('Sin resultados',
+                        Text(l10n.libraryNoResults,
                             style: TextStyle(color: cs.onSurfaceVariant)),
                         const SizedBox(height: 4),
                         Text(
                           _selectedStatus != null
-                              ? 'No hay títulos con este estado'
-                              : 'Busca y añade contenido',
+                              ? l10n.libraryNoStatusResults
+                              : l10n.librarySearchAndAdd,
                           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withAlpha(150)),
                         ),
                       ],
                     ),
                   );
                 }
-                final sorted = _sortEntries(entries);
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                  itemCount: sorted.length,
-                  itemBuilder: (context, i) =>
-                      _EntryCard(entry: sorted[i], ref: ref),
+                  itemCount: entries.length + (hasMore ? 1 : 0),
+                  itemBuilder: (context, i) {
+                    if (i >= entries.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    return _EntryCard(
+                      key: ValueKey(entries[i].id),
+                      entry: entries[i],
+                      ref: ref,
+                      selectedKind: _selectedKind,
+                      onDelete: () {
+                        ref.read(paginatedLibraryProvider(_params).notifier)
+                            .removeEntry(entries[i].id);
+                        ref.read(databaseProvider).deleteLibraryEntry(entries[i].id);
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -219,25 +292,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         ],
       ),
     );
-  }
-
-  List<LibraryEntry> _sortEntries(List<LibraryEntry> entries) {
-    final list = [...entries];
-    list.sort((a, b) {
-      int cmp;
-      switch (_sortField) {
-        case _SortField.title:
-          cmp = a.title.toLowerCase().compareTo(b.title.toLowerCase());
-        case _SortField.score:
-          cmp = (a.score ?? 0).compareTo(b.score ?? 0);
-        case _SortField.progress:
-          cmp = (a.progress ?? 0).compareTo(b.progress ?? 0);
-        case _SortField.updatedAt:
-          cmp = a.updatedAt.compareTo(b.updatedAt);
-      }
-      return _sortAsc ? cmp : -cmp;
-    });
-    return list;
   }
 
   void _checkAnilistSync() {
@@ -264,55 +318,136 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       );
 
       if (didSync && mounted) {
-        ref.invalidate(libraryFilteredProvider(_selectedKind, _selectedStatus));
+        ref.invalidate(paginatedLibraryProvider(_params));
       }
     });
   }
 }
 
-class _KindChip extends StatelessWidget {
-  const _KindChip({
+// ---------------------------------------------------------------------------
+// Status dropdown
+// ---------------------------------------------------------------------------
+class _StatusDropdown extends StatelessWidget {
+  const _StatusDropdown({
+    required this.value,
     required this.label,
     required this.icon,
-    required this.selected,
-    required this.onTap,
     required this.cs,
+    required this.onChanged,
   });
+  final String? value;
   final String label;
   final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
   final ColorScheme cs;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return FilterChip(
-      selected: selected,
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
+    return PopupMenuButton<String?>(
+      initialValue: value,
+      onSelected: onChanged,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      position: PopupMenuPosition.under,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: cs.primaryContainer.withAlpha(80),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: cs.primary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface)),
+            const SizedBox(width: 4),
+            Icon(Icons.expand_more_rounded, size: 16, color: cs.onSurfaceVariant),
+          ],
+        ),
       ),
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
+      itemBuilder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return _statusKeys.map((key) {
+          final isSelected = key == value;
+          return PopupMenuItem<String?>(
+            value: key,
+            child: Row(
+              children: [
+                Icon(_statusIcon(key), size: 18,
+                    color: isSelected ? cs.primary : cs.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Text(_statusLabel(key, l10n),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? cs.primary : cs.onSurface,
+                    )),
+                const Spacer(),
+                if (isSelected)
+                  Icon(Icons.check_rounded, size: 18, color: cs.primary),
+              ],
+            ),
+          );
+        }).toList();
+      },
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// Chip builder
+// ---------------------------------------------------------------------------
+Widget _buildChip({
+  required String label,
+  required IconData icon,
+  required bool selected,
+  required VoidCallback onTap,
+  Widget? trailing,
+}) {
+  return FilterChip(
+    selected: selected,
+    label: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+        if (trailing != null) ...[
+          const SizedBox(width: 3),
+          trailing,
+        ],
+      ],
+    ),
+    onSelected: (_) => onTap(),
+    showCheckmark: false,
+    visualDensity: VisualDensity.compact,
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Entry card
+// ---------------------------------------------------------------------------
 class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.entry, required this.ref});
+  const _EntryCard({
+    super.key,
+    required this.entry,
+    required this.ref,
+    required this.onDelete,
+    this.selectedKind,
+  });
 
   final LibraryEntry entry;
   final WidgetRef ref;
+  final VoidCallback onDelete;
+  final MediaKind? selectedKind;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final kind = MediaKind.fromCode(entry.kind);
     final canNavigate = entry.externalId.isNotEmpty &&
         (kind == MediaKind.anime || kind == MediaKind.manga);
@@ -338,6 +473,7 @@ class _EntryCard extends StatelessWidget {
                       width: 65,
                       height: 90,
                       fit: BoxFit.cover,
+                      memCacheWidth: 130,
                     )
                   : Container(
                       width: 65,
@@ -367,7 +503,7 @@ class _EntryCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            _statusLabel(entry.status),
+                            _currentStatusLabel(entry.status, kind, l10n),
                             style: TextStyle(fontSize: 10, color: cs.onPrimaryContainer),
                           ),
                         ),
@@ -389,9 +525,9 @@ class _EntryCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                    if (kind != _selectedKindForCard) ...[
+                    if (selectedKind == null) ...[
                       const SizedBox(height: 3),
-                      Text(kind.label,
+                      Text(mediaKindLabel(kind, l10n),
                           style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant.withAlpha(150))),
                     ],
                   ],
@@ -402,25 +538,13 @@ class _EntryCard extends StatelessWidget {
               _IncrementButton(entry: entry, ref: ref),
             IconButton(
               icon: Icon(Icons.delete_outline, size: 20, color: cs.error.withAlpha(150)),
-              onPressed: () => ref.read(databaseProvider).deleteLibraryEntry(entry.id),
+              onPressed: onDelete,
             ),
           ],
         ),
       ),
     );
   }
-
-  MediaKind? get _selectedKindForCard => null;
-
-  String _statusLabel(String status) => switch (status.toUpperCase()) {
-        'CURRENT' => 'Viendo',
-        'PLANNING' => 'Planeado',
-        'COMPLETED' => 'Completado',
-        'DROPPED' => 'Abandonado',
-        'PAUSED' => 'Pausado',
-        'REPEATING' => 'Repitiendo',
-        _ => status,
-      };
 
   Color _statusColor(String status, ColorScheme cs) => switch (status.toUpperCase()) {
         'CURRENT' => cs.primaryContainer,
@@ -433,6 +557,9 @@ class _EntryCard extends StatelessWidget {
       };
 }
 
+// ---------------------------------------------------------------------------
+// Increment button
+// ---------------------------------------------------------------------------
 class _IncrementButton extends StatefulWidget {
   const _IncrementButton({required this.entry, required this.ref});
   final LibraryEntry entry;
@@ -451,8 +578,6 @@ class _IncrementButtonState extends State<_IncrementButton> {
     try {
       final db = widget.ref.read(databaseProvider);
       await db.incrementProgress(widget.entry.id);
-
-      // Sync con Anilist si es anime/manga
       final kind = MediaKind.fromCode(widget.entry.kind);
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();
@@ -481,6 +606,7 @@ class _IncrementButtonState extends State<_IncrementButton> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final atMax = widget.entry.totalEpisodes != null &&
         (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
 
@@ -496,7 +622,7 @@ class _IncrementButtonState extends State<_IncrementButton> {
               size: 22,
               color: atMax ? cs.onSurfaceVariant.withAlpha(80) : cs.primary,
             ),
-      tooltip: atMax ? 'Completado' : '+1 capítulo/episodio',
+      tooltip: atMax ? l10n.tooltipCompleted : l10n.tooltipIncrementProgress,
       onPressed: atMax ? null : _increment,
     );
   }

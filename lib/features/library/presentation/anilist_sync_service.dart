@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Importa las listas de anime y manga del usuario de Anilist a la DB local.
 Future<int> importAnilistToLocal({
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,
@@ -17,7 +17,6 @@ Future<int> importAnilistToLocal({
     graphql.fetchUserMediaList(token, userName, type: 'MANGA'),
   ]);
 
-  // Deduplicar por mediaId para evitar duplicados de listas custom
   final seen = <String>{};
   int count = 0;
 
@@ -58,21 +57,20 @@ Future<int> importAnilistToLocal({
       ));
       count++;
     } catch (_) {
-      // Saltar entries con datos corruptos para no romper la importación completa
       continue;
     }
   }
   return count;
 }
 
-/// Muestra el diálogo de primera sincronización con Anilist.
-/// Devuelve true si se realizó la importación/merge.
 Future<bool> showAnilistSyncDialog({
   required BuildContext context,
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,
   required String token,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
+
   final viewer = await graphql.fetchViewer(token);
   if (viewer == null) return false;
   final userName = viewer['name'] as String? ?? '';
@@ -84,27 +82,27 @@ Future<bool> showAnilistSyncDialog({
     builder: (ctx) {
       final cs = Theme.of(ctx).colorScheme;
       return AlertDialog(
-        title: const Text('Sincronizar con Anilist'),
+        title: Text(l10n.syncTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '¡Bienvenido, $userName! ¿Cómo quieres sincronizar tu biblioteca?',
+              l10n.syncWelcome(userName),
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             _SyncOption(
               icon: Icons.cloud_download,
-              title: 'Importar de Anilist',
-              subtitle: 'Trae toda tu lista de Anilist aquí (recomendado)',
+              title: l10n.syncImport,
+              subtitle: l10n.syncImportDesc,
               cs: cs,
             ),
             const SizedBox(height: 8),
             _SyncOption(
               icon: Icons.merge_type,
-              title: 'Combinar',
-              subtitle: 'Fusiona registros locales con Anilist',
+              title: l10n.syncMerge,
+              subtitle: l10n.syncMergeDesc,
               cs: cs,
             ),
           ],
@@ -112,15 +110,15 @@ Future<bool> showAnilistSyncDialog({
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'skip'),
-            child: const Text('Ahora no'),
+            child: Text(l10n.syncNotNow),
           ),
           OutlinedButton(
             onPressed: () => Navigator.pop(ctx, 'merge'),
-            child: const Text('Combinar'),
+            child: Text(l10n.syncMerge),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, 'import'),
-            child: const Text('Importar'),
+            child: Text(l10n.syncImport),
           ),
         ],
       );
@@ -132,14 +130,14 @@ Future<bool> showAnilistSyncDialog({
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const PopScope(
+    builder: (_) => PopScope(
       canPop: false,
       child: AlertDialog(
         content: Row(
           children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Sincronizando...'),
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text(l10n.syncLoading),
           ],
         ),
       ),
@@ -166,7 +164,7 @@ Future<bool> showAnilistSyncDialog({
     if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Importados $count títulos de Anilist')),
+        SnackBar(content: Text(l10n.syncImportedCount(count))),
       );
     }
     return true;
@@ -174,7 +172,7 @@ Future<bool> showAnilistSyncDialog({
     if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al sincronizar: $e')),
+        SnackBar(content: Text(l10n.errorSyncMessage(e))),
       );
     }
     return false;

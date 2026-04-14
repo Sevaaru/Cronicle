@@ -13,6 +13,7 @@ import 'package:cronicle/core/errors/app_failure.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -32,7 +33,6 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
-          // Theme
           GlassCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +62,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Language
           GlassCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,15 +86,15 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Library default filter
           _DefaultFilterSection(),
           const SizedBox(height: 12),
 
-          // Anilist
+          _AppDefaultsSection(),
+          const SizedBox(height: 12),
+
           _AnilistSection(),
           const SizedBox(height: 12),
 
-          // Google account
           GlassCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,12 +113,12 @@ class SettingsPage extends ConsumerWidget {
                       );
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Conectado con Google')),
+                        SnackBar(content: Text(l10n.connectedWithGoogle)),
                       );
                     } catch (e) {
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
+                        SnackBar(content: Text(l10n.errorWithMessage(e))),
                       );
                     }
                   },
@@ -139,7 +138,6 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
 
-          // Backup
           GlassCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +151,7 @@ class SettingsPage extends ConsumerWidget {
                       child: FilledButton.icon(
                         onPressed: () => _uploadBackup(context, ref),
                         icon: const Icon(Icons.cloud_upload_outlined),
-                        label: const Text('Subir'),
+                        label: Text(l10n.backupUpload),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -161,7 +159,7 @@ class SettingsPage extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _downloadBackup(context, ref),
                         icon: const Icon(Icons.cloud_download_outlined),
-                        label: const Text('Restaurar'),
+                        label: Text(l10n.backupRestore),
                       ),
                     ),
                   ],
@@ -212,13 +210,13 @@ class SettingsPage extends ConsumerWidget {
       result.fold(
         (f) => _showFailure(context, f, l10n),
         (_) => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup subido correctamente')),
+          SnackBar(content: Text(l10n.backupUploadSuccess)),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
       );
     }
   }
@@ -251,14 +249,14 @@ class SettingsPage extends ConsumerWidget {
 
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Restaurados ${entries.length} elementos')),
+            SnackBar(content: Text(l10n.backupRestoredCount(entries.length))),
           );
         },
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
       );
     }
   }
@@ -278,6 +276,7 @@ class SettingsPage extends ConsumerWidget {
 class _AnilistSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final tokenAsync = ref.watch(anilistTokenProvider);
     final cs = Theme.of(context).colorScheme;
 
@@ -289,18 +288,18 @@ class _AnilistSection extends ConsumerWidget {
             children: [
               Icon(Icons.animation_rounded, size: 20, color: cs.primary),
               const SizedBox(width: 8),
-              Text('Anilist', style: Theme.of(context).textTheme.titleSmall),
+              Text(l10n.anilistTitle, style: Theme.of(context).textTheme.titleSmall),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            'Sincroniza tu lista de anime y manga',
+            l10n.anilistSubtitle,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           tokenAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (_, _) => const Text('Error al verificar token'),
+            error: (_, _) => Text(l10n.errorVerifyingToken),
             data: (token) {
               if (token != null) {
                 return Column(
@@ -311,7 +310,7 @@ class _AnilistSection extends ConsumerWidget {
                         Icon(Icons.check_circle, size: 18, color: Colors.green.shade400),
                         const SizedBox(width: 6),
                         Text(
-                          'Conectado',
+                          l10n.anilistConnected,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -325,12 +324,12 @@ class _AnilistSection extends ConsumerWidget {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.logout, size: 18),
-                        label: const Text('Desconectar Anilist'),
+                        label: Text(l10n.anilistDisconnect),
                         onPressed: () async {
                           await ref.read(anilistTokenProvider.notifier).clearToken();
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Desconectado de Anilist')),
+                            SnackBar(content: Text(l10n.anilistDisconnected)),
                           );
                         },
                       ),
@@ -343,7 +342,7 @@ class _AnilistSection extends ConsumerWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.login, size: 18),
-                  label: const Text('Conectar Anilist'),
+                  label: Text(l10n.anilistConnect),
                   onPressed: () => _startAnilistLogin(context, ref),
                 ),
               );
@@ -355,17 +354,16 @@ class _AnilistSection extends ConsumerWidget {
   }
 
   void _startAnilistLogin(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final auth = ref.read(anilistAuthProvider);
     final controller = TextEditingController();
     final cs = Theme.of(context).colorScheme;
 
-    // Abre Anilist inmediatamente
     launchUrl(
       Uri.parse(auth.authorizeUrl),
       mode: LaunchMode.externalApplication,
     );
 
-    // Muestra el diálogo para pegar el token al volver
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -373,7 +371,7 @@ class _AnilistSection extends ConsumerWidget {
           children: [
             Icon(Icons.animation_rounded, color: cs.primary, size: 22),
             const SizedBox(width: 8),
-            const Text('Conectar Anilist'),
+            Text(l10n.anilistConnectTitle),
           ],
         ),
         content: Column(
@@ -389,11 +387,11 @@ class _AnilistSection extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _StepRow(number: '1', text: 'Autoriza Cronicle en la pestaña que se abrió', cs: cs),
+                  _StepRow(number: '1', text: l10n.anilistStep1, cs: cs),
                   const SizedBox(height: 6),
-                  _StepRow(number: '2', text: 'Copia el token que aparece en pantalla', cs: cs),
+                  _StepRow(number: '2', text: l10n.anilistStep2, cs: cs),
                   const SizedBox(height: 6),
-                  _StepRow(number: '3', text: 'Vuelve aquí y pégalo abajo', cs: cs),
+                  _StepRow(number: '3', text: l10n.anilistStep3, cs: cs),
                 ],
               ),
             ),
@@ -401,13 +399,13 @@ class _AnilistSection extends ConsumerWidget {
             TextField(
               controller: controller,
               decoration: InputDecoration(
-                labelText: 'Token de Anilist',
-                hintText: 'Pega el token aquí',
+                labelText: l10n.anilistTokenLabel,
+                hintText: l10n.anilistTokenHint,
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.key, size: 20),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.content_paste_go, size: 20),
-                  tooltip: 'Pegar del portapapeles',
+                  tooltip: l10n.anilistPasteTooltip,
                   onPressed: () async {
                     final data = await Clipboard.getData(Clipboard.kTextPlain);
                     if (data?.text != null) {
@@ -423,11 +421,11 @@ class _AnilistSection extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           FilledButton.icon(
             icon: const Icon(Icons.check, size: 18),
-            label: const Text('Conectar'),
+            label: Text(l10n.connect),
             onPressed: () async {
               final token = controller.text.trim();
               if (token.isEmpty) return;
@@ -436,7 +434,7 @@ class _AnilistSection extends ConsumerWidget {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(ctx).showSnackBar(
                 SnackBar(
-                  content: const Text('¡Conectado con Anilist!'),
+                  content: Text(l10n.anilistConnectSuccess),
                   backgroundColor: Colors.green.shade700,
                 ),
               );
@@ -449,40 +447,116 @@ class _AnilistSection extends ConsumerWidget {
 }
 
 class _DefaultFilterSection extends ConsumerWidget {
-  static const _options = [
-    ('CURRENT', 'Viendo'),
-    ('PLANNING', 'Planeado'),
-    ('COMPLETED', 'Completado'),
-    ('PAUSED', 'Pausado'),
-    ('DROPPED', 'Abandonado'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final current = ref.watch(defaultLibraryFilterProvider);
+
+    final options = [
+      ('CURRENT', l10n.statusCurrentAnime),
+      ('PLANNING', l10n.statusPlanning),
+      ('COMPLETED', l10n.statusCompleted),
+      ('PAUSED', l10n.statusPaused),
+      ('DROPPED', l10n.statusDropped),
+    ];
 
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Filtro por defecto en Biblioteca',
+          Text(l10n.settingsDefaultFilter,
               style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 4),
           Text(
-            'Al abrir la biblioteca se mostrará este estado',
+            l10n.settingsDefaultFilterDesc,
             style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: _options.map((o) {
+            children: options.map((o) {
               final selected = current == o.$1;
               return ChoiceChip(
                 selected: selected,
                 label: Text(o.$2, style: const TextStyle(fontSize: 12)),
                 onSelected: (_) =>
                     ref.read(defaultLibraryFilterProvider.notifier).set(o.$1),
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppDefaultsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final currentPage = ref.watch(defaultStartPageProvider);
+    final currentFeedTab = ref.watch(defaultFeedTabProvider);
+
+    final startPages = [
+      ('/feed', l10n.settingsStartFeed, Icons.rss_feed_rounded),
+      ('/library', l10n.settingsStartLibrary, Icons.collections_bookmark_rounded),
+    ];
+
+    final feedTabs = [
+      ('following', l10n.filterFollowing, Icons.people_rounded),
+      ('all', l10n.filterGlobal, Icons.public_rounded),
+      ('anime', l10n.filterAnime, Icons.animation_rounded),
+      ('manga', l10n.filterManga, Icons.menu_book_rounded),
+    ];
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.settingsDefaultsTitle,
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(l10n.settingsDefaultsDesc,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+          const SizedBox(height: 14),
+
+          Text(l10n.settingsStartPage, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: startPages.map((o) {
+              final selected = currentPage == o.$1;
+              return ChoiceChip(
+                selected: selected,
+                avatar: Icon(o.$3, size: 16),
+                label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+                onSelected: (_) =>
+                    ref.read(defaultStartPageProvider.notifier).set(o.$1),
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 14),
+          Text(l10n.settingsFeedTab, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: feedTabs.map((o) {
+              final selected = currentFeedTab == o.$1;
+              return ChoiceChip(
+                selected: selected,
+                avatar: Icon(o.$3, size: 16),
+                label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+                onSelected: (_) =>
+                    ref.read(defaultFeedTabProvider.notifier).set(o.$1),
+                showCheckmark: false,
                 visualDensity: VisualDensity.compact,
               );
             }).toList(),

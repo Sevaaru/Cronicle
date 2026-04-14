@@ -58,6 +58,15 @@ Future<List<Map<String, dynamic>>> anilistSearch(
   return graphql.searchMedia(query, type: type);
 }
 
+@Riverpod(keepAlive: true)
+Future<List<Map<String, dynamic>>> anilistPopular(
+  AnilistPopularRef ref,
+  String type,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  return graphql.fetchPopular(type: type);
+}
+
 FeedActivity _mapActivity(Map<String, dynamic> a) {
   final media = a['media'] as Map<String, dynamic>;
   final user = a['user'] as Map<String, dynamic>;
@@ -99,6 +108,7 @@ class AnilistFeed extends _$AnilistFeed {
   int _animePage = 1;
   int _mangaPage = 1;
   bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   bool get hasMore => _hasMore;
 
@@ -107,6 +117,7 @@ class AnilistFeed extends _$AnilistFeed {
     _animePage = 1;
     _mangaPage = 1;
     _hasMore = true;
+    _isLoadingMore = false;
     return _fetchPage();
   }
 
@@ -131,19 +142,20 @@ class AnilistFeed extends _$AnilistFeed {
   }
 
   Future<void> loadMore() async {
-    if (!_hasMore || state.isLoading) return;
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
     _animePage++;
     _mangaPage++;
     final prev = state.valueOrNull ?? [];
-    state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
     try {
       final next = await _fetchPage();
       if (next.isEmpty) _hasMore = false;
       state = AsyncData([...prev, ...next]);
-    } catch (e, st) {
+    } catch (_) {
       _animePage--;
       _mangaPage--;
-      state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
+    } finally {
+      _isLoadingMore = false;
     }
   }
 
@@ -162,6 +174,7 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   static const _perPage = 15;
   int _page = 1;
   bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   bool get hasMore => _hasMore;
 
@@ -169,6 +182,7 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   Future<List<FeedActivity>> build(String activityType) async {
     _page = 1;
     _hasMore = true;
+    _isLoadingMore = false;
     return _fetchPage();
   }
 
@@ -186,17 +200,86 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   }
 
   Future<void> loadMore() async {
-    if (!_hasMore || state.isLoading) return;
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
     _page++;
     final prev = state.valueOrNull ?? [];
-    state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
     try {
       final next = await _fetchPage();
       if (next.isEmpty) _hasMore = false;
       state = AsyncData([...prev, ...next]);
-    } catch (e, st) {
+    } catch (_) {
       _page--;
-      state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(AsyncData(prev));
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  void updateActivity(FeedActivity updated) {
+    final list = state.valueOrNull;
+    if (list == null) return;
+    state = AsyncData([
+      for (final a in list)
+        if (a.id == updated.id) updated else a,
+    ]);
+  }
+}
+
+@riverpod
+class AnilistFeedFollowing extends _$AnilistFeedFollowing {
+  static const _perPage = 15;
+  int _animePage = 1;
+  int _mangaPage = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<FeedActivity>> build() async {
+    _animePage = 1;
+    _mangaPage = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
+    return _fetchPage();
+  }
+
+  Future<List<FeedActivity>> _fetchPage() async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) return [];
+    final results = await Future.wait([
+      graphql.fetchRecentActivityByType(
+          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token, isFollowing: true),
+      graphql.fetchRecentActivityByType(
+          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token, isFollowing: true),
+    ]);
+    if (results[0].length < _perPage && results[1].length < _perPage) {
+      _hasMore = false;
+    }
+    final items = [
+      ...results[0].map(_mapActivity),
+      ...results[1].map(_mapActivity),
+    ];
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
+    _animePage++;
+    _mangaPage++;
+    final prev = state.valueOrNull ?? [];
+    try {
+      final next = await _fetchPage();
+      if (next.isEmpty) _hasMore = false;
+      state = AsyncData([...prev, ...next]);
+    } catch (_) {
+      _animePage--;
+      _mangaPage--;
+    } finally {
+      _isLoadingMore = false;
     }
   }
 

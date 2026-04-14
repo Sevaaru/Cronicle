@@ -5,29 +5,40 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:drift/drift.dart' as drift;
 
-const _anilistStatuses = [
-  ('CURRENT', 'Viendo', Icons.play_arrow_rounded),
-  ('PLANNING', 'Planeado', Icons.bookmark_add_outlined),
-  ('COMPLETED', 'Completado', Icons.check_circle_outline),
-  ('DROPPED', 'Abandonado', Icons.cancel_outlined),
-  ('PAUSED', 'Pausado', Icons.pause_circle_outline),
-  ('REPEATING', 'Rewatching', Icons.replay_rounded),
+const _animeStatusData = [
+  ('CURRENT', Icons.play_arrow_rounded),
+  ('PLANNING', Icons.bookmark_add_outlined),
+  ('COMPLETED', Icons.check_circle_outline),
+  ('DROPPED', Icons.cancel_outlined),
+  ('PAUSED', Icons.pause_circle_outline),
+  ('REPEATING', Icons.replay_rounded),
 ];
 
-const _mangaStatuses = [
-  ('CURRENT', 'Leyendo', Icons.auto_stories_rounded),
-  ('PLANNING', 'Planeado', Icons.bookmark_add_outlined),
-  ('COMPLETED', 'Completado', Icons.check_circle_outline),
-  ('DROPPED', 'Abandonado', Icons.cancel_outlined),
-  ('PAUSED', 'Pausado', Icons.pause_circle_outline),
-  ('REPEATING', 'Releyendo', Icons.replay_rounded),
+const _mangaStatusData = [
+  ('CURRENT', Icons.auto_stories_rounded),
+  ('PLANNING', Icons.bookmark_add_outlined),
+  ('COMPLETED', Icons.check_circle_outline),
+  ('DROPPED', Icons.cancel_outlined),
+  ('PAUSED', Icons.pause_circle_outline),
+  ('REPEATING', Icons.replay_rounded),
 ];
 
-/// Shows the "add to library" bottom sheet.
-/// Returns true if the item was added.
+String _statusLabel(AppLocalizations l10n, String key, bool isManga) {
+  return switch (key) {
+    'CURRENT' => isManga ? l10n.statusCurrentManga : l10n.statusCurrentAnime,
+    'PLANNING' => l10n.statusPlanning,
+    'COMPLETED' => l10n.statusCompleted,
+    'DROPPED' => l10n.statusDropped,
+    'PAUSED' => l10n.statusPaused,
+    'REPEATING' => l10n.statusRepeating,
+    _ => key,
+  };
+}
+
 Future<bool> showAddToLibrarySheet({
   required BuildContext context,
   required WidgetRef ref,
@@ -36,7 +47,6 @@ Future<bool> showAddToLibrarySheet({
 }) async {
   final db = ref.read(databaseProvider);
 
-  // First-time Anilist prompt (only for anime/manga, only once ever)
   if (kind == MediaKind.anime || kind == MediaKind.manga) {
     final prompted = await db.getKeyValue('anilist_prompt_shown');
     if (prompted == null && context.mounted) {
@@ -100,7 +110,6 @@ Future<bool> showAddToLibrarySheet({
     ),
   );
 
-  // Sincronizar con Anilist si estamos logueados y es anime/manga
   if ((kind == MediaKind.anime || kind == MediaKind.manga) && mediaId != null) {
     _syncEntryToAnilist(ref, mediaId as int, result);
   }
@@ -108,7 +117,6 @@ Future<bool> showAddToLibrarySheet({
   return true;
 }
 
-/// Envía los cambios a Anilist en background (fire-and-forget).
 void _syncEntryToAnilist(WidgetRef ref, int mediaId, _AddResult result) async {
   try {
     final token = await ref.read(anilistTokenProvider.future);
@@ -122,9 +130,7 @@ void _syncEntryToAnilist(WidgetRef ref, int mediaId, _AddResult result) async {
       progress: result.progress,
       notes: result.notes,
     );
-  } catch (_) {
-    // Sync silencioso, no bloqueamos al usuario
-  }
+  } catch (_) {}
 }
 
 class _AddResult {
@@ -145,25 +151,24 @@ class _AnilistPromptDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
     return AlertDialog(
       icon: Icon(Icons.sync_rounded, size: 40, color: cs.primary),
-      title: const Text('Sincroniza con Anilist'),
+      title: Text(l10n.syncPromptTitle),
       content: Text(
-        'Conecta tu cuenta de Anilist para mantener tu lista de anime y manga '
-        'sincronizada automáticamente.\n\n'
-        'También puedes hacerlo más tarde desde Ajustes.',
+        l10n.syncPromptBody,
         style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop('skip'),
-          child: const Text('No, gracias'),
+          child: Text(l10n.syncPromptNoThanks),
         ),
         FilledButton.icon(
           icon: const Icon(Icons.login, size: 18),
-          label: const Text('Conectar Anilist'),
+          label: Text(l10n.anilistConnect),
           onPressed: () => Navigator.of(context).pop('connect'),
         ),
       ],
@@ -188,14 +193,12 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
 
   bool get _isManga => widget.kind == MediaKind.manga;
 
-  List<(String, String, IconData)> get _statuses =>
-      _isManga ? _mangaStatuses : _anilistStatuses;
+  List<(String, IconData)> get _statusData =>
+      _isManga ? _mangaStatusData : _animeStatusData;
 
   int? get _totalCount => _isManga
       ? widget.item['chapters'] as int?
       : widget.item['episodes'] as int?;
-
-  String get _countLabel => _isManga ? 'Capítulos' : 'Episodios';
 
   @override
   void dispose() {
@@ -206,11 +209,13 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final title = widget.item['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
         '';
+    final countLabel = _isManga ? l10n.addToListChapters : l10n.addToListEpisodes;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -223,7 +228,6 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 36,
@@ -237,7 +241,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               const SizedBox(height: 16),
 
               Text(
-                'Añadir a tu lista',
+                l10n.addToListTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -253,8 +257,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               ),
               const SizedBox(height: 20),
 
-              // Status
-              Text('Estado', style: TextStyle(
+              Text(l10n.addToListStatus, style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
@@ -263,16 +266,16 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _statuses.map((s) {
+                children: _statusData.map((s) {
                   final selected = _status == s.$1;
                   return ChoiceChip(
                     selected: selected,
                     label: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(s.$3, size: 16),
+                        Icon(s.$2, size: 16),
                         const SizedBox(width: 4),
-                        Text(s.$2),
+                        Text(_statusLabel(l10n, s.$1, _isManga)),
                       ],
                     ),
                     onSelected: (_) => setState(() => _status = s.$1),
@@ -283,10 +286,9 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               ),
               const SizedBox(height: 20),
 
-              // Score (0-10 slider)
               Row(
                 children: [
-                  Text('Nota', style: TextStyle(
+                  Text(l10n.addToListScore, style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: cs.onSurfaceVariant,
@@ -307,15 +309,14 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                 min: 0,
                 max: 10,
                 divisions: 10,
-                label: _score == 0 ? 'Sin nota' : '${_score.round()}',
+                label: _score == 0 ? l10n.addToListNoScore : '${_score.round()}',
                 onChanged: (v) => setState(() => _score = v),
               ),
               const SizedBox(height: 12),
 
-              // Progress
               Row(
                 children: [
-                  Text(_countLabel, style: TextStyle(
+                  Text(countLabel, style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: cs.onSurfaceVariant,
@@ -323,7 +324,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                   const Spacer(),
                   if (_totalCount != null)
                     Text(
-                      'de $_totalCount',
+                      l10n.addToListOf(_totalCount!),
                       style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                     ),
                 ],
@@ -369,15 +370,14 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                         _progressCtrl.text = '$_totalCount';
                         setState(() => _status = 'COMPLETED');
                       },
-                      child: const Text('Máx', style: TextStyle(fontSize: 12)),
+                      child: Text(l10n.addToListMax, style: const TextStyle(fontSize: 12)),
                     ),
                   ],
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Notes
-              Text('Notas', style: TextStyle(
+              Text(l10n.addToListNotes, style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
@@ -386,19 +386,18 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               TextField(
                 controller: _notesCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Notas personales (opcional)...',
+                decoration: InputDecoration(
+                  hintText: l10n.addToListNotesHint,
                   isDense: true,
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Submit
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.check),
-                  label: const Text('Guardar'),
+                  label: Text(l10n.addToListSave),
                   onPressed: () {
                     final progress = int.tryParse(_progressCtrl.text);
                     final notes = _notesCtrl.text.trim();

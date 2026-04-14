@@ -4,7 +4,17 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+
+String _timeAgo(DateTime dt, AppLocalizations l10n) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 1) return l10n.timeNow;
+  if (diff.inMinutes < 60) return l10n.timeMinutes(diff.inMinutes);
+  if (diff.inHours < 24) return l10n.timeHours(diff.inHours);
+  if (diff.inDays < 7) return l10n.timeDays(diff.inDays);
+  return l10n.timeWeeks((diff.inDays / 7).floor());
+}
 
 class ActivityRepliesPage extends ConsumerStatefulWidget {
   const ActivityRepliesPage({super.key, required this.activityId});
@@ -37,21 +47,13 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
     });
   }
 
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'ahora';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
-    return '${(diff.inDays / 7).floor()}sem';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Comentarios')),
+      appBar: AppBar(title: Text(l10n.commentsTitle)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _replies == null || _replies!.isEmpty
@@ -62,7 +64,7 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                       Icon(Icons.chat_bubble_outline,
                           size: 48, color: cs.onSurfaceVariant.withAlpha(80)),
                       const SizedBox(height: 12),
-                      Text('Sin comentarios',
+                      Text(l10n.noComments,
                           style: TextStyle(color: cs.onSurfaceVariant)),
                     ],
                   ),
@@ -71,7 +73,7 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   itemCount: _replies!.length,
                   itemBuilder: (context, i) =>
-                      _ReplyCard(reply: _replies![i], timeAgo: _timeAgo),
+                      _ReplyCard(reply: _replies![i], timeAgo: (dt) => _timeAgo(dt, l10n)),
                 ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 enum _SearchFilter {
@@ -16,15 +17,6 @@ enum _SearchFilter {
   tv,
   game;
 
-  String get label => switch (this) {
-        _SearchFilter.all => 'Todo',
-        _SearchFilter.anime => 'Anime',
-        _SearchFilter.manga => 'Manga',
-        _SearchFilter.movie => 'Películas',
-        _SearchFilter.tv => 'Series',
-        _SearchFilter.game => 'Juegos',
-      };
-
   IconData get icon => switch (this) {
         _SearchFilter.all => Icons.search_rounded,
         _SearchFilter.anime => Icons.animation_rounded,
@@ -34,6 +26,15 @@ enum _SearchFilter {
         _SearchFilter.game => Icons.sports_esports_rounded,
       };
 }
+
+String _searchFilterLabel(_SearchFilter f, AppLocalizations l10n) => switch (f) {
+  _SearchFilter.all => l10n.filterAll,
+  _SearchFilter.anime => l10n.filterAnime,
+  _SearchFilter.manga => l10n.filterManga,
+  _SearchFilter.movie => l10n.filterMovies,
+  _SearchFilter.tv => l10n.filterTv,
+  _SearchFilter.game => l10n.filterGames,
+};
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
@@ -61,17 +62,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       kind: kind,
     );
     if (!mounted || !added) return;
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Añadido a la biblioteca')),
+      SnackBar(content: Text(l10n.addedToLibrary)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Búsqueda')),
+      appBar: AppBar(title: Text(l10n.searchTitle)),
       body: Column(
         children: [
           Padding(
@@ -82,7 +84,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   child: TextField(
                     controller: _searchCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Buscar...',
+                      hintText: l10n.searchHint,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _query.isNotEmpty
                           ? IconButton(
@@ -121,7 +123,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     children: [
                       Icon(f.icon, size: 16),
                       const SizedBox(width: 4),
-                      Text(f.label),
+                      Text(_searchFilterLabel(f, l10n)),
                     ],
                   ),
                   onSelected: (_) => setState(() => _filter = f),
@@ -134,20 +136,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           const SizedBox(height: 8),
           Expanded(
             child: _query.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.search, size: 56,
-                            color: colorScheme.onSurfaceVariant.withAlpha(80)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Escribe para buscar',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  )
+                ? _PopularContent(filter: _filter, onAdd: _addToLibrary)
                 : _SearchResultsList(
                     query: _query,
                     filter: _filter,
@@ -156,6 +145,159 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PopularContent extends ConsumerWidget {
+  const _PopularContent({required this.filter, required this.onAdd});
+  final _SearchFilter filter;
+  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    if (filter == _SearchFilter.movie ||
+        filter == _SearchFilter.tv ||
+        filter == _SearchFilter.game) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(filter.icon, size: 48, color: cs.onSurfaceVariant.withAlpha(80)),
+            const SizedBox(height: 12),
+            Text(l10n.searchComingSoon(_searchFilterLabel(filter, l10n)),
+                style: TextStyle(color: cs.onSurfaceVariant)),
+          ],
+        ),
+      );
+    }
+
+    final showAnime = filter == _SearchFilter.all || filter == _SearchFilter.anime;
+    final showManga = filter == _SearchFilter.all || filter == _SearchFilter.manga;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+      children: [
+        if (showAnime) ...[
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(l10n.searchTrendingAnime,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.primary)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _PopularGrid(type: 'ANIME', kind: MediaKind.anime, onAdd: onAdd),
+          const SizedBox(height: 16),
+        ],
+        if (showManga) ...[
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, size: 18, color: Colors.deepPurple),
+              const SizedBox(width: 6),
+              Text(l10n.searchTrendingManga,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.deepPurple)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _PopularGrid(type: 'MANGA', kind: MediaKind.manga, onAdd: onAdd),
+        ],
+      ],
+    );
+  }
+}
+
+class _PopularGrid extends ConsumerWidget {
+  const _PopularGrid({required this.type, required this.kind, required this.onAdd});
+  final String type;
+  final MediaKind kind;
+  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final popularAsync = ref.watch(anilistPopularProvider(type));
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return popularAsync.when(
+      loading: () => const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(l10n.errorWithMessage(e), style: TextStyle(color: cs.error)),
+      ),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 195,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemCount: items.length,
+            itemBuilder: (context, i) {
+              final item = items[i];
+              final title = item['title'] as Map<String, dynamic>? ?? {};
+              final cover = (item['coverImage'] as Map?)?['large'] as String?;
+              final name = (title['english'] as String?) ??
+                  (title['romaji'] as String?) ?? '';
+              final score = item['averageScore'] as int?;
+              final id = item['id'] as int?;
+
+              return GestureDetector(
+                onTap: id != null
+                    ? () => context.push('/media/$id?kind=${kind.code}')
+                    : null,
+                child: SizedBox(
+                  width: 110,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: cover != null
+                            ? CachedNetworkImage(
+                                imageUrl: cover,
+                                width: 110,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 110,
+                                height: 150,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.image),
+                              ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      if (score != null)
+                        Row(
+                          children: [
+                            Icon(Icons.star, size: 11, color: Colors.amber.shade600),
+                            const SizedBox(width: 2),
+                            Text('$score%',
+                                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -173,30 +315,29 @@ class _SearchResultsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Determine what to search based on filter
+    final l10n = AppLocalizations.of(context)!;
     final sections = <_ResultSection>[];
 
     if (filter == _SearchFilter.all || filter == _SearchFilter.anime) {
-      sections.add(_ResultSection('Anime', MediaKind.anime,
+      sections.add(_ResultSection(l10n.filterAnime, MediaKind.anime,
           ref.watch(anilistSearchProvider(query, 'ANIME'))));
     }
     if (filter == _SearchFilter.all || filter == _SearchFilter.manga) {
-      sections.add(_ResultSection('Manga', MediaKind.manga,
+      sections.add(_ResultSection(l10n.filterManga, MediaKind.manga,
           ref.watch(anilistSearchProvider(query, 'MANGA'))));
     }
-    // Movie, TV, Game: stubs for now (no API connected yet)
     if (filter == _SearchFilter.movie) {
-      sections.add(_ResultSection.placeholder('Películas', MediaKind.movie));
+      sections.add(_ResultSection.placeholder(l10n.filterMovies, MediaKind.movie));
     }
     if (filter == _SearchFilter.tv) {
-      sections.add(_ResultSection.placeholder('Series', MediaKind.tv));
+      sections.add(_ResultSection.placeholder(l10n.filterTv, MediaKind.tv));
     }
     if (filter == _SearchFilter.game) {
-      sections.add(_ResultSection.placeholder('Juegos', MediaKind.game));
+      sections.add(_ResultSection.placeholder(l10n.filterGames, MediaKind.game));
     }
 
     if (sections.isEmpty) {
-      return const Center(child: Text('Selecciona un filtro'));
+      return Center(child: Text(l10n.searchSelectFilter));
     }
 
     return ListView(
@@ -215,7 +356,7 @@ class _SearchResultsList extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Próximamente — conecta TMDB / IGDB',
+                    l10n.searchComingSoonApi,
                     style: TextStyle(
                       fontSize: 13,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -242,7 +383,7 @@ class _SearchResultsList extends ConsumerWidget {
           ),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text('Error en ${section.title}: $e'),
+            child: Text(l10n.searchErrorIn(section.title, e)),
           ),
           data: (list) {
             if (list.isEmpty) return const SizedBox.shrink();
@@ -296,6 +437,7 @@ class _ResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final title = item['title'] as Map<String, dynamic>? ?? {};
     final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
@@ -387,7 +529,7 @@ class _ResultCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            kind.label,
+                            mediaKindLabel(kind, AppLocalizations.of(context)!),
                             style: TextStyle(
                               fontSize: 10,
                               color: colorScheme.onSecondaryContainer,
@@ -439,7 +581,7 @@ class _ResultCard extends StatelessWidget {
                 icon:
                     Icon(Icons.add_circle_outline, color: colorScheme.primary),
                 onPressed: () => onAdd(item, kind),
-                tooltip: 'Añadir a biblioteca',
+                tooltip: l10n.addToLibrary,
               ),
             ),
           ],

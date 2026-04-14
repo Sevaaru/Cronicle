@@ -50,6 +50,6 @@ Future<void> _handleAnilistOAuthCallback() async {
   await clearPendingAnilistToken();
 
   if (kDebugMode) {
-    debugPrint('[Cronicle] Anilist token guardado automáticamente');
+    debugPrint('[Cronicle] Anilist token saved automatically');
   }
 }

@@ -116,6 +116,46 @@ class AppDatabase extends _$AppDatabase {
     return select(libraryEntries).get();
   }
 
+  Future<List<LibraryEntry>> getLibraryPage({
+    int? kindCode,
+    String? status,
+    required int limit,
+    required int offset,
+    String orderBy = 'updatedAt',
+    bool ascending = false,
+  }) {
+    final q = select(libraryEntries)
+      ..where((t) {
+        Expression<bool> expr = const Constant(true);
+        if (kindCode != null) expr = expr & t.kind.equals(kindCode);
+        if (status != null) expr = expr & t.status.upper().equals(status.toUpperCase());
+        return expr;
+      })
+      ..orderBy([
+        (t) => switch (orderBy) {
+              'title' => ascending ? OrderingTerm.asc(t.title) : OrderingTerm.desc(t.title),
+              'score' => ascending ? OrderingTerm.asc(t.score) : OrderingTerm.desc(t.score),
+              'progress' => ascending ? OrderingTerm.asc(t.progress) : OrderingTerm.desc(t.progress),
+              _ => ascending ? OrderingTerm.asc(t.updatedAt) : OrderingTerm.desc(t.updatedAt),
+            },
+      ])
+      ..limit(limit, offset: offset);
+    return q.get();
+  }
+
+  Future<int> countLibrary({int? kindCode, String? status}) async {
+    final countExp = libraryEntries.id.count();
+    final q = selectOnly(libraryEntries)..addColumns([countExp]);
+    if (kindCode != null) {
+      q.where(libraryEntries.kind.equals(kindCode));
+    }
+    if (status != null) {
+      q.where(libraryEntries.status.upper().equals(status.toUpperCase()));
+    }
+    final row = await q.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
   Future<LibraryEntry?> getLibraryEntryById(int id) {
     return (select(libraryEntries)..where((t) => t.id.equals(id)))
         .getSingleOrNull();

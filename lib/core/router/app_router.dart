@@ -12,6 +12,7 @@ import 'package:cronicle/features/movies/presentation/movies_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -22,31 +23,32 @@ part 'app_router.g.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
+int _tabIndexFromPath(String path) {
+  if (path.startsWith('/library')) return 1;
+  if (path.startsWith('/search')) return 2;
+  if (path.startsWith('/profile') && !path.startsWith('/profile/')) return 3;
+  if (path.startsWith('/settings')) return 4;
+  return 0;
+}
+
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
+  final startPage = ref.read(defaultStartPageProvider);
+
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: '/feed',
+    initialLocation: startPage,
     routes: [
       ShellRoute(
         navigatorKey: _shellKey,
         builder: (context, state, child) {
           final location = state.uri.path;
-          int index = 0;
-          if (location.startsWith('/library')) {
-            index = 1;
-          } else if (location.startsWith('/search')) {
-            index = 2;
-          } else if (location.startsWith('/profile')) {
-            index = 3;
-          } else if (location.startsWith('/settings')) {
-            index = 4;
-          }
+          final index = _tabIndexFromPath(location);
 
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              final routes = ['/feed', '/library', '/search', '/profile', '/settings'];
+              const routes = ['/feed', '/library', '/search', '/profile', '/settings'];
               context.go(routes[i]);
             },
             child: child,
@@ -83,6 +85,33 @@ GoRouter appRouter(AppRouterRef ref) {
               child: SettingsPage(),
             ),
           ),
+          GoRoute(
+            path: '/media/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              final kindCode = int.tryParse(
+                      state.uri.queryParameters['kind'] ?? '') ??
+                  0;
+              return MediaDetailPage(
+                mediaId: id,
+                kind: MediaKind.fromCode(kindCode),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/user/:id',
+            builder: (context, state) {
+              final userId = int.parse(state.pathParameters['id']!);
+              return UserProfilePage(userId: userId);
+            },
+          ),
+          GoRoute(
+            path: '/activity/:id/replies',
+            builder: (context, state) {
+              final activityId = int.parse(state.pathParameters['id']!);
+              return ActivityRepliesPage(activityId: activityId);
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -100,33 +129,6 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthPage(),
-      ),
-      GoRoute(
-        path: '/media/:id',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          final kindCode = int.tryParse(
-                  state.uri.queryParameters['kind'] ?? '') ??
-              0;
-          return MediaDetailPage(
-            mediaId: id,
-            kind: MediaKind.fromCode(kindCode),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/user/:id',
-        builder: (context, state) {
-          final userId = int.parse(state.pathParameters['id']!);
-          return UserProfilePage(userId: userId);
-        },
-      ),
-      GoRoute(
-        path: '/activity/:id/replies',
-        builder: (context, state) {
-          final activityId = int.parse(state.pathParameters['id']!);
-          return ActivityRepliesPage(activityId: activityId);
-        },
       ),
     ],
   );
