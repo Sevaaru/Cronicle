@@ -82,6 +82,10 @@
   "libraryNoResults": "Sin resultados",
   "libraryNoStatusResults": "No hay títulos con este estado",
   "librarySearchAndAdd": "Busca y añade contenido",
+  "librarySearchTitle": "Buscar en biblioteca",
+  "librarySearchHint": "Buscar en biblioteca...",
+  "librarySearchPrompt": "Escribe un título para buscar",
+  "librarySearchGlobalResults": "Resultados globales",
 
   "statusAll": "Todo",
   "statusCurrent": "En progreso",

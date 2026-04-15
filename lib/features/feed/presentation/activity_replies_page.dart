@@ -7,7 +7,6 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
@@ -152,9 +151,9 @@ class _ReplyInputBar extends ConsumerWidget {
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
 
-    final shellNavPad = kGlassBottomNavContentHeight;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + shellNavPad),
+      padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),

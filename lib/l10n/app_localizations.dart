@@ -476,6 +476,30 @@ abstract class AppLocalizations {
   /// **'Busca y añade contenido'**
   String get librarySearchAndAdd;
 
+  /// No description provided for @librarySearchTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en biblioteca'**
+  String get librarySearchTitle;
+
+  /// No description provided for @librarySearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en biblioteca...'**
+  String get librarySearchHint;
+
+  /// No description provided for @librarySearchPrompt.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un título para buscar'**
+  String get librarySearchPrompt;
+
+  /// No description provided for @librarySearchGlobalResults.
+  ///
+  /// In es, this message translates to:
+  /// **'Resultados globales'**
+  String get librarySearchGlobalResults;
+
   /// No description provided for @statusAll.
   ///
   /// In es, this message translates to:

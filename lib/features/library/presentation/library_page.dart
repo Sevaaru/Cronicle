@@ -171,15 +171,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.libraryTitle)),
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: kGlassBottomNavContentHeight +
-              MediaQuery.viewPaddingOf(context).bottom +
-              8,
-        ),
-        child: FloatingActionButton(
-          heroTag: 'library_search_fab',
-          onPressed: () => _openLibrarySearchPage(context),
-          child: const Icon(Icons.search_rounded, size: 22),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _LibrarySearchFab(
+          onTap: () => _openLibrarySearchPage(context),
         ),
       ),
       body: Column(
@@ -301,7 +295,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 }
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   addAutomaticKeepAlives: false,
                   itemCount: entries.length + (hasMore ? 1 : 0),
                   itemBuilder: (context, i) {
@@ -735,8 +729,10 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
       byKind.putIfAbsent(kind, () => []).add(e);
     }
 
+    const bottomSafePad = 20.0;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Buscar en biblioteca')),
+      appBar: AppBar(title: Text(l10n.librarySearchTitle)),
       body: Column(
       children: [
         Padding(
@@ -747,7 +743,7 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search_rounded),
-              hintText: 'Buscar en biblioteca...',
+              hintText: l10n.librarySearchHint,
               suffixIcon: _query.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.close_rounded),
@@ -769,7 +765,7 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
           child: _query.trim().isEmpty
               ? Center(
                   child: Text(
-                    'Escribe un título para buscar',
+                    l10n.librarySearchPrompt,
                     style: TextStyle(color: cs.onSurfaceVariant),
                   ),
                 )
@@ -781,11 +777,11 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                       ),
                     )
                   : ListView(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                      padding: EdgeInsets.fromLTRB(12, 0, 12, bottomSafePad),
                       children: [
                         _SearchSectionHeader(
                           icon: Icons.public_rounded,
-                          title: 'Resultados globales',
+                          title: l10n.librarySearchGlobalResults,
                         ),
                         const SizedBox(height: 6),
                         ...filtered.map((e) => _SearchEntryTile(
@@ -904,6 +900,58 @@ class _SearchEntryTile extends StatelessWidget {
               onPressed: onEdit,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LibrarySearchFab extends StatelessWidget {
+  const _LibrarySearchFab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    cs.primaryContainer,
+                    cs.primary,
+                  ]
+                : [
+                    cs.primary,
+                    cs.secondary,
+                  ],
+          ),
+          border: Border.all(
+            color: isDark ? cs.onPrimaryContainer : cs.onPrimary,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: cs.primary.withAlpha(60),
+              blurRadius: 12,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.search_rounded,
+          size: 25,
+          color: isDark ? cs.onPrimaryContainer : cs.onPrimary,
         ),
       ),
     );

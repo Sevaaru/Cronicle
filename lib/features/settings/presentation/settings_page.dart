@@ -37,7 +37,7 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         children: [
           GlassCard(
             child: Column(

@@ -73,6 +73,10 @@
   "libraryNoResults": "No results",
   "libraryNoStatusResults": "No titles with this status",
   "librarySearchAndAdd": "Search and add content",
+  "librarySearchTitle": "Search library",
+  "librarySearchHint": "Search in library...",
+  "librarySearchPrompt": "Type a title to search",
+  "librarySearchGlobalResults": "Global results",
 
   "statusAll": "All",
   "statusCurrent": "In progress",

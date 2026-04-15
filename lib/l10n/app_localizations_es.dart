@@ -216,6 +216,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get librarySearchAndAdd => 'Busca y añade contenido';
 
   @override
+  String get librarySearchTitle => 'Buscar en biblioteca';
+
+  @override
+  String get librarySearchHint => 'Buscar en biblioteca...';
+
+  @override
+  String get librarySearchPrompt => 'Escribe un título para buscar';
+
+  @override
+  String get librarySearchGlobalResults => 'Resultados globales';
+
+  @override
   String get statusAll => 'Todo';
 
   @override

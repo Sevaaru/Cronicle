@@ -70,7 +70,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     return Scaffold(
       body: widget.child,
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: GlassBottomNav(
         currentIndex: widget.currentIndex,
         onTap: widget.onTabChanged,
