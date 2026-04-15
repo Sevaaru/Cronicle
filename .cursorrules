@@ -1,3 +1,8 @@
+---
+description: 
+alwaysApply: true
+---
+
 - Strict Clean Architecture: presentation → domain → data (never the reverse).
 - State: Riverpod 2.5+ with AsyncNotifier / Notifier; prefer `@riverpod` + codegen (`riverpod_generator`, `build_runner`).
 - Never use `setState` for app state; use Riverpod only.
@@ -12,3 +17,5 @@
 - Secrets (TMDB, Twitch/IGDB, OAuth client IDs): `--dart-define` or untracked env files; never commit keys.
 - Codegen: run `dart run build_runner watch` or `build` after changing `@DriftDatabase`, `@riverpod`, `freezed`, etc.
 - Google Sign-In uses `google_sign_in` 7.x: `GoogleSignIn.instance.initialize()` once in `main`, then `authenticate` / `authorizationClient` for scopes (e.g. Drive `appDataFolder`).
+
+- always put at the end of your messages what model you are

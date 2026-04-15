@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+const kGlassBottomNavContentHeight = 66.0;
+
 class GlassBottomNav extends StatelessWidget {
   const GlassBottomNav({
     super.key,
@@ -18,25 +20,27 @@ class GlassBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? colorScheme.surface.withAlpha(180)
-                : colorScheme.surfaceContainerHighest.withAlpha(200),
-            border: Border(
-              top: BorderSide(
-                color: colorScheme.outlineVariant.withAlpha(40),
-                width: 0.5,
+    return SizedBox(
+      height: kGlassBottomNavContentHeight + bottomInset,
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark
+                  ? colorScheme.surface.withAlpha(180)
+                  : colorScheme.surfaceContainerHighest.withAlpha(200),
+              border: Border(
+                top: BorderSide(
+                  color: colorScheme.outlineVariant.withAlpha(40),
+                  width: 0.5,
+                ),
               ),
             ),
-          ),
-          child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.fromLTRB(8, 6, 8, 6 + bottomInset),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: List.generate(items.length, (i) {
@@ -47,15 +51,16 @@ class GlassBottomNav extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => onTap(i),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 4,
+                                horizontal: 12,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
                                 color: selected
@@ -67,7 +72,7 @@ class GlassBottomNav extends StatelessWidget {
                               ),
                               child: Icon(
                                 selected ? item.activeIcon : item.icon,
-                                size: 22,
+                                size: 20,
                                 color: selected
                                     ? (isDark
                                         ? colorScheme.onPrimaryContainer
@@ -75,22 +80,25 @@ class GlassBottomNav extends StatelessWidget {
                                     : colorScheme.onSurfaceVariant,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item.label,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: selected
-                                    ? (isDark
-                                        ? colorScheme.onSurface
-                                        : colorScheme.primary)
-                                    : colorScheme.onSurfaceVariant,
+                            const SizedBox(height: 1),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight:
+                                        selected ? FontWeight.w600 : FontWeight.w400,
+                                    color: selected
+                                        ? (isDark
+                                            ? colorScheme.onSurface
+                                            : colorScheme.primary)
+                                        : colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

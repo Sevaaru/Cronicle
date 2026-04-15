@@ -130,10 +130,8 @@ FeedActivity? _mapActivity(Map<String, dynamic> a) {
 
 @riverpod
 class AnilistFeed extends _$AnilistFeed {
-  static const _perPage = 15;
-  int _animePage = 1;
-  int _mangaPage = 1;
-  int _textPage = 1;
+  static const _perPage = 25;
+  int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
@@ -141,9 +139,7 @@ class AnilistFeed extends _$AnilistFeed {
 
   @override
   Future<List<FeedActivity>> build() async {
-    _animePage = 1;
-    _mangaPage = 1;
-    _textPage = 1;
+    _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
     return _fetchPage();
@@ -152,22 +148,14 @@ class AnilistFeed extends _$AnilistFeed {
   Future<List<FeedActivity>> _fetchPage() async {
     final graphql = ref.read(anilistGraphqlProvider);
     final token = await ref.read(anilistTokenProvider.future);
-    final results = await Future.wait([
-      graphql.fetchRecentActivityByType(
-          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token),
-      graphql.fetchRecentActivityByType(
-          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token),
-      graphql.fetchRecentActivityByType(
-          activityType: 'TEXT', page: _textPage, perPage: _perPage, token: token),
-    ]);
-    if (results[0].length < _perPage && results[1].length < _perPage && results[2].length < _perPage) {
-      _hasMore = false;
-    }
-    final items = [
-      ...results[0].map(_mapActivity).whereType<FeedActivity>(),
-      ...results[1].map(_mapActivity).whereType<FeedActivity>(),
-      ...results[2].map(_mapActivity).whereType<FeedActivity>(),
-    ];
+    final raw = await graphql.fetchRecentActivityByType(
+      activityType: null,
+      page: _page,
+      perPage: _perPage,
+      token: token,
+    );
+    if (raw.length < _perPage) _hasMore = false;
+    final items = raw.map(_mapActivity).whereType<FeedActivity>().toList();
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
@@ -175,18 +163,20 @@ class AnilistFeed extends _$AnilistFeed {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
-    _animePage++;
-    _mangaPage++;
-    _textPage++;
+    _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
       if (next.isEmpty) _hasMore = false;
-      state = AsyncData([...prev, ...next]);
+      final byId = <String, FeedActivity>{
+        for (final a in prev) a.id: a,
+        for (final a in next) a.id: a,
+      };
+      final merged = byId.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      state = AsyncData(merged);
     } catch (_) {
-      _animePage--;
-      _mangaPage--;
-      _textPage--;
+      _page--;
     } finally {
       _isLoadingMore = false;
     }
@@ -260,10 +250,8 @@ class AnilistFeedByType extends _$AnilistFeedByType {
 
 @riverpod
 class AnilistFeedFollowing extends _$AnilistFeedFollowing {
-  static const _perPage = 15;
-  int _animePage = 1;
-  int _mangaPage = 1;
-  int _textPage = 1;
+  static const _perPage = 25;
+  int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
@@ -271,9 +259,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
 
   @override
   Future<List<FeedActivity>> build() async {
-    _animePage = 1;
-    _mangaPage = 1;
-    _textPage = 1;
+    _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
     return _fetchPage();
@@ -283,22 +269,15 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
     final graphql = ref.read(anilistGraphqlProvider);
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) return [];
-    final results = await Future.wait([
-      graphql.fetchRecentActivityByType(
-          activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token, isFollowing: true),
-      graphql.fetchRecentActivityByType(
-          activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token, isFollowing: true),
-      graphql.fetchRecentActivityByType(
-          activityType: 'TEXT', page: _textPage, perPage: _perPage, token: token, isFollowing: true),
-    ]);
-    if (results[0].length < _perPage && results[1].length < _perPage && results[2].length < _perPage) {
-      _hasMore = false;
-    }
-    final items = [
-      ...results[0].map(_mapActivity).whereType<FeedActivity>(),
-      ...results[1].map(_mapActivity).whereType<FeedActivity>(),
-      ...results[2].map(_mapActivity).whereType<FeedActivity>(),
-    ];
+    final raw = await graphql.fetchRecentActivityByType(
+      activityType: null,
+      page: _page,
+      perPage: _perPage,
+      token: token,
+      isFollowing: true,
+    );
+    if (raw.length < _perPage) _hasMore = false;
+    final items = raw.map(_mapActivity).whereType<FeedActivity>().toList();
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
@@ -306,18 +285,20 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
-    _animePage++;
-    _mangaPage++;
-    _textPage++;
+    _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
       if (next.isEmpty) _hasMore = false;
-      state = AsyncData([...prev, ...next]);
+      final byId = <String, FeedActivity>{
+        for (final a in prev) a.id: a,
+        for (final a in next) a.id: a,
+      };
+      final merged = byId.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      state = AsyncData(merged);
     } catch (_) {
-      _animePage--;
-      _mangaPage--;
-      _textPage--;
+      _page--;
     } finally {
       _isLoadingMore = false;
     }

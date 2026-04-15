@@ -12,6 +12,7 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
 
@@ -169,6 +170,18 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.libraryTitle)),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: kGlassBottomNavContentHeight +
+              MediaQuery.viewPaddingOf(context).bottom +
+              8,
+        ),
+        child: FloatingActionButton(
+          heroTag: 'library_search_fab',
+          onPressed: () => _openLibrarySearchPage(context),
+          child: const Icon(Icons.search_rounded, size: 22),
+        ),
+      ),
       body: Column(
         children: [
           SizedBox(
@@ -314,6 +327,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openLibrarySearchPage(BuildContext context) async {
+    final db = ref.read(databaseProvider);
+    final all = await db.getAllLibraryEntries();
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => _LibrarySearchPage(
+        entries: all,
+        onEdit: (entry) => _openEditSheet(context, entry),
+      ),
       ),
     );
   }
@@ -663,3 +690,222 @@ IconData _kindIcon(MediaKind kind) => switch (kind) {
       MediaKind.tv => Icons.tv_rounded,
       MediaKind.game => Icons.sports_esports_rounded,
     };
+
+class _LibrarySearchPage extends StatefulWidget {
+  const _LibrarySearchPage({
+    required this.entries,
+    required this.onEdit,
+  });
+
+  final List<LibraryEntry> entries;
+  final Future<void> Function(LibraryEntry entry) onEdit;
+
+  @override
+  State<_LibrarySearchPage> createState() => _LibrarySearchPageState();
+}
+
+class _LibrarySearchPageState extends State<_LibrarySearchPage> {
+  final _controller = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  List<LibraryEntry> get _filtered {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return [];
+    return widget.entries
+        .where((e) => e.title.toLowerCase().contains(q))
+        .toList()
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final filtered = _filtered;
+
+    final byKind = <MediaKind, List<LibraryEntry>>{};
+    for (final e in filtered) {
+      final kind = MediaKind.fromCode(e.kind);
+      byKind.putIfAbsent(kind, () => []).add(e);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Buscar en biblioteca')),
+      body: Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: 'Buscar en biblioteca...',
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () {
+                        _controller.clear();
+                        setState(() => _query = '');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              filled: true,
+              fillColor: cs.surfaceContainerHighest.withAlpha(120),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _query.trim().isEmpty
+              ? Center(
+                  child: Text(
+                    'Escribe un título para buscar',
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
+                )
+              : filtered.isEmpty
+                  ? Center(
+                      child: Text(
+                        l10n.libraryNoResults,
+                        style: TextStyle(color: cs.onSurfaceVariant),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+                      children: [
+                        _SearchSectionHeader(
+                          icon: Icons.public_rounded,
+                          title: 'Resultados globales',
+                        ),
+                        const SizedBox(height: 6),
+                        ...filtered.map((e) => _SearchEntryTile(
+                              entry: e,
+                              onEdit: () => widget.onEdit(e),
+                            )),
+                        const SizedBox(height: 12),
+                        ...MediaKind.values.where(byKind.containsKey).map((kind) {
+                          final items = byKind[kind]!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _SearchSectionHeader(
+                                icon: _kindIcon(kind),
+                                title: mediaKindLabel(kind, l10n),
+                              ),
+                              const SizedBox(height: 6),
+                              ...items.map((e) => _SearchEntryTile(
+                                    entry: e,
+                                    onEdit: () => widget.onEdit(e),
+                                  )),
+                              const SizedBox(height: 10),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+        ),
+      ],
+      ),
+    );
+  }
+}
+
+class _SearchSectionHeader extends StatelessWidget {
+  const _SearchSectionHeader({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: cs.primary),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: cs.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchEntryTile extends StatelessWidget {
+  const _SearchEntryTile({
+    required this.entry,
+    required this.onEdit,
+  });
+
+  final LibraryEntry entry;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final kind = MediaKind.fromCode(entry.kind);
+    final canNavigate = entry.externalId.isNotEmpty &&
+        (kind == MediaKind.anime || kind == MediaKind.manga);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: entry.posterUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: entry.posterUrl!,
+                  width: 36,
+                  height: 50,
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  width: 36,
+                  height: 50,
+                  color: cs.surfaceContainerHighest,
+                  child: const Icon(Icons.image, size: 16),
+                ),
+        ),
+        title: Text(
+          entry.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${mediaKindLabel(kind, l10n)} · ${_currentStatusLabel(entry.status, kind, l10n)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canNavigate)
+              IconButton(
+                icon: const Icon(Icons.open_in_new_rounded, size: 20),
+                onPressed: () => context.push('/media/${entry.externalId}?kind=${entry.kind}'),
+              ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: onEdit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

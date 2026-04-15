@@ -100,6 +100,9 @@ class _DetailContentState extends State<_DetailContent> {
     const posterHeight = 130.0;
     const posterWidth = 90.0;
     const overlapAmount = 50.0;
+    const headerOverflowAllowance = 10.0;
+    final endDateLabel = _formatDate(endDate);
+    final isReleasing = status == 'RELEASING';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -112,7 +115,7 @@ class _DetailContentState extends State<_DetailContent> {
           child: Column(
             children: [
               SizedBox(
-                height: bannerHeight + posterHeight - overlapAmount,
+                height: bannerHeight + posterHeight - overlapAmount + headerOverflowAllowance,
                 child: Stack(
                 children: [
                   GestureDetector(
@@ -301,7 +304,8 @@ class _DetailContentState extends State<_DetailContent> {
                             if (season != null && seasonYear != null) _InfoPill(l10n.mediaSeason, '$season $seasonYear'),
                             if (source != null) _InfoPill(l10n.mediaSource, source.replaceAll('_', ' ')),
                             if (startDate != null) _InfoPill(l10n.mediaStart, _formatDate(startDate)),
-                            if (endDate != null) _InfoPill(l10n.mediaEnd, _formatDate(endDate)),
+                            if (endDateLabel.isNotEmpty || isReleasing)
+                              _InfoPill(l10n.mediaEnd, endDateLabel.isNotEmpty ? endDateLabel : 'Releasing'),
                           ],
                         ),
                       ],
