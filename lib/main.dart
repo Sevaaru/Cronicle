@@ -16,11 +16,13 @@ Future<void> main() async {
 
   await _handleAnilistOAuthCallback();
 
-  try {
-    await GoogleSignIn.instance.initialize();
-  } catch (e) {
-    if (kDebugMode) {
-      debugPrint('[Cronicle] Google Sign-In init skipped: $e');
+  if (!kIsWeb) {
+    try {
+      await GoogleSignIn.instance.initialize();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Cronicle] Google Sign-In init skipped: $e');
+      }
     }
   }
 

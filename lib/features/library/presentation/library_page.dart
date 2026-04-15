@@ -10,6 +10,7 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
@@ -119,6 +120,29 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           notifier.loadMore();
         }
       } catch (_) {}
+    }
+  }
+
+  Future<void> _openEditSheet(BuildContext context, LibraryEntry entry) async {
+    final kind = MediaKind.fromCode(entry.kind);
+    final item = <String, dynamic>{
+      'id': int.tryParse(entry.externalId) ?? entry.externalId,
+      'title': {'english': entry.title, 'romaji': entry.title},
+      'coverImage': {'large': entry.posterUrl},
+      if (kind == MediaKind.manga) 'chapters': entry.totalEpisodes
+      else 'episodes': entry.totalEpisodes,
+    };
+
+    final saved = await showAddToLibrarySheet(
+      context: context,
+      ref: ref,
+      item: item,
+      kind: kind,
+      existingEntry: entry,
+    );
+
+    if (saved && mounted) {
+      ref.invalidate(paginatedLibraryProvider(_params));
     }
   }
 
@@ -278,11 +302,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       entry: entries[i],
                       ref: ref,
                       selectedKind: _selectedKind,
-                      onDelete: () {
-                        ref.read(paginatedLibraryProvider(_params).notifier)
-                            .removeEntry(entries[i].id);
-                        ref.read(databaseProvider).deleteLibraryEntry(entries[i].id);
-                      },
+                      onEdit: () => _openEditSheet(context, entries[i]),
                       onProgressUpdated: () {
                         ref.invalidate(paginatedLibraryProvider(_params));
                       },
@@ -438,14 +458,14 @@ class _EntryCard extends StatelessWidget {
     super.key,
     required this.entry,
     required this.ref,
-    required this.onDelete,
+    required this.onEdit,
     required this.onProgressUpdated,
     this.selectedKind,
   });
 
   final LibraryEntry entry;
   final WidgetRef ref;
-  final VoidCallback onDelete;
+  final VoidCallback onEdit;
   final VoidCallback onProgressUpdated;
   final MediaKind? selectedKind;
 
@@ -542,8 +562,8 @@ class _EntryCard extends StatelessWidget {
             if (showProgressButton)
               _IncrementButton(entry: entry, ref: ref, onUpdated: onProgressUpdated),
             IconButton(
-              icon: Icon(Icons.delete_outline, size: 20, color: cs.error.withAlpha(150)),
-              onPressed: onDelete,
+              icon: Icon(Icons.edit_outlined, size: 20, color: cs.onSurfaceVariant),
+              onPressed: onEdit,
             ),
           ],
         ),

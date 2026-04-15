@@ -105,6 +105,8 @@
   "editLibraryEntry": "Edit entry",
   "addedToLibrary": "Added to library",
   "entryUpdated": "Entry updated",
+  "removeFromLibrary": "Remove from my library",
+  "removedFromLibrary": "Removed from library",
 
   "profileTitle": "Profile",
   "profileLocalUser": "Local user",

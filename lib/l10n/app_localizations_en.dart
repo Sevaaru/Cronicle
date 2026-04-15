@@ -300,6 +300,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entryUpdated => 'Entry updated';
 
   @override
+  String get removeFromLibrary => 'Remove from my library';
+
+  @override
+  String get removedFromLibrary => 'Removed from library';
+
+  @override
   String get profileTitle => 'Profile';
 
   @override

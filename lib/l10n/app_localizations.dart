@@ -638,6 +638,18 @@ abstract class AppLocalizations {
   /// **'Entrada actualizada'**
   String get entryUpdated;
 
+  /// No description provided for @removeFromLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar de mi biblioteca'**
+  String get removeFromLibrary;
+
+  /// No description provided for @removedFromLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminado de la biblioteca'**
+  String get removedFromLibrary;
+
   /// No description provided for @profileTitle.
   ///
   /// In es, this message translates to:

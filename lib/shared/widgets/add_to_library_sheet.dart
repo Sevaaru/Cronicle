@@ -79,6 +79,11 @@ Future<bool> showAddToLibrarySheet({
 
   if (result == null) return false;
 
+  if (result.deleted && existingEntry != null) {
+    await db.deleteLibraryEntry(existingEntry.id);
+    return true;
+  }
+
   final title = item['title'] as Map<String, dynamic>? ?? {};
   final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
   final isManga = kind == MediaKind.manga;
@@ -140,11 +145,15 @@ class _AddResult {
     this.score,
     this.progress,
     this.notes,
+    this.deleted = false,
   });
   final String status;
   final int? score;
   final int? progress;
   final String? notes;
+  final bool deleted;
+
+  static const remove = _AddResult(status: '', deleted: true);
 }
 
 class _AnilistPromptDialog extends StatelessWidget {
@@ -426,6 +435,18 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                   },
                 ),
               ),
+              if (isEdit) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: Icon(Icons.delete_outline, color: cs.error),
+                    label: Text(l10n.removeFromLibrary, style: TextStyle(color: cs.error)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error.withAlpha(120))),
+                    onPressed: () => Navigator.of(context).pop(_AddResult.remove),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -301,6 +301,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get entryUpdated => 'Entrada actualizada';
 
   @override
+  String get removeFromLibrary => 'Eliminar de mi biblioteca';
+
+  @override
+  String get removedFromLibrary => 'Eliminado de la biblioteca';
+
+  @override
   String get profileTitle => 'Perfil';
 
   @override

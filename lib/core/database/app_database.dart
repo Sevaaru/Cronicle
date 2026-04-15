@@ -105,7 +105,13 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<int> upsertLibraryEntry(LibraryEntriesCompanion entry) {
-    return into(libraryEntries).insertOnConflictUpdate(entry);
+    return into(libraryEntries).insert(
+      entry,
+      onConflict: DoUpdate(
+        (old) => entry,
+        target: [libraryEntries.kind, libraryEntries.externalId],
+      ),
+    );
   }
 
   Future<void> deleteLibraryEntry(int id) {

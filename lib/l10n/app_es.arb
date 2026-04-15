@@ -116,6 +116,8 @@
   "editLibraryEntry": "Editar entrada",
   "addedToLibrary": "Añadido a la biblioteca",
   "entryUpdated": "Entrada actualizada",
+  "removeFromLibrary": "Eliminar de mi biblioteca",
+  "removedFromLibrary": "Eliminado de la biblioteca",
 
   "profileTitle": "Perfil",
   "profileLocalUser": "Usuario local",
