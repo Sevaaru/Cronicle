@@ -1,6 +1,6 @@
 <div align="center">
 
-# CRONICLE APP(#)
+# CRONICLE APP
 An app for everything tracking. Integration With Anilist, Trackr, and more to come.
 
 <a>
