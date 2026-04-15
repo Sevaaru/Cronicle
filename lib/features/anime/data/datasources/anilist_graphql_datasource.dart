@@ -199,10 +199,12 @@ class AnilistGraphqlDatasource {
             nodes {
               id
               summary
+              body(asHtml: false)
               score
               rating
               ratingAmount
-              user { name avatar { medium } }
+              userRating
+              user { id name avatar { medium } }
             }
           }
           stats {
@@ -482,6 +484,49 @@ class AnilistGraphqlDatasource {
 
     final data = await _post(query, variables: variables, token: token);
     return data['data']?['SaveMediaListEntry'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch a single review by ID.
+  Future<Map<String, dynamic>?> fetchReviewById(int reviewId, {String? token}) async {
+    const query = r'''
+      query ($id: Int) {
+        Review(id: $id) {
+          id
+          summary
+          body(asHtml: false)
+          score
+          rating
+          ratingAmount
+          userRating
+          createdAt
+          media {
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+          }
+          user { id name avatar { medium large } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': reviewId}, token: token);
+    return data['data']?['Review'] as Map<String, dynamic>?;
+  }
+
+  /// Rate a review (UP_VOTE, DOWN_VOTE, NO_VOTE).
+  Future<Map<String, dynamic>?> rateReview(int reviewId, String rating, String token) async {
+    const query = r'''
+      mutation ($reviewId: Int, $rating: ReviewRating) {
+        RateReview(reviewId: $reviewId, rating: $rating) {
+          id
+          rating
+          ratingAmount
+          userRating
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'reviewId': reviewId, 'rating': rating}, token: token);
+    return data['data']?['RateReview'] as Map<String, dynamic>?;
   }
 
   /// Delete a media list entry from Anilist by list entry ID.

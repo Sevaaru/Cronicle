@@ -229,5 +229,16 @@
   "mediaKindManga": "Manga",
   "mediaKindMovie": "Películas",
   "mediaKindTv": "Series",
-  "mediaKindGame": "Juegos"
+  "mediaKindGame": "Juegos",
+
+  "reviewTitle": "Reseña",
+  "reviewByUser": "Por {name}",
+  "@reviewByUser": { "placeholders": { "name": {} } },
+  "reviewHelpful": "¿Útil?",
+  "reviewUpVote": "Sí",
+  "reviewDownVote": "No",
+  "reviewLoginRequired": "Inicia sesión en Anilist para votar",
+  "reviewUsersFoundHelpful": "{count} de {total} encontraron útil esta reseña",
+  "@reviewUsersFoundHelpful": { "placeholders": { "count": {}, "total": {} } },
+  "readMore": "Leer más"
 }

@@ -607,4 +607,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaKindGame => 'Games';
+
+  @override
+  String get reviewTitle => 'Review';
+
+  @override
+  String reviewByUser(Object name) {
+    return 'By $name';
+  }
+
+  @override
+  String get reviewHelpful => 'Helpful?';
+
+  @override
+  String get reviewUpVote => 'Yes';
+
+  @override
+  String get reviewDownVote => 'No';
+
+  @override
+  String get reviewLoginRequired => 'Sign in to Anilist to vote';
+
+  @override
+  String reviewUsersFoundHelpful(Object count, Object total) {
+    return '$count of $total found this review helpful';
+  }
+
+  @override
+  String get readMore => 'Read more';
 }

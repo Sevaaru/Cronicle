@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
@@ -138,7 +139,7 @@ class _ReplyCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(text,
+          AnilistMarkdown(text,
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface, height: 1.4)),
           if (likeCount > 0) ...[

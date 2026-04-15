@@ -1231,6 +1231,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Juegos'**
   String get mediaKindGame;
+
+  /// No description provided for @reviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseña'**
+  String get reviewTitle;
+
+  /// No description provided for @reviewByUser.
+  ///
+  /// In es, this message translates to:
+  /// **'Por {name}'**
+  String reviewByUser(Object name);
+
+  /// No description provided for @reviewHelpful.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Útil?'**
+  String get reviewHelpful;
+
+  /// No description provided for @reviewUpVote.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get reviewUpVote;
+
+  /// No description provided for @reviewDownVote.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get reviewDownVote;
+
+  /// No description provided for @reviewLoginRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión en Anilist para votar'**
+  String get reviewLoginRequired;
+
+  /// No description provided for @reviewUsersFoundHelpful.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} de {total} encontraron útil esta reseña'**
+  String reviewUsersFoundHelpful(Object count, Object total);
+
+  /// No description provided for @readMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer más'**
+  String get readMore;
 }
 
 class _AppLocalizationsDelegate

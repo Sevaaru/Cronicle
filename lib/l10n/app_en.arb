@@ -214,5 +214,14 @@
   "mediaKindManga": "Manga",
   "mediaKindMovie": "Movies",
   "mediaKindTv": "TV Shows",
-  "mediaKindGame": "Games"
+  "mediaKindGame": "Games",
+
+  "reviewTitle": "Review",
+  "reviewByUser": "By {name}",
+  "reviewHelpful": "Helpful?",
+  "reviewUpVote": "Yes",
+  "reviewDownVote": "No",
+  "reviewLoginRequired": "Sign in to Anilist to vote",
+  "reviewUsersFoundHelpful": "{count} of {total} found this review helpful",
+  "readMore": "Read more"
 }

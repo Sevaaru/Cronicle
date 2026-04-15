@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
+import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
@@ -110,6 +111,14 @@ GoRouter appRouter(AppRouterRef ref) {
             builder: (context, state) {
               final activityId = int.parse(state.pathParameters['id']!);
               return ActivityRepliesPage(activityId: activityId);
+            },
+          ),
+          GoRoute(
+            path: '/review/:id',
+            builder: (context, state) {
+              final reviewId = int.parse(state.pathParameters['id']!);
+              final extra = state.extra as Map<String, dynamic>?;
+              return ReviewDetailPage(reviewId: reviewId, initialData: extra);
             },
           ),
         ],

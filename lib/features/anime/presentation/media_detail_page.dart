@@ -10,6 +10,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
@@ -300,8 +301,8 @@ class _DetailContentState extends State<_DetailContent> {
                 if (description != null && description.isNotEmpty) ...[
                   Text(l10n.mediaSynopsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 6),
-                  Text(
-                    _cleanHtml(description),
+                  AnilistMarkdown(
+                    description,
                     style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant, height: 1.5),
                   ),
                   const SizedBox(height: 16),
@@ -610,57 +611,69 @@ class _DetailContentState extends State<_DetailContent> {
           final user = review['user'] as Map<String, dynamic>? ?? {};
           final avatar = user['avatar'] as Map<String, dynamic>? ?? {};
           final reviewScore = review['score'] as int?;
+          final reviewId = review['id'] as int?;
 
-          return GlassCard(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundImage: avatar['medium'] != null
-                          ? CachedNetworkImageProvider(avatar['medium'] as String)
-                          : null,
-                      child: avatar['medium'] == null
-                          ? const Icon(Icons.person, size: 14)
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        user['name'] as String? ?? l10n.mediaAnonymous,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          return GestureDetector(
+            onTap: reviewId != null
+                ? () => context.push('/review/$reviewId', extra: review)
+                : null,
+            child: GlassCard(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundImage: avatar['medium'] != null
+                            ? CachedNetworkImageProvider(avatar['medium'] as String)
+                            : null,
+                        child: avatar['medium'] == null
+                            ? const Icon(Icons.person, size: 14)
+                            : null,
                       ),
-                    ),
-                    if (reviewScore != null) ...[
-                      Icon(Icons.star, size: 14, color: Colors.amber.shade600),
-                      const SizedBox(width: 2),
-                      Text('$reviewScore/100', style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          user['name'] as String? ?? l10n.mediaAnonymous,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
+                      if (reviewScore != null) ...[
+                        Icon(Icons.star, size: 14, color: Colors.amber.shade600),
+                        const SizedBox(width: 2),
+                        Text('$reviewScore/100', style: const TextStyle(fontSize: 12)),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  review['summary'] as String? ?? '',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.4),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.thumb_up_alt_outlined, size: 13, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${review['rating'] ?? 0}/${review['ratingAmount'] ?? 0}',
-                      style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    review['summary'] as String? ?? '',
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.4),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.thumb_up_alt_outlined, size: 13, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${review['rating'] ?? 0}/${review['ratingAmount'] ?? 0}',
+                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                      ),
+                      const Spacer(),
+                      Text(
+                        l10n.readMore,
+                        style: TextStyle(fontSize: 12, color: cs.primary, fontWeight: FontWeight.w600),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 11, color: cs.primary),
+                    ],
+                  ),
+                ],
+              ),
             ),
           );
         }),
@@ -735,17 +748,6 @@ class _DetailContentState extends State<_DetailContent> {
     return '$n';
   }
 
-  String _cleanHtml(String html) {
-    return html
-        .replaceAll(RegExp(r'<br\s*/?>'), '\n')
-        .replaceAll(RegExp(r'<[^>]+>'), '')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .trim();
-  }
 }
 
 class _Tag extends StatelessWidget {
