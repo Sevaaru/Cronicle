@@ -1,5 +1,5 @@
 # cronicle
-
+https://i.imgur.com/QhVLrPB.png
 A new Flutter project.
 
 ## Getting Started
