@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cronicle · Twitch</title>
+</head>
+<body>
+  <p>Volviendo a Cronicle…</p>
+  <script>
+    (function () {
+      var q = window.location.search;
+      if (!q) {
+        document.body.textContent = 'Falta la query de OAuth (code/state).';
+        return;
+      }
+      // Misma ruta que en AndroidManifest (scheme cronicle, host twitch-oauth)
+      window.location.replace('cronicle://twitch-oauth' + q);
+    })();
+  </script>
+</body>
+</html>

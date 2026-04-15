@@ -302,6 +302,12 @@ abstract class AppLocalizations {
   /// **'Backup subido correctamente'**
   String get backupUploadSuccess;
 
+  /// No description provided for @backupExportReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia lista. Usa el menú compartir para guardarla donde quieras.'**
+  String get backupExportReady;
+
   /// No description provided for @backupRestored.
   ///
   /// In es, this message translates to:
@@ -314,11 +320,203 @@ abstract class AppLocalizations {
   /// **'Restaurados {count} elementos'**
   String backupRestoredCount(Object count);
 
+  /// No description provided for @backupSectionSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluye biblioteca, ajustes en este dispositivo y tokens de Anilist/Twitch (copia cifrada en la app). Con sesión de Google: sube o baja el JSON desde la carpeta privada de Drive; si no, comparte el archivo.'**
+  String get backupSectionSubtitle;
+
+  /// No description provided for @backupRestoreChooseSourceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Origen de la copia'**
+  String get backupRestoreChooseSourceTitle;
+
+  /// No description provided for @backupRestoreChooseSourceBody.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Desde un archivo JSON o desde la copia guardada en Google Drive?'**
+  String get backupRestoreChooseSourceBody;
+
+  /// No description provided for @backupRestoreFromFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo…'**
+  String get backupRestoreFromFile;
+
+  /// No description provided for @backupRestoreFromDrive.
+  ///
+  /// In es, this message translates to:
+  /// **'Google Drive'**
+  String get backupRestoreFromDrive;
+
+  /// No description provided for @backupRestoreConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar copia'**
+  String get backupRestoreConfirmTitle;
+
+  /// No description provided for @backupRestoreConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se fusionarán {count} entradas de biblioteca y, si la copia es reciente, preferencias y sesiones (Anilist/Twitch) incluidas en el archivo.'**
+  String backupRestoreConfirmBody(Object count);
+
   /// No description provided for @feedTitle.
   ///
   /// In es, this message translates to:
   /// **'Inicio'**
   String get feedTitle;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay notificaciones.'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsLoginRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión en Anilist en Ajustes para ver notificaciones.'**
+  String get notificationsLoginRequired;
+
+  /// No description provided for @notificationNoLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Abre esta notificación en anilist.co'**
+  String get notificationNoLink;
+
+  /// No description provided for @notificationTypeGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificación'**
+  String get notificationTypeGeneric;
+
+  /// No description provided for @notificationTypeAiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo episodio'**
+  String get notificationTypeAiring;
+
+  /// No description provided for @notificationTypeActivityReply.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta en actividad'**
+  String get notificationTypeActivityReply;
+
+  /// No description provided for @notificationTypeActivityMention.
+  ///
+  /// In es, this message translates to:
+  /// **'Mención en actividad'**
+  String get notificationTypeActivityMention;
+
+  /// No description provided for @notificationTypeActivityMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensaje de actividad'**
+  String get notificationTypeActivityMessage;
+
+  /// No description provided for @notificationTypeFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo seguidor'**
+  String get notificationTypeFollowing;
+
+  /// No description provided for @notificationTypeRelatedMedia.
+  ///
+  /// In es, this message translates to:
+  /// **'Medio relacionado añadido'**
+  String get notificationTypeRelatedMedia;
+
+  /// No description provided for @notificationTypeMediaDataChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Medio actualizado'**
+  String get notificationTypeMediaDataChange;
+
+  /// No description provided for @notificationTypeMediaMerge.
+  ///
+  /// In es, this message translates to:
+  /// **'Medios fusionados'**
+  String get notificationTypeMediaMerge;
+
+  /// No description provided for @notificationTypeMediaDeletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Medio eliminado de Anilist'**
+  String get notificationTypeMediaDeletion;
+
+  /// No description provided for @notificationTypeThreadReply.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta en foro'**
+  String get notificationTypeThreadReply;
+
+  /// No description provided for @notificationTypeThreadMention.
+  ///
+  /// In es, this message translates to:
+  /// **'Mención en foro'**
+  String get notificationTypeThreadMention;
+
+  /// No description provided for @notificationTypeThreadSubscribed.
+  ///
+  /// In es, this message translates to:
+  /// **'Hilo del foro'**
+  String get notificationTypeThreadSubscribed;
+
+  /// No description provided for @notificationTypeThreadLike.
+  ///
+  /// In es, this message translates to:
+  /// **'Me gusta en foro'**
+  String get notificationTypeThreadLike;
+
+  /// No description provided for @notificationTypeActivityLike.
+  ///
+  /// In es, this message translates to:
+  /// **'Me gusta en actividad'**
+  String get notificationTypeActivityLike;
+
+  /// No description provided for @notificationTypeActivityReplyLike.
+  ///
+  /// In es, this message translates to:
+  /// **'Me gusta en respuesta'**
+  String get notificationTypeActivityReplyLike;
+
+  /// No description provided for @notificationTypeActivityReplySubscribed.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuesta en actividad seguida'**
+  String get notificationTypeActivityReplySubscribed;
+
+  /// No description provided for @notificationTypeThreadCommentLike.
+  ///
+  /// In es, this message translates to:
+  /// **'Me gusta en comentario del foro'**
+  String get notificationTypeThreadCommentLike;
+
+  /// No description provided for @notificationTypeMediaSubmission.
+  ///
+  /// In es, this message translates to:
+  /// **'Envío de medio (Anilist)'**
+  String get notificationTypeMediaSubmission;
+
+  /// No description provided for @notificationTypeStaffSubmission.
+  ///
+  /// In es, this message translates to:
+  /// **'Envío de staff (Anilist)'**
+  String get notificationTypeStaffSubmission;
+
+  /// No description provided for @notificationTypeCharacterSubmission.
+  ///
+  /// In es, this message translates to:
+  /// **'Envío de personaje (Anilist)'**
+  String get notificationTypeCharacterSubmission;
 
   /// No description provided for @feedEmpty.
   ///
@@ -337,6 +535,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Feed de {label} — próximamente'**
   String feedComingSoon(Object label);
+
+  /// No description provided for @feedBrowseActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad'**
+  String get feedBrowseActivity;
+
+  /// No description provided for @feedBrowseSeasonal.
+  ///
+  /// In es, this message translates to:
+  /// **'De temporada'**
+  String get feedBrowseSeasonal;
+
+  /// No description provided for @feedBrowseTopRated.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejor valorados'**
+  String get feedBrowseTopRated;
+
+  /// No description provided for @feedBrowseUpcoming.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximos'**
+  String get feedBrowseUpcoming;
+
+  /// No description provided for @feedBrowseRecentlyReleased.
+  ///
+  /// In es, this message translates to:
+  /// **'Recién estrenados'**
+  String get feedBrowseRecentlyReleased;
+
+  /// No description provided for @feedBrowseEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay títulos en esta lista.'**
+  String get feedBrowseEmpty;
 
   /// No description provided for @filterFollowing.
   ///
@@ -397,6 +631,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Inicia sesión en Anilist para dar like'**
   String get loginRequiredLike;
+
+  /// No description provided for @loginRequiredFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión en Anilist en Ajustes para usar favoritos'**
+  String get loginRequiredFavorite;
+
+  /// No description provided for @sectionFavGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos favoritos'**
+  String get sectionFavGames;
+
+  /// No description provided for @tooltipAddFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir a favoritos'**
+  String get tooltipAddFavorite;
+
+  /// No description provided for @tooltipRemoveFavorite.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar de favoritos'**
+  String get tooltipRemoveFavorite;
 
   /// No description provided for @loginRequiredFollow.
   ///
@@ -1064,6 +1322,144 @@ abstract class AppLocalizations {
   /// **'No, gracias'**
   String get syncPromptNoThanks;
 
+  /// No description provided for @settingsAccountsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuentas'**
+  String get settingsAccountsTitle;
+
+  /// No description provided for @settingsAccountsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Anilist sincroniza anime/manga con la nube. Twitch autentica las consultas a la API de IGDB. Google sirve para copias. Los juegos en Cronicle se guardan en el dispositivo.'**
+  String get settingsAccountsSubtitle;
+
+  /// No description provided for @twitchIgdbTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Twitch (IGDB)'**
+  String get twitchIgdbTitle;
+
+  /// No description provided for @twitchIgdbSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión para que búsquedas y fichas usen tu token con IGDB. Eso no sube tus juegos a igdb.com ni importa tu lista «Jugado» del sitio: esa colección no está en la API pública.'**
+  String get twitchIgdbSubtitle;
+
+  /// No description provided for @twitchConnectedAs.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado como @{login}'**
+  String twitchConnectedAs(Object login);
+
+  /// No description provided for @twitchDisconnectAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Desvincular Twitch'**
+  String get twitchDisconnectAccount;
+
+  /// No description provided for @twitchConnectOAuth.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar con Twitch'**
+  String get twitchConnectOAuth;
+
+  /// No description provided for @twitchConnectSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Twitch conectado. Las peticiones a IGDB usarán tu sesión.'**
+  String get twitchConnectSuccess;
+
+  /// No description provided for @twitchDisconnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta de Twitch desvinculada.'**
+  String get twitchDisconnected;
+
+  /// No description provided for @twitchOAuthWebUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'El inicio de sesión con Twitch en el navegador no está configurado. Usa la app en Android, iOS o escritorio.'**
+  String get twitchOAuthWebUnavailable;
+
+  /// No description provided for @twitchOAuthMissingSecrets.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade TWITCH_CLIENT_ID y TWITCH_CLIENT_SECRET a los flags de compilación (ver README).'**
+  String get twitchOAuthMissingSecrets;
+
+  /// No description provided for @twitchRedirectNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'(sin TWITCH_REDIRECT_URI: usa --dart-define con una URL https)'**
+  String get twitchRedirectNotConfigured;
+
+  /// No description provided for @twitchRedirectMustBeHttps.
+  ///
+  /// In es, this message translates to:
+  /// **'TWITCH_REDIRECT_URI debe ser https://… La consola de Twitch no acepta cronicle://; despliega web/twitch_oauth_bridge.html y registra esa URL exacta.'**
+  String get twitchRedirectMustBeHttps;
+
+  /// No description provided for @twitchSyncTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizar juegos con Twitch'**
+  String get twitchSyncTitle;
+
+  /// No description provided for @twitchSyncWelcome.
+  ///
+  /// In es, this message translates to:
+  /// **'Hola, {name}. ¿Cómo quieres alinear tu biblioteca de juegos?'**
+  String twitchSyncWelcome(Object name);
+
+  /// No description provided for @twitchGameSyncMerge.
+  ///
+  /// In es, this message translates to:
+  /// **'Combinar'**
+  String get twitchGameSyncMerge;
+
+  /// No description provided for @twitchGameSyncMergeDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantiene los juegos guardados en este dispositivo y evita duplicados cuando exista una fuente remota conectada.'**
+  String get twitchGameSyncMergeDesc;
+
+  /// No description provided for @twitchGameSyncOverwrite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobreescribir con la nube'**
+  String get twitchGameSyncOverwrite;
+
+  /// No description provided for @twitchGameSyncOverwriteDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Borra los juegos guardados solo en este dispositivo y luego importa desde la fuente remota (cuando esté disponible).'**
+  String get twitchGameSyncOverwriteDesc;
+
+  /// No description provided for @twitchSyncIgdbApiFootnote.
+  ///
+  /// In es, this message translates to:
+  /// **'La API pública de IGDB no permite leer ni escribir tu colección personal de igdb.com (p. ej. «Jugado»). Lo que añades en Biblioteca vive solo aquí hasta que integremos otra fuente (p. ej. Steam).'**
+  String get twitchSyncIgdbApiFootnote;
+
+  /// No description provided for @twitchSyncImportedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizados {count} juegos desde Twitch.'**
+  String twitchSyncImportedCount(Object count);
+
+  /// No description provided for @twitchSyncImportedZeroWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borraron los juegos en este dispositivo. Aún no hay importación remota (la API de IGDB no expone tu lista de igdb.com). Puedes volver a añadir juegos a mano.'**
+  String get twitchSyncImportedZeroWarning;
+
+  /// No description provided for @googleAccountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Google'**
+  String get googleAccountTitle;
+
   /// No description provided for @anilistTitle.
   ///
   /// In es, this message translates to:
@@ -1208,6 +1604,72 @@ abstract class AppLocalizations {
   /// **'Pestaña del feed por defecto'**
   String get settingsFeedTab;
 
+  /// No description provided for @settingsLayoutCustomizationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Barras de inicio y biblioteca'**
+  String get settingsLayoutCustomizationTitle;
+
+  /// No description provided for @settingsLayoutCustomizationSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige qué pestañas mostrar y en qué orden.'**
+  String get settingsLayoutCustomizationSubtitle;
+
+  /// No description provided for @settingsCustomizeFeedFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra de filtros del feed'**
+  String get settingsCustomizeFeedFilters;
+
+  /// No description provided for @settingsCustomizeFeedFiltersDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Reordena u oculta Siguiendo, Global, Anime, etc. Debe quedar al menos un filtro visible.'**
+  String get settingsCustomizeFeedFiltersDesc;
+
+  /// No description provided for @settingsCustomizeLibraryKinds.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra de tipos en Biblioteca'**
+  String get settingsCustomizeLibraryKinds;
+
+  /// No description provided for @settingsCustomizeLibraryKindsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Reordena u oculta Todo, Anime, Películas, TV, Juegos, Manga. Debe quedar al menos una opción visible.'**
+  String get settingsCustomizeLibraryKindsDesc;
+
+  /// No description provided for @settingsLayoutDragHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantén pulsada la barra de arrastre para mover y cambiar el orden.'**
+  String get settingsLayoutDragHint;
+
+  /// No description provided for @settingsLayoutReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer'**
+  String get settingsLayoutReset;
+
+  /// No description provided for @settingsLayoutResetDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Orden por defecto restaurado.'**
+  String get settingsLayoutResetDone;
+
+  /// No description provided for @settingsLayoutShowInFeed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar en el feed'**
+  String get settingsLayoutShowInFeed;
+
+  /// No description provided for @settingsLayoutShowInLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar en biblioteca'**
+  String get settingsLayoutShowInLibrary;
+
   /// No description provided for @follow.
   ///
   /// In es, this message translates to:
@@ -1231,6 +1693,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin comentarios'**
   String get noComments;
+
+  /// No description provided for @activityOriginalPost.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicación original'**
+  String get activityOriginalPost;
+
+  /// No description provided for @activityRepliesHeading.
+  ///
+  /// In es, this message translates to:
+  /// **'Respuestas'**
+  String get activityRepliesHeading;
+
+  /// No description provided for @activityThreadLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el hilo'**
+  String get activityThreadLoadError;
+
+  /// No description provided for @activityMessageActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Mensaje privado'**
+  String get activityMessageActivity;
 
   /// No description provided for @comingSoon.
   ///

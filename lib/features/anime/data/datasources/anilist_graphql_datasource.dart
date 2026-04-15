@@ -133,6 +133,127 @@ class AnilistGraphqlDatasource {
         [];
   }
 
+  /// Anilist season convention (Winter includes December → next [seasonYear]).
+  static ({String season, int seasonYear}) currentMediaSeason() {
+    final now = DateTime.now();
+    final m = now.month;
+    final y = now.year;
+    if (m == 12) return (season: 'WINTER', seasonYear: y + 1);
+    if (m <= 2) return (season: 'WINTER', seasonYear: y);
+    if (m <= 5) return (season: 'SPRING', seasonYear: y);
+    if (m <= 8) return (season: 'SUMMER', seasonYear: y);
+    return (season: 'FALL', seasonYear: y);
+  }
+
+  /// Home browse rails for Anilist: [category] is
+  /// `seasonal`, `top_rated`, `upcoming`, `recently_released`.
+  Future<List<Map<String, dynamic>>> fetchBrowseMedia({
+    required String type,
+    required String category,
+    int page = 1,
+    int perPage = 24,
+  }) async {
+    const mediaFields = '''
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            episodes
+            chapters
+            volumes
+            averageScore
+            status
+            format
+            genres
+    ''';
+
+    final s = currentMediaSeason();
+
+    if (category == 'seasonal') {
+      final query = '''
+      query (\$type: MediaType, \$season: MediaSeason, \$seasonYear: Int, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          media(type: \$type, season: \$season, seasonYear: \$seasonYear, sort: POPULARITY_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'season': s.season,
+        'seasonYear': s.seasonYear,
+        'page': page,
+        'perPage': perPage,
+      });
+      return (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+    }
+
+    if (category == 'top_rated') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          media(type: \$type, sort: SCORE_DESC, averageScore_greater: 60) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      return (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+    }
+
+    if (category == 'upcoming') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          media(type: \$type, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      return (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+    }
+
+    if (category == 'recently_released') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          media(type: \$type, status: RELEASING, sort: START_DATE_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      return (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+    }
+
+    return [];
+  }
+
   /// Search Anilist media by type (ANIME or MANGA).
   Future<List<Map<String, dynamic>>> searchMedia(
     String search, {
@@ -167,7 +288,8 @@ class AnilistGraphqlDatasource {
   }
 
   /// Fetch full media details by Anilist ID.
-  Future<Map<String, dynamic>?> fetchMediaDetail(int id) async {
+  /// Pass [token] so `isFavourite` reflects the logged-in viewer.
+  Future<Map<String, dynamic>?> fetchMediaDetail(int id, {String? token}) async {
     const query = r'''
       query ($id: Int) {
         Media(id: $id) {
@@ -191,6 +313,7 @@ class AnilistGraphqlDatasource {
           meanScore
           popularity
           favourites
+          isFavourite
           genres
           tags { name rank }
           studios(isMain: true) { nodes { name } }
@@ -240,8 +363,255 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'id': id});
+    final data = await _post(query, variables: {'id': id}, token: token);
     return data['data']?['Media'] as Map<String, dynamic>?;
+  }
+
+  /// Toggle viewer favourite for this anime or manga on Anilist (requires auth).
+  Future<void> toggleFavouriteMedia({
+    required int mediaId,
+    required String mediaType,
+    required String token,
+  }) async {
+    final isAnime = mediaType == 'ANIME';
+    const mutation = r'''
+      mutation ($animeId: Int, $mangaId: Int) {
+        ToggleFavourite(animeId: $animeId, mangaId: $mangaId) {
+          id
+        }
+      }
+    ''';
+    await _post(
+      mutation,
+      variables: {
+        'animeId': isAnime ? mediaId : null,
+        'mangaId': isAnime ? null : mediaId,
+      },
+      token: token,
+    );
+  }
+
+  /// Unread notification count for the authenticated viewer.
+  Future<int?> fetchUnreadNotificationCount(String token) async {
+    const query = r'''
+      query { Viewer { unreadNotificationCount } }
+    ''';
+    final data = await _post(query, token: token);
+    return data['data']?['Viewer']?['unreadNotificationCount'] as int?;
+  }
+
+  /// Inbox notifications (requires auth). Set [resetNotificationCount] to clear unread on Anilist.
+  Future<List<Map<String, dynamic>>> fetchNotifications({
+    required String token,
+    int page = 1,
+    int perPage = 25,
+    bool resetNotificationCount = false,
+  }) async {
+    const query = r'''
+      query ($page: Int, $perPage: Int, $reset: Boolean) {
+        Page(page: $page, perPage: $perPage) {
+          notifications(resetNotificationCount: $reset) {
+            __typename
+            ... on AiringNotification {
+              id
+              type
+              createdAt
+              episode
+              contexts
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+            }
+            ... on ActivityReplyNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              user { id name avatar { medium } }
+            }
+            ... on ActivityMentionNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              user { id name avatar { medium } }
+            }
+            ... on ActivityMessageNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              message { id }
+              user { id name avatar { medium } }
+            }
+            ... on FollowingNotification {
+              id
+              type
+              createdAt
+              context
+              user { id name avatar { medium } }
+            }
+            ... on RelatedMediaAdditionNotification {
+              id
+              type
+              createdAt
+              context
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+            }
+            ... on MediaDataChangeNotification {
+              id
+              type
+              createdAt
+              context
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+            }
+            ... on MediaMergeNotification {
+              id
+              type
+              createdAt
+              context
+              media { id type title { romaji english } }
+              deletedMediaTitles
+            }
+            ... on MediaDeletionNotification {
+              id
+              type
+              createdAt
+              context
+              deletedMediaTitle
+              reason
+            }
+            ... on ThreadCommentReplyNotification {
+              id
+              type
+              createdAt
+              context
+              thread { id title }
+            }
+            ... on ThreadCommentMentionNotification {
+              id
+              type
+              createdAt
+              context
+              thread { id title }
+            }
+            ... on ThreadCommentSubscribedNotification {
+              id
+              type
+              createdAt
+              context
+              thread { id title }
+            }
+            ... on ThreadLikeNotification {
+              id
+              type
+              createdAt
+              context
+              thread { id title }
+              user { id name }
+            }
+            ... on ActivityLikeNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              user { id name avatar { medium } }
+            }
+            ... on ActivityReplyLikeNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              user { id name avatar { medium } }
+            }
+            ... on ActivityReplySubscribedNotification {
+              id
+              type
+              createdAt
+              activityId
+              context
+              user { id name avatar { medium } }
+            }
+            ... on ThreadCommentLikeNotification {
+              id
+              type
+              createdAt
+              context
+              commentId
+              thread { id title }
+              user { id name avatar { medium } }
+            }
+            ... on MediaSubmissionUpdateNotification {
+              id
+              type
+              createdAt
+              contexts
+              status
+              submittedTitle
+              media {
+                id
+                type
+                title { romaji english }
+                coverImage { large }
+              }
+            }
+            ... on StaffSubmissionUpdateNotification {
+              id
+              type
+              createdAt
+              contexts
+              status
+              staff {
+                id
+                name { full }
+              }
+            }
+            ... on CharacterSubmissionUpdateNotification {
+              id
+              type
+              createdAt
+              contexts
+              status
+              character {
+                id
+                name { full }
+                image { large }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {
+        'page': page,
+        'perPage': perPage,
+        'reset': resetNotificationCount,
+      },
+      token: token,
+    );
+    return (data['data']?['Page']?['notifications'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
   }
 
   /// Recent public activity. Pass null [activityType] for all types.
@@ -367,11 +737,88 @@ class AnilistGraphqlDatasource {
     return data['data']!['SaveActivityReply'] as Map<String, dynamic>;
   }
 
-  /// Fetch replies for an activity.
+  /// Fetch replies for an activity (root [activityId] only).
   Future<List<Map<String, dynamic>>> fetchActivityReplies(int activityId, {String? token}) async {
+    final bundle = await fetchActivityRepliesPageData(activityId, token: token);
+    return (bundle['replies'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Si [ambiguousId] es un [ActivityReply] id, devuelve el `activityId` padre; si no, el mismo id.
+  Future<int> resolveRootActivityId(int ambiguousId, {String? token}) async {
+    const q = r'''
+      query ($id: Int!) {
+        ActivityReply(id: $id) {
+          activityId
+        }
+      }
+    ''';
+    try {
+      final data = await _post(q, variables: {'id': ambiguousId}, token: token);
+      final aid = data['data']?['ActivityReply']?['activityId'] as int?;
+      if (aid != null) return aid;
+    } catch (_) {
+      // Sin reply con ese id: se asume id de actividad raíz.
+    }
+    return ambiguousId;
+  }
+
+  /// Actividad raíz + respuestas. [ambiguousId] puede ser id de actividad o de reply.
+  ///
+  /// Primero se pide [Activity] + [activityReplies] con ese id (caso típico al abrir desde el feed).
+  /// Si no hay actividad ni respuestas, se intenta resolver como id de [ActivityReply] (p. ej. desde una notificación).
+  Future<Map<String, dynamic>> fetchActivityRepliesPageData(
+    int ambiguousId, {
+    String? token,
+  }) async {
     const query = r'''
-      query ($activityId: Int) {
-        Page(page: 1, perPage: 25) {
+      query ($activityId: Int!) {
+        Activity(id: $activityId) {
+          __typename
+          ... on TextActivity {
+            id
+            type
+            text(asHtml: false)
+            createdAt
+            likeCount
+            replyCount
+            isLiked
+            user {
+              id
+              name
+              avatar { medium }
+            }
+          }
+          ... on ListActivity {
+            id
+            type
+            status
+            progress
+            createdAt
+            likeCount
+            replyCount
+            isLiked
+            user {
+              id
+              name
+              avatar { medium }
+            }
+            media {
+              id
+              type
+              title { romaji english }
+              coverImage { large }
+            }
+          }
+          ... on MessageActivity {
+            id
+            type
+            createdAt
+            likeCount
+            replyCount
+            isLiked
+          }
+        }
+        Page(page: 1, perPage: 50) {
           activityReplies(activityId: $activityId) {
             id
             text(asHtml: false)
@@ -387,10 +834,33 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'activityId': activityId}, token: token);
-    return (data['data']?['Page']?['activityReplies'] as List?)
-            ?.cast<Map<String, dynamic>>() ??
-        [];
+    Future<Map<String, dynamic>> bundleFor(int activityId) async {
+      final data = await _post(query, variables: {'activityId': activityId}, token: token);
+      return {
+        'activity': data['data']?['Activity'] as Map<String, dynamic>?,
+        'replies': (data['data']?['Page']?['activityReplies'] as List?)
+                ?.cast<Map<String, dynamic>>() ??
+            [],
+        'rootActivityId': activityId,
+      };
+    }
+
+    var rootId = ambiguousId;
+    var out = await bundleFor(rootId);
+    final act = out['activity'] as Map<String, dynamic>?;
+    final reps = out['replies'] as List<Map<String, dynamic>>;
+    if (act == null && reps.isEmpty) {
+      final resolved = await resolveRootActivityId(ambiguousId, token: token);
+      if (resolved != ambiguousId) {
+        rootId = resolved;
+        out = await bundleFor(rootId);
+      }
+    }
+    return {
+      'activity': out['activity'],
+      'replies': out['replies'],
+      'rootActivityId': out['rootActivityId'] as int? ?? rootId,
+    };
   }
 
   /// Fetch user media list by type (ANIME or MANGA). Requires token.

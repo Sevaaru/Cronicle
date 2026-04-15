@@ -261,7 +261,21 @@ class _DetailContentState extends State<_DetailContent> {
               children: [
                 const SizedBox(height: 12),
 
-                _AddToLibraryButton(media: media, kind: kind),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (media['id'] != null)
+                      _MediaFavoriteToggle(
+                        mediaId: media['id'] as int,
+                        mediaType: (media['type'] as String?) ?? 'ANIME',
+                        isFavourite: media['isFavourite'] as bool? ?? false,
+                      ),
+                    if (media['id'] != null) const SizedBox(width: 8),
+                    Expanded(
+                      child: _AddToLibraryButton(media: media, kind: kind),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
 
                 if (score != null || meanScore != null)
@@ -845,6 +859,85 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
+class _MediaFavoriteToggle extends ConsumerStatefulWidget {
+  const _MediaFavoriteToggle({
+    required this.mediaId,
+    required this.mediaType,
+    required this.isFavourite,
+  });
+
+  final int mediaId;
+  final String mediaType;
+  final bool isFavourite;
+
+  @override
+  ConsumerState<_MediaFavoriteToggle> createState() =>
+      _MediaFavoriteToggleState();
+}
+
+class _MediaFavoriteToggleState extends ConsumerState<_MediaFavoriteToggle> {
+  bool _busy = false;
+
+  Future<void> _onPressed() async {
+    final l10n = AppLocalizations.of(context)!;
+    final token = ref.read(anilistTokenProvider).valueOrNull;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.loginRequiredFavorite)),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final gql = ref.read(anilistGraphqlProvider);
+      await gql.toggleFavouriteMedia(
+        mediaId: widget.mediaId,
+        mediaType: widget.mediaType,
+        token: token,
+      );
+      ref.invalidate(anilistMediaDetailProvider(widget.mediaId));
+      ref.invalidate(anilistProfileProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isFav = widget.isFavourite;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Tooltip(
+        message:
+            isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
+        child: IconButton.filledTonal(
+          onPressed: _busy ? null : _onPressed,
+          icon: _busy
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  isFav
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color: isFav ? Colors.redAccent : null,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AddToLibraryButton extends ConsumerStatefulWidget {
   const _AddToLibraryButton({required this.media, required this.kind});
   final Map<String, dynamic> media;
@@ -885,29 +978,26 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: SizedBox(
-        width: double.infinity,
-        child: _loaded
-            ? FilledButton.icon(
-                icon: Icon(isEdit ? Icons.edit : Icons.add),
-                label: Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
-                onPressed: () async {
-                  final saved = await showAddToLibrarySheet(
-                    context: context,
-                    ref: ref,
-                    item: widget.media,
-                    kind: widget.kind,
-                    existingEntry: _existing,
-                  );
-                  if (!context.mounted || !saved) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(isEdit ? l10n.entryUpdated : l10n.addedToLibrary)),
-                  );
-                  _checkExisting();
-                },
-              )
-            : const SizedBox.shrink(),
-      ),
+      child: _loaded
+          ? FilledButton.icon(
+              icon: Icon(isEdit ? Icons.edit : Icons.add),
+              label: Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
+              onPressed: () async {
+                final saved = await showAddToLibrarySheet(
+                  context: context,
+                  ref: ref,
+                  item: widget.media,
+                  kind: widget.kind,
+                  existingEntry: _existing,
+                );
+                if (!context.mounted || !saved) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(isEdit ? l10n.entryUpdated : l10n.addedToLibrary)),
+                );
+                _checkExisting();
+              },
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

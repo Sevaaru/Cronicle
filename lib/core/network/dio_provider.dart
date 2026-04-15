@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dio_provider.g.dart';
@@ -7,8 +8,8 @@ part 'dio_provider.g.dart';
 Dio dio(DioRef ref) {
   final dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: Duration(seconds: kIsWeb ? 25 : 10),
+      receiveTimeout: Duration(seconds: kIsWeb ? 45 : 15),
     ),
   );
   assert(() {

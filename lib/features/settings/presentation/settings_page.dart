@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,13 +12,18 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:drift/drift.dart' show Value;
-import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/core/backup/app_backup_bundle.dart';
+import 'package:cronicle/core/backup/backup_repository_provider.dart';
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/library/presentation/twitch_sync_service.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
+import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -95,16 +100,16 @@ class SettingsPage extends ConsumerWidget {
           _DefaultFilterSection(),
           const SizedBox(height: 12),
 
+          _LayoutCustomizationSection(),
+          const SizedBox(height: 12),
+
           _AppDefaultsSection(),
           const SizedBox(height: 12),
 
-          _AnilistSection(),
+          _AccountsSection(googleSignIn: googleSignIn),
           const SizedBox(height: 12),
 
-          _GoogleSection(googleSignIn: googleSignIn),
-          const SizedBox(height: 12),
-
-          _BackupSection(),
+          _BackupSection(googleSignIn: googleSignIn),
         ],
       ),
     );
@@ -112,87 +117,267 @@ class SettingsPage extends ConsumerWidget {
 
 }
 
-class _AnilistSection extends ConsumerWidget {
+class _AccountsSection extends ConsumerWidget {
+  const _AccountsSection({required this.googleSignIn});
+
+  final GoogleSignIn googleSignIn;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final tokenAsync = ref.watch(anilistTokenProvider);
     final cs = Theme.of(context).colorScheme;
 
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.animation_rounded, size: 20, color: cs.primary),
-              const SizedBox(width: 8),
-              Text(l10n.anilistTitle, style: Theme.of(context).textTheme.titleSmall),
-            ],
+          Text(
+            l10n.settingsAccountsTitle,
+            style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.anilistSubtitle,
+            l10n.settingsAccountsSubtitle,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
-          const SizedBox(height: 12),
-          tokenAsync.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (_, _) => Text(l10n.errorVerifyingToken),
-            data: (token) {
-              if (token != null) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle, size: 18, color: Colors.green.shade400),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.anilistConnected,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.logout, size: 18),
-                        label: Text(l10n.anilistDisconnect),
-                        onPressed: () async {
-                          await ref.read(anilistTokenProvider.notifier).clearToken();
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.anilistDisconnected)),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              }
-
-              return SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.login, size: 18),
-                  label: Text(l10n.anilistConnect),
-                  onPressed: () => _startAnilistLogin(context, ref),
-                ),
-              );
-            },
-          ),
+          const Divider(height: 24),
+          const _AnilistSection(),
+          const Divider(height: 24),
+          const _TwitchIgdbAccountSection(),
+          const Divider(height: 24),
+          _GoogleSection(googleSignIn: googleSignIn),
         ],
       ),
     );
   }
+}
 
-  void _startAnilistLogin(BuildContext context, WidgetRef ref) {
+class _TwitchIgdbAccountSection extends ConsumerWidget {
+  const _TwitchIgdbAccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final twitchAsync = ref.watch(twitchIgdbAccountProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.sports_esports_rounded, size: 20, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(
+              l10n.twitchIgdbTitle,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.twitchIgdbSubtitle,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        twitchAsync.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => Text(l10n.errorVerifyingToken),
+          data: (s) {
+            if (s.userConnected) {
+              final login = s.login;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          size: 18, color: Colors.purpleAccent.shade100),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          login != null && login.isNotEmpty
+                              ? l10n.twitchConnectedAs(login)
+                              : l10n.anilistConnected,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.purpleAccent.shade100,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: Text(l10n.twitchDisconnectAccount),
+                      onPressed: () async {
+                        await ref
+                            .read(twitchIgdbAccountProvider.notifier)
+                            .disconnectUser();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.twitchDisconnected)),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+            return SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.login, size: 18),
+                label: Text(l10n.twitchConnectOAuth),
+                onPressed: () async {
+                  try {
+                    await ref
+                        .read(twitchIgdbAccountProvider.notifier)
+                        .connectOAuth();
+                    if (!context.mounted) return;
+                    final login = ref
+                            .read(twitchIgdbAccountProvider)
+                            .valueOrNull
+                            ?.login ??
+                        '';
+                    final syncRes = await showTwitchGameSyncDialog(
+                      context: context,
+                      ref: ref,
+                      login: login,
+                    );
+                    if (!context.mounted) return;
+                    if (syncRes == TwitchSyncDialogResult.skipped) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.twitchConnectSuccess)),
+                      );
+                    }
+                  } on UnsupportedError {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.twitchOAuthWebUnavailable)),
+                    );
+                  } on StateError catch (e) {
+                    if (!context.mounted) return;
+                    final msg = e.message;
+                    if (msg == 'no_credentials') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.twitchOAuthMissingSecrets)),
+                      );
+                    } else if (msg == 'no_redirect_uri' ||
+                        msg == 'invalid_redirect_uri') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.twitchRedirectNotConfigured)),
+                      );
+                    } else if (msg == 'redirect_must_be_https') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.twitchRedirectMustBeHttps)),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.errorWithMessage(e))),
+                      );
+                    }
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.errorWithMessage(e))),
+                    );
+                  }
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AnilistSection extends ConsumerWidget {
+  const _AnilistSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final tokenAsync = ref.watch(anilistTokenProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.animation_rounded, size: 20, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(l10n.anilistTitle, style: Theme.of(context).textTheme.titleSmall),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.anilistSubtitle,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        tokenAsync.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => Text(l10n.errorVerifyingToken),
+          data: (token) {
+            if (token != null) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, size: 18, color: Colors.green.shade400),
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.anilistConnected,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: Text(l10n.anilistDisconnect),
+                      onPressed: () async {
+                        await ref.read(anilistTokenProvider.notifier).clearToken();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.anilistDisconnected)),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.login, size: 18),
+                label: Text(l10n.anilistConnect),
+                onPressed: () => _AnilistSection._startAnilistLogin(context, ref),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  static void _startAnilistLogin(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final auth = ref.read(anilistAuthProvider);
     final controller = TextEditingController();
@@ -285,6 +470,65 @@ class _AnilistSection extends ConsumerWidget {
   }
 }
 
+class _LayoutCustomizationSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.settingsLayoutCustomizationTitle,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.settingsLayoutCustomizationSubtitle,
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.tune_rounded, color: cs.primary),
+            title: Text(l10n.settingsCustomizeFeedFilters),
+            subtitle: Text(
+              l10n.settingsCustomizeFeedFiltersDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                fullscreenDialog: false,
+                builder: (_) => const FeedFilterLayoutEditorPage(),
+              ),
+            ),
+          ),
+          const Divider(height: 20),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.view_list_rounded, color: cs.primary),
+            title: Text(l10n.settingsCustomizeLibraryKinds),
+            subtitle: Text(
+              l10n.settingsCustomizeLibraryKindsDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                fullscreenDialog: false,
+                builder: (_) => const LibraryKindLayoutEditorPage(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DefaultFilterSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -339,18 +583,25 @@ class _AppDefaultsSection extends ConsumerWidget {
     final currentPage = ref.watch(defaultStartPageProvider);
     final currentFeedTab = ref.watch(defaultFeedTabProvider);
     final hideText = ref.watch(hideTextActivitiesProvider);
+    final visibleFeedIds = ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
     final startPages = [
       ('/feed', l10n.settingsStartFeed, Icons.rss_feed_rounded),
       ('/library', l10n.settingsStartLibrary, Icons.collections_bookmark_rounded),
     ];
 
-    final feedTabs = [
+    final feedTabOptions = [
       ('following', l10n.filterFollowing, Icons.people_rounded),
       ('all', l10n.filterGlobal, Icons.public_rounded),
       ('anime', l10n.filterAnime, Icons.animation_rounded),
       ('manga', l10n.filterManga, Icons.menu_book_rounded),
+      ('movie', l10n.filterMovies, Icons.movie_rounded),
+      ('tv', l10n.filterTv, Icons.tv_rounded),
+      ('game', l10n.filterGames, Icons.sports_esports_rounded),
     ];
+    final feedTabs = feedTabOptions
+        .where((o) => visibleFeedIds.contains(o.$1))
+        .toList();
 
     return GlassCard(
       child: Column(
@@ -442,32 +693,101 @@ class _StepRow extends StatelessWidget {
   }
 }
 
-class _GoogleSection extends StatelessWidget {
+class _GoogleSection extends ConsumerStatefulWidget {
   const _GoogleSection({required this.googleSignIn});
+
   final GoogleSignIn googleSignIn;
+
+  @override
+  ConsumerState<_GoogleSection> createState() => _GoogleSectionState();
+}
+
+class _GoogleSectionState extends ConsumerState<_GoogleSection> {
+  static const _driveScopes = [
+    'https://www.googleapis.com/auth/drive.appdata',
+  ];
+
+  bool _loading = true;
+  bool _signedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshSignedIn();
+  }
+
+  Future<void> _refreshSignedIn() async {
+    if (kIsWeb) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    final client = widget.googleSignIn.authorizationClient;
+    try {
+      final auth = await client.authorizationForScopes(_driveScopes);
+      if (mounted) {
+        setState(() {
+          _signedIn = auth != null;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _signedIn = false;
+          _loading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.navAuth, style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 12),
-          if (kIsWeb)
-            _GoogleWebButton()
-          else
-            FilledButton.icon(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.account_circle_outlined,
+                size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              l10n.googleAccountTitle,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (kIsWeb)
+          buildGoogleWebButton(context)
+        else if (_loading)
+          const LinearProgressIndicator(minHeight: 2)
+        else if (_signedIn)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await widget.googleSignIn.signOut();
+                await _refreshSignedIn();
+              },
+              icon: const Icon(Icons.logout),
+              label: Text(l10n.googleSignOut),
+            ),
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
               onPressed: () async {
                 try {
-                  await googleSignIn.authenticate(
+                  await widget.googleSignIn.authenticate(
                     scopeHint: const [
                       'email',
                       'https://www.googleapis.com/auth/drive.appdata',
                     ],
                   );
+                  await _refreshSignedIn();
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l10n.connectedWithGoogle)),
@@ -482,28 +802,17 @@ class _GoogleSection extends StatelessWidget {
               icon: const Icon(Icons.login),
               label: Text(l10n.googleSignIn),
             ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await googleSignIn.signOut();
-            },
-            icon: const Icon(Icons.logout),
-            label: Text(l10n.googleSignOut),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
 
-class _GoogleWebButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return buildGoogleWebButton(context);
-  }
-}
-
 class _BackupSection extends ConsumerStatefulWidget {
+  const _BackupSection({required this.googleSignIn});
+
+  final GoogleSignIn googleSignIn;
+
   @override
   ConsumerState<_BackupSection> createState() => _BackupSectionState();
 }
@@ -512,38 +821,56 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
   bool _exporting = false;
   bool _importing = false;
 
+  static const _driveScope = 'https://www.googleapis.com/auth/drive.appdata';
+
+  Future<bool> _googleAuthorizedForDrive() async {
+    if (kIsWeb) return false;
+    try {
+      final client = widget.googleSignIn.authorizationClient;
+      final a = await client.authorizationForScopes([_driveScope]);
+      return a != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _exportBackup() async {
     if (_exporting) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _exporting = true);
     try {
       final db = ref.read(databaseProvider);
-      final entries = await db.getAllLibraryEntries();
-      final kv = await db.getAllKeyValues();
-
-      final payload = {
-        'version': 1,
-        'exportedAt': DateTime.now().toIso8601String(),
-        'library': entries
-            .map((e) => {
-                  'kind': e.kind,
-                  'externalId': e.externalId,
-                  'title': e.title,
-                  'posterUrl': e.posterUrl,
-                  'status': e.status,
-                  'score': e.score,
-                  'progress': e.progress,
-                  'totalEpisodes': e.totalEpisodes,
-                  'notes': e.notes,
-                  'updatedAt': e.updatedAt,
-                })
-            .toList(),
-        'keyValues': kv.map((e) => {'key': e.key, 'value': e.value}).toList(),
-      };
-
+      final prefs = ref.read(sharedPreferencesProvider);
+      const secure = FlutterSecureStorage();
+      final payload = await AppBackupBundle.build(
+        db: db,
+        prefs: prefs,
+        secure: secure,
+      );
       final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+      final bytes = Uint8List.fromList(utf8.encode(jsonStr));
+
+      if (!kIsWeb && await _googleAuthorizedForDrive()) {
+        final repo = ref.read(backupRepositoryProvider);
+        final res = await repo.uploadBackup(bytes);
+        res.fold(
+          (f) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.errorWithMessage(f.toString()))),
+            );
+          },
+          (_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.backupUploadSuccess)),
+            );
+          },
+        );
+        return;
+      }
 
       if (kIsWeb) {
-        // On web just download via share
         await SharePlus.instance.share(ShareParams(text: jsonStr));
       } else {
         final dir = await getTemporaryDirectory();
@@ -557,12 +884,12 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Backup exportado correctamente')),
+        SnackBar(content: Text(l10n.backupExportReady)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
@@ -571,20 +898,70 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
 
   Future<void> _importBackup() async {
     if (_importing) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _importing = true);
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        withData: true,
-      );
-      if (result == null || result.files.isEmpty) {
-        if (mounted) setState(() => _importing = false);
-        return;
+      Uint8List? bytes;
+
+      if (!kIsWeb && await _googleAuthorizedForDrive()) {
+        if (!mounted) return;
+        final source = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.backupRestoreChooseSourceTitle),
+            content: Text(l10n.backupRestoreChooseSourceBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'file'),
+                child: Text(l10n.backupRestoreFromFile),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'drive'),
+                child: Text(l10n.backupRestoreFromDrive),
+              ),
+            ],
+          ),
+        );
+        if (source == null) {
+          if (mounted) setState(() => _importing = false);
+          return;
+        }
+        if (source == 'drive') {
+          final repo = ref.read(backupRepositoryProvider);
+          final res = await repo.downloadBackup();
+          bytes = res.fold(
+            (f) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.errorWithMessage(f.toString()))),
+                );
+              }
+              return null;
+            },
+            (b) => b,
+          );
+          if (bytes == null) {
+            if (mounted) setState(() => _importing = false);
+            return;
+          }
+        }
       }
 
-      final bytes = result.files.first.bytes ?? (kIsWeb ? null : await File(result.files.first.path!).readAsBytes());
-      if (bytes == null) throw Exception('No se pudo leer el archivo');
+      if (bytes == null) {
+        final result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+          withData: true,
+        );
+        if (result == null || result.files.isEmpty) {
+          if (mounted) setState(() => _importing = false);
+          return;
+        }
+        bytes = result.files.first.bytes ??
+            (kIsWeb ? null : await File(result.files.first.path!).readAsBytes());
+      }
+
+      if (bytes == null) throw Exception(l10n.errorWithMessage('read file'));
 
       final jsonStr = utf8.decode(bytes);
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -594,11 +971,11 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Restaurar backup'),
-          content: Text('Se importarán ${entries.length} entradas a tu biblioteca. Las entradas existentes se actualizarán.'),
+          title: Text(l10n.backupRestoreConfirmTitle),
+          content: Text(l10n.backupRestoreConfirmBody(entries.length)),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restaurar')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.backupRestore)),
           ],
         ),
       );
@@ -609,37 +986,24 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
       }
 
       final db = ref.read(databaseProvider);
-      int imported = 0;
-      for (final e in entries) {
-        try {
-          await db.upsertLibraryEntry(
-            LibraryEntriesCompanion(
-              kind: Value(e['kind'] as int),
-              externalId: Value(e['externalId'] as String),
-              title: Value(e['title'] as String),
-              posterUrl: Value(e['posterUrl'] as String?),
-              status: Value((e['status'] as String?) ?? 'PLANNING'),
-              score: Value(e['score'] as int?),
-              progress: Value(e['progress'] as int?),
-              totalEpisodes: Value(e['totalEpisodes'] as int?),
-              notes: Value(e['notes'] as String?),
-              updatedAt: Value((e['updatedAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch),
-            ),
-          );
-          imported++;
-        } catch (_) {}
-      }
-
-      ref.invalidate(paginatedLibraryProvider);
+      final prefs = ref.read(sharedPreferencesProvider);
+      const secure = FlutterSecureStorage();
+      final imported = await AppBackupBundle.restoreFromJson(
+        json: json,
+        db: db,
+        prefs: prefs,
+        secure: secure,
+        ref: ref,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Restauradas $imported entradas')),
+        SnackBar(content: Text(l10n.backupRestoredCount(imported))),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
       );
     } finally {
       if (mounted) setState(() => _importing = false);
@@ -664,7 +1028,7 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Exporta tu biblioteca como archivo JSON e impórtala en cualquier momento.',
+            l10n.backupSectionSubtitle,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 14),

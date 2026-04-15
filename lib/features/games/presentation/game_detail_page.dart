@@ -361,7 +361,14 @@ class _GameDetailContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 12),
-                  _AddToLibraryButton(game: game),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      _GameFavoriteButton(game: game),
+                      const SizedBox(width: 8),
+                      Expanded(child: _AddToLibraryButton(game: game)),
+                    ],
+                  ),
                   const SizedBox(height: 12),
 
                   if (hasLinkSection) ...[
@@ -879,6 +886,39 @@ class _ExpandableGameLinkChipsState extends State<_ExpandableGameLinkChips> {
   }
 }
 
+class _GameFavoriteButton extends ConsumerWidget {
+  const _GameFavoriteButton({required this.game});
+  final Map<String, dynamic> game;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final id = (game['id'] as num?)?.toInt() ?? 0;
+    final list = ref.watch(favoriteGamesProvider);
+    final isFav =
+        id != 0 && list.any((e) => (e['id'] as num?)?.toInt() == id);
+
+    return Tooltip(
+      message: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
+      child: IconButton.filledTonal(
+        style: IconButton.styleFrom(
+          fixedSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: id == 0
+            ? null
+            : () => ref
+                .read(favoriteGamesProvider.notifier)
+                .toggleFavorite(game),
+        icon: Icon(
+          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          color: isFav ? Colors.redAccent : null,
+        ),
+      ),
+    );
+  }
+}
+
 class _AddToLibraryButton extends ConsumerWidget {
   const _AddToLibraryButton({required this.game});
   final Map<String, dynamic> game;
@@ -900,33 +940,31 @@ class _AddToLibraryButton extends ConsumerWidget {
       builder: (context, snap) {
         final existing = snap.data;
         final inLibrary = existing != null;
-        return SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            icon: Icon(inLibrary ? Icons.edit : Icons.add),
-            label: Text(inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary),
-            style: FilledButton.styleFrom(
-              backgroundColor: inLibrary ? cs.secondaryContainer : null,
-              foregroundColor: inLibrary ? cs.onSecondaryContainer : null,
-            ),
-            onPressed: () async {
-              final added = await showAddToLibrarySheet(
-                context: context,
-                ref: ref,
-                item: game,
-                kind: MediaKind.game,
-                existingEntry: existing,
-              );
-              if (context.mounted && added) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(inLibrary
-                          ? l10n.entryUpdated
-                          : l10n.addedToLibrary)),
-                );
-              }
-            },
+        return FilledButton.icon(
+          icon: Icon(inLibrary ? Icons.edit : Icons.add),
+          label: Text(inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            backgroundColor: inLibrary ? cs.secondaryContainer : null,
+            foregroundColor: inLibrary ? cs.onSecondaryContainer : null,
           ),
+          onPressed: () async {
+            final added = await showAddToLibrarySheet(
+              context: context,
+              ref: ref,
+              item: game,
+              kind: MediaKind.game,
+              existingEntry: existing,
+            );
+            if (context.mounted && added) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(inLibrary
+                        ? l10n.entryUpdated
+                        : l10n.addedToLibrary)),
+              );
+            }
+          },
         );
       },
     );

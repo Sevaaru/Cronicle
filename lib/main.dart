@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
@@ -18,10 +19,21 @@ Future<void> main() async {
 
   if (!kIsWeb) {
     try {
-      await GoogleSignIn.instance.initialize();
+      final server = EnvConfig.googleServerClientId.trim();
+      final iosClient = EnvConfig.googleIosClientId.trim();
+      await GoogleSignIn.instance.initialize(
+        serverClientId: server.isEmpty ? null : server,
+        clientId: iosClient.isEmpty ? null : iosClient,
+      );
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('[Cronicle] Google Sign-In init skipped: $e');
+        debugPrint('[Cronicle] Google Sign-In init: $e');
+        if (EnvConfig.googleServerClientId.trim().isEmpty) {
+          debugPrint(
+            '[Cronicle] En Android hace falta --dart-define=GOOGLE_SERVER_CLIENT_ID='
+            '<id_de_cliente_Web.apps.googleusercontent.com> (Google Cloud Console → Credenciales → Cliente web).',
+          );
+        }
       }
     }
   }

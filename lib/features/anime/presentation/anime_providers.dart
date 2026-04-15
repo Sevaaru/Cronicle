@@ -67,7 +67,19 @@ Future<List<Map<String, dynamic>>> anilistPopular(
   return graphql.fetchPopular(type: type);
 }
 
-FeedActivity? _mapActivity(Map<String, dynamic> a) {
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+@riverpod
+Future<List<Map<String, dynamic>>> anilistBrowseMedia(
+  AnilistBrowseMediaRef ref,
+  String type,
+  String category,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  return graphql.fetchBrowseMedia(type: type, category: category);
+}
+
+/// Convierte una actividad Anilist (mapa GraphQL) en [FeedActivity] para la UI del feed.
+FeedActivity? feedActivityFromAnilistActivityMap(Map<String, dynamic> a) {
   final actType = a['type'] as String? ?? '';
 
   if (actType == 'TEXT') {
@@ -155,7 +167,7 @@ class AnilistFeed extends _$AnilistFeed {
       token: token,
     );
     if (raw.length < _perPage) _hasMore = false;
-    final items = raw.map(_mapActivity).whereType<FeedActivity>().toList();
+    final items = raw.map(feedActivityFromAnilistActivityMap).whereType<FeedActivity>().toList();
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
@@ -219,7 +231,7 @@ class AnilistFeedByType extends _$AnilistFeedByType {
       token: token,
     );
     if (raw.length < _perPage) _hasMore = false;
-    return raw.map(_mapActivity).whereType<FeedActivity>().toList();
+    return raw.map(feedActivityFromAnilistActivityMap).whereType<FeedActivity>().toList();
   }
 
   Future<void> loadMore() async {
@@ -277,7 +289,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
       isFollowing: true,
     );
     if (raw.length < _perPage) _hasMore = false;
-    final items = raw.map(_mapActivity).whereType<FeedActivity>().toList();
+    final items = raw.map(feedActivityFromAnilistActivityMap).whereType<FeedActivity>().toList();
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
   }
@@ -320,7 +332,8 @@ Future<Map<String, dynamic>?> anilistMediaDetail(
   int mediaId,
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
-  return graphql.fetchMediaDetail(mediaId);
+  final token = await ref.watch(anilistTokenProvider.future);
+  return graphql.fetchMediaDetail(mediaId, token: token);
 }
 
 /// Full Anilist user profile with statistics (requires auth).
@@ -330,4 +343,33 @@ Future<Map<String, dynamic>?> anilistProfile(AnilistProfileRef ref) async {
   if (token == null) return null;
   final graphql = ref.read(anilistGraphqlProvider);
   return graphql.fetchViewerProfile(token);
+}
+
+/// Unread Anilist notification count (0 if not logged in).
+@riverpod
+Future<int> anilistUnreadNotificationCount(
+  AnilistUnreadNotificationCountRef ref,
+) async {
+  final token = await ref.watch(anilistTokenProvider.future);
+  if (token == null) return 0;
+  final graphql = ref.read(anilistGraphqlProvider);
+  return await graphql.fetchUnreadNotificationCount(token) ?? 0;
+}
+
+/// First page of Anilist notifications; [resetNotificationCount] clears unread on Anilist.
+@riverpod
+Future<List<Map<String, dynamic>>> anilistNotificationsList(
+  AnilistNotificationsListRef ref,
+) async {
+  final token = await ref.watch(anilistTokenProvider.future);
+  if (token == null) return [];
+  final graphql = ref.read(anilistGraphqlProvider);
+  final list = await graphql.fetchNotifications(
+    token: token,
+    page: 1,
+    perPage: 30,
+    resetNotificationCount: true,
+  );
+  ref.invalidate(anilistUnreadNotificationCountProvider);
+  return list;
 }

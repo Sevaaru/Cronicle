@@ -115,6 +115,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupUploadSuccess => 'Backup uploaded successfully';
 
   @override
+  String get backupExportReady =>
+      'Backup ready — use the share sheet to save it wherever you want.';
+
+  @override
   String get backupRestored => 'Restored successfully';
 
   @override
@@ -123,7 +127,110 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get backupSectionSubtitle =>
+      'Includes your library, on-device settings, and Anilist/Twitch tokens (encrypted at rest by the OS). With Google signed in: upload or download the JSON from Drive’s hidden app folder; otherwise share the file.';
+
+  @override
+  String get backupRestoreChooseSourceTitle => 'Backup source';
+
+  @override
+  String get backupRestoreChooseSourceBody =>
+      'Restore from a JSON file or from the backup stored in Google Drive?';
+
+  @override
+  String get backupRestoreFromFile => 'File…';
+
+  @override
+  String get backupRestoreFromDrive => 'Google Drive';
+
+  @override
+  String get backupRestoreConfirmTitle => 'Restore backup';
+
+  @override
+  String backupRestoreConfirmBody(Object count) {
+    return 'This will merge $count library entries and, if the backup includes them, local preferences and Anilist/Twitch sessions from the file.';
+  }
+
+  @override
   String get feedTitle => 'Home';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'No notifications yet.';
+
+  @override
+  String get notificationsLoginRequired =>
+      'Sign in with Anilist in Settings to see notifications.';
+
+  @override
+  String get notificationNoLink => 'Open this notification on anilist.co';
+
+  @override
+  String get notificationTypeGeneric => 'Notification';
+
+  @override
+  String get notificationTypeAiring => 'New episode';
+
+  @override
+  String get notificationTypeActivityReply => 'Activity reply';
+
+  @override
+  String get notificationTypeActivityMention => 'Mention in activity';
+
+  @override
+  String get notificationTypeActivityMessage => 'Activity message';
+
+  @override
+  String get notificationTypeFollowing => 'New follower';
+
+  @override
+  String get notificationTypeRelatedMedia => 'Related media added';
+
+  @override
+  String get notificationTypeMediaDataChange => 'Media updated';
+
+  @override
+  String get notificationTypeMediaMerge => 'Media merged';
+
+  @override
+  String get notificationTypeMediaDeletion => 'Media removed from Anilist';
+
+  @override
+  String get notificationTypeThreadReply => 'Forum reply';
+
+  @override
+  String get notificationTypeThreadMention => 'Forum mention';
+
+  @override
+  String get notificationTypeThreadSubscribed => 'Forum thread update';
+
+  @override
+  String get notificationTypeThreadLike => 'Forum like';
+
+  @override
+  String get notificationTypeActivityLike => 'Activity liked';
+
+  @override
+  String get notificationTypeActivityReplyLike => 'Reply liked';
+
+  @override
+  String get notificationTypeActivityReplySubscribed =>
+      'Reply on subscribed activity';
+
+  @override
+  String get notificationTypeThreadCommentLike => 'Forum comment liked';
+
+  @override
+  String get notificationTypeMediaSubmission => 'Media submission update';
+
+  @override
+  String get notificationTypeStaffSubmission => 'Staff submission update';
+
+  @override
+  String get notificationTypeCharacterSubmission =>
+      'Character submission update';
 
   @override
   String get feedEmpty => 'No recent activity.';
@@ -135,6 +242,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String feedComingSoon(Object label) {
     return '$label feed — coming soon';
   }
+
+  @override
+  String get feedBrowseActivity => 'Activity';
+
+  @override
+  String get feedBrowseSeasonal => 'Seasonal';
+
+  @override
+  String get feedBrowseTopRated => 'Top rated';
+
+  @override
+  String get feedBrowseUpcoming => 'Upcoming';
+
+  @override
+  String get feedBrowseRecentlyReleased => 'Recently released';
+
+  @override
+  String get feedBrowseEmpty => 'No titles in this list.';
 
   @override
   String get filterFollowing => 'Following';
@@ -166,6 +291,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginRequiredLike => 'Sign in with Anilist to like';
+
+  @override
+  String get loginRequiredFavorite =>
+      'Sign in with Anilist in Settings to use favourites';
+
+  @override
+  String get sectionFavGames => 'Favourite games';
+
+  @override
+  String get tooltipAddFavorite => 'Add to favourites';
+
+  @override
+  String get tooltipRemoveFavorite => 'Remove from favourites';
 
   @override
   String get loginRequiredFollow => 'Sign in with Anilist to follow users';
@@ -524,6 +662,92 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncPromptNoThanks => 'No, thanks';
 
   @override
+  String get settingsAccountsTitle => 'Accounts';
+
+  @override
+  String get settingsAccountsSubtitle =>
+      'Anilist syncs anime/manga to the cloud. Twitch authenticates IGDB API calls. Google is for backups. Games in Cronicle stay on your device.';
+
+  @override
+  String get twitchIgdbTitle => 'Twitch (IGDB)';
+
+  @override
+  String get twitchIgdbSubtitle =>
+      'Sign in so search and game pages use your token with IGDB. That does not upload your library to igdb.com or import your igdb.com “Played” list—the public API does not expose personal collections.';
+
+  @override
+  String twitchConnectedAs(Object login) {
+    return 'Connected as @$login';
+  }
+
+  @override
+  String get twitchDisconnectAccount => 'Disconnect Twitch';
+
+  @override
+  String get twitchConnectOAuth => 'Connect with Twitch';
+
+  @override
+  String get twitchConnectSuccess =>
+      'Twitch connected. IGDB requests will use your session.';
+
+  @override
+  String get twitchDisconnected => 'Twitch account disconnected.';
+
+  @override
+  String get twitchOAuthWebUnavailable =>
+      'Twitch sign-in from the browser is not set up. Use the Android, iOS, or desktop app.';
+
+  @override
+  String get twitchOAuthMissingSecrets =>
+      'Add TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET to build flags (see README).';
+
+  @override
+  String get twitchRedirectNotConfigured =>
+      '(TWITCH_REDIRECT_URI not set: pass an https URL via --dart-define)';
+
+  @override
+  String get twitchRedirectMustBeHttps =>
+      'TWITCH_REDIRECT_URI must be https://… Twitch’s console rejects cronicle://; host web/twitch_oauth_bridge.html over HTTPS and register that exact URL.';
+
+  @override
+  String get twitchSyncTitle => 'Sync games with Twitch';
+
+  @override
+  String twitchSyncWelcome(Object name) {
+    return 'Hi, $name. How do you want to align your game library?';
+  }
+
+  @override
+  String get twitchGameSyncMerge => 'Merge';
+
+  @override
+  String get twitchGameSyncMergeDesc =>
+      'Keep games stored on this device and avoid duplicates when a remote source is connected.';
+
+  @override
+  String get twitchGameSyncOverwrite => 'Overwrite from the cloud';
+
+  @override
+  String get twitchGameSyncOverwriteDesc =>
+      'Delete games stored only on this device, then import from the remote source (when available).';
+
+  @override
+  String get twitchSyncIgdbApiFootnote =>
+      'IGDB’s public API cannot read or write your personal igdb.com collection (e.g. “Played”). Library entries you add here stay on-device until we integrate another source (e.g. Steam).';
+
+  @override
+  String twitchSyncImportedCount(Object count) {
+    return 'Synced $count games from Twitch.';
+  }
+
+  @override
+  String get twitchSyncImportedZeroWarning =>
+      'Games on this device were cleared. There is still no remote import (IGDB’s API does not expose your igdb.com list). You can add games manually again.';
+
+  @override
+  String get googleAccountTitle => 'Google';
+
+  @override
   String get anilistTitle => 'Anilist';
 
   @override
@@ -597,6 +821,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsFeedTab => 'Default feed tab';
 
   @override
+  String get settingsLayoutCustomizationTitle => 'Home & library bars';
+
+  @override
+  String get settingsLayoutCustomizationSubtitle =>
+      'Choose which chips appear and in what order.';
+
+  @override
+  String get settingsCustomizeFeedFilters => 'Feed filter bar';
+
+  @override
+  String get settingsCustomizeFeedFiltersDesc =>
+      'Reorder or hide Following, Global, Anime, etc. At least one filter must stay visible.';
+
+  @override
+  String get settingsCustomizeLibraryKinds => 'Library type bar';
+
+  @override
+  String get settingsCustomizeLibraryKindsDesc =>
+      'Reorder or hide All, Anime, Movies, TV, Games, Manga. At least one option must stay visible.';
+
+  @override
+  String get settingsLayoutDragHint =>
+      'Long-press the handle to drag and change order.';
+
+  @override
+  String get settingsLayoutReset => 'Reset';
+
+  @override
+  String get settingsLayoutResetDone => 'Order restored to defaults.';
+
+  @override
+  String get settingsLayoutShowInFeed => 'Show in feed';
+
+  @override
+  String get settingsLayoutShowInLibrary => 'Show in library';
+
+  @override
   String get follow => 'Follow';
 
   @override
@@ -607,6 +868,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noComments => 'No comments';
+
+  @override
+  String get activityOriginalPost => 'Original post';
+
+  @override
+  String get activityRepliesHeading => 'Replies';
+
+  @override
+  String get activityThreadLoadError => 'Could not load this thread';
+
+  @override
+  String get activityMessageActivity => 'Private message';
 
   @override
   String get comingSoon => 'Coming soon';

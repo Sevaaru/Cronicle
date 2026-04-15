@@ -49,3 +49,6 @@ app.*.map.json
 
 # Twitch / IGDB (local secrets for --dart-define-from-file)
 twitch_secrets.json
+
+# Defines de compilación (copia desde dart_defines.example.json)
+dart_defines.local.json

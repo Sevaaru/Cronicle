@@ -17,6 +17,11 @@ class IgdbApiDatasource {
 
   static const _baseUrl = 'https://api.igdb.com/v4';
 
+  /// Resuelve el `popularity_type` de visitas IGDB (PopScore); cacheado en memoria.
+  int? _cachedVisitPopularityTypeId;
+
+  static const _queryRetryDelayMs = 180;
+
   Future<Options> _headers() async {
     final token = await _auth.getValidToken();
     return Options(
@@ -46,16 +51,13 @@ limit 20;
     return _postList('/games', body);
   }
 
-  /// Fetch popular games. Tries several Apicalypse shapes because some
-  /// field combinations or filters can yield an empty list on IGDB.
-  ///
-  /// IGDB's `Game` schema no longer exposes `popularity` on `/games`; asking
-  /// for it or `sort popularity desc` returns HTTP 400. Older queries are kept
-  /// as fallbacks where useful, but each attempt is wrapped so a 400 does not
-  /// block the next candidate.
-  Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 20}) async {
+  /// Popular vía IGDB PopScore (`/popularity_primitives` + `/games` por ids en
+  /// orden de visitas). Si no hay datos, orden estable por `total_rating`.
+  Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 24}) async {
+    final viaPop = await _fetchPopularViaPopularityPrimitives(limit: limit);
+    if (viaPop.isNotEmpty) return viaPop;
+
     final candidates = <String>[
-      // Main-ish games with user ratings (closest to "trending" without popularity).
       '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
        total_rating, first_release_date, summary;
@@ -71,20 +73,16 @@ sort total_rating desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, summary;
-sort total_rating desc;
-limit $limit;
-''',
-      '''
 fields name, cover.image_id, total_rating, first_release_date, summary;
+where category = 0;
 sort id desc;
 limit $limit;
 ''',
     ];
     for (var i = 0; i < candidates.length; i++) {
       if (i > 0) {
-        await Future<void>.delayed(const Duration(milliseconds: 280));
+        await Future<void>.delayed(
+            const Duration(milliseconds: _queryRetryDelayMs));
       }
       try {
         final list = await _postList('/games', candidates[i]);
@@ -96,67 +94,226 @@ limit $limit;
     return [];
   }
 
-  /// Próximos lanzamientos con más hype (si el campo existe); si no, por fecha.
-  Future<List<Map<String, dynamic>>> fetchGamesMostAnticipated(
-      {int limit = 24}) async {
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final yearAhead = now + 365 * 24 * 3600;
-    final candidates = <String>[
-      '''
-fields name, cover.image_id, first_release_date, summary, hypes;
-where category = 0 & first_release_date > $now & first_release_date < $yearAhead;
-sort hypes desc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, summary;
-where category = 0 & first_release_date > $now & first_release_date < $yearAhead;
-sort first_release_date asc;
-limit $limit;
-''',
-    ];
-    for (final body in candidates) {
+  Future<int> _resolveVisitPopularityTypeId() async {
+    if (_cachedVisitPopularityTypeId != null) {
+      return _cachedVisitPopularityTypeId!;
+    }
+    try {
+      final rows = await _postList('/popularity_types', 'fields id, name; limit 100;');
+      for (final r in rows) {
+        final name = (r['name'] as String? ?? '').toLowerCase();
+        final idRaw = r['id'];
+        final tid =
+            idRaw is int ? idRaw : idRaw is num ? idRaw.toInt() : null;
+        if (tid == null) continue;
+        if (name.contains('visit') ||
+            name.contains('traffic') ||
+            name.contains('page view')) {
+          _cachedVisitPopularityTypeId = tid;
+          return tid;
+        }
+      }
+    } catch (_) {}
+    _cachedVisitPopularityTypeId = 1;
+    return 1;
+  }
+
+  int? _popularityPrimitiveGameId(Map<String, dynamic> p) {
+    final v = p['game_id'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    final g = p['game'];
+    if (g is int) return g;
+    if (g is num) return g.toInt();
+    if (g is Map<String, dynamic>) {
+      final id = g['id'];
+      if (id is int) return id;
+      if (id is num) return id.toInt();
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchPopularViaPopularityPrimitives({
+    required int limit,
+  }) async {
+    try {
+      final typeId = await _resolveVisitPopularityTypeId();
+      const maxScan = 100;
+      final primitives = await _postList('/popularity_primitives', '''
+fields game_id, value, popularity_type;
+where popularity_type = $typeId;
+sort value desc;
+limit $maxScan;
+''');
+      final orderedIds = <int>[];
+      final seen = <int>{};
+      for (final p in primitives) {
+        final gid = _popularityPrimitiveGameId(p);
+        if (gid == null || seen.contains(gid)) continue;
+        seen.add(gid);
+        orderedIds.add(gid);
+      }
+      if (orderedIds.isEmpty) return [];
+
+      final idList = orderedIds.join(',');
+      final games = await _postList('/games', '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, summary, category;
+where id = ($idList);
+limit ${orderedIds.length};
+''');
+      final byId = <int, Map<String, dynamic>>{};
+      for (final g in games) {
+        final idRaw = g['id'];
+        final gid =
+            idRaw is int ? idRaw : idRaw is num ? idRaw.toInt() : null;
+        if (gid != null) byId[gid] = g;
+      }
+      final out = <Map<String, dynamic>>[];
+      for (final id in orderedIds) {
+        final g = byId[id];
+        if (g == null) continue;
+        final cat = g['category'];
+        final c = cat is int ? cat : cat is num ? cat.toInt() : null;
+        if (c != null && c != 0) continue;
+        out.add(g);
+        if (out.length >= limit) break;
+      }
+      return out;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Ejecuta varias consultas `/games` hasta obtener resultados (p. ej. tras 400
+  /// por campos retirados o listas vacías por filtros demasiado estrictos).
+  Future<List<Map<String, dynamic>>> _tryPostGameQueries(
+    List<String> candidates,
+  ) async {
+    for (var i = 0; i < candidates.length; i++) {
+      if (i > 0) {
+        await Future<void>.delayed(
+            const Duration(milliseconds: _queryRetryDelayMs));
+      }
       try {
-        final list = await _postList('/games', body);
+        final list = await _postList('/games', candidates[i]);
         if (list.isNotEmpty) return list;
       } catch (_) {}
     }
     return [];
   }
 
-  /// Lanzados recientemente (últimos 18 meses).
+  /// Próximos lanzamientos (fecha futura); intenta sin `hypes` primero porque
+  /// puede devolver HTTP 400 o cero filas.
+  Future<List<Map<String, dynamic>>> fetchGamesMostAnticipated(
+      {int limit = 24}) async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final oneYear = now + 365 * 24 * 3600;
+    final twoYears = now + 730 * 24 * 3600;
+    return _tryPostGameQueries([
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date > $now & first_release_date < $twoYears;
+sort first_release_date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, release_dates.date, summary;
+where category = 0 & release_dates.date > $now & release_dates.date < $twoYears;
+sort release_dates.date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date > $now;
+sort first_release_date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary, hypes;
+where category = 0 & first_release_date > $now & first_release_date < $oneYear;
+sort hypes desc;
+limit $limit;
+''',
+    ]);
+  }
+
+  /// Lanzados recientemente (ventana ~18 meses, con ampliaciones y `release_dates`).
   Future<List<Map<String, dynamic>>> fetchGamesRecentlyReleased(
       {int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final past = now - 548 * 24 * 3600; // ~18 months
-    final body = '''
+    final pastWide = now - 1095 * 24 * 3600; // ~36 months
+    return _tryPostGameQueries([
+      '''
 fields name, cover.image_id, first_release_date, total_rating, summary;
 where category = 0 & first_release_date <= $now & first_release_date >= $past;
 sort first_release_date desc;
 limit $limit;
-''';
-    try {
-      return await _postList('/games', body);
-    } catch (_) {
-      return [];
-    }
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date <= $now & first_release_date >= $past & first_release_date != null;
+sort first_release_date desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, release_dates.date, summary;
+where category = 0 & release_dates.date <= $now & release_dates.date >= $past;
+sort release_dates.date desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date <= $now & first_release_date >= $pastWide;
+sort first_release_date desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date <= $now & first_release_date != null;
+sort first_release_date desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where first_release_date <= $now & first_release_date >= $past;
+sort first_release_date desc;
+limit $limit;
+''',
+    ]);
   }
 
-  /// Próximo a salir (fecha de lanzamiento futura).
+  /// Próximo a salir (fecha futura); alternativas por `release_dates` y sin tope.
   Future<List<Map<String, dynamic>>> fetchGamesComingSoon({int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final cap = now + 730 * 24 * 3600; // 2 years
-    final body = '''
+    return _tryPostGameQueries([
+      '''
 fields name, cover.image_id, first_release_date, summary;
 where category = 0 & first_release_date > $now & first_release_date < $cap;
 sort first_release_date asc;
 limit $limit;
-''';
-    try {
-      return await _postList('/games', body);
-    } catch (_) {
-      return [];
-    }
+''',
+      '''
+fields name, cover.image_id, release_dates.date, summary;
+where category = 0 & release_dates.date > $now & release_dates.date < $cap;
+sort release_dates.date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date > $now;
+sort first_release_date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where first_release_date > $now & first_release_date < $cap;
+sort first_release_date asc;
+limit $limit;
+''',
+    ]);
   }
 
   /// Reseñas recientes (comunidad IGDB).
@@ -167,10 +324,14 @@ fields id, title, content, score, created_at, user.username,
 sort created_at desc;
 limit $limit;
 ''';
-    final raw = await _postList('/reviews', body);
-    return raw
-        .where((r) => (r['game'] as Map<String, dynamic>?) != null)
-        .toList();
+    try {
+      final raw = await _postReviewsList(body);
+      return raw
+          .where((r) => (r['game'] as Map<String, dynamic>?) != null)
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Reseñas con puntuación alta (aprox. “críticos” / destacadas).
@@ -184,7 +345,7 @@ sort created_at desc;
 limit $limit;
 ''';
     try {
-      final raw = await _postList('/reviews', body);
+      final raw = await _postReviewsList(body);
       return raw
           .where((r) => (r['game'] as Map<String, dynamic>?) != null)
           .toList();
@@ -200,8 +361,12 @@ fields id, title, content, score, created_at, user.username,
        game.id, game.name, game.cover.image_id;
 where id = $reviewId;
 ''';
-    final list = await _postList('/reviews', body);
-    return list.isEmpty ? null : list.first;
+    try {
+      final list = await _postReviewsList(body);
+      return list.isEmpty ? null : list.first;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Full game detail by ID.
@@ -256,7 +421,7 @@ limit 1;
     return list.isEmpty ? null : list.first;
   }
 
-  /// Community reviews for a game (IGDB `/reviews`).
+  /// Community reviews for a game (IGDB `review` / `reviews`).
   Future<List<Map<String, dynamic>>> fetchGameReviews(int gameId) async {
     final body = '''
 fields id, title, content, score, created_at, user.username;
@@ -264,7 +429,36 @@ where game = $gameId;
 sort created_at desc;
 limit 15;
 ''';
-    return _postList('/reviews', body);
+    try {
+      return await _postReviewsList(body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Prueba `/review` y `/reviews` (Apicalypse); si ambos devuelven 404, [].
+  Future<List<Map<String, dynamic>>> _postReviewsList(String body) async {
+    const candidates = ['/review', '/reviews'];
+    for (var i = 0; i < candidates.length; i++) {
+      try {
+        return await _postList(candidates[i], body);
+      } on Object catch (e) {
+        final is404 = _isIgdbNotFound(e);
+        if (is404 && i < candidates.length - 1) {
+          await Future<void>.delayed(
+              const Duration(milliseconds: _queryRetryDelayMs));
+          continue;
+        }
+        if (is404) return [];
+        rethrow;
+      }
+    }
+    return [];
+  }
+
+  static bool _isIgdbNotFound(Object e) {
+    final s = e.toString();
+    return s.contains('HTTP 404') || s.contains('(404)');
   }
 
   /// IGDB often returns protocol-relative URLs (`//www.igdb.com/...`).

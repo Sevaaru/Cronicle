@@ -8,13 +8,17 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
+
+/// [PopupMenuItem] con `value: null` no es seleccionable (Material lo trata como divisor).
+/// En el menú usamos cadena vacía para «todas» y la mapeamos a `null` en el estado.
+const _statusMenuValueAll = '';
 
 String _statusLabel(String? key, AppLocalizations l10n) => switch (key) {
   null => l10n.statusAll,
@@ -53,6 +57,24 @@ String _currentStatusLabel(String status, MediaKind? kind, AppLocalizations l10n
     'REPEATING' => l10n.statusRepeating,
     _ => status,
   };
+}
+
+bool _libraryEntryHasDetailPage(LibraryEntry entry) {
+  if (entry.externalId.isEmpty) return false;
+  final kind = MediaKind.fromCode(entry.kind);
+  if (kind == MediaKind.anime || kind == MediaKind.manga) return true;
+  if (kind == MediaKind.game) return int.tryParse(entry.externalId) != null;
+  return false;
+}
+
+void _openLibraryEntryDetail(BuildContext context, LibraryEntry entry) {
+  final kind = MediaKind.fromCode(entry.kind);
+  if (kind == MediaKind.game) {
+    final id = int.tryParse(entry.externalId);
+    if (id != null) context.push('/game/$id');
+    return;
+  }
+  context.push('/media/${entry.externalId}?kind=${entry.kind}');
 }
 
 enum _SortField {
@@ -160,6 +182,27 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
     _checkAnilistSync();
 
+    final kindLayout = ref.watch(libraryKindLayoutProvider);
+    ref.listen<LibraryKindLayoutState>(libraryKindLayoutProvider, (prev, next) {
+      if (_selectedKind == null) {
+        if (!next.isVisible('all')) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedKind = next.firstVisibleKind);
+          });
+        }
+      } else if (!next.isVisible(_selectedKind!.name)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
+            _selectedKind =
+                next.isVisible('all') ? null : next.firstVisibleKind;
+          });
+        });
+      }
+    });
+
+    final visibleKindSlots = kindLayout.slots.where((s) => s.visible).toList();
+
     final listAsync = ref.watch(paginatedLibraryProvider(_params));
     bool hasMore;
     try {
@@ -184,9 +227,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: MediaKind.values.length + 1,
+              itemCount: visibleKindSlots.length,
               itemBuilder: (context, i) {
-                if (i == 0) {
+                final s = visibleKindSlots[i];
+                if (s.id == 'all') {
                   return _buildChip(
                     label: l10n.filterAll,
                     icon: Icons.grid_view_rounded,
@@ -194,7 +238,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     onTap: () => setState(() => _selectedKind = null),
                   );
                 }
-                final kind = MediaKind.values[i - 1];
+                final kind = MediaKind.values.byName(s.id);
                 return _buildChip(
                   label: mediaKindLabel(kind, l10n),
                   icon: _kindIcon(kind),
@@ -386,11 +430,15 @@ class _StatusDropdown extends StatelessWidget {
   final ColorScheme cs;
   final ValueChanged<String?> onChanged;
 
+  String _menuValueForKey(String? key) => key ?? _statusMenuValueAll;
+
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String?>(
-      initialValue: value,
-      onSelected: onChanged,
+    return PopupMenuButton<String>(
+      initialValue: _menuValueForKey(value),
+      onSelected: (v) => onChanged(
+        v == _statusMenuValueAll ? null : v,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       position: PopupMenuPosition.under,
       child: Container(
@@ -414,9 +462,10 @@ class _StatusDropdown extends StatelessWidget {
       itemBuilder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return _statusKeys.map((key) {
+          final menuValue = _menuValueForKey(key);
           final isSelected = key == value;
-          return PopupMenuItem<String?>(
-            value: key,
+          return PopupMenuItem<String>(
+            value: menuValue,
             child: Row(
               children: [
                 Icon(_statusIcon(key), size: 18,
@@ -496,8 +545,7 @@ class _EntryCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final kind = MediaKind.fromCode(entry.kind);
-    final canNavigate = entry.externalId.isNotEmpty &&
-        (kind == MediaKind.anime || kind == MediaKind.manga);
+    final canNavigate = _libraryEntryHasDetailPage(entry);
     final showProgressButton =
         (kind == MediaKind.anime || kind == MediaKind.manga) &&
         entry.status == 'CURRENT';
@@ -507,9 +555,7 @@ class _EntryCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: canNavigate
-            ? () => context.push('/media/${entry.externalId}?kind=${entry.kind}')
-            : null,
+        onTap: canNavigate ? () => _openLibraryEntryDetail(context, entry) : null,
         child: Row(
           children: [
             ClipRRect(
@@ -855,12 +901,12 @@ class _SearchEntryTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final kind = MediaKind.fromCode(entry.kind);
-    final canNavigate = entry.externalId.isNotEmpty &&
-        (kind == MediaKind.anime || kind == MediaKind.manga);
+    final canNavigate = _libraryEntryHasDetailPage(entry);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        onTap: canNavigate ? () => _openLibraryEntryDetail(context, entry) : null,
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: entry.posterUrl != null
@@ -893,7 +939,7 @@ class _SearchEntryTile extends StatelessWidget {
             if (canNavigate)
               IconButton(
                 icon: const Icon(Icons.open_in_new_rounded, size: 20),
-                onPressed: () => context.push('/media/${entry.externalId}?kind=${entry.kind}'),
+                onPressed: () => _openLibraryEntryDetail(context, entry),
               ),
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
@@ -936,7 +982,7 @@ class _LibrarySearchFab extends StatelessWidget {
                   ],
           ),
           border: Border.all(
-            color: isDark ? cs.onPrimaryContainer : cs.onPrimary,
+            color: cs.shadow.withAlpha(isDark ? 100 : 45),
             width: 1,
           ),
           boxShadow: [

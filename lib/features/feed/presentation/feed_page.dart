@@ -4,11 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 enum _FeedFilter {
@@ -41,6 +46,47 @@ String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
       _FeedFilter.game => l10n.filterGames,
     };
 
+enum _AnimeMangaBrowseTab {
+  activity,
+  seasonal,
+  topRated,
+  upcoming,
+  recentlyReleased,
+}
+
+const _anilistBrowseCategories = [
+  'seasonal',
+  'top_rated',
+  'upcoming',
+  'recently_released',
+];
+
+String _browseCategoryApiKey(_AnimeMangaBrowseTab tab) => switch (tab) {
+      _AnimeMangaBrowseTab.activity => '',
+      _AnimeMangaBrowseTab.seasonal => 'seasonal',
+      _AnimeMangaBrowseTab.topRated => 'top_rated',
+      _AnimeMangaBrowseTab.upcoming => 'upcoming',
+      _AnimeMangaBrowseTab.recentlyReleased => 'recently_released',
+    };
+
+String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
+    switch (tab) {
+      _AnimeMangaBrowseTab.activity => l10n.feedBrowseActivity,
+      _AnimeMangaBrowseTab.seasonal => l10n.feedBrowseSeasonal,
+      _AnimeMangaBrowseTab.topRated => l10n.feedBrowseTopRated,
+      _AnimeMangaBrowseTab.upcoming => l10n.feedBrowseUpcoming,
+      _AnimeMangaBrowseTab.recentlyReleased =>
+        l10n.feedBrowseRecentlyReleased,
+    };
+
+const List<_AnimeMangaBrowseTab> _animeMangaBrowseTabs = [
+  _AnimeMangaBrowseTab.activity,
+  _AnimeMangaBrowseTab.seasonal,
+  _AnimeMangaBrowseTab.topRated,
+  _AnimeMangaBrowseTab.upcoming,
+  _AnimeMangaBrowseTab.recentlyReleased,
+];
+
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
   if (diff.inMinutes < 1) return l10n.timeNow;
@@ -60,6 +106,7 @@ class FeedPage extends ConsumerStatefulWidget {
 class _FeedPageState extends ConsumerState<FeedPage> {
   _FeedFilter _filter = _FeedFilter.all;
   bool _filterInitialized = false;
+  _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
 
   AsyncValue<List<FeedActivity>> _getFilteredFeed() {
     return switch (_filter) {
@@ -81,8 +128,17 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         ref.invalidate(anilistFeedProvider);
       case _FeedFilter.anime:
         ref.invalidate(anilistFeedByTypeProvider('ANIME_LIST'));
+        for (final c in _anilistBrowseCategories) {
+          ref.invalidate(anilistBrowseMediaProvider('ANIME', c));
+        }
       case _FeedFilter.manga:
         ref.invalidate(anilistFeedByTypeProvider('MANGA_LIST'));
+        for (final c in _anilistBrowseCategories) {
+          ref.invalidate(anilistBrowseMediaProvider('MANGA', c));
+        }
+      case _FeedFilter.game:
+        ref.invalidate(igdbPopularProvider);
+        ref.invalidate(igdbGamesHomeAsideProvider);
       default:
         break;
     }
@@ -104,31 +160,96 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   }
 
   bool get _isPlaceholderFilter =>
-      _filter == _FeedFilter.movie ||
-      _filter == _FeedFilter.tv ||
-      _filter == _FeedFilter.game;
+      _filter == _FeedFilter.movie || _filter == _FeedFilter.tv;
+
+  bool get _showAnimeMangaBrowseRail =>
+      _filter == _FeedFilter.anime || _filter == _FeedFilter.manga;
+
+  bool get _showAnilistBrowseGrid =>
+      _showAnimeMangaBrowseRail &&
+      _animeMangaBrowseTab != _AnimeMangaBrowseTab.activity;
+
+  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    final added = await showAddToLibrarySheet(
+      context: context,
+      ref: ref,
+      item: item,
+      kind: kind,
+    );
+    if (!mounted || !added) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.addedToLibrary)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
+    final feedLayout = ref.watch(feedFilterLayoutProvider);
+    ref.listen<FeedFilterLayoutState>(feedFilterLayoutProvider, (prev, next) {
+      if (!next.visibleIdSet.contains(_filter.name)) {
+        final id = next.firstVisibleId;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() => _filter = _FeedFilter.values.byName(id));
+          }
+        });
+      }
+    });
+
     if (!_filterInitialized) {
       final defaultTab = ref.read(defaultFeedTabProvider);
+      final layout0 = ref.read(feedFilterLayoutProvider);
       _filter = _FeedFilter.values.firstWhere(
         (f) => f.name == defaultTab,
         orElse: () => _FeedFilter.all,
       );
+      if (!layout0.visibleIdSet.contains(_filter.name)) {
+        _filter = _FeedFilter.values.byName(layout0.firstVisibleId);
+      }
       _filterInitialized = true;
     }
+
+    final feedFilterChips = feedLayout.visibleOrderedIds
+        .map((id) => _FeedFilter.values.byName(id))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.feedTitle),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _invalidateFeed,
+          Consumer(
+            builder: (context, ref, _) {
+              final unread =
+                  ref.watch(anilistUnreadNotificationCountProvider);
+              return unread.when(
+                data: (count) => IconButton(
+                  tooltip: l10n.notificationsTitle,
+                  onPressed: () => context.push('/notifications'),
+                  icon: Badge(
+                    isLabelVisible: count > 0,
+                    label: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                ),
+                loading: () => IconButton(
+                  tooltip: l10n.notificationsTitle,
+                  onPressed: () => context.push('/notifications'),
+                  icon: const Icon(Icons.notifications_outlined),
+                ),
+                error: (_, _) => IconButton(
+                  tooltip: l10n.notificationsTitle,
+                  onPressed: () => context.push('/notifications'),
+                  icon: const Icon(Icons.notifications_outlined),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -140,9 +261,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: _FeedFilter.values.length,
+              itemCount: feedFilterChips.length,
               itemBuilder: (context, i) {
-                final f = _FeedFilter.values[i];
+                final f = feedFilterChips[i];
                 final selected = _filter == f;
                 return FilterChip(
                   selected: selected,
@@ -154,44 +275,99 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                       Text(_filterLabel(f, l10n), style: const TextStyle(fontSize: 12)),
                     ],
                   ),
-                  onSelected: (_) => setState(() => _filter = f),
+                  onSelected: (_) {
+                    setState(() {
+                      final prev = _filter;
+                      _filter = f;
+                      if (prev != f &&
+                          (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
+                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
+                      }
+                    });
+                  },
                   showCheckmark: false,
                   visualDensity: VisualDensity.compact,
                 );
               },
             ),
           ),
+          if (_showAnimeMangaBrowseRail) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
+                itemCount: _animeMangaBrowseTabs.length,
+                itemBuilder: (context, i) {
+                  final tab = _animeMangaBrowseTabs[i];
+                  final selected = _animeMangaBrowseTab == tab;
+                  return FilterChip(
+                    selected: selected,
+                    label: Text(
+                      _browseTabLabel(tab, l10n),
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _animeMangaBrowseTab = tab),
+                    showCheckmark: false,
+                    visualDensity: VisualDensity.compact,
+                  );
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: 6),
           Expanded(
-            child: _isPlaceholderFilter
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(_filter.icon, size: 48,
-                            color: colorScheme.onSurfaceVariant.withAlpha(80)),
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.feedComingSoon(_filterLabel(_filter, l10n)),
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+            child: _filter == _FeedFilter.game
+                ? const GamesHomeFeedView()
+                : _isPlaceholderFilter
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_filter.icon, size: 48,
+                                color: colorScheme.onSurfaceVariant
+                                    .withAlpha(80)),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.feedComingSoon(
+                                  _filterLabel(_filter, l10n)),
+                              style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  )
-                : _filter == _FeedFilter.following
+                      )
+                    : _filter == _FeedFilter.following
                     ? _FollowingFeedGuard(
                         onRefresh: _invalidateFeed,
                         onLoadMore: _loadMore,
                         filter: _filter,
                         l10n: l10n,
                       )
-                    : _FeedList(
-                        feedAsync: _getFilteredFeed(),
-                        onRefresh: _invalidateFeed,
-                        onLoadMore: _loadMore,
-                        filter: _filter,
-                        l10n: l10n,
-                      ),
+                    : _showAnilistBrowseGrid
+                        ? _AnimeMangaBrowseList(
+                            mediaType: _filter == _FeedFilter.anime
+                                ? 'ANIME'
+                                : 'MANGA',
+                            category:
+                                _browseCategoryApiKey(_animeMangaBrowseTab),
+                            kind: _filter == _FeedFilter.anime
+                                ? MediaKind.anime
+                                : MediaKind.manga,
+                            onRefresh: _invalidateFeed,
+                            onAdd: _addToLibrary,
+                            l10n: l10n,
+                          )
+                        : _FeedList(
+                            feedAsync: _getFilteredFeed(),
+                            onRefresh: _invalidateFeed,
+                            onLoadMore: _loadMore,
+                            filter: _filter,
+                            l10n: l10n,
+                          ),
           ),
         ],
       ),
@@ -535,8 +711,6 @@ class _ExpandableTextState extends State<_ExpandableText> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     if (!_isLong || _expanded) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,6 +1024,74 @@ class _ActivityCard extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimeMangaBrowseList extends ConsumerWidget {
+  const _AnimeMangaBrowseList({
+    required this.mediaType,
+    required this.category,
+    required this.kind,
+    required this.onRefresh,
+    required this.onAdd,
+    required this.l10n,
+  });
+
+  final String mediaType;
+  final String category;
+  final MediaKind kind;
+  final VoidCallback onRefresh;
+  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(anilistBrowseMediaProvider(mediaType, category));
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
+            const SizedBox(height: 12),
+            Text(l10n.errorNetwork),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () {
+                ref.invalidate(
+                    anilistBrowseMediaProvider(mediaType, category));
+                onRefresh();
+              },
+              child: Text(l10n.feedRetry),
+            ),
+          ],
+        ),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Center(child: Text(l10n.feedBrowseEmpty));
+        }
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(anilistBrowseMediaProvider(mediaType, category));
+            onRefresh();
+            await ref.read(anilistBrowseMediaProvider(mediaType, category).future);
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            itemCount: list.length,
+            itemBuilder: (_, i) => BrowseResultCard(
+              item: list[i],
+              kind: kind,
+              onAdd: onAdd,
+            ),
+          ),
+        );
+      },
     );
   }
 }

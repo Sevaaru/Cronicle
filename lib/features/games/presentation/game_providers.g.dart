@@ -183,9 +183,9 @@ class _IgdbSearchProviderElement
   String get query => (origin as IgdbSearchProvider).query;
 }
 
-String _$igdbPopularHash() => r'4b7e49747259c9f3f8a5f8b36dcd89d35e29503e';
+String _$igdbPopularHash() => r'e8c5442c02211582f5129507a189e340e9975274';
 
-/// AutoDispose so leaving Search and returning refetches trending (avoids stale empty).
+/// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
 ///
 /// Copied from [igdbPopular].
 @ProviderFor(igdbPopular)
@@ -325,24 +325,28 @@ class _IgdbGameDetailProviderElement
   int get gameId => (origin as IgdbGameDetailProvider).gameId;
 }
 
-String _$igdbGamesHomeHash() => r'93e9e830e450bdc6f6f2dca9b50533630ec23c0c';
+String _$igdbGamesHomeAsideHash() =>
+    r'247673a0d1a3060e546b3dffe5a7e8928f10a4c1';
 
-/// See also [igdbGamesHome].
-@ProviderFor(igdbGamesHome)
-final igdbGamesHomeProvider =
-    AutoDisposeFutureProvider<IgdbGamesHomeData>.internal(
-      igdbGamesHome,
-      name: r'igdbGamesHomeProvider',
+/// Resto del home juegos en paralelo (Popular va aparte para pintarse antes).
+///
+/// Copied from [igdbGamesHomeAside].
+@ProviderFor(igdbGamesHomeAside)
+final igdbGamesHomeAsideProvider =
+    AutoDisposeFutureProvider<IgdbGamesHomeAsideData>.internal(
+      igdbGamesHomeAside,
+      name: r'igdbGamesHomeAsideProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
-          : _$igdbGamesHomeHash,
+          : _$igdbGamesHomeAsideHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef IgdbGamesHomeRef = AutoDisposeFutureProviderRef<IgdbGamesHomeData>;
+typedef IgdbGamesHomeAsideRef =
+    AutoDisposeFutureProviderRef<IgdbGamesHomeAsideData>;
 String _$igdbReviewByIdHash() => r'27406cd579ea483b124241346a5d521a7d513ebb';
 
 /// See also [igdbReviewById].
@@ -464,5 +468,178 @@ class _IgdbReviewByIdProviderElement
   int get reviewId => (origin as IgdbReviewByIdProvider).reviewId;
 }
 
+String _$igdbGamesSectionListHash() =>
+    r'04581276b29789d2e0a898dd12046c917530ab94';
+
+/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+///
+/// Copied from [igdbGamesSectionList].
+@ProviderFor(igdbGamesSectionList)
+const igdbGamesSectionListProvider = IgdbGamesSectionListFamily();
+
+/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+///
+/// Copied from [igdbGamesSectionList].
+class IgdbGamesSectionListFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  ///
+  /// Copied from [igdbGamesSectionList].
+  const IgdbGamesSectionListFamily();
+
+  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  ///
+  /// Copied from [igdbGamesSectionList].
+  IgdbGamesSectionListProvider call(String slug) {
+    return IgdbGamesSectionListProvider(slug);
+  }
+
+  @override
+  IgdbGamesSectionListProvider getProviderOverride(
+    covariant IgdbGamesSectionListProvider provider,
+  ) {
+    return call(provider.slug);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'igdbGamesSectionListProvider';
+}
+
+/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+///
+/// Copied from [igdbGamesSectionList].
+class IgdbGamesSectionListProvider
+    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
+  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  ///
+  /// Copied from [igdbGamesSectionList].
+  IgdbGamesSectionListProvider(String slug)
+    : this._internal(
+        (ref) => igdbGamesSectionList(ref as IgdbGamesSectionListRef, slug),
+        from: igdbGamesSectionListProvider,
+        name: r'igdbGamesSectionListProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$igdbGamesSectionListHash,
+        dependencies: IgdbGamesSectionListFamily._dependencies,
+        allTransitiveDependencies:
+            IgdbGamesSectionListFamily._allTransitiveDependencies,
+        slug: slug,
+      );
+
+  IgdbGamesSectionListProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.slug,
+  }) : super.internal();
+
+  final String slug;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<Map<String, dynamic>>> Function(
+      IgdbGamesSectionListRef provider,
+    )
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: IgdbGamesSectionListProvider._internal(
+        (ref) => create(ref as IgdbGamesSectionListRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        slug: slug,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
+    return _IgdbGamesSectionListProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is IgdbGamesSectionListProvider && other.slug == slug;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, slug.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin IgdbGamesSectionListRef
+    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `slug` of this provider.
+  String get slug;
+}
+
+class _IgdbGamesSectionListProviderElement
+    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
+    with IgdbGamesSectionListRef {
+  _IgdbGamesSectionListProviderElement(super.provider);
+
+  @override
+  String get slug => (origin as IgdbGamesSectionListProvider).slug;
+}
+
+String _$favoriteGamesHash() => r'96ace829105b3d07cdda862470dea07b4784e682';
+
+/// Juegos marcados como favoritos (solo local, SharedPreferences).
+///
+/// Copied from [FavoriteGames].
+@ProviderFor(FavoriteGames)
+final favoriteGamesProvider =
+    NotifierProvider<FavoriteGames, List<Map<String, dynamic>>>.internal(
+      FavoriteGames.new,
+      name: r'favoriteGamesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$favoriteGamesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$FavoriteGames = Notifier<List<Map<String, dynamic>>>;
+String _$twitchIgdbAccountHash() => r'f126bb0fccb1a634abd6f9a735db83b9fe6bd12f';
+
+/// See also [TwitchIgdbAccount].
+@ProviderFor(TwitchIgdbAccount)
+final twitchIgdbAccountProvider =
+    AsyncNotifierProvider<TwitchIgdbAccount, TwitchIgdbAccountState>.internal(
+      TwitchIgdbAccount.new,
+      name: r'twitchIgdbAccountProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$twitchIgdbAccountHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$TwitchIgdbAccount = AsyncNotifier<TwitchIgdbAccountState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

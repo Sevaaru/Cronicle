@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
@@ -105,6 +106,33 @@ class _NotLoggedIn extends ConsumerWidget {
                           '${counts[kind]}', _kindColor(kind, cs)),
                 ],
               ),
+            );
+          },
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final favGames = ref.watch(favoriteGamesProvider);
+            if (favGames.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                Text(l10n.sectionFavGames,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(right: 8),
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemCount: favGames.length,
+                    itemBuilder: (context, i) {
+                      return _FavoriteGameCard(game: favGames[i]);
+                    },
+                  ),
+                ),
+              ],
             );
           },
         ),
@@ -396,6 +424,33 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ],
 
+              Consumer(
+                builder: (context, ref, _) {
+                  final favGames = ref.watch(favoriteGamesProvider);
+                  if (favGames.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      _SectionHeader(l10n.sectionFavGames, Icons.favorite_rounded,
+                          Colors.redAccent.shade400),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 160,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          separatorBuilder: (_, _) => const SizedBox(width: 10),
+                          itemCount: favGames.length,
+                          itemBuilder: (context, i) {
+                            return _FavoriteGameCard(game: favGames[i]);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+
               const SizedBox(height: 16),
 
               // Connected accounts
@@ -569,6 +624,56 @@ class _StatRow extends StatelessWidget {
           Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurface))),
           Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.onSurface)),
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteGameCard extends StatelessWidget {
+  const _FavoriteGameCard({required this.game});
+  final Map<String, dynamic> game;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final title = game['title'] as Map<String, dynamic>? ?? {};
+    final name = (title['english'] as String?) ??
+        (title['romaji'] as String?) ??
+        '';
+    final cover = (game['coverImage'] as Map?)?['large'] as String?;
+    final id = (game['id'] as num?)?.toInt();
+
+    return GestureDetector(
+      onTap: id != null ? () => context.push('/game/$id') : null,
+      child: SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: cover != null
+                  ? CachedNetworkImage(
+                      imageUrl: cover,
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 100,
+                      height: 130,
+                      color: cs.surfaceContainerHighest,
+                      child: const Icon(Icons.sports_esports),
+                    ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
       ),
     );
   }

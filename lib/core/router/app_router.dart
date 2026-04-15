@@ -6,8 +6,10 @@ import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
+import 'package:cronicle/features/feed/presentation/anilist_notifications_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
 import 'package:cronicle/features/games/presentation/game_detail_page.dart';
+import 'package:cronicle/features/games/presentation/games_home_section_list_page.dart';
 import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/games/presentation/igdb_game_review_detail_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
@@ -63,6 +65,10 @@ GoRouter appRouter(AppRouterRef ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: FeedPage(),
             ),
+          ),
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const AnilistNotificationsPage(),
           ),
           GoRoute(
             path: '/library',
@@ -121,6 +127,13 @@ GoRouter appRouter(AppRouterRef ref) {
               final reviewId = int.parse(state.pathParameters['id']!);
               final extra = state.extra as Map<String, dynamic>?;
               return ReviewDetailPage(reviewId: reviewId, initialData: extra);
+            },
+          ),
+          GoRoute(
+            path: '/games/section/:slug',
+            builder: (context, state) {
+              final slug = state.pathParameters['slug']!;
+              return GamesHomeSectionListPage(slug: slug);
             },
           ),
           GoRoute(
