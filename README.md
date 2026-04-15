@@ -13,7 +13,7 @@ Discover and watch anime, cartoons, series, and more – easier than ever on you
 ## Download
 <div align="center">
 
-[![Download](https://img.shields.io/badge/⬇️_Descargar_ahora-blue?style=for-the-badge&logo=download&logoColor=white&color=007ACC)](https://github.com/Sevaaru/Cronicle/releases/latest)
+[![Download](https://img.shields.io/badge/⬇️Download-now-blue?style=for-the-badge&logo=download&logoColor=white&color=007ACC)](https://github.com/Sevaaru/Cronicle/releases/latest)
 
 **Current version:** Beta 0.1 (alpha)  
 **Status:** Pre-release - Very unstable but working.
