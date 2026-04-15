@@ -11,6 +11,14 @@ An app for everything tracking. Integration With Anilist, Trackr, and more to co
 Discover and watch anime, cartoons, series, and more – easier than ever on your Android device.
 
 ## Download
+<div align="center">
+
+[![Download](https://img.shields.io/badge/⬇️_Descargar_ahora-blue?style=for-the-badge&logo=download&logoColor=white&color=007ACC)](https://github.com/Sevaaru/Cronicle/releases/latest)
+
+**Current version:** Beta 0.1 (alpha)  
+**Status:** Pre-release - Very unstable but working.
+
+</div>
 
 *Requires Android 8.0 or higher.*
 
