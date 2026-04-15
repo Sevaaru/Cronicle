@@ -690,13 +690,10 @@ class _ExpandableMarkdownState extends State<_ExpandableMarkdown> {
         children: [
           AnilistMarkdown(widget.text, style: widget.style),
           if (_isLong)
-            GestureDetector(
+            _ProfileExpandButton(
+              label: 'Ver menos',
+              icon: Icons.expand_less_rounded,
               onTap: () => setState(() => _expanded = false),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text('Ver menos',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.primary)),
-              ),
             ),
         ],
       );
@@ -706,21 +703,66 @@ class _ExpandableMarkdownState extends State<_ExpandableMarkdown> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRect(
-          child: SizedBox(
-            height: 72,
-            child: AnilistMarkdown(widget.text, style: widget.style),
+        SizedBox(
+          height: 80,
+          child: ClipRect(
+            child: ShaderMask(
+              shaderCallback: (rect) => LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.white, Colors.white.withAlpha(0)],
+                stops: const [0.6, 1.0],
+              ).createShader(rect),
+              blendMode: BlendMode.dstIn,
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: AnilistMarkdown(widget.text, style: widget.style),
+              ),
+            ),
           ),
         ),
-        GestureDetector(
+        _ProfileExpandButton(
+          label: 'Ver más',
+          icon: Icons.expand_more_rounded,
           onTap: () => setState(() => _expanded = true),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text('Ver más',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.primary)),
-          ),
         ),
       ],
+    );
+  }
+}
+
+class _ProfileExpandButton extends StatelessWidget {
+  const _ProfileExpandButton({required this.label, required this.icon, required this.onTap});
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: cs.primary.withAlpha(18),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: cs.primary),
+              const SizedBox(width: 4),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -356,6 +356,8 @@ class _FeedListState extends ConsumerState<_FeedList> {
           child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            addRepaintBoundaries: true,
+            addAutomaticKeepAlives: false,
             itemCount: totalItems,
             itemBuilder: (context, i) {
               if (i == 0) {
@@ -368,7 +370,9 @@ class _FeedListState extends ConsumerState<_FeedList> {
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 );
               }
-              return _ActivityCard(activity: filtered[actIdx]);
+              return RepaintBoundary(
+                child: _ActivityCard(activity: filtered[actIdx]),
+              );
             },
           ),
         );
@@ -481,10 +485,6 @@ class _ComposeCardState extends ConsumerState<_ComposeCard> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(
-                    l10n.composeMarkdownTip,
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                  ),
                   const Spacer(),
                   TextButton(
                     onPressed: _sending
@@ -544,19 +544,10 @@ class _ExpandableTextState extends State<_ExpandableText> {
         children: [
           AnilistMarkdown(widget.text, style: widget.style),
           if (_isLong)
-            GestureDetector(
+            _ExpandToggleButton(
+              label: 'Ver menos',
+              icon: Icons.expand_less_rounded,
               onTap: () => setState(() => _expanded = false),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Ver menos',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: cs.primary,
-                  ),
-                ),
-              ),
             ),
         ],
       );
@@ -566,38 +557,66 @@ class _ExpandableTextState extends State<_ExpandableText> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRect(
-          child: SizedBox(
-            height: 80,
-            child: AnilistMarkdown(widget.text, style: widget.style),
-          ),
-        ),
-        GestureDetector(
-          onTap: () => setState(() => _expanded = true),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
+        SizedBox(
+          height: 100,
+          child: ClipRect(
+            child: ShaderMask(
+              shaderCallback: (rect) => LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  cs.surface.withAlpha(0),
-                  cs.surface.withAlpha(200),
-                ],
-              ),
-            ),
-            child: Text(
-              'Ver más',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: cs.primary,
+                colors: [Colors.white, Colors.white.withAlpha(0)],
+                stops: const [0.6, 1.0],
+              ).createShader(rect),
+              blendMode: BlendMode.dstIn,
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: AnilistMarkdown(widget.text, style: widget.style),
               ),
             ),
           ),
         ),
+        _ExpandToggleButton(
+          label: 'Ver más',
+          icon: Icons.expand_more_rounded,
+          onTap: () => setState(() => _expanded = true),
+        ),
       ],
+    );
+  }
+}
+
+class _ExpandToggleButton extends StatelessWidget {
+  const _ExpandToggleButton({required this.label, required this.icon, required this.onTap});
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: cs.primary.withAlpha(18),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: cs.primary),
+              const SizedBox(width: 4),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

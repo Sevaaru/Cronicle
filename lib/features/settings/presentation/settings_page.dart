@@ -1,17 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:cronicle/core/backup/backup_repository_provider.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
-import 'package:cronicle/core/errors/app_failure.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
@@ -101,139 +104,12 @@ class SettingsPage extends ConsumerWidget {
           _GoogleSection(googleSignIn: googleSignIn),
           const SizedBox(height: 12),
 
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.backupTitle,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => _uploadBackup(context, ref),
-                        icon: const Icon(Icons.cloud_upload_outlined),
-                        label: Text(l10n.backupUpload),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _downloadBackup(context, ref),
-                        icon: const Icon(Icons.cloud_download_outlined),
-                        label: Text(l10n.backupRestore),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          _BackupSection(),
         ],
       ),
     );
   }
 
-  Future<void> _uploadBackup(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final db = ref.read(databaseProvider);
-      final entries = await db.getAllLibraryEntries();
-      final kv = await db.getAllKeyValues();
-
-      final payload = {
-        'version': 1,
-        'exportedAt': DateTime.now().toIso8601String(),
-        'library': entries
-            .map((e) => {
-                  'kind': e.kind,
-                  'externalId': e.externalId,
-                  'title': e.title,
-                  'posterUrl': e.posterUrl,
-                  'status': e.status,
-                  'score': e.score,
-                  'progress': e.progress,
-                  'totalEpisodes': e.totalEpisodes,
-                  'notes': e.notes,
-                  'updatedAt': e.updatedAt,
-                })
-            .toList(),
-        'keyValues': kv
-            .map((e) => {'key': e.key, 'value': e.value})
-            .toList(),
-      };
-
-      final bytes =
-          Uint8List.fromList(utf8.encode(jsonEncode(payload)));
-      final backup = ref.read(backupRepositoryProvider);
-      final result = await backup.uploadBackup(bytes);
-
-      if (!context.mounted) return;
-      result.fold(
-        (f) => _showFailure(context, f, l10n),
-        (_) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.backupUploadSuccess)),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorWithMessage(e))),
-      );
-    }
-  }
-
-  Future<void> _downloadBackup(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final backup = ref.read(backupRepositoryProvider);
-      final result = await backup.downloadBackup();
-
-      if (!context.mounted) return;
-      await result.fold(
-        (f) async => _showFailure(context, f, l10n),
-        (bytes) async {
-          final json =
-              jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-          final entries =
-              (json['library'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-          final db = ref.read(databaseProvider);
-          for (final e in entries) {
-            await db.upsertLibraryEntry(
-              LibraryEntriesCompanion.insert(
-                kind: e['kind'] as int,
-                externalId: e['externalId'] as String,
-                title: e['title'] as String,
-              ),
-            );
-          }
-
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.backupRestoredCount(entries.length))),
-          );
-        },
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorWithMessage(e))),
-      );
-    }
-  }
-
-  void _showFailure(
-      BuildContext context, AppFailure failure, AppLocalizations l10n) {
-    final message = switch (failure) {
-      GoogleDriveFailure(message: final m) => m ?? l10n.errorGeneric,
-      NetworkFailure() => l10n.errorNetwork,
-      _ => l10n.errorGeneric,
-    };
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
 }
 
 class _AnilistSection extends ConsumerWidget {
@@ -624,5 +500,199 @@ class _GoogleWebButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return buildGoogleWebButton(context);
+  }
+}
+
+class _BackupSection extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BackupSection> createState() => _BackupSectionState();
+}
+
+class _BackupSectionState extends ConsumerState<_BackupSection> {
+  bool _exporting = false;
+  bool _importing = false;
+
+  Future<void> _exportBackup() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final entries = await db.getAllLibraryEntries();
+      final kv = await db.getAllKeyValues();
+
+      final payload = {
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'library': entries
+            .map((e) => {
+                  'kind': e.kind,
+                  'externalId': e.externalId,
+                  'title': e.title,
+                  'posterUrl': e.posterUrl,
+                  'status': e.status,
+                  'score': e.score,
+                  'progress': e.progress,
+                  'totalEpisodes': e.totalEpisodes,
+                  'notes': e.notes,
+                  'updatedAt': e.updatedAt,
+                })
+            .toList(),
+        'keyValues': kv.map((e) => {'key': e.key, 'value': e.value}).toList(),
+      };
+
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+
+      if (kIsWeb) {
+        // On web just download via share
+        await SharePlus.instance.share(ShareParams(text: jsonStr));
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/cronicle_backup.json');
+        await file.writeAsString(jsonStr);
+        await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Cronicle Backup',
+        ));
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup exportado correctamente')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _importBackup() async {
+    if (_importing) return;
+    setState(() => _importing = true);
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) {
+        if (mounted) setState(() => _importing = false);
+        return;
+      }
+
+      final bytes = result.files.first.bytes ?? (kIsWeb ? null : await File(result.files.first.path!).readAsBytes());
+      if (bytes == null) throw Exception('No se pudo leer el archivo');
+
+      final jsonStr = utf8.decode(bytes);
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final entries = (json['library'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Restaurar backup'),
+          content: Text('Se importarán ${entries.length} entradas a tu biblioteca. Las entradas existentes se actualizarán.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restaurar')),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        if (mounted) setState(() => _importing = false);
+        return;
+      }
+
+      final db = ref.read(databaseProvider);
+      int imported = 0;
+      for (final e in entries) {
+        try {
+          await db.upsertLibraryEntry(
+            LibraryEntriesCompanion(
+              kind: Value(e['kind'] as int),
+              externalId: Value(e['externalId'] as String),
+              title: Value(e['title'] as String),
+              posterUrl: Value(e['posterUrl'] as String?),
+              status: Value((e['status'] as String?) ?? 'PLANNING'),
+              score: Value(e['score'] as int?),
+              progress: Value(e['progress'] as int?),
+              totalEpisodes: Value(e['totalEpisodes'] as int?),
+              notes: Value(e['notes'] as String?),
+              updatedAt: Value((e['updatedAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch),
+            ),
+          );
+          imported++;
+        } catch (_) {}
+      }
+
+      ref.invalidate(paginatedLibraryProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Restauradas $imported entradas')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.backup_rounded, size: 20, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(l10n.backupTitle, style: Theme.of(context).textTheme.titleSmall),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Exporta tu biblioteca como archivo JSON e impórtala en cualquier momento.',
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _exporting ? null : _exportBackup,
+                  icon: _exporting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.upload_file_rounded),
+                  label: Text(l10n.backupUpload),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _importing ? null : _importBackup,
+                  icon: _importing
+                      ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))
+                      : const Icon(Icons.download_rounded),
+                  label: Text(l10n.backupRestore),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -111,8 +111,9 @@ class _DetailContentState extends State<_DetailContent> {
         SliverToBoxAdapter(
           child: Column(
             children: [
-              Stack(
-                clipBehavior: Clip.none,
+              SizedBox(
+                height: bannerHeight + posterHeight - overlapAmount,
+                child: Stack(
                 children: [
                   GestureDetector(
                     onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
@@ -229,8 +230,9 @@ class _DetailContentState extends State<_DetailContent> {
                   ),
                 ],
               ),
+              ),
 
-              SizedBox(height: posterHeight - overlapAmount + 12),
+              const SizedBox(height: 12),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

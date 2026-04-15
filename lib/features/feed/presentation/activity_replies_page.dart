@@ -96,34 +96,40 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.commentsTitle)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _replies == null || _replies!.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline,
-                          size: 48,
-                          color: cs.onSurfaceVariant.withAlpha(80)),
-                      const SizedBox(height: 12),
-                      Text(l10n.noComments,
-                          style: TextStyle(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  itemCount: _replies!.length,
-                  itemBuilder: (context, i) => _ReplyCard(
-                    reply: _replies![i],
-                    timeAgo: (dt) => _timeAgo(dt, l10n),
-                  ),
-                ),
-      bottomNavigationBar: _ReplyInputBar(
-        controller: _replyController,
-        sending: _sending,
-        onSend: _sendReply,
+      body: Column(
+        children: [
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _replies == null || _replies!.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.chat_bubble_outline,
+                                size: 48,
+                                color: cs.onSurfaceVariant.withAlpha(80)),
+                            const SizedBox(height: 12),
+                            Text(l10n.noComments,
+                                style: TextStyle(color: cs.onSurfaceVariant)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        itemCount: _replies!.length,
+                        itemBuilder: (context, i) => _ReplyCard(
+                          reply: _replies![i],
+                          timeAgo: (dt) => _timeAgo(dt, l10n),
+                        ),
+                      ),
+          ),
+          _ReplyInputBar(
+            controller: _replyController,
+            sending: _sending,
+            onSend: _sendReply,
+          ),
+        ],
       ),
     );
   }
@@ -145,8 +151,9 @@ class _ReplyInputBar extends ConsumerWidget {
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
 
+    final shellNavPad = MediaQuery.of(context).viewPadding.bottom + 64;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + shellNavPad),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),

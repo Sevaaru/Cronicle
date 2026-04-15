@@ -1,9 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-
-import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 void showFullscreenImage(BuildContext context, String imageUrl) {
   Navigator.of(context, rootNavigator: true).push(
@@ -136,22 +135,13 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
               maxScale: 5.0,
               clipBehavior: Clip.none,
               child: Center(
-                child: LayoutBuilder(
-                  builder: (context, c) {
-                    final w = c.maxWidth.isFinite ? c.maxWidth : 800.0;
-                    final h = c.maxHeight.isFinite ? c.maxHeight : 600.0;
-                    return RemoteNetworkImage(
-                      key: ValueKey(widget.imageUrl),
-                      imageUrl: widget.imageUrl,
-                      width: w,
-                      height: h,
-                      fit: BoxFit.contain,
-                      placeholder: const Center(
-                        child: CircularProgressIndicator(color: Colors.white70),
-                      ),
-                      error: const Icon(Icons.broken_image, color: Colors.white54, size: 48),
-                    );
-                  },
+                child: CachedNetworkImage(
+                  imageUrl: widget.imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (_, _) =>
+                      const Center(child: CircularProgressIndicator(color: Colors.white70)),
+                  errorWidget: (_, _, _) =>
+                      const Icon(Icons.broken_image, color: Colors.white54, size: 48),
                 ),
               ),
             ),

@@ -289,6 +289,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                  addAutomaticKeepAlives: false,
                   itemCount: entries.length + (hasMore ? 1 : 0),
                   itemBuilder: (context, i) {
                     if (i >= entries.length) {
