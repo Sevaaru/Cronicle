@@ -46,3 +46,6 @@ app.*.map.json
 
 # Internal project guide (not for version control)
 /guide/
+
+# Twitch / IGDB (local secrets for --dart-define-from-file)
+twitch_secrets.json

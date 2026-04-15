@@ -1495,6 +1495,378 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Horas jugadas'**
   String get addToListHoursPlayed;
+
+  /// No description provided for @gameDetailLinksSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlaces'**
+  String get gameDetailLinksSection;
+
+  /// No description provided for @gameDetailLinksShowMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar {remaining} más'**
+  String gameDetailLinksShowMore(Object remaining);
+
+  /// No description provided for @gameDetailLinksShowLess.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar menos'**
+  String get gameDetailLinksShowLess;
+
+  /// No description provided for @gameDetailLinkOfficialSite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get gameDetailLinkOfficialSite;
+
+  /// No description provided for @gameDetailLinkKindPlayStation.
+  ///
+  /// In es, this message translates to:
+  /// **'PlayStation'**
+  String get gameDetailLinkKindPlayStation;
+
+  /// No description provided for @gameDetailLinkKindNintendo.
+  ///
+  /// In es, this message translates to:
+  /// **'Nintendo'**
+  String get gameDetailLinkKindNintendo;
+
+  /// No description provided for @gameDetailLinkKindApple.
+  ///
+  /// In es, this message translates to:
+  /// **'App Store'**
+  String get gameDetailLinkKindApple;
+
+  /// No description provided for @gameDetailLinkKindGooglePlay.
+  ///
+  /// In es, this message translates to:
+  /// **'Google Play'**
+  String get gameDetailLinkKindGooglePlay;
+
+  /// No description provided for @gameDetailLinkKindAmazon.
+  ///
+  /// In es, this message translates to:
+  /// **'Amazon'**
+  String get gameDetailLinkKindAmazon;
+
+  /// No description provided for @gameDetailLinkKindOculus.
+  ///
+  /// In es, this message translates to:
+  /// **'Meta / Oculus'**
+  String get gameDetailLinkKindOculus;
+
+  /// No description provided for @gameDetailLinkKindGameJolt.
+  ///
+  /// In es, this message translates to:
+  /// **'Game Jolt'**
+  String get gameDetailLinkKindGameJolt;
+
+  /// No description provided for @gameDetailLinkKindHumble.
+  ///
+  /// In es, this message translates to:
+  /// **'Humble'**
+  String get gameDetailLinkKindHumble;
+
+  /// No description provided for @gameDetailLinkKindUbisoft.
+  ///
+  /// In es, this message translates to:
+  /// **'Ubisoft'**
+  String get gameDetailLinkKindUbisoft;
+
+  /// No description provided for @gameDetailLinkKindEa.
+  ///
+  /// In es, this message translates to:
+  /// **'EA'**
+  String get gameDetailLinkKindEa;
+
+  /// No description provided for @gameDetailLinkKindRockstar.
+  ///
+  /// In es, this message translates to:
+  /// **'Rockstar'**
+  String get gameDetailLinkKindRockstar;
+
+  /// No description provided for @gameDetailLinkKindBattlenet.
+  ///
+  /// In es, this message translates to:
+  /// **'Battle.net'**
+  String get gameDetailLinkKindBattlenet;
+
+  /// No description provided for @gameDetailLinkKindTiktok.
+  ///
+  /// In es, this message translates to:
+  /// **'TikTok'**
+  String get gameDetailLinkKindTiktok;
+
+  /// No description provided for @gameDetailLinkKindBluesky.
+  ///
+  /// In es, this message translates to:
+  /// **'Bluesky'**
+  String get gameDetailLinkKindBluesky;
+
+  /// No description provided for @gamesHomePopularNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Popular ahora'**
+  String get gamesHomePopularNow;
+
+  /// No description provided for @gamesHomeMostAnticipated.
+  ///
+  /// In es, this message translates to:
+  /// **'Más esperados'**
+  String get gamesHomeMostAnticipated;
+
+  /// No description provided for @gamesHomeRecentReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas recientes'**
+  String get gamesHomeRecentReviews;
+
+  /// No description provided for @gamesHomeCriticsReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas de críticos'**
+  String get gamesHomeCriticsReviews;
+
+  /// No description provided for @gamesHomeRecentlyReleased.
+  ///
+  /// In es, this message translates to:
+  /// **'Recién salidos'**
+  String get gamesHomeRecentlyReleased;
+
+  /// No description provided for @gamesHomeComingSoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximamente'**
+  String get gamesHomeComingSoon;
+
+  /// No description provided for @gamesHomeSectionExpand.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más'**
+  String get gamesHomeSectionExpand;
+
+  /// No description provided for @gamesHomeSectionCollapse.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver menos'**
+  String get gamesHomeSectionCollapse;
+
+  /// No description provided for @gamesHomeNoItems.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin contenido'**
+  String get gamesHomeNoItems;
+
+  /// No description provided for @gamesHomeOpenGame.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver juego'**
+  String get gamesHomeOpenGame;
+
+  /// No description provided for @igdbReviewNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró la reseña.'**
+  String get igdbReviewNotFound;
+
+  /// No description provided for @gameDetailOpenIgdb.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver en IGDB'**
+  String get gameDetailOpenIgdb;
+
+  /// No description provided for @gameDetailTimeToBeatSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo estimado (IGDB)'**
+  String get gameDetailTimeToBeatSection;
+
+  /// No description provided for @gameDetailTtbHastily.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia principal (rápido)'**
+  String get gameDetailTtbHastily;
+
+  /// No description provided for @gameDetailTtbNormal.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia principal (normal)'**
+  String get gameDetailTtbNormal;
+
+  /// No description provided for @gameDetailTtbComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Al 100%'**
+  String get gameDetailTtbComplete;
+
+  /// No description provided for @gameDetailScreenshots.
+  ///
+  /// In es, this message translates to:
+  /// **'Capturas'**
+  String get gameDetailScreenshots;
+
+  /// No description provided for @gameDetailReviewsSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas (IGDB)'**
+  String get gameDetailReviewsSection;
+
+  /// No description provided for @gameDetailNoReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reseñas en IGDB para este juego.'**
+  String get gameDetailNoReviews;
+
+  /// No description provided for @gameDetailReviewUntitled.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseña'**
+  String get gameDetailReviewUntitled;
+
+  /// No description provided for @gameDetailReviewBy.
+  ///
+  /// In es, this message translates to:
+  /// **'Por {name}'**
+  String gameDetailReviewBy(Object name);
+
+  /// No description provided for @gameDetailPlaytimeHoursMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String gameDetailPlaytimeHoursMinutes(Object hours, Object minutes);
+
+  /// No description provided for @gameDetailPlaytimeHoursOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h'**
+  String gameDetailPlaytimeHoursOnly(Object hours);
+
+  /// No description provided for @gameDetailPlaytimeMinutesOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min'**
+  String gameDetailPlaytimeMinutesOnly(Object minutes);
+
+  /// No description provided for @gameDetailWebCatOfficial.
+  ///
+  /// In es, this message translates to:
+  /// **'Web oficial'**
+  String get gameDetailWebCatOfficial;
+
+  /// No description provided for @gameDetailWebCatWikia.
+  ///
+  /// In es, this message translates to:
+  /// **'Wikia'**
+  String get gameDetailWebCatWikia;
+
+  /// No description provided for @gameDetailWebCatWikipedia.
+  ///
+  /// In es, this message translates to:
+  /// **'Wikipedia'**
+  String get gameDetailWebCatWikipedia;
+
+  /// No description provided for @gameDetailWebCatFacebook.
+  ///
+  /// In es, this message translates to:
+  /// **'Facebook'**
+  String get gameDetailWebCatFacebook;
+
+  /// No description provided for @gameDetailWebCatTwitter.
+  ///
+  /// In es, this message translates to:
+  /// **'Twitter / X'**
+  String get gameDetailWebCatTwitter;
+
+  /// No description provided for @gameDetailWebCatTwitch.
+  ///
+  /// In es, this message translates to:
+  /// **'Twitch'**
+  String get gameDetailWebCatTwitch;
+
+  /// No description provided for @gameDetailWebCatInstagram.
+  ///
+  /// In es, this message translates to:
+  /// **'Instagram'**
+  String get gameDetailWebCatInstagram;
+
+  /// No description provided for @gameDetailWebCatYoutube.
+  ///
+  /// In es, this message translates to:
+  /// **'YouTube'**
+  String get gameDetailWebCatYoutube;
+
+  /// No description provided for @gameDetailWebCatSteam.
+  ///
+  /// In es, this message translates to:
+  /// **'Steam'**
+  String get gameDetailWebCatSteam;
+
+  /// No description provided for @gameDetailWebCatReddit.
+  ///
+  /// In es, this message translates to:
+  /// **'Reddit'**
+  String get gameDetailWebCatReddit;
+
+  /// No description provided for @gameDetailWebCatItch.
+  ///
+  /// In es, this message translates to:
+  /// **'itch.io'**
+  String get gameDetailWebCatItch;
+
+  /// No description provided for @gameDetailWebCatEpic.
+  ///
+  /// In es, this message translates to:
+  /// **'Epic Games'**
+  String get gameDetailWebCatEpic;
+
+  /// No description provided for @gameDetailWebCatGog.
+  ///
+  /// In es, this message translates to:
+  /// **'GOG'**
+  String get gameDetailWebCatGog;
+
+  /// No description provided for @gameDetailWebCatDiscord.
+  ///
+  /// In es, this message translates to:
+  /// **'Discord'**
+  String get gameDetailWebCatDiscord;
+
+  /// No description provided for @gameDetailWebCatOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlace'**
+  String get gameDetailWebCatOther;
+
+  /// No description provided for @gameDetailExtCatSteam.
+  ///
+  /// In es, this message translates to:
+  /// **'Steam'**
+  String get gameDetailExtCatSteam;
+
+  /// No description provided for @gameDetailExtCatGog.
+  ///
+  /// In es, this message translates to:
+  /// **'GOG'**
+  String get gameDetailExtCatGog;
+
+  /// No description provided for @gameDetailExtCatMicrosoft.
+  ///
+  /// In es, this message translates to:
+  /// **'Microsoft Store'**
+  String get gameDetailExtCatMicrosoft;
+
+  /// No description provided for @gameDetailExtCatEpic.
+  ///
+  /// In es, this message translates to:
+  /// **'Epic Games'**
+  String get gameDetailExtCatEpic;
+
+  /// No description provided for @gameDetailExtCatOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienda externa'**
+  String get gameDetailExtCatOther;
 }
 
 class _AppLocalizationsDelegate

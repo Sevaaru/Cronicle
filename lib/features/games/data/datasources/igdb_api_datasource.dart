@@ -46,22 +46,172 @@ limit 20;
     return _postList('/games', body);
   }
 
-  /// Fetch popular/highly-rated games.
-  Future<List<Map<String, dynamic>>> fetchPopularGames() async {
-    const body = '''
-fields name, cover.image_id, genres.name, platforms.abbreviation,
+  /// Fetch popular games. Tries several Apicalypse shapes because some
+  /// field combinations or filters can yield an empty list on IGDB.
+  ///
+  /// IGDB's `Game` schema no longer exposes `popularity` on `/games`; asking
+  /// for it or `sort popularity desc` returns HTTP 400. Older queries are kept
+  /// as fallbacks where useful, but each attempt is wrapped so a 400 does not
+  /// block the next candidate.
+  Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 20}) async {
+    final candidates = <String>[
+      // Main-ish games with user ratings (closest to "trending" without popularity).
+      '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, summary;
+where category = 0 & total_rating > 0;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, summary;
+where category = 0;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
        total_rating, first_release_date, summary;
 sort total_rating desc;
-where total_rating_count > 50 & category = 0;
-limit 20;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, total_rating, first_release_date, summary;
+sort id desc;
+limit $limit;
+''',
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (i > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 280));
+      }
+      try {
+        final list = await _postList('/games', candidates[i]);
+        if (list.isNotEmpty) return list;
+      } catch (_) {
+        continue;
+      }
+    }
+    return [];
+  }
+
+  /// Próximos lanzamientos con más hype (si el campo existe); si no, por fecha.
+  Future<List<Map<String, dynamic>>> fetchGamesMostAnticipated(
+      {int limit = 24}) async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final yearAhead = now + 365 * 24 * 3600;
+    final candidates = <String>[
+      '''
+fields name, cover.image_id, first_release_date, summary, hypes;
+where category = 0 & first_release_date > $now & first_release_date < $yearAhead;
+sort hypes desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date > $now & first_release_date < $yearAhead;
+sort first_release_date asc;
+limit $limit;
+''',
+    ];
+    for (final body in candidates) {
+      try {
+        final list = await _postList('/games', body);
+        if (list.isNotEmpty) return list;
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  /// Lanzados recientemente (últimos 18 meses).
+  Future<List<Map<String, dynamic>>> fetchGamesRecentlyReleased(
+      {int limit = 24}) async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final past = now - 548 * 24 * 3600; // ~18 months
+    final body = '''
+fields name, cover.image_id, first_release_date, total_rating, summary;
+where category = 0 & first_release_date <= $now & first_release_date >= $past;
+sort first_release_date desc;
+limit $limit;
 ''';
-    return _postList('/games', body);
+    try {
+      return await _postList('/games', body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Próximo a salir (fecha de lanzamiento futura).
+  Future<List<Map<String, dynamic>>> fetchGamesComingSoon({int limit = 24}) async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final cap = now + 730 * 24 * 3600; // 2 years
+    final body = '''
+fields name, cover.image_id, first_release_date, summary;
+where category = 0 & first_release_date > $now & first_release_date < $cap;
+sort first_release_date asc;
+limit $limit;
+''';
+    try {
+      return await _postList('/games', body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Reseñas recientes (comunidad IGDB).
+  Future<List<Map<String, dynamic>>> fetchReviewsRecent({int limit = 30}) async {
+    final body = '''
+fields id, title, content, score, created_at, user.username,
+       game.id, game.name, game.cover.image_id;
+sort created_at desc;
+limit $limit;
+''';
+    final raw = await _postList('/reviews', body);
+    return raw
+        .where((r) => (r['game'] as Map<String, dynamic>?) != null)
+        .toList();
+  }
+
+  /// Reseñas con puntuación alta (aprox. “críticos” / destacadas).
+  Future<List<Map<String, dynamic>>> fetchReviewsHighScore(
+      {int limit = 24, int minScore = 80}) async {
+    final body = '''
+fields id, title, content, score, created_at, user.username,
+       game.id, game.name, game.cover.image_id;
+where score >= $minScore;
+sort created_at desc;
+limit $limit;
+''';
+    try {
+      final raw = await _postList('/reviews', body);
+      return raw
+          .where((r) => (r['game'] as Map<String, dynamic>?) != null)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Una reseña por id (para pantalla de lectura).
+  Future<Map<String, dynamic>?> fetchReviewById(int reviewId) async {
+    final body = '''
+fields id, title, content, score, created_at, user.username,
+       game.id, game.name, game.cover.image_id;
+where id = $reviewId;
+''';
+    final list = await _postList('/reviews', body);
+    return list.isEmpty ? null : list.first;
   }
 
   /// Full game detail by ID.
+  ///
+  /// Playtime estimates live on the separate [GameTimeToBeat] resource
+  /// (`/game_time_to_beats`), not as `game.time_to_beat` — requesting the
+  /// latter in `fields` returns HTTP 400 from IGDB.
   Future<Map<String, dynamic>?> fetchGameDetail(int gameId) async {
     final body = '''
-fields name, summary, storyline, total_rating, total_rating_count,
+fields name, summary, total_rating, total_rating_count,
        aggregated_rating, aggregated_rating_count,
        cover.image_id,
        screenshots.image_id,
@@ -76,11 +226,54 @@ fields name, summary, storyline, total_rating, total_rating_count,
        themes.name,
        status,
        category,
-       url;
+       url,
+       websites.url, websites.category,
+       external_games.url, external_games.category, external_games.uid,
+       external_games.name, external_games.external_game_source.name;
 where id = $gameId;
 ''';
     final list = await _postList('/games', body);
+    if (list.isEmpty) return null;
+    final game = list.first;
+    try {
+      final ttb = await _fetchGameTimeToBeat(gameId);
+      if (ttb != null) {
+        game['time_to_beat'] = ttb;
+      }
+    } catch (_) {
+      // Pro tier / network: detail page still works without estimates.
+    }
+    return game;
+  }
+
+  Future<Map<String, dynamic>?> _fetchGameTimeToBeat(int gameId) async {
+    final body = '''
+fields hastily, normally, completely;
+where game_id = $gameId;
+limit 1;
+''';
+    final list = await _postList('/game_time_to_beats', body);
     return list.isEmpty ? null : list.first;
+  }
+
+  /// Community reviews for a game (IGDB `/reviews`).
+  Future<List<Map<String, dynamic>>> fetchGameReviews(int gameId) async {
+    final body = '''
+fields id, title, content, score, created_at, user.username;
+where game = $gameId;
+sort created_at desc;
+limit 15;
+''';
+    return _postList('/reviews', body);
+  }
+
+  /// IGDB often returns protocol-relative URLs (`//www.igdb.com/...`).
+  static String? absoluteHttpUrl(String? u) {
+    if (u == null || u.isEmpty) return null;
+    final t = u.trim();
+    if (t.startsWith('//')) return 'https:$t';
+    if (t.startsWith('http://') || t.startsWith('https://')) return t;
+    return 'https://$t';
   }
 
   /// Normalizes a raw IGDB game map into the common format used by
@@ -101,9 +294,15 @@ where id = $gameId;
         .where((p) => p.isNotEmpty)
         .toList();
     final rating = raw['total_rating'] as num?;
+    final idRaw = raw['id'];
+    final gameId = idRaw is int
+        ? idRaw
+        : idRaw is num
+            ? idRaw.toInt()
+            : int.tryParse('$idRaw');
 
     return {
-      'id': raw['id'],
+      'id': gameId,
       'title': {'english': name, 'romaji': name},
       'name': name,
       'coverImage': {
@@ -125,9 +324,12 @@ where id = $gameId;
       'similar_games': raw['similar_games'],
       'game_modes': raw['game_modes'],
       'themes': raw['themes'],
-      'storyline': raw['storyline'],
       'status': raw['status'],
       'url': raw['url'],
+      'igdb_page_url': absoluteHttpUrl(raw['url'] as String?),
+      'time_to_beat': raw['time_to_beat'],
+      'websites': raw['websites'],
+      'external_games': raw['external_games'],
       '_raw': raw,
     };
   }
@@ -144,11 +346,27 @@ where id = $gameId;
       options: Options(
         headers: options.headers,
         contentType: 'text/plain',
+        validateStatus: (_) => true,
       ),
     );
 
+    final code = res.statusCode ?? 0;
+    if (code >= 400) {
+      if (res.data is Map<String, dynamic>) {
+        final m = res.data as Map<String, dynamic>;
+        final msg = m['message'] as String? ?? m.toString();
+        throw Exception('IGDB ($code): $msg');
+      }
+      throw Exception('IGDB HTTP $code');
+    }
+
     if (res.data is List) {
       return (res.data as List).cast<Map<String, dynamic>>();
+    }
+    if (res.data is Map<String, dynamic>) {
+      final m = res.data as Map<String, dynamic>;
+      final msg = m['message'] as String? ?? m.toString();
+      throw Exception('IGDB: $msg');
     }
     return [];
   }

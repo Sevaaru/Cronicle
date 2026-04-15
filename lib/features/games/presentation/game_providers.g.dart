@@ -183,24 +183,28 @@ class _IgdbSearchProviderElement
   String get query => (origin as IgdbSearchProvider).query;
 }
 
-String _$igdbPopularHash() => r'fe785cc06485dea68626fe6d2a18a30067d09a61';
+String _$igdbPopularHash() => r'4b7e49747259c9f3f8a5f8b36dcd89d35e29503e';
 
-/// See also [igdbPopular].
+/// AutoDispose so leaving Search and returning refetches trending (avoids stale empty).
+///
+/// Copied from [igdbPopular].
 @ProviderFor(igdbPopular)
-final igdbPopularProvider = FutureProvider<List<Map<String, dynamic>>>.internal(
-  igdbPopular,
-  name: r'igdbPopularProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$igdbPopularHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final igdbPopularProvider =
+    AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
+      igdbPopular,
+      name: r'igdbPopularProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$igdbPopularHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef IgdbPopularRef = FutureProviderRef<List<Map<String, dynamic>>>;
-String _$igdbGameDetailHash() => r'f3f10de2831354ea0adb731808ccc606f37233ba';
+typedef IgdbPopularRef =
+    AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
+String _$igdbGameDetailHash() => r'256c66738a4115ea34ed1f15b1d0a614925880d1';
 
 /// See also [igdbGameDetail].
 @ProviderFor(igdbGameDetail)
@@ -319,6 +323,145 @@ class _IgdbGameDetailProviderElement
 
   @override
   int get gameId => (origin as IgdbGameDetailProvider).gameId;
+}
+
+String _$igdbGamesHomeHash() => r'93e9e830e450bdc6f6f2dca9b50533630ec23c0c';
+
+/// See also [igdbGamesHome].
+@ProviderFor(igdbGamesHome)
+final igdbGamesHomeProvider =
+    AutoDisposeFutureProvider<IgdbGamesHomeData>.internal(
+      igdbGamesHome,
+      name: r'igdbGamesHomeProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$igdbGamesHomeHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef IgdbGamesHomeRef = AutoDisposeFutureProviderRef<IgdbGamesHomeData>;
+String _$igdbReviewByIdHash() => r'27406cd579ea483b124241346a5d521a7d513ebb';
+
+/// See also [igdbReviewById].
+@ProviderFor(igdbReviewById)
+const igdbReviewByIdProvider = IgdbReviewByIdFamily();
+
+/// See also [igdbReviewById].
+class IgdbReviewByIdFamily extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// See also [igdbReviewById].
+  const IgdbReviewByIdFamily();
+
+  /// See also [igdbReviewById].
+  IgdbReviewByIdProvider call(int reviewId) {
+    return IgdbReviewByIdProvider(reviewId);
+  }
+
+  @override
+  IgdbReviewByIdProvider getProviderOverride(
+    covariant IgdbReviewByIdProvider provider,
+  ) {
+    return call(provider.reviewId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'igdbReviewByIdProvider';
+}
+
+/// See also [igdbReviewById].
+class IgdbReviewByIdProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// See also [igdbReviewById].
+  IgdbReviewByIdProvider(int reviewId)
+    : this._internal(
+        (ref) => igdbReviewById(ref as IgdbReviewByIdRef, reviewId),
+        from: igdbReviewByIdProvider,
+        name: r'igdbReviewByIdProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$igdbReviewByIdHash,
+        dependencies: IgdbReviewByIdFamily._dependencies,
+        allTransitiveDependencies:
+            IgdbReviewByIdFamily._allTransitiveDependencies,
+        reviewId: reviewId,
+      );
+
+  IgdbReviewByIdProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.reviewId,
+  }) : super.internal();
+
+  final int reviewId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(IgdbReviewByIdRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: IgdbReviewByIdProvider._internal(
+        (ref) => create(ref as IgdbReviewByIdRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        reviewId: reviewId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _IgdbReviewByIdProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is IgdbReviewByIdProvider && other.reviewId == reviewId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, reviewId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin IgdbReviewByIdRef on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `reviewId` of this provider.
+  int get reviewId;
+}
+
+class _IgdbReviewByIdProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with IgdbReviewByIdRef {
+  _IgdbReviewByIdProviderElement(super.provider);
+
+  @override
+  int get reviewId => (origin as IgdbReviewByIdProvider).reviewId;
 }
 
 // ignore_for_file: type=lint

@@ -3,17 +3,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
     show IgdbApiDatasource, IgdbWebUnsupportedException;
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/games/presentation/igdb_detail_helpers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+
+typedef _GameDetailLinkRow = ({
+  String label,
+  String url,
+  bool igdbPage,
+  int? websiteCategory,
+  int? externalCategory,
+});
+
+Future<void> _launchGameLink(
+  BuildContext context,
+  AppLocalizations l10n,
+  String? href,
+) async {
+  final resolved = IgdbApiDatasource.absoluteHttpUrl(href);
+  if (resolved == null) return;
+  final uri = Uri.tryParse(resolved);
+  if (uri == null) return;
+  try {
+    final ok =
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorWithMessage(resolved))),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+      );
+    }
+  }
+}
 
 class GameDetailPage extends ConsumerWidget {
   const GameDetailPage({super.key, required this.gameId});
@@ -67,7 +103,6 @@ class _GameDetailContent extends StatelessWidget {
     final poster = (coverImage['extraLarge'] as String?) ??
         (coverImage['large'] as String?);
     final summary = game['summary'] as String?;
-    final storyline = game['storyline'] as String?;
     final score = game['averageScore'] as int?;
     final format = game['format'] as String?;
     final genres = (game['genres'] as List?)?.cast<String>() ?? [];
@@ -116,6 +151,65 @@ class _GameDetailContent extends StatelessWidget {
         : null;
 
     final similarGames = game['similar_games'] as List?;
+    final igdbPageUrl = game['igdb_page_url'] as String?;
+    final websites = (game['websites'] as List?) ?? const [];
+    final externalGames = (game['external_games'] as List?) ?? const [];
+    final ttb = game['time_to_beat'] as Map<String, dynamic>?;
+    final reviews = (game['igdb_reviews'] as List?) ?? const [];
+
+    final linkRows = <_GameDetailLinkRow>[];
+    final seenLinkUrls = <String>{};
+    void addLinkRow(
+      String label,
+      String? href, {
+      bool igdbPage = false,
+      int? websiteCategory,
+      int? externalCategory,
+    }) {
+      final u = IgdbApiDatasource.absoluteHttpUrl(href);
+      if (u == null) return;
+      final key = u.toLowerCase();
+      if (seenLinkUrls.contains(key)) return;
+      seenLinkUrls.add(key);
+      linkRows.add((
+        label: label,
+        url: u,
+        igdbPage: igdbPage,
+        websiteCategory: websiteCategory,
+        externalCategory: externalCategory,
+      ));
+    }
+
+    addLinkRow(l10n.gameDetailOpenIgdb, igdbPageUrl, igdbPage: true);
+    for (final w in websites) {
+      final m = w as Map<String, dynamic>;
+      final wc = m['category'] as int?;
+      final href = IgdbApiDatasource.absoluteHttpUrl(m['url'] as String?);
+      if (href == null) continue;
+      addLinkRow(
+        gameDetailWebsiteChipLabel(wc, href, l10n),
+        href,
+        websiteCategory: wc,
+      );
+    }
+    for (final e in externalGames) {
+      final m = e as Map<String, dynamic>;
+      final href = externalStoreLaunchUrl(m);
+      if (href == null) continue;
+      addLinkRow(
+        gameDetailExternalGameChipLabel(m, href, l10n),
+        href,
+        externalCategory: m['category'] as int?,
+      );
+    }
+    final hasLinkSection = linkRows.isNotEmpty;
+
+    final ttbHastily = readTimeToBeatSeconds(ttb, 'hastily', 'hastly');
+    final ttbNormal = readTimeToBeatSeconds(ttb, 'normally', 'normal');
+    final ttbComplete = readTimeToBeatSeconds(ttb, 'completely', 'complete');
+    final hasTtb = ttbHastily != null ||
+        ttbNormal != null ||
+        ttbComplete != null;
 
     const bannerHeight = 200.0;
     const posterHeight = 140.0;
@@ -270,6 +364,87 @@ class _GameDetailContent extends StatelessWidget {
                   _AddToLibraryButton(game: game),
                   const SizedBox(height: 12),
 
+                  if (hasLinkSection) ...[
+                    Text(l10n.gameDetailLinksSection,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 8),
+                    _ExpandableGameLinkChips(
+                      rows: linkRows,
+                      l10n: l10n,
+                      isDark: isDark,
+                      colorScheme: cs,
+                      onOpenUrl: (url) => _launchGameLink(context, l10n, url),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  if (hasTtb) ...[
+                    Text(l10n.gameDetailTimeToBeatSection,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 6),
+                    GlassCard(
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        children: [
+                          if (ttbHastily != null)
+                            _KeyValueRow(
+                              l10n.gameDetailTtbHastily,
+                              formatIgdbPlaytimeSeconds(ttbHastily, l10n),
+                            ),
+                          if (ttbNormal != null)
+                            _KeyValueRow(
+                              l10n.gameDetailTtbNormal,
+                              formatIgdbPlaytimeSeconds(ttbNormal, l10n),
+                            ),
+                          if (ttbComplete != null)
+                            _KeyValueRow(
+                              l10n.gameDetailTtbComplete,
+                              formatIgdbPlaytimeSeconds(ttbComplete, l10n),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  Text(l10n.gameDetailReviewsSection,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 6),
+                  if (reviews.isEmpty)
+                    GlassCard(
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        l10n.gameDetailNoReviews,
+                        style: TextStyle(
+                            fontSize: 13, color: cs.onSurfaceVariant),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final raw in reviews)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: GlassCard(
+                                padding: const EdgeInsets.all(14),
+                                child: _IgdbReviewTile(
+                                  review: raw as Map<String, dynamic>,
+                                  l10n: l10n,
+                                  cs: cs,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
                   if (score != null)
                     GlassCard(
                       padding: const EdgeInsets.symmetric(
@@ -347,22 +522,8 @@ class _GameDetailContent extends StatelessWidget {
                     ),
                   ],
 
-                  if (storyline != null) ...[
-                    Text(l10n.gameDetailStoryline,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 6),
-                    GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Text(storyline,
-                          style: TextStyle(
-                              fontSize: 13, color: cs.onSurfaceVariant)),
-                    ),
-                  ],
-
                   if (screenshots != null && screenshots.isNotEmpty) ...[
-                    Text('Screenshots',
+                    Text(l10n.gameDetailScreenshots,
                         style: const TextStyle(
                             fontWeight: FontWeight.w700, fontSize: 15)),
                     const SizedBox(height: 8),
@@ -478,6 +639,241 @@ class _GameDetailContent extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+String _igdbReviewExcerpt(String text) {
+  final t = text.trim();
+  if (t.length <= 320) return t;
+  return '${t.substring(0, 320)}…';
+}
+
+class _KeyValueRow extends StatelessWidget {
+  const _KeyValueRow(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IgdbReviewTile extends StatelessWidget {
+  const _IgdbReviewTile({
+    required this.review,
+    required this.l10n,
+    required this.cs,
+  });
+
+  final Map<String, dynamic> review;
+  final AppLocalizations l10n;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext _) {
+    final titleRaw = review['title'] as String?;
+    final title = (titleRaw != null && titleRaw.trim().isNotEmpty)
+        ? titleRaw.trim()
+        : l10n.gameDetailReviewUntitled;
+    final user = review['user'] as Map<String, dynamic>?;
+    final by = user?['username'] as String? ?? '';
+    final rawContent = review['content'] as String? ?? '';
+    final excerpt = _igdbReviewExcerpt(stripSimpleHtml(rawContent));
+
+    final scoreVal = review['score'];
+    int? score;
+    if (scoreVal is int) {
+      score = scoreVal;
+    } else if (scoreVal is num) {
+      score = scoreVal.toInt();
+    }
+
+    DateTime? reviewDate;
+    final created = review['created_at'];
+    if (created is int) {
+      reviewDate = DateTime.fromMillisecondsSinceEpoch(created * 1000);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (score != null)
+              Text(
+                '$score',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: cs.primary,
+                ),
+              ),
+          ],
+        ),
+        if (by.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            l10n.gameDetailReviewBy(by),
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (reviewDate != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            '${reviewDate.day}/${reviewDate.month}/${reviewDate.year}',
+            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (excerpt.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            excerpt,
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ExpandableGameLinkChips extends StatefulWidget {
+  const _ExpandableGameLinkChips({
+    required this.rows,
+    required this.l10n,
+    required this.isDark,
+    required this.colorScheme,
+    required this.onOpenUrl,
+  });
+
+  final List<_GameDetailLinkRow> rows;
+  final AppLocalizations l10n;
+  final bool isDark;
+  final ColorScheme colorScheme;
+  final void Function(String url) onOpenUrl;
+
+  @override
+  State<_ExpandableGameLinkChips> createState() =>
+      _ExpandableGameLinkChipsState();
+}
+
+class _ExpandableGameLinkChipsState extends State<_ExpandableGameLinkChips> {
+  static const int _maxCollapsed = 6;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = widget.rows;
+    final cs = widget.colorScheme;
+    final l10n = widget.l10n;
+    final isDark = widget.isDark;
+
+    final showAll = _expanded || rows.length <= _maxCollapsed;
+    final visible =
+        showAll ? rows : rows.take(_maxCollapsed).toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: visible.map((row) => _buildChip(row, cs, l10n, isDark)).toList(),
+        ),
+        if (rows.length > _maxCollapsed) ...[
+          const SizedBox(height: 6),
+          TextButton(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => setState(() => _expanded = !_expanded),
+            child: Text(
+              _expanded
+                  ? l10n.gameDetailLinksShowLess
+                  : l10n.gameDetailLinksShowMore(rows.length - _maxCollapsed),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChip(
+    _GameDetailLinkRow row,
+    ColorScheme cs,
+    AppLocalizations l10n,
+    bool isDark,
+  ) {
+    final icon = gameDetailLinkIcon(
+      url: row.url,
+      isIgdbPage: row.igdbPage,
+      websiteCategory: row.websiteCategory,
+      externalCategory: row.externalCategory,
+    );
+    final accent = gameDetailLinkAccentColor(
+      url: row.url,
+      isIgdbPage: row.igdbPage,
+      websiteCategory: row.websiteCategory,
+      externalCategory: row.externalCategory,
+    );
+    var labelColor = cs.primary;
+    if (accent != null) {
+      final lum = accent.computeLuminance();
+      if (!isDark && lum > 0.55) {
+        labelColor =
+            HSLColor.fromColor(accent).withLightness(0.32).toColor();
+      } else {
+        labelColor = accent;
+      }
+    }
+    return Tooltip(
+      message: '${row.label}\n${row.url}',
+      child: ActionChip(
+        avatar: Icon(icon, size: 16, color: labelColor),
+        label: Text(
+          gameDetailLinkChipTitle(row.label),
+          style: TextStyle(fontSize: 12, color: labelColor),
+        ),
+        onPressed: () => widget.onOpenUrl(row.url),
+        visualDensity: VisualDensity.compact,
       ),
     );
   }

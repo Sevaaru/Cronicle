@@ -9,6 +9,7 @@ import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
 import 'package:cronicle/features/games/presentation/game_detail_page.dart';
 import 'package:cronicle/features/games/presentation/games_page.dart';
+import 'package:cronicle/features/games/presentation/igdb_game_review_detail_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
@@ -127,6 +128,13 @@ GoRouter appRouter(AppRouterRef ref) {
             builder: (context, state) {
               final gameId = int.parse(state.pathParameters['id']!);
               return GameDetailPage(gameId: gameId);
+            },
+          ),
+          GoRoute(
+            path: '/igdb-review/:id',
+            builder: (context, state) {
+              final reviewId = int.parse(state.pathParameters['id']!);
+              return IgdbGameReviewDetailPage(reviewId: reviewId);
             },
           ),
         ],

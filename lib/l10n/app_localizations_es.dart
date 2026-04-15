@@ -747,4 +747,200 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addToListHoursPlayed => 'Horas jugadas';
+
+  @override
+  String get gameDetailLinksSection => 'Enlaces';
+
+  @override
+  String gameDetailLinksShowMore(Object remaining) {
+    return 'Mostrar $remaining más';
+  }
+
+  @override
+  String get gameDetailLinksShowLess => 'Mostrar menos';
+
+  @override
+  String get gameDetailLinkOfficialSite => 'Sitio web';
+
+  @override
+  String get gameDetailLinkKindPlayStation => 'PlayStation';
+
+  @override
+  String get gameDetailLinkKindNintendo => 'Nintendo';
+
+  @override
+  String get gameDetailLinkKindApple => 'App Store';
+
+  @override
+  String get gameDetailLinkKindGooglePlay => 'Google Play';
+
+  @override
+  String get gameDetailLinkKindAmazon => 'Amazon';
+
+  @override
+  String get gameDetailLinkKindOculus => 'Meta / Oculus';
+
+  @override
+  String get gameDetailLinkKindGameJolt => 'Game Jolt';
+
+  @override
+  String get gameDetailLinkKindHumble => 'Humble';
+
+  @override
+  String get gameDetailLinkKindUbisoft => 'Ubisoft';
+
+  @override
+  String get gameDetailLinkKindEa => 'EA';
+
+  @override
+  String get gameDetailLinkKindRockstar => 'Rockstar';
+
+  @override
+  String get gameDetailLinkKindBattlenet => 'Battle.net';
+
+  @override
+  String get gameDetailLinkKindTiktok => 'TikTok';
+
+  @override
+  String get gameDetailLinkKindBluesky => 'Bluesky';
+
+  @override
+  String get gamesHomePopularNow => 'Popular ahora';
+
+  @override
+  String get gamesHomeMostAnticipated => 'Más esperados';
+
+  @override
+  String get gamesHomeRecentReviews => 'Reseñas recientes';
+
+  @override
+  String get gamesHomeCriticsReviews => 'Reseñas de críticos';
+
+  @override
+  String get gamesHomeRecentlyReleased => 'Recién salidos';
+
+  @override
+  String get gamesHomeComingSoon => 'Próximamente';
+
+  @override
+  String get gamesHomeSectionExpand => 'Ver más';
+
+  @override
+  String get gamesHomeSectionCollapse => 'Ver menos';
+
+  @override
+  String get gamesHomeNoItems => 'Sin contenido';
+
+  @override
+  String get gamesHomeOpenGame => 'Ver juego';
+
+  @override
+  String get igdbReviewNotFound => 'No se encontró la reseña.';
+
+  @override
+  String get gameDetailOpenIgdb => 'Ver en IGDB';
+
+  @override
+  String get gameDetailTimeToBeatSection => 'Tiempo estimado (IGDB)';
+
+  @override
+  String get gameDetailTtbHastily => 'Historia principal (rápido)';
+
+  @override
+  String get gameDetailTtbNormal => 'Historia principal (normal)';
+
+  @override
+  String get gameDetailTtbComplete => 'Al 100%';
+
+  @override
+  String get gameDetailScreenshots => 'Capturas';
+
+  @override
+  String get gameDetailReviewsSection => 'Reseñas (IGDB)';
+
+  @override
+  String get gameDetailNoReviews => 'No hay reseñas en IGDB para este juego.';
+
+  @override
+  String get gameDetailReviewUntitled => 'Reseña';
+
+  @override
+  String gameDetailReviewBy(Object name) {
+    return 'Por $name';
+  }
+
+  @override
+  String gameDetailPlaytimeHoursMinutes(Object hours, Object minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String gameDetailPlaytimeHoursOnly(Object hours) {
+    return '$hours h';
+  }
+
+  @override
+  String gameDetailPlaytimeMinutesOnly(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get gameDetailWebCatOfficial => 'Web oficial';
+
+  @override
+  String get gameDetailWebCatWikia => 'Wikia';
+
+  @override
+  String get gameDetailWebCatWikipedia => 'Wikipedia';
+
+  @override
+  String get gameDetailWebCatFacebook => 'Facebook';
+
+  @override
+  String get gameDetailWebCatTwitter => 'Twitter / X';
+
+  @override
+  String get gameDetailWebCatTwitch => 'Twitch';
+
+  @override
+  String get gameDetailWebCatInstagram => 'Instagram';
+
+  @override
+  String get gameDetailWebCatYoutube => 'YouTube';
+
+  @override
+  String get gameDetailWebCatSteam => 'Steam';
+
+  @override
+  String get gameDetailWebCatReddit => 'Reddit';
+
+  @override
+  String get gameDetailWebCatItch => 'itch.io';
+
+  @override
+  String get gameDetailWebCatEpic => 'Epic Games';
+
+  @override
+  String get gameDetailWebCatGog => 'GOG';
+
+  @override
+  String get gameDetailWebCatDiscord => 'Discord';
+
+  @override
+  String get gameDetailWebCatOther => 'Enlace';
+
+  @override
+  String get gameDetailExtCatSteam => 'Steam';
+
+  @override
+  String get gameDetailExtCatGog => 'GOG';
+
+  @override
+  String get gameDetailExtCatMicrosoft => 'Microsoft Store';
+
+  @override
+  String get gameDetailExtCatEpic => 'Epic Games';
+
+  @override
+  String get gameDetailExtCatOther => 'Tienda externa';
 }

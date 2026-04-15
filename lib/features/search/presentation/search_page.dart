@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -47,11 +49,33 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _searchCtrl = TextEditingController();
-  String _query = '';
+  Timer? _searchDebounce;
+  /// Query passed to Anilist/IGDB providers (updated after debounce or submit).
+  String _committedSearchQuery = '';
   _SearchFilter _filter = _SearchFilter.all;
+
+  void _onSearchTextChanged() {
+    _searchDebounce?.cancel();
+    final text = _searchCtrl.text;
+    if (text.trim().isEmpty) {
+      setState(() => _committedSearchQuery = '');
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 520), () {
+      if (!mounted) return;
+      setState(() => _committedSearchQuery = _searchCtrl.text.trim());
+    });
+    setState(() {});
+  }
+
+  void _flushSearchNow() {
+    _searchDebounce?.cancel();
+    setState(() => _committedSearchQuery = _searchCtrl.text.trim());
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -88,18 +112,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     decoration: InputDecoration(
                       hintText: l10n.searchHint,
                       prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _query.isNotEmpty
+                      suffixIcon: _searchCtrl.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
+                                _searchDebounce?.cancel();
                                 _searchCtrl.clear();
-                                setState(() => _query = '');
+                                setState(() => _committedSearchQuery = '');
                               },
                             )
                           : null,
                     ),
-                    onChanged: (v) => setState(() => _query = v),
-                    onSubmitted: (v) => setState(() => _query = v),
+                    onChanged: (_) => _onSearchTextChanged(),
+                    onSubmitted: (_) => _flushSearchNow(),
                     textInputAction: TextInputAction.search,
                   ),
                 ),
@@ -137,13 +162,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: _query.isEmpty
-                ? _PopularContent(filter: _filter, onAdd: _addToLibrary)
-                : _SearchResultsList(
-                    query: _query,
-                    filter: _filter,
-                    onAdd: _addToLibrary,
-                  ),
+            child: Builder(
+              builder: (context) {
+                final draft = _searchCtrl.text.trim();
+                final hasDraft = draft.isNotEmpty;
+                final debouncePending = _searchDebounce?.isActive ?? false;
+                if (!hasDraft) {
+                  return _PopularContent(filter: _filter, onAdd: _addToLibrary);
+                }
+                if (debouncePending) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                }
+                return _SearchResultsList(
+                  query: _committedSearchQuery,
+                  filter: _filter,
+                  onAdd: _addToLibrary,
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -359,7 +400,15 @@ class _IgdbPopularGrid extends ConsumerWidget {
         ),
       ),
       data: (items) {
-        if (items.isEmpty) return const SizedBox.shrink();
+        if (items.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              l10n.libraryNoResults,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            ),
+          );
+        }
         return SizedBox(
           height: 195,
           child: ListView.separated(
