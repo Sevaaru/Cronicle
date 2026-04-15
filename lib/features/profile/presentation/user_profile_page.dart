@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -117,7 +118,14 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
     final favManga = (favs['manga'] as Map?)?['nodes'] as List? ?? [];
 
-    return Scaffold(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarIconBrightness: (banner != null || isDark) ? Brightness.light : Brightness.dark,
+        statusBarBrightness: (banner != null || isDark) ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -332,6 +340,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -388,10 +397,25 @@ class _FavCard extends StatelessWidget {
   }
 }
 
-class _UserActivityCard extends StatelessWidget {
+class _UserActivityCard extends ConsumerStatefulWidget {
   const _UserActivityCard({required this.activity, required this.cs});
   final Map<String, dynamic> activity;
   final ColorScheme cs;
+
+  @override
+  ConsumerState<_UserActivityCard> createState() => _UserActivityCardState();
+}
+
+class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
+  late bool _isLiked;
+  late int _likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked = widget.activity['isLiked'] as bool? ?? false;
+    _likeCount = widget.activity['likeCount'] as int? ?? 0;
+  }
 
   String _timeAgo(int timestamp, AppLocalizations l10n) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
@@ -403,9 +427,33 @@ class _UserActivityCard extends StatelessWidget {
     return l10n.timeWeeks((diff.inDays / 7).floor());
   }
 
+  Future<void> _handleLike() async {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
+      );
+      return;
+    }
+    final actId = widget.activity['id'] as int?;
+    if (actId == null) return;
+    final graphql = ref.read(anilistGraphqlProvider);
+    final liked = await graphql.toggleLike(actId, token);
+    if (!mounted) return;
+    setState(() {
+      _isLiked = liked;
+      _likeCount = liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = widget.cs;
+    final activity = widget.activity;
+    final actType = activity['type'] as String? ?? '';
+    final isText = actType == 'TEXT';
     final media = activity['media'] as Map<String, dynamic>? ?? {};
     final title = media['title'] as Map<String, dynamic>? ?? {};
     final cover = (media['coverImage'] as Map?)?['large'] as String?;
@@ -416,6 +464,8 @@ class _UserActivityCard extends StatelessWidget {
     final status = activity['status'] as String? ?? '';
     final progress = activity['progress'] as String?;
     final createdAt = activity['createdAt'] as int? ?? 0;
+    final replyCount = activity['replyCount'] as int? ?? 0;
+    final actId = activity['id'] as int?;
 
     String actionText = status;
     if (progress != null) actionText = '$status $progress';
@@ -423,86 +473,149 @@ class _UserActivityCard extends StatelessWidget {
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ?? '';
 
+    final textContent = activity['text'] as String? ?? '';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: GlassCard(
         padding: const EdgeInsets.all(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: mediaId != null
-              ? () => context.push('/media/$mediaId?kind=${kind.code}')
-              : null,
-          child: Row(
-            children: [
-              if (cover != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: cover,
-                    width: 40,
-                    height: 56,
-                    fit: BoxFit.cover,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isText)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ExpandableMarkdown(
+                    text: textContent,
+                    style: TextStyle(fontSize: 12, color: cs.onSurface),
                   ),
-                ),
-              if (cover != null) const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.edit_note_rounded, size: 12, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        _timeAgo(createdAt, l10n),
+                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: mediaId != null
+                    ? () => context.push('/media/$mediaId?kind=${kind.code}')
+                    : null,
+                child: Row(
                   children: [
-                    RichText(
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: TextStyle(fontSize: 12, color: cs.onSurface),
+                    if (cover != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: cover,
+                          width: 40,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    if (cover != null) const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextSpan(
-                            text: actionText,
-                            style: TextStyle(color: cs.onSurfaceVariant),
+                          RichText(
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              style: TextStyle(fontSize: 12, color: cs.onSurface),
+                              children: [
+                                TextSpan(
+                                  text: actionText,
+                                  style: TextStyle(color: cs.onSurfaceVariant),
+                                ),
+                                const TextSpan(text: ' '),
+                                TextSpan(
+                                  text: name,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
                           ),
-                          const TextSpan(text: ' '),
-                          TextSpan(
-                            text: name,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                kind == MediaKind.manga
+                                    ? Icons.menu_book_rounded
+                                    : Icons.animation_rounded,
+                                size: 12,
+                                color: cs.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _timeAgo(createdAt, l10n),
+                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          kind == MediaKind.manga
-                              ? Icons.menu_book_rounded
-                              : Icons.animation_rounded,
-                          size: 12,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _timeAgo(createdAt, l10n),
-                          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                        ),
-                        const SizedBox(width: 10),
-                        Icon(
-                          (activity['isLiked'] == true) ? Icons.favorite : Icons.favorite_border,
-                          size: 13,
-                          color: (activity['isLiked'] == true) ? Colors.red.shade400 : cs.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 3),
-                        Text('${activity['likeCount'] ?? 0}',
-                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                        const SizedBox(width: 10),
-                        Icon(Icons.chat_bubble_outline, size: 12, color: cs.onSurfaceVariant),
-                        const SizedBox(width: 3),
-                        Text('${activity['replyCount'] ?? 0}',
-                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                      ],
-                    ),
                   ],
                 ),
               ),
-            ],
-          ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _handleLike,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isLiked ? Icons.favorite : Icons.favorite_border,
+                          size: 16,
+                          color: _isLiked ? Colors.red.shade400 : cs.onSurfaceVariant,
+                        ),
+                        if (_likeCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Text('$_likeCount',
+                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (actId != null)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => context.push('/activity/$actId/replies'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 15, color: cs.onSurfaceVariant),
+                          if (replyCount > 0) ...[
+                            const SizedBox(width: 4),
+                            Text('$replyCount',
+                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -547,6 +660,66 @@ class _BigStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(label,
             style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+      ],
+    );
+  }
+}
+
+class _ExpandableMarkdown extends StatefulWidget {
+  const _ExpandableMarkdown({required this.text, this.style});
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_ExpandableMarkdown> createState() => _ExpandableMarkdownState();
+}
+
+class _ExpandableMarkdownState extends State<_ExpandableMarkdown> {
+  bool _expanded = false;
+
+  bool get _isLong => widget.text.length > 200;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    if (!_isLong || _expanded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnilistMarkdown(widget.text, style: widget.style),
+          if (_isLong)
+            GestureDetector(
+              onTap: () => setState(() => _expanded = false),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('Ver menos',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.primary)),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRect(
+          child: SizedBox(
+            height: 72,
+            child: AnilistMarkdown(widget.text, style: widget.style),
+          ),
+        ),
+        GestureDetector(
+          onTap: () => setState(() => _expanded = true),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text('Ver más',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.primary)),
+          ),
+        ),
       ],
     );
   }

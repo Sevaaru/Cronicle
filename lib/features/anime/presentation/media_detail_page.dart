@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -55,8 +56,6 @@ class _DetailContent extends StatefulWidget {
 }
 
 class _DetailContentState extends State<_DetailContent> {
-  bool _collapsed = false;
-
   Map<String, dynamic> get media => widget.media;
   MediaKind get kind => widget.kind;
 
@@ -97,66 +96,155 @@ class _DetailContentState extends State<_DetailContent> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bool showWhiteArrow = banner != null && !_collapsed;
-    final arrowColor = showWhiteArrow ? Colors.white : (isDark ? Colors.white : Colors.black);
+    const bannerHeight = 170.0;
+    const posterHeight = 130.0;
+    const posterWidth = 90.0;
+    const overlapAmount = 50.0;
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollUpdateNotification) {
-          final offset = notification.metrics.pixels;
-          final expandedHeight = (banner != null ? 220.0 : 160.0) - kToolbarHeight;
-          final isNowCollapsed = offset > expandedHeight * 0.6;
-          if (isNowCollapsed != _collapsed) {
-            setState(() => _collapsed = isNowCollapsed);
-          }
-        }
-        return false;
-      },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarIconBrightness: (banner != null || isDark) ? Brightness.light : Brightness.dark,
+        statusBarBrightness: (banner != null || isDark) ? Brightness.dark : Brightness.light,
+      ),
       child: CustomScrollView(
       slivers: [
-        SliverAppBar(
-          expandedHeight: banner != null ? 220 : 160,
-          pinned: true,
-          iconTheme: IconThemeData(color: arrowColor),
-          flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (banner != null)
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
                   GestureDetector(
-                    onTap: () => showFullscreenImage(context, banner),
-                    child: CachedNetworkImage(
-                      imageUrl: banner,
-                      fit: BoxFit.cover,
-                      color: Colors.black45,
-                      colorBlendMode: BlendMode.darken,
-                    ),
-                  )
-                else
-                  Container(color: colorScheme.surfaceContainerHighest),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: -1,
-                  height: 100,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          colorScheme.surface.withAlpha(0),
-                          colorScheme.surface.withAlpha(40),
-                          colorScheme.surface.withAlpha(120),
-                          colorScheme.surface,
-                        ],
-                        stops: const [0.0, 0.3, 0.7, 1.0],
+                    onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
+                    child: Container(
+                      height: bannerHeight,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        image: banner != null
+                            ? DecorationImage(
+                                image: CachedNetworkImageProvider(banner),
+                                fit: BoxFit.cover,
+                                colorFilter: ColorFilter.mode(
+                                    Colors.black.withAlpha(60), BlendMode.darken),
+                              )
+                            : null,
+                        color: banner == null ? colorScheme.surfaceContainerHighest : null,
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              style: IconButton.styleFrom(backgroundColor: Colors.black26),
+                              onPressed: () => Navigator.of(context).maybePop(),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
+
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    top: bannerHeight - overlapAmount,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (poster != null)
+                          GestureDetector(
+                            onTap: () => showFullscreenImage(context, poster),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: colorScheme.surface, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(60),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(9),
+                                child: CachedNetworkImage(
+                                  imageUrl: poster,
+                                  width: posterWidth,
+                                  height: posterHeight,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface.withAlpha(210),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (romajiTitle != null && romajiTitle != name)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8, top: 2),
+                                    child: Text(
+                                      romajiTitle,
+                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                if (nativeTitle != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8, top: 1),
+                                    child: Text(
+                                      nativeTitle,
+                                      style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: posterHeight - overlapAmount + 12),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (format != null) _Tag(format, colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
+                    if (status != null) _Tag(status, colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
+                    if (isAdult) _Tag('18+', colorScheme.errorContainer, colorScheme.onErrorContainer),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
 
@@ -166,70 +254,6 @@ class _DetailContentState extends State<_DetailContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (poster != null)
-                      GestureDetector(
-                        onTap: () => showFullscreenImage(context, poster),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            imageUrl: poster,
-                            width: 100,
-                            height: 145,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (romajiTitle != null &&
-                              romajiTitle != name) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              romajiTitle,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                          if (nativeTitle != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              nativeTitle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: [
-                              if (format != null) _Tag(format, colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
-                              if (status != null) _Tag(status, colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
-                              if (isAdult) _Tag('18+', colorScheme.errorContainer, colorScheme.onErrorContainer),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 12),
 
                 _AddToLibraryButton(media: media, kind: kind),
@@ -254,29 +278,32 @@ class _DetailContentState extends State<_DetailContent> {
                     ),
                   ),
 
-                GlassCard(
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.mediaInfo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 24,
-                        runSpacing: 6,
-                        children: [
-                          if (!isManga && episodes != null) _InfoPill(l10n.mediaEpisodes, '$episodes'),
-                          if (isManga && chapters != null) _InfoPill(l10n.mediaChapters, '$chapters'),
-                          if (isManga && volumes != null) _InfoPill(l10n.mediaVolumes, '$volumes'),
-                          if (duration != null) _InfoPill(l10n.mediaDuration, '$duration min/ep'),
-                          if (season != null && seasonYear != null) _InfoPill(l10n.mediaSeason, '$season $seasonYear'),
-                          if (source != null) _InfoPill(l10n.mediaSource, source.replaceAll('_', ' ')),
-                          if (startDate != null) _InfoPill(l10n.mediaStart, _formatDate(startDate)),
-                          if (endDate != null) _InfoPill(l10n.mediaEnd, _formatDate(endDate)),
-                        ],
-                      ),
-                    ],
+                SizedBox(
+                  width: double.infinity,
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.mediaInfo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 24,
+                          runSpacing: 6,
+                          children: [
+                            if (!isManga && episodes != null) _InfoPill(l10n.mediaEpisodes, '$episodes'),
+                            if (isManga && chapters != null) _InfoPill(l10n.mediaChapters, '$chapters'),
+                            if (isManga && volumes != null) _InfoPill(l10n.mediaVolumes, '$volumes'),
+                            if (duration != null) _InfoPill(l10n.mediaDuration, '$duration min/ep'),
+                            if (season != null && seasonYear != null) _InfoPill(l10n.mediaSeason, '$season $seasonYear'),
+                            if (source != null) _InfoPill(l10n.mediaSource, source.replaceAll('_', ' ')),
+                            if (startDate != null) _InfoPill(l10n.mediaStart, _formatDate(startDate)),
+                            if (endDate != null) _InfoPill(l10n.mediaEnd, _formatDate(endDate)),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 

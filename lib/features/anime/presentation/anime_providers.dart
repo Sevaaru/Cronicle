@@ -67,9 +67,35 @@ Future<List<Map<String, dynamic>>> anilistPopular(
   return graphql.fetchPopular(type: type);
 }
 
-FeedActivity _mapActivity(Map<String, dynamic> a) {
-  final media = a['media'] as Map<String, dynamic>;
-  final user = a['user'] as Map<String, dynamic>;
+FeedActivity? _mapActivity(Map<String, dynamic> a) {
+  final actType = a['type'] as String? ?? '';
+
+  if (actType == 'TEXT') {
+    final user = a['user'] as Map<String, dynamic>? ?? {};
+    final avatar = user['avatar'] as Map<String, dynamic>? ?? {};
+    final rawText = a['text'] as String? ?? '';
+    return FeedActivity(
+      id: a['id'].toString(),
+      source: MediaKind.anime,
+      userName: user['name'] as String? ?? '',
+      userId: user['id'] as int?,
+      userAvatarUrl: avatar['medium'] as String?,
+      action: '',
+      mediaTitle: rawText,
+      mediaId: null,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        ((a['createdAt'] as int?) ?? 0) * 1000,
+      ),
+      likeCount: a['likeCount'] as int? ?? 0,
+      replyCount: a['replyCount'] as int? ?? 0,
+      isLiked: a['isLiked'] as bool? ?? false,
+      isTextActivity: true,
+    );
+  }
+
+  final media = a['media'] as Map<String, dynamic>?;
+  if (media == null) return null;
+  final user = a['user'] as Map<String, dynamic>? ?? {};
   final title = media['title'] as Map<String, dynamic>? ?? {};
   final avatar = user['avatar'] as Map<String, dynamic>? ?? {};
   final coverImage = media['coverImage'] as Map<String, dynamic>? ?? {};
@@ -107,6 +133,7 @@ class AnilistFeed extends _$AnilistFeed {
   static const _perPage = 15;
   int _animePage = 1;
   int _mangaPage = 1;
+  int _textPage = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
@@ -116,6 +143,7 @@ class AnilistFeed extends _$AnilistFeed {
   Future<List<FeedActivity>> build() async {
     _animePage = 1;
     _mangaPage = 1;
+    _textPage = 1;
     _hasMore = true;
     _isLoadingMore = false;
     return _fetchPage();
@@ -129,13 +157,16 @@ class AnilistFeed extends _$AnilistFeed {
           activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token),
       graphql.fetchRecentActivityByType(
           activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token),
+      graphql.fetchRecentActivityByType(
+          activityType: 'TEXT', page: _textPage, perPage: _perPage, token: token),
     ]);
-    if (results[0].length < _perPage && results[1].length < _perPage) {
+    if (results[0].length < _perPage && results[1].length < _perPage && results[2].length < _perPage) {
       _hasMore = false;
     }
     final items = [
-      ...results[0].map(_mapActivity),
-      ...results[1].map(_mapActivity),
+      ...results[0].map(_mapActivity).whereType<FeedActivity>(),
+      ...results[1].map(_mapActivity).whereType<FeedActivity>(),
+      ...results[2].map(_mapActivity).whereType<FeedActivity>(),
     ];
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
@@ -146,6 +177,7 @@ class AnilistFeed extends _$AnilistFeed {
     _isLoadingMore = true;
     _animePage++;
     _mangaPage++;
+    _textPage++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
@@ -154,6 +186,7 @@ class AnilistFeed extends _$AnilistFeed {
     } catch (_) {
       _animePage--;
       _mangaPage--;
+      _textPage--;
     } finally {
       _isLoadingMore = false;
     }
@@ -196,7 +229,7 @@ class AnilistFeedByType extends _$AnilistFeedByType {
       token: token,
     );
     if (raw.length < _perPage) _hasMore = false;
-    return raw.map(_mapActivity).toList();
+    return raw.map(_mapActivity).whereType<FeedActivity>().toList();
   }
 
   Future<void> loadMore() async {
@@ -230,6 +263,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   static const _perPage = 15;
   int _animePage = 1;
   int _mangaPage = 1;
+  int _textPage = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
@@ -239,6 +273,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   Future<List<FeedActivity>> build() async {
     _animePage = 1;
     _mangaPage = 1;
+    _textPage = 1;
     _hasMore = true;
     _isLoadingMore = false;
     return _fetchPage();
@@ -253,13 +288,16 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
           activityType: 'ANIME_LIST', page: _animePage, perPage: _perPage, token: token, isFollowing: true),
       graphql.fetchRecentActivityByType(
           activityType: 'MANGA_LIST', page: _mangaPage, perPage: _perPage, token: token, isFollowing: true),
+      graphql.fetchRecentActivityByType(
+          activityType: 'TEXT', page: _textPage, perPage: _perPage, token: token, isFollowing: true),
     ]);
-    if (results[0].length < _perPage && results[1].length < _perPage) {
+    if (results[0].length < _perPage && results[1].length < _perPage && results[2].length < _perPage) {
       _hasMore = false;
     }
     final items = [
-      ...results[0].map(_mapActivity),
-      ...results[1].map(_mapActivity),
+      ...results[0].map(_mapActivity).whereType<FeedActivity>(),
+      ...results[1].map(_mapActivity).whereType<FeedActivity>(),
+      ...results[2].map(_mapActivity).whereType<FeedActivity>(),
     ];
     items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return items;
@@ -270,6 +308,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
     _isLoadingMore = true;
     _animePage++;
     _mangaPage++;
+    _textPage++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
@@ -278,6 +317,7 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
     } catch (_) {
       _animePage--;
       _mangaPage--;
+      _textPage--;
     } finally {
       _isLoadingMore = false;
     }

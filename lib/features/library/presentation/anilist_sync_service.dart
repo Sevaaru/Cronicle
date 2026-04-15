@@ -127,6 +127,8 @@ Future<bool> showAnilistSyncDialog({
 
   if (choice == null || choice == 'skip' || !context.mounted) return false;
 
+  final nav = Navigator.of(context, rootNavigator: true);
+
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -161,16 +163,20 @@ Future<bool> showAnilistSyncDialog({
       userName: userName,
     );
 
+    if (nav.mounted) {
+      nav.pop();
+    }
     if (context.mounted) {
-      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.syncImportedCount(count))),
       );
     }
     return true;
   } catch (e) {
+    if (nav.mounted) {
+      nav.pop();
+    }
     if (context.mounted) {
-      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.errorSyncMessage(e))),
       );

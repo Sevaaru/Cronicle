@@ -37,3 +37,21 @@ class DefaultFeedTab extends _$DefaultFeedTab {
     state = tab;
   }
 }
+
+@riverpod
+class HideTextActivities extends _$HideTextActivities {
+  static const _key = 'hide_text_activities';
+
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool(_key) ?? false;
+  }
+
+  Future<void> toggle() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final next = !state;
+    await prefs.setBool(_key, next);
+    state = next;
+  }
+}

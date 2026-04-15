@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
+import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class AnilistMarkdown extends StatelessWidget {
   const AnilistMarkdown(this.text, {super.key, this.style});
@@ -48,7 +48,8 @@ class _NodesColumn extends StatelessWidget {
         case _Break():
           buf.add(const _Inline(text: '\n'));
         case _Spoiler():
-          buf.add(const _Inline(text: '[Spoiler]', italic: true));
+          flush();
+          widgets.add(_SpoilerWidget(content: n.content, baseStyle: baseStyle));
         case _Image():
           flush();
           widgets.add(_ImgWidget(url: n.url, width: n.width));
@@ -58,9 +59,10 @@ class _NodesColumn extends StatelessWidget {
         case _Header():
           flush();
           final sz = switch (n.level) { 1 => 22.0, 2 => 18.0, 3 => 16.0, _ => 14.0 };
+          final hStyle = baseStyle.copyWith(fontSize: sz, fontWeight: FontWeight.bold, color: cs.onSurface);
           widgets.add(Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 2),
-            child: Text(n.text, style: baseStyle.copyWith(fontSize: sz, fontWeight: FontWeight.bold, color: cs.onSurface)),
+            child: _NodesColumn(nodes: n.children, baseStyle: hStyle),
           ));
         case _Quote():
           flush();
@@ -119,24 +121,92 @@ class _ImgWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: GestureDetector(
         onTap: () => showFullscreenImage(context, url),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
+          child: RemoteNetworkImage(
+            key: ValueKey(url),
             imageUrl: url,
             width: width,
             fit: BoxFit.contain,
-            placeholder: (_, _) => SizedBox(
-              width: width ?? 200, height: 80,
-              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            error: GestureDetector(
+              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.open_in_new, size: 16, color: cs.primary),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text('Abrir imagen', style: TextStyle(fontSize: 12, color: cs.primary)),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            errorWidget: (_, _, _) => const Icon(Icons.broken_image, size: 32),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SpoilerWidget extends StatefulWidget {
+  const _SpoilerWidget({required this.content, required this.baseStyle});
+  final String content;
+  final TextStyle baseStyle;
+
+  @override
+  State<_SpoilerWidget> createState() => _SpoilerWidgetState();
+}
+
+class _SpoilerWidgetState extends State<_SpoilerWidget> {
+  bool _revealed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (!_revealed) {
+      return GestureDetector(
+        onTap: () => setState(() => _revealed = true),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.visibility_off, size: 16, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text('Spoiler, toca para ver',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, fontStyle: FontStyle.italic)),
+            ],
+          ),
+        ),
+      );
+    }
+    final nodes = _parse(widget.content);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(100),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+      ),
+      child: _NodesColumn(nodes: nodes, baseStyle: widget.baseStyle),
     );
   }
 }
@@ -148,22 +218,39 @@ class _Text extends _Node { _Text(this.text, {this.bold = false, this.italic = f
 class _Link extends _Node { _Link(this.label, this.url); final String label, url; }
 class _Image extends _Node { _Image(this.url, {this.width}); final String url; final double? width; }
 class _Center extends _Node { _Center(this.children); final List<_Node> children; }
-class _Spoiler extends _Node {}
+class _Spoiler extends _Node { _Spoiler(this.content); final String content; }
 class _Break extends _Node {}
 class _Hr extends _Node {}
-class _Header extends _Node { _Header(this.text, this.level); final String text; final int level; }
+class _Header extends _Node { _Header(this.children, this.level); final List<_Node> children; final int level; }
 class _Quote extends _Node { _Quote(this.text); final String text; }
 
 // --- Parser ---
 
 List<_Node> _parse(String raw) {
   var text = raw
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
       .replaceAll(RegExp(r'<br\s*/?>'), '\n')
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')
       .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'");
+      .replaceAll('&#39;', "'")
+      // Convert <h1>..<h6> HTML tags to markdown headers
+      .replaceAllMapped(RegExp(r'<h([1-6])[^>]*>(.*?)</h\1>', caseSensitive: false, dotAll: true),
+          (m) => '${'#' * int.parse(m.group(1)!)} ${m.group(2)}')
+      .replaceAllMapped(RegExp(r'<a\s*>(.*?)</a>', dotAll: true), (m) => m.group(1) ?? '')
+      .replaceAllMapped(RegExp(r'<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>', dotAll: true),
+          (m) => '[${m.group(2)}](${m.group(1)})')
+      .replaceAll(RegExp(r'<(?:span|div|font|u)[^>]*>', caseSensitive: false), '')
+      .replaceAll(RegExp(r'</(?:span|div|font|u)>', caseSensitive: false), '');
+
+  // Rejoin URLs broken across lines inside img(), youtube(), webm(), ![](), []()
+  text = text.replaceAllMapped(
+    RegExp(r'(img\d+\(https?://|!\[[^\]]*\]\(https?://|\[[^\]]*\]\(https?://|youtube\(|webm\()([^)]*)\)',
+        caseSensitive: false, dotAll: true),
+    (m) => '${m.group(1)}${m.group(2)!.replaceAll(RegExp(r'\s+'), '')})',
+  );
 
   final nodes = <_Node>[];
   final lines = text.split('\n');
@@ -186,7 +273,12 @@ List<_Node> _parse(String raw) {
 
     final hm = RegExp(r'^(#{1,5})\s+(.+)$').firstMatch(line);
     if (hm != null) {
-      flushBuf(); nodes.add(_Header(hm.group(2)!.trim(), hm.group(1)!.length)); i++; continue;
+      flushBuf();
+      final headerContent = hm.group(2)!.trim();
+      final headerNodes = <_Node>[];
+      _parseInline(headerContent, headerNodes);
+      nodes.add(_Header(headerNodes, hm.group(1)!.length));
+      i++; continue;
     }
 
     if (line.trimLeft().startsWith('>')) {
@@ -200,12 +292,33 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    if (line.trim() == '~~~') {
+    // ~~~ center blocks: handles all variants
+    if (line.trimLeft().startsWith('~~~')) {
       flushBuf();
+      final afterOpen = line.trimLeft().substring(3);
+
+      // ~~~content~~~ all on one line
+      if (afterOpen.trimRight().endsWith('~~~') && afterOpen.trim().length > 3) {
+        final content = afterOpen.trimRight();
+        nodes.add(_Center(_parse(content.substring(0, content.length - 3))));
+        i++; continue;
+      }
+
+      // Multi-line: collect until closing ~~~
       final cl = <String>[];
+      if (afterOpen.trim().isNotEmpty) cl.add(afterOpen);
       i++;
-      while (i < lines.length && lines[i].trim() != '~~~') { cl.add(lines[i]); i++; }
-      if (i < lines.length) i++;
+      while (i < lines.length) {
+        final l = lines[i];
+        final trimmed = l.trimRight();
+        if (trimmed == '~~~') { i++; break; }
+        if (trimmed.endsWith('~~~')) {
+          cl.add(trimmed.substring(0, trimmed.length - 3));
+          i++; break;
+        }
+        cl.add(l);
+        i++;
+      }
       nodes.add(_Center(_parse(cl.join('\n'))));
       continue;
     }
@@ -215,7 +328,14 @@ List<_Node> _parse(String raw) {
     final centerCloseRx = RegExp(r'</(?:center|p)>', caseSensitive: false);
     if (centerOpenRx.hasMatch(line)) {
       flushBuf();
-      final cl = <String>[line.replaceAll(RegExp(r'</?(?:center|p\s+align="center"|p)>', caseSensitive: false), '')];
+      // Single-line center: <center>text</center>
+      if (centerCloseRx.hasMatch(line)) {
+        final inner = line
+            .replaceAll(RegExp(r'</?(?:center|p\s+align="center"|p)>', caseSensitive: false), '');
+        nodes.add(_Center(_parse(inner)));
+        i++; continue;
+      }
+      final cl = <String>[line.replaceAll(centerOpenRx, '')];
       i++;
       while (i < lines.length && !centerCloseRx.hasMatch(lines[i])) {
         cl.add(lines[i]); i++;
@@ -241,19 +361,24 @@ void _parseInline(String text, List<_Node> nodes) {
   if (s.isEmpty) return;
 
   final patterns = <(RegExp, String)>[
-    (RegExp(r'img(\d+)\((https?://[^\)]+)\)'), 'img'),
+    // ~~~content~~~ inline center (must be before strikethrough)
+    (RegExp(r'~~~(.+?)~~~'), 'inlineCenter'),
+    (RegExp(r'img(\d+)\((https?://[^\)]+)\)', caseSensitive: false), 'img'),
     (RegExp(r'!\[([^\]]*)\]\((https?://[^\)]+)\)'), 'mdImg'),
     (RegExp(r'<img[^>]+src="(https?://[^"]+)"[^>]*/?>'), 'htmlImg'),
     (RegExp(r'youtube\((?:https?://(?:www\.)?youtube\.com/watch\?v=)?([a-zA-Z0-9_-]+)\)'), 'youtube'),
     (RegExp(r'webm\((https?://[^\)]+)\)'), 'webm'),
     (RegExp(r'~!(.+?)!~', dotAll: true), 'spoiler'),
     (RegExp(r'\[([^\]]+)\]\((https?://[^\)]+)\)'), 'link'),
-    (RegExp(r'<a[^>]+href="(https?://[^"]+)"[^>]*>([^<]+)</a>'), 'htmlLink'),
+    (RegExp(r'<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', dotAll: true), 'htmlLink'),
+    (RegExp(r'<a[^>]*>(.*?)</a>', dotAll: true), 'htmlAnchorPlain'),
     (RegExp(r'<(?:b|strong)>(.*?)</(?:b|strong)>', dotAll: true), 'htmlBold'),
     (RegExp(r'<(?:i|em)>(.*?)</(?:i|em)>', dotAll: true), 'htmlItalic'),
     (RegExp(r'<(?:s|del|strike)>(.*?)</(?:s|del|strike)>', dotAll: true), 'htmlStrike'),
     (RegExp(r'(\*\*|__)(.+?)\1'), 'bold'),
-    (RegExp(r'~~(.+?)~~'), 'strike'),
+    (RegExp(r'(?<![/\w])_([^_\n]+?)_(?![/\w])'), 'italic'),
+    (RegExp(r'(?<!\w)\*([^*\n]+?)\*(?!\w)'), 'italicStar'),
+    (RegExp(r'(?<!~)~~(?!~)(.+?)(?<!~)~~(?!~)'), 'strike'),
   ];
 
   while (s.isNotEmpty) {
@@ -270,18 +395,25 @@ void _parseInline(String text, List<_Node> nodes) {
     if (best.start > 0) _addPlainText(s.substring(0, best.start), nodes);
 
     switch (type) {
+      case 'inlineCenter':
+        final inner = <_Node>[];
+        _parseInline(best.group(1)!, inner);
+        nodes.add(_Center(inner));
       case 'img': nodes.add(_Image(best.group(2)!, width: double.tryParse(best.group(1)!)));
       case 'mdImg': nodes.add(_Image(best.group(2)!));
       case 'htmlImg': nodes.add(_Image(best.group(1)!));
       case 'youtube': nodes.add(_Link('▶ YouTube', 'https://www.youtube.com/watch?v=${best.group(1)!}'));
       case 'webm': nodes.add(_Link('▶ Video', best.group(1)!));
-      case 'spoiler': nodes.add(_Spoiler());
+      case 'spoiler': nodes.add(_Spoiler(best.group(1)!));
       case 'link': nodes.add(_Link(best.group(1)!, best.group(2)!));
       case 'htmlLink': nodes.add(_Link(best.group(2)!, best.group(1)!));
+      case 'htmlAnchorPlain': nodes.add(_Text(best.group(1)!));
       case 'htmlBold': nodes.add(_Text(best.group(1)!, bold: true));
       case 'htmlItalic': nodes.add(_Text(best.group(1)!, italic: true));
       case 'htmlStrike': nodes.add(_Text(best.group(1)!, strike: true));
       case 'bold': nodes.add(_Text(best.group(2)!, bold: true));
+      case 'italic': nodes.add(_Text(best.group(1)!, italic: true));
+      case 'italicStar': nodes.add(_Text(best.group(1)!, italic: true));
       case 'strike': nodes.add(_Text(best.group(1)!, strike: true));
     }
     s = s.substring(best.end);
@@ -289,7 +421,8 @@ void _parseInline(String text, List<_Node> nodes) {
 }
 
 void _addPlainText(String raw, List<_Node> nodes) {
-  final cleaned = raw.replaceAll(RegExp(r'<[^>]+>'), '');
+  // Strip remaining HTML tags but keep their inner text
+  final cleaned = raw.replaceAll(RegExp(r'<[^>]*>'), '');
   if (cleaned.isEmpty) return;
 
   final urlRx = RegExp(r'(https?://[^\s<>\)\]]+)');

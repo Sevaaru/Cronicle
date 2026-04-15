@@ -641,4 +641,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readMore => 'Read more';
+
+  @override
+  String get writeReplyHint => 'Write a comment...';
+
+  @override
+  String get composeActivityHint => 'What\'s on your mind?';
+
+  @override
+  String get composeMarkdownTip => 'Supports markdown and images';
+
+  @override
+  String get cancelButton => 'Cancel';
+
+  @override
+  String get postButton => 'Post';
+
+  @override
+  String get activityPosted => 'Posted successfully';
+
+  @override
+  String get settingsHideTextActivities => 'Hide text activities';
+
+  @override
+  String get settingsHideTextActivitiesDesc =>
+      'Don\'t show text posts in the feed';
 }

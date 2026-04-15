@@ -8,6 +8,7 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 enum _FeedFilter {
@@ -342,27 +343,261 @@ class _FeedListState extends ConsumerState<_FeedList> {
         ),
       ),
       data: (activities) {
-        if (activities.isEmpty) {
+        final hideText = ref.watch(hideTextActivitiesProvider);
+        final filtered = hideText
+            ? activities.where((a) => !a.isTextActivity).toList()
+            : activities;
+        if (filtered.isEmpty) {
           return Center(child: Text(widget.l10n.feedEmpty));
         }
+        final totalItems = 1 + filtered.length + (hasMore ? 1 : 0);
         return RefreshIndicator(
           onRefresh: () async => widget.onRefresh(),
           child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-            itemCount: activities.length + (hasMore ? 1 : 0),
+            itemCount: totalItems,
             itemBuilder: (context, i) {
-              if (i >= activities.length) {
+              if (i == 0) {
+                return _ComposeCard(onPosted: widget.onRefresh);
+              }
+              final actIdx = i - 1;
+              if (actIdx >= filtered.length) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 );
               }
-              return _ActivityCard(activity: activities[i]);
+              return _ActivityCard(activity: filtered[actIdx]);
             },
           ),
         );
       },
+    );
+  }
+}
+
+class _ComposeCard extends ConsumerStatefulWidget {
+  const _ComposeCard({required this.onPosted});
+  final VoidCallback onPosted;
+
+  @override
+  ConsumerState<_ComposeCard> createState() => _ComposeCardState();
+}
+
+class _ComposeCardState extends ConsumerState<_ComposeCard> {
+  final _controller = TextEditingController();
+  bool _sending = false;
+  bool _expanded = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _post() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.loginRequiredLike)),
+      );
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      await graphql.saveTextActivity(text, token);
+      if (!mounted) return;
+      _controller.clear();
+      setState(() => _expanded = false);
+      widget.onPosted();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final tokenAsync = ref.watch(anilistTokenProvider);
+    final isLoggedIn = tokenAsync.valueOrNull != null;
+
+    if (!isLoggedIn) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!_expanded)
+              GestureDetector(
+                onTap: () => setState(() => _expanded = true),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_note_rounded, size: 20, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.composeActivityHint,
+                      style: TextStyle(
+                          fontSize: 13, color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                maxLines: 5,
+                minLines: 2,
+                enabled: !_sending,
+                decoration: InputDecoration(
+                  hintText: l10n.composeActivityHint,
+                  hintStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: cs.outlineVariant),
+                  ),
+                  filled: true,
+                  fillColor: cs.surfaceContainerHighest.withAlpha(80),
+                  contentPadding: const EdgeInsets.all(12),
+                  isDense: true,
+                ),
+                style: TextStyle(fontSize: 13, color: cs.onSurface),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    l10n.composeMarkdownTip,
+                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _sending
+                        ? null
+                        : () => setState(() => _expanded = false),
+                    child: Text(l10n.cancelButton),
+                  ),
+                  const SizedBox(width: 6),
+                  _sending
+                      ? const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Padding(
+                            padding: EdgeInsets.all(6),
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : FilledButton.icon(
+                          onPressed: _post,
+                          icon: const Icon(Icons.send_rounded, size: 16),
+                          label: Text(l10n.postButton),
+                        ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpandableText extends StatefulWidget {
+  const _ExpandableText({required this.text, this.style});
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<_ExpandableText> createState() => _ExpandableTextState();
+}
+
+class _ExpandableTextState extends State<_ExpandableText> {
+  static const _collapseThreshold = 200;
+  bool _expanded = false;
+
+  bool get _isLong => widget.text.length > _collapseThreshold;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    if (!_isLong || _expanded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnilistMarkdown(widget.text, style: widget.style),
+          if (_isLong)
+            GestureDetector(
+              onTap: () => setState(() => _expanded = false),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Ver menos',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ClipRect(
+          child: SizedBox(
+            height: 80,
+            child: AnilistMarkdown(widget.text, style: widget.style),
+          ),
+        ),
+        GestureDetector(
+          onTap: () => setState(() => _expanded = true),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  cs.surface.withAlpha(0),
+                  cs.surface.withAlpha(200),
+                ],
+              ),
+            ),
+            child: Text(
+              'Ver más',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: cs.primary,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -482,9 +717,13 @@ class _ActivityCard extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           Icon(
-                            _sourceIcon(activity.source),
+                            activity.isTextActivity
+                                ? Icons.edit_note_rounded
+                                : _sourceIcon(activity.source),
                             size: 13,
-                            color: _sourceColor(activity.source, colorScheme),
+                            color: activity.isTextActivity
+                                ? colorScheme.onSurfaceVariant
+                                : _sourceColor(activity.source, colorScheme),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -497,27 +736,33 @@ class _ActivityCard extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      RichText(
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurface,
+                      if (activity.isTextActivity)
+                        _ExpandableText(
+                          text: activity.mediaTitle,
+                          style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+                        )
+                      else
+                        RichText(
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurface,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: activity.action,
+                                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                              ),
+                              const TextSpan(text: ' '),
+                              TextSpan(
+                                text: activity.mediaTitle,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
                           ),
-                          children: [
-                            TextSpan(
-                              text: activity.action,
-                              style: TextStyle(color: colorScheme.onSurfaceVariant),
-                            ),
-                            const TextSpan(text: ' '),
-                            TextSpan(
-                              text: activity.mediaTitle,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ],
                         ),
-                      ),
                     ],
                   ),
                 ),

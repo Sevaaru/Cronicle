@@ -462,6 +462,7 @@ class _AppDefaultsSection extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final currentPage = ref.watch(defaultStartPageProvider);
     final currentFeedTab = ref.watch(defaultFeedTabProvider);
+    final hideText = ref.watch(hideTextActivitiesProvider);
 
     final startPages = [
       ('/feed', l10n.settingsStartFeed, Icons.rss_feed_rounded),
@@ -523,6 +524,18 @@ class _AppDefaultsSection extends ConsumerWidget {
                 visualDensity: VisualDensity.compact,
               );
             }).toList(),
+          ),
+
+          const Divider(height: 24),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsHideTextActivities,
+                style: const TextStyle(fontSize: 13)),
+            subtitle: Text(l10n.settingsHideTextActivitiesDesc,
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+            value: hideText,
+            onChanged: (_) =>
+                ref.read(hideTextActivitiesProvider.notifier).toggle(),
           ),
         ],
       ),

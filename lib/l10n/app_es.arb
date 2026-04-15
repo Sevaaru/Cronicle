@@ -242,5 +242,15 @@
   "reviewLoginRequired": "Inicia sesión en Anilist para votar",
   "reviewUsersFoundHelpful": "{count} de {total} encontraron útil esta reseña",
   "@reviewUsersFoundHelpful": { "placeholders": { "count": {}, "total": {} } },
-  "readMore": "Leer más"
+  "readMore": "Leer más",
+
+  "writeReplyHint": "Escribe un comentario...",
+  "composeActivityHint": "¿Qué estás pensando?",
+  "composeMarkdownTip": "Soporta markdown e imágenes",
+  "cancelButton": "Cancelar",
+  "postButton": "Publicar",
+  "activityPosted": "Publicado correctamente",
+
+  "settingsHideTextActivities": "Ocultar actividades de texto",
+  "settingsHideTextActivitiesDesc": "No mostrar publicaciones de texto en el feed"
 }

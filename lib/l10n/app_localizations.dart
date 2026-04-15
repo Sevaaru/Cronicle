@@ -1291,6 +1291,54 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Leer más'**
   String get readMore;
+
+  /// No description provided for @writeReplyHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un comentario...'**
+  String get writeReplyHint;
+
+  /// No description provided for @composeActivityHint.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué estás pensando?'**
+  String get composeActivityHint;
+
+  /// No description provided for @composeMarkdownTip.
+  ///
+  /// In es, this message translates to:
+  /// **'Soporta markdown e imágenes'**
+  String get composeMarkdownTip;
+
+  /// No description provided for @cancelButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get cancelButton;
+
+  /// No description provided for @postButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicar'**
+  String get postButton;
+
+  /// No description provided for @activityPosted.
+  ///
+  /// In es, this message translates to:
+  /// **'Publicado correctamente'**
+  String get activityPosted;
+
+  /// No description provided for @settingsHideTextActivities.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar actividades de texto'**
+  String get settingsHideTextActivities;
+
+  /// No description provided for @settingsHideTextActivitiesDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'No mostrar publicaciones de texto en el feed'**
+  String get settingsHideTextActivitiesDesc;
 }
 
 class _AppLocalizationsDelegate

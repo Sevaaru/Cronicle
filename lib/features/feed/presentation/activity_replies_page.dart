@@ -29,11 +29,19 @@ class ActivityRepliesPage extends ConsumerStatefulWidget {
 class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
   List<Map<String, dynamic>>? _replies;
   bool _loading = true;
+  final _replyController = TextEditingController();
+  bool _sending = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _replyController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -46,6 +54,39 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
       _replies = data;
       _loading = false;
     });
+  }
+
+  Future<void> _sendReply() async {
+    final text = _replyController.text.trim();
+    if (text.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.loginRequiredLike)),
+      );
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final result = await graphql.saveActivityReply(
+          widget.activityId, text, token);
+      if (!mounted) return;
+      _replyController.clear();
+      setState(() {
+        _replies ??= [];
+        _replies!.add(result);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override
@@ -63,7 +104,8 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.chat_bubble_outline,
-                          size: 48, color: cs.onSurfaceVariant.withAlpha(80)),
+                          size: 48,
+                          color: cs.onSurfaceVariant.withAlpha(80)),
                       const SizedBox(height: 12),
                       Text(l10n.noComments,
                           style: TextStyle(color: cs.onSurfaceVariant)),
@@ -71,31 +113,141 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   itemCount: _replies!.length,
-                  itemBuilder: (context, i) =>
-                      _ReplyCard(reply: _replies![i], timeAgo: (dt) => _timeAgo(dt, l10n)),
+                  itemBuilder: (context, i) => _ReplyCard(
+                    reply: _replies![i],
+                    timeAgo: (dt) => _timeAgo(dt, l10n),
+                  ),
                 ),
+      bottomNavigationBar: _ReplyInputBar(
+        controller: _replyController,
+        sending: _sending,
+        onSend: _sendReply,
+      ),
     );
   }
 }
 
-class _ReplyCard extends StatelessWidget {
+class _ReplyInputBar extends ConsumerWidget {
+  const _ReplyInputBar({
+    required this.controller,
+    required this.sending,
+    required this.onSend,
+  });
+  final TextEditingController controller;
+  final bool sending;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final tokenAsync = ref.watch(anilistTokenProvider);
+    final isLoggedIn = tokenAsync.valueOrNull != null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              enabled: isLoggedIn && !sending,
+              maxLines: 3,
+              minLines: 1,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: isLoggedIn
+                    ? AppLocalizations.of(context)!.writeReplyHint
+                    : AppLocalizations.of(context)!.loginRequiredLike,
+                hintStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: cs.surfaceContainerHighest,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                isDense: true,
+              ),
+              style: TextStyle(fontSize: 13, color: cs.onSurface),
+            ),
+          ),
+          const SizedBox(width: 6),
+          sending
+              ? const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : IconButton(
+                  icon: Icon(Icons.send_rounded, color: cs.primary),
+                  onPressed: isLoggedIn ? onSend : null,
+                ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReplyCard extends ConsumerStatefulWidget {
   const _ReplyCard({required this.reply, required this.timeAgo});
   final Map<String, dynamic> reply;
   final String Function(DateTime) timeAgo;
 
   @override
+  ConsumerState<_ReplyCard> createState() => _ReplyCardState();
+}
+
+class _ReplyCardState extends ConsumerState<_ReplyCard> {
+  late bool _isLiked;
+  late int _likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked = widget.reply['isLiked'] as bool? ?? false;
+    _likeCount = widget.reply['likeCount'] as int? ?? 0;
+  }
+
+  Future<void> _handleLike() async {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
+      );
+      return;
+    }
+    final replyId = widget.reply['id'] as int?;
+    if (replyId == null) return;
+    final graphql = ref.read(anilistGraphqlProvider);
+    final liked = await graphql.toggleLike(replyId, token, type: 'ACTIVITY_REPLY');
+    if (!mounted) return;
+    setState(() {
+      _isLiked = liked;
+      _likeCount = liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final user = reply['user'] as Map<String, dynamic>? ?? {};
+    final user = widget.reply['user'] as Map<String, dynamic>? ?? {};
     final avatar = (user['avatar'] as Map?)?['medium'] as String?;
     final userName = user['name'] as String? ?? '';
     final userId = user['id'] as int?;
-    final text = reply['text'] as String? ?? '';
-    final likeCount = reply['likeCount'] as int? ?? 0;
+    final text = widget.reply['text'] as String? ?? '';
     final createdAt = DateTime.fromMillisecondsSinceEpoch(
-      ((reply['createdAt'] as int?) ?? 0) * 1000,
+      ((widget.reply['createdAt'] as int?) ?? 0) * 1000,
     );
 
     return GlassCard(
@@ -133,7 +285,7 @@ class _ReplyCard extends StatelessWidget {
                           fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
               ),
-              Text(timeAgo(createdAt),
+              Text(widget.timeAgo(createdAt),
                   style:
                       TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
             ],
@@ -142,17 +294,29 @@ class _ReplyCard extends StatelessWidget {
           AnilistMarkdown(text,
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface, height: 1.4)),
-          if (likeCount > 0) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.favorite, size: 14, color: Colors.red.shade300),
-                const SizedBox(width: 4),
-                Text('$likeCount',
-                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-              ],
+          const SizedBox(height: 6),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _handleLike,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    size: 15,
+                    color: _isLiked ? Colors.red.shade400 : cs.onSurfaceVariant,
+                  ),
+                  if (_likeCount > 0) ...[
+                    const SizedBox(width: 4),
+                    Text('$_likeCount',
+                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                  ],
+                ],
+              ),
             ),
-          ],
+          ),
         ],
       ),
     );

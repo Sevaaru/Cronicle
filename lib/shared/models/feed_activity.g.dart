@@ -21,6 +21,7 @@ _$FeedActivityImpl _$$FeedActivityImplFromJson(Map<String, dynamic> json) =>
       likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
       replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
       isLiked: json['isLiked'] as bool? ?? false,
+      isTextActivity: json['isTextActivity'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$FeedActivityImplToJson(_$FeedActivityImpl instance) =>
@@ -38,6 +39,7 @@ Map<String, dynamic> _$$FeedActivityImplToJson(_$FeedActivityImpl instance) =>
       'likeCount': instance.likeCount,
       'replyCount': instance.replyCount,
       'isLiked': instance.isLiked,
+      'isTextActivity': instance.isTextActivity,
     };
 
 const _$MediaKindEnumMap = {

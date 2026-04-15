@@ -21,6 +21,7 @@ class FeedActivity with _$FeedActivity {
     @Default(0) int likeCount,
     @Default(0) int replyCount,
     @Default(false) bool isLiked,
+    @Default(false) bool isTextActivity,
   }) = _FeedActivity;
 
   factory FeedActivity.fromJson(Map<String, dynamic> json) =>

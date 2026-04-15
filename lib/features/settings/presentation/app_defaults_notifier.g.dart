@@ -38,5 +38,22 @@ final defaultFeedTabProvider =
     );
 
 typedef _$DefaultFeedTab = AutoDisposeNotifier<String>;
+String _$hideTextActivitiesHash() =>
+    r'6bf85e67c98f3c6f79da23bb7d43126f344aa657';
+
+/// See also [HideTextActivities].
+@ProviderFor(HideTextActivities)
+final hideTextActivitiesProvider =
+    AutoDisposeNotifierProvider<HideTextActivities, bool>.internal(
+      HideTextActivities.new,
+      name: r'hideTextActivitiesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$hideTextActivitiesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$HideTextActivities = AutoDisposeNotifier<bool>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

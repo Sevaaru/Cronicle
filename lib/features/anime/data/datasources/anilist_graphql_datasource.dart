@@ -18,12 +18,37 @@ class AnilistGraphqlDatasource {
     };
     if (token != null) headers['Authorization'] = 'Bearer $token';
 
-    final res = await _dio.post<Map<String, dynamic>>(
-      _url,
-      data: {'query': query, 'variables': variables},
-      options: Options(headers: headers),
-    );
-    return res.data!;
+    late final Map<String, dynamic> body;
+    try {
+      final res = await _dio.post<dynamic>(
+        _url,
+        data: {'query': query, 'variables': variables},
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.json,
+          validateStatus: (_) => true,
+        ),
+      );
+      if (res.data is Map<String, dynamic>) {
+        body = res.data as Map<String, dynamic>;
+      } else {
+        throw Exception('HTTP ${res.statusCode}');
+      }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        body = data;
+      } else {
+        throw Exception('Network error: ${e.message}');
+      }
+    }
+
+    final errors = body['errors'] as List?;
+    if (errors != null && errors.isNotEmpty) {
+      final msg = (errors.first as Map)['message'] as String? ?? 'GraphQL error';
+      throw Exception(msg);
+    }
+    return body;
   }
 
   /// Recent public anime activity (global feed).
@@ -38,6 +63,7 @@ class AnilistGraphqlDatasource {
           activities(type: ANIME_LIST, sort: ID_DESC) {
             ... on ListActivity {
               id
+              type
               status
               progress
               createdAt
@@ -218,10 +244,10 @@ class AnilistGraphqlDatasource {
     return data['data']?['Media'] as Map<String, dynamic>?;
   }
 
-  /// Recent public activity for a media type (ANIME_LIST or MANGA_LIST).
+  /// Recent public activity. Pass null [activityType] for all types.
   /// If [isFollowing] is true, only shows activity from users the viewer follows.
   Future<List<Map<String, dynamic>>> fetchRecentActivityByType({
-    required String activityType,
+    String? activityType,
     int page = 1,
     int perPage = 25,
     String? token,
@@ -233,6 +259,7 @@ class AnilistGraphqlDatasource {
           activities(type: $type, sort: ID_DESC, isFollowing: $isFollowing) {
             ... on ListActivity {
               id
+              type
               status
               progress
               createdAt
@@ -251,6 +278,20 @@ class AnilistGraphqlDatasource {
                 avatar { medium }
               }
             }
+            ... on TextActivity {
+              id
+              type
+              text(asHtml: false)
+              createdAt
+              likeCount
+              replyCount
+              isLiked
+              user {
+                id
+                name
+                avatar { medium }
+              }
+            }
           }
         }
       }
@@ -258,28 +299,72 @@ class AnilistGraphqlDatasource {
     final data = await _post(query, variables: {
       'page': page,
       'perPage': perPage,
-      'type': activityType,
+      if (activityType != null) 'type': activityType,
       'isFollowing': isFollowing ? true : null,
     }, token: token);
     final activities =
         (data['data']?['Page']?['activities'] as List?)
                 ?.cast<Map<String, dynamic>>() ??
             [];
-    return activities.where((a) => a['media'] != null).toList();
+    return activities.where((a) => a['media'] != null || a['type'] == 'TEXT').toList();
   }
 
-  /// Toggle like on an activity. Requires auth token.
-  Future<bool> toggleLike(int activityId, String token) async {
+  /// Toggle like on an activity or reply. Requires auth token.
+  Future<bool> toggleLike(int id, String token, {String type = 'ACTIVITY'}) async {
     const query = r'''
       mutation ($id: Int, $type: LikeableType) {
         ToggleLikeV2(id: $id, type: $type) {
           ... on ListActivity { id isLiked likeCount }
+          ... on TextActivity { id isLiked likeCount }
+          ... on ActivityReply { id isLiked likeCount }
         }
       }
     ''';
     final data = await _post(query,
-        variables: {'id': activityId, 'type': 'ACTIVITY'}, token: token);
+        variables: {'id': id, 'type': type}, token: token);
     return data['data']?['ToggleLikeV2']?['isLiked'] as bool? ?? false;
+  }
+
+  /// Post a text activity to the authenticated user's feed.
+  Future<Map<String, dynamic>> saveTextActivity(String text, String token) async {
+    const query = r'''
+      mutation ($activityText: String) {
+        SaveTextActivity(text: $activityText) {
+          id
+          type
+          text(asHtml: false)
+          createdAt
+          likeCount
+          replyCount
+          isLiked
+          user { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'activityText': text}, token: token);
+    return data['data']!['SaveTextActivity'] as Map<String, dynamic>;
+  }
+
+  /// Post a reply to an activity.
+  Future<Map<String, dynamic>> saveActivityReply(int activityId, String text, String token) async {
+    const query = r'''
+      mutation ($activityId: Int, $replyText: String) {
+        SaveActivityReply(activityId: $activityId, text: $replyText) {
+          id
+          text(asHtml: false)
+          likeCount
+          isLiked
+          createdAt
+          user { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'activityId': activityId, 'replyText': text},
+      token: token,
+    );
+    return data['data']!['SaveActivityReply'] as Map<String, dynamic>;
   }
 
   /// Fetch replies for an activity.
@@ -291,6 +376,7 @@ class AnilistGraphqlDatasource {
             id
             text(asHtml: false)
             likeCount
+            isLiked
             createdAt
             user {
               id
@@ -425,6 +511,7 @@ class AnilistGraphqlDatasource {
           activities(userId: $userId, sort: ID_DESC) {
             ... on ListActivity {
               id
+              type
               status
               progress
               createdAt
@@ -443,6 +530,20 @@ class AnilistGraphqlDatasource {
                 avatar { medium }
               }
             }
+            ... on TextActivity {
+              id
+              type
+              text(asHtml: false)
+              createdAt
+              likeCount
+              replyCount
+              isLiked
+              user {
+                id
+                name
+                avatar { medium }
+              }
+            }
           }
         }
       }
@@ -452,7 +553,7 @@ class AnilistGraphqlDatasource {
         (data['data']?['Page']?['activities'] as List?)
                 ?.cast<Map<String, dynamic>>() ??
             [];
-    return activities.where((a) => a['media'] != null).toList();
+    return activities.where((a) => a['media'] != null || a['type'] == 'TEXT').toList();
   }
 
   /// Save (create/update) a media list entry on Anilist.

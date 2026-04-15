@@ -225,5 +225,15 @@
   "reviewDownVote": "No",
   "reviewLoginRequired": "Sign in to Anilist to vote",
   "reviewUsersFoundHelpful": "{count} of {total} found this review helpful",
-  "readMore": "Read more"
+  "readMore": "Read more",
+
+  "writeReplyHint": "Write a comment...",
+  "composeActivityHint": "What's on your mind?",
+  "composeMarkdownTip": "Supports markdown and images",
+  "cancelButton": "Cancel",
+  "postButton": "Post",
+  "activityPosted": "Posted successfully",
+
+  "settingsHideTextActivities": "Hide text activities",
+  "settingsHideTextActivitiesDesc": "Don't show text posts in the feed"
 }

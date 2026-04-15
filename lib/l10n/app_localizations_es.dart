@@ -642,4 +642,29 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get readMore => 'Leer más';
+
+  @override
+  String get writeReplyHint => 'Escribe un comentario...';
+
+  @override
+  String get composeActivityHint => '¿Qué estás pensando?';
+
+  @override
+  String get composeMarkdownTip => 'Soporta markdown e imágenes';
+
+  @override
+  String get cancelButton => 'Cancelar';
+
+  @override
+  String get postButton => 'Publicar';
+
+  @override
+  String get activityPosted => 'Publicado correctamente';
+
+  @override
+  String get settingsHideTextActivities => 'Ocultar actividades de texto';
+
+  @override
+  String get settingsHideTextActivitiesDesc =>
+      'No mostrar publicaciones de texto en el feed';
 }

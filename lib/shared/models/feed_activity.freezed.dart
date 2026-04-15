@@ -34,6 +34,7 @@ mixin _$FeedActivity {
   int get likeCount => throw _privateConstructorUsedError;
   int get replyCount => throw _privateConstructorUsedError;
   bool get isLiked => throw _privateConstructorUsedError;
+  bool get isTextActivity => throw _privateConstructorUsedError;
 
   /// Serializes this FeedActivity to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -66,6 +67,7 @@ abstract class $FeedActivityCopyWith<$Res> {
     int likeCount,
     int replyCount,
     bool isLiked,
+    bool isTextActivity,
   });
 }
 
@@ -97,6 +99,7 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
     Object? likeCount = null,
     Object? replyCount = null,
     Object? isLiked = null,
+    Object? isTextActivity = null,
   }) {
     return _then(
       _value.copyWith(
@@ -152,6 +155,10 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
                 ? _value.isLiked
                 : isLiked // ignore: cast_nullable_to_non_nullable
                       as bool,
+            isTextActivity: null == isTextActivity
+                ? _value.isTextActivity
+                : isTextActivity // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -181,6 +188,7 @@ abstract class _$$FeedActivityImplCopyWith<$Res>
     int likeCount,
     int replyCount,
     bool isLiked,
+    bool isTextActivity,
   });
 }
 
@@ -211,6 +219,7 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
     Object? likeCount = null,
     Object? replyCount = null,
     Object? isLiked = null,
+    Object? isTextActivity = null,
   }) {
     return _then(
       _$FeedActivityImpl(
@@ -266,6 +275,10 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
             ? _value.isLiked
             : isLiked // ignore: cast_nullable_to_non_nullable
                   as bool,
+        isTextActivity: null == isTextActivity
+            ? _value.isTextActivity
+            : isTextActivity // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -288,6 +301,7 @@ class _$FeedActivityImpl implements _FeedActivity {
     this.likeCount = 0,
     this.replyCount = 0,
     this.isLiked = false,
+    this.isTextActivity = false,
   });
 
   factory _$FeedActivityImpl.fromJson(Map<String, dynamic> json) =>
@@ -322,10 +336,13 @@ class _$FeedActivityImpl implements _FeedActivity {
   @override
   @JsonKey()
   final bool isLiked;
+  @override
+  @JsonKey()
+  final bool isTextActivity;
 
   @override
   String toString() {
-    return 'FeedActivity(id: $id, source: $source, userName: $userName, userId: $userId, userAvatarUrl: $userAvatarUrl, action: $action, mediaTitle: $mediaTitle, mediaPosterUrl: $mediaPosterUrl, mediaId: $mediaId, createdAt: $createdAt, likeCount: $likeCount, replyCount: $replyCount, isLiked: $isLiked)';
+    return 'FeedActivity(id: $id, source: $source, userName: $userName, userId: $userId, userAvatarUrl: $userAvatarUrl, action: $action, mediaTitle: $mediaTitle, mediaPosterUrl: $mediaPosterUrl, mediaId: $mediaId, createdAt: $createdAt, likeCount: $likeCount, replyCount: $replyCount, isLiked: $isLiked, isTextActivity: $isTextActivity)';
   }
 
   @override
@@ -352,7 +369,9 @@ class _$FeedActivityImpl implements _FeedActivity {
                 other.likeCount == likeCount) &&
             (identical(other.replyCount, replyCount) ||
                 other.replyCount == replyCount) &&
-            (identical(other.isLiked, isLiked) || other.isLiked == isLiked));
+            (identical(other.isLiked, isLiked) || other.isLiked == isLiked) &&
+            (identical(other.isTextActivity, isTextActivity) ||
+                other.isTextActivity == isTextActivity));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -372,6 +391,7 @@ class _$FeedActivityImpl implements _FeedActivity {
     likeCount,
     replyCount,
     isLiked,
+    isTextActivity,
   );
 
   /// Create a copy of FeedActivity
@@ -403,6 +423,7 @@ abstract class _FeedActivity implements FeedActivity {
     final int likeCount,
     final int replyCount,
     final bool isLiked,
+    final bool isTextActivity,
   }) = _$FeedActivityImpl;
 
   factory _FeedActivity.fromJson(Map<String, dynamic> json) =
@@ -434,6 +455,8 @@ abstract class _FeedActivity implements FeedActivity {
   int get replyCount;
   @override
   bool get isLiked;
+  @override
+  bool get isTextActivity;
 
   /// Create a copy of FeedActivity
   /// with the given fields replaced by the non-null parameter values.
