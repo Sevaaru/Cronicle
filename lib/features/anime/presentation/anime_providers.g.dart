@@ -601,7 +601,7 @@ final anilistTokenProvider =
     );
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
-String _$anilistFeedHash() => r'40b01281f81c52ff87d13c7e8a0acb17dc7b7db5';
+String _$anilistFeedHash() => r'd46e8364a83484fb2eb10fa87cc4e3958ef9e6ad';
 
 /// See also [AnilistFeed].
 @ProviderFor(AnilistFeed)
@@ -762,7 +762,7 @@ class _AnilistFeedByTypeProviderElement
 }
 
 String _$anilistFeedFollowingHash() =>
-    r'77b1ed705bce9feb90fc1c62619a776596fa1436';
+    r'319b89e8cd0819fa66a235b7d06eba97d73bb687';
 
 /// See also [AnilistFeedFollowing].
 @ProviderFor(AnilistFeedFollowing)

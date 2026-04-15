@@ -256,5 +256,32 @@
   "activityPosted": "Publicado correctamente",
 
   "settingsHideTextActivities": "Ocultar actividades de texto",
-  "settingsHideTextActivitiesDesc": "No mostrar publicaciones de texto en el feed"
+  "settingsHideTextActivitiesDesc": "No mostrar publicaciones de texto en el feed",
+
+  "statusCurrentGame": "Jugando",
+  "statusReplayingGame": "Rejugando",
+
+  "searchTrendingGames": "Juegos en tendencia",
+
+  "igdbWebNotSupported": "IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.",
+
+  "twitchSyncPromptTitle": "Conecta con Twitch",
+  "twitchSyncPromptBody": "Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.",
+  "twitchSyncPromptNoThanks": "No, gracias",
+  "twitchConnect": "Conectar Twitch",
+
+  "gameDetailPlatforms": "Plataformas",
+  "gameDetailGenres": "Géneros",
+  "gameDetailSynopsis": "Sinopsis",
+  "gameDetailStoryline": "Historia",
+  "gameDetailModes": "Modos de juego",
+  "gameDetailThemes": "Temas",
+  "gameDetailDeveloper": "Desarrollador",
+  "gameDetailPublisher": "Distribuidor",
+  "gameDetailReleaseDate": "Fecha de lanzamiento",
+  "gameDetailRating": "Puntuación",
+  "gameDetailSimilarGames": "Juegos similares",
+  "gameDetailNoData": "No se encontraron datos del juego",
+  "gameDetailCompanies": "Empresas",
+  "addToListHoursPlayed": "Horas jugadas"
 }

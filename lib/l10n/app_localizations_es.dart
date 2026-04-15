@@ -679,4 +679,72 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsHideTextActivitiesDesc =>
       'No mostrar publicaciones de texto en el feed';
+
+  @override
+  String get statusCurrentGame => 'Jugando';
+
+  @override
+  String get statusReplayingGame => 'Rejugando';
+
+  @override
+  String get searchTrendingGames => 'Juegos en tendencia';
+
+  @override
+  String get igdbWebNotSupported =>
+      'IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.';
+
+  @override
+  String get twitchSyncPromptTitle => 'Conecta con Twitch';
+
+  @override
+  String get twitchSyncPromptBody =>
+      'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.';
+
+  @override
+  String get twitchSyncPromptNoThanks => 'No, gracias';
+
+  @override
+  String get twitchConnect => 'Conectar Twitch';
+
+  @override
+  String get gameDetailPlatforms => 'Plataformas';
+
+  @override
+  String get gameDetailGenres => 'Géneros';
+
+  @override
+  String get gameDetailSynopsis => 'Sinopsis';
+
+  @override
+  String get gameDetailStoryline => 'Historia';
+
+  @override
+  String get gameDetailModes => 'Modos de juego';
+
+  @override
+  String get gameDetailThemes => 'Temas';
+
+  @override
+  String get gameDetailDeveloper => 'Desarrollador';
+
+  @override
+  String get gameDetailPublisher => 'Distribuidor';
+
+  @override
+  String get gameDetailReleaseDate => 'Fecha de lanzamiento';
+
+  @override
+  String get gameDetailRating => 'Puntuación';
+
+  @override
+  String get gameDetailSimilarGames => 'Juegos similares';
+
+  @override
+  String get gameDetailNoData => 'No se encontraron datos del juego';
+
+  @override
+  String get gameDetailCompanies => 'Empresas';
+
+  @override
+  String get addToListHoursPlayed => 'Horas jugadas';
 }

@@ -1363,6 +1363,138 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No mostrar publicaciones de texto en el feed'**
   String get settingsHideTextActivitiesDesc;
+
+  /// No description provided for @statusCurrentGame.
+  ///
+  /// In es, this message translates to:
+  /// **'Jugando'**
+  String get statusCurrentGame;
+
+  /// No description provided for @statusReplayingGame.
+  ///
+  /// In es, this message translates to:
+  /// **'Rejugando'**
+  String get statusReplayingGame;
+
+  /// No description provided for @searchTrendingGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos en tendencia'**
+  String get searchTrendingGames;
+
+  /// No description provided for @igdbWebNotSupported.
+  ///
+  /// In es, this message translates to:
+  /// **'IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.'**
+  String get igdbWebNotSupported;
+
+  /// No description provided for @twitchSyncPromptTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta con Twitch'**
+  String get twitchSyncPromptTitle;
+
+  /// No description provided for @twitchSyncPromptBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.'**
+  String get twitchSyncPromptBody;
+
+  /// No description provided for @twitchSyncPromptNoThanks.
+  ///
+  /// In es, this message translates to:
+  /// **'No, gracias'**
+  String get twitchSyncPromptNoThanks;
+
+  /// No description provided for @twitchConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Twitch'**
+  String get twitchConnect;
+
+  /// No description provided for @gameDetailPlatforms.
+  ///
+  /// In es, this message translates to:
+  /// **'Plataformas'**
+  String get gameDetailPlatforms;
+
+  /// No description provided for @gameDetailGenres.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros'**
+  String get gameDetailGenres;
+
+  /// No description provided for @gameDetailSynopsis.
+  ///
+  /// In es, this message translates to:
+  /// **'Sinopsis'**
+  String get gameDetailSynopsis;
+
+  /// No description provided for @gameDetailStoryline.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get gameDetailStoryline;
+
+  /// No description provided for @gameDetailModes.
+  ///
+  /// In es, this message translates to:
+  /// **'Modos de juego'**
+  String get gameDetailModes;
+
+  /// No description provided for @gameDetailThemes.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas'**
+  String get gameDetailThemes;
+
+  /// No description provided for @gameDetailDeveloper.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollador'**
+  String get gameDetailDeveloper;
+
+  /// No description provided for @gameDetailPublisher.
+  ///
+  /// In es, this message translates to:
+  /// **'Distribuidor'**
+  String get gameDetailPublisher;
+
+  /// No description provided for @gameDetailReleaseDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de lanzamiento'**
+  String get gameDetailReleaseDate;
+
+  /// No description provided for @gameDetailRating.
+  ///
+  /// In es, this message translates to:
+  /// **'Puntuación'**
+  String get gameDetailRating;
+
+  /// No description provided for @gameDetailSimilarGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos similares'**
+  String get gameDetailSimilarGames;
+
+  /// No description provided for @gameDetailNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron datos del juego'**
+  String get gameDetailNoData;
+
+  /// No description provided for @gameDetailCompanies.
+  ///
+  /// In es, this message translates to:
+  /// **'Empresas'**
+  String get gameDetailCompanies;
+
+  /// No description provided for @addToListHoursPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas jugadas'**
+  String get addToListHoursPlayed;
 }
 
 class _AppLocalizationsDelegate

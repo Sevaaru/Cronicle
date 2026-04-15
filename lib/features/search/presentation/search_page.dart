@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
+import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -159,9 +161,7 @@ class _PopularContent extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    if (filter == _SearchFilter.movie ||
-        filter == _SearchFilter.tv ||
-        filter == _SearchFilter.game) {
+    if (filter == _SearchFilter.movie || filter == _SearchFilter.tv) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -175,8 +175,27 @@ class _PopularContent extends ConsumerWidget {
       );
     }
 
+    if (filter == _SearchFilter.game) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, size: 18, color: Colors.teal),
+              const SizedBox(width: 6),
+              Text(l10n.searchTrendingGames,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.teal)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _IgdbPopularGrid(onAdd: onAdd),
+        ],
+      );
+    }
+
     final showAnime = filter == _SearchFilter.all || filter == _SearchFilter.anime;
     final showManga = filter == _SearchFilter.all || filter == _SearchFilter.manga;
+    final showGames = filter == _SearchFilter.all;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
@@ -205,6 +224,19 @@ class _PopularContent extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           _PopularGrid(type: 'MANGA', kind: MediaKind.manga, onAdd: onAdd),
+          const SizedBox(height: 16),
+        ],
+        if (showGames) ...[
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, size: 18, color: Colors.teal),
+              const SizedBox(width: 6),
+              Text(l10n.searchTrendingGames,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.teal)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _IgdbPopularGrid(onAdd: onAdd),
         ],
       ],
     );
@@ -302,6 +334,97 @@ class _PopularGrid extends ConsumerWidget {
   }
 }
 
+class _IgdbPopularGrid extends ConsumerWidget {
+  const _IgdbPopularGrid({required this.onAdd});
+  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final popularAsync = ref.watch(igdbPopularProvider);
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return popularAsync.when(
+      loading: () => const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          e is IgdbWebUnsupportedException
+              ? l10n.igdbWebNotSupported
+              : l10n.errorWithMessage(e),
+          style: TextStyle(color: cs.error),
+        ),
+      ),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 195,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemCount: items.length,
+            itemBuilder: (context, i) {
+              final item = items[i];
+              final title = item['title'] as Map<String, dynamic>? ?? {};
+              final cover = (item['coverImage'] as Map?)?['large'] as String?;
+              final name = (title['english'] as String?) ?? '';
+              final score = item['averageScore'] as int?;
+              final id = item['id'] as int?;
+
+              return GestureDetector(
+                onTap: id != null ? () => context.push('/game/$id') : null,
+                child: SizedBox(
+                  width: 110,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: cover != null
+                            ? CachedNetworkImage(
+                                imageUrl: cover,
+                                width: 110,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 110,
+                                height: 150,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.sports_esports),
+                              ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      if (score != null)
+                        Row(
+                          children: [
+                            Icon(Icons.star, size: 11, color: Colors.amber.shade600),
+                            const SizedBox(width: 2),
+                            Text('$score%',
+                                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SearchResultsList extends ConsumerWidget {
   const _SearchResultsList({
     required this.query,
@@ -326,14 +449,15 @@ class _SearchResultsList extends ConsumerWidget {
       sections.add(_ResultSection(l10n.filterManga, MediaKind.manga,
           ref.watch(anilistSearchProvider(query, 'MANGA'))));
     }
+    if (filter == _SearchFilter.all || filter == _SearchFilter.game) {
+      sections.add(_ResultSection(l10n.filterGames, MediaKind.game,
+          ref.watch(igdbSearchProvider(query))));
+    }
     if (filter == _SearchFilter.movie) {
       sections.add(_ResultSection.placeholder(l10n.filterMovies, MediaKind.movie));
     }
     if (filter == _SearchFilter.tv) {
       sections.add(_ResultSection.placeholder(l10n.filterTv, MediaKind.tv));
-    }
-    if (filter == _SearchFilter.game) {
-      sections.add(_ResultSection.placeholder(l10n.filterGames, MediaKind.game));
     }
 
     if (sections.isEmpty) {
@@ -383,7 +507,14 @@ class _SearchResultsList extends ConsumerWidget {
           ),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(l10n.searchErrorIn(section.title, e)),
+            child: Text(
+              l10n.searchErrorIn(
+                section.title,
+                e is IgdbWebUnsupportedException
+                    ? l10n.igdbWebNotSupported
+                    : e,
+              ),
+            ),
           ),
           data: (list) {
             if (list.isEmpty) return const SizedBox.shrink();
@@ -453,9 +584,12 @@ class _ResultCard extends StatelessWidget {
     final format = item['format'] as String?;
 
     final bool isManga = kind == MediaKind.manga;
-    final countLabel = isManga
-        ? (chapters != null ? '$chapters cap' : null)
-        : (episodes != null ? '$episodes ep' : null);
+    final bool isGame = kind == MediaKind.game;
+    final countLabel = isGame
+        ? null
+        : isManga
+            ? (chapters != null ? '$chapters cap' : null)
+            : (episodes != null ? '$episodes ep' : null);
 
     final itemId = item['id'] as int?;
 
@@ -466,7 +600,11 @@ class _ResultCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: () {
           if (itemId != null) {
-            context.push('/media/$itemId?kind=${kind.code}');
+            if (kind == MediaKind.game) {
+              context.push('/game/$itemId');
+            } else {
+              context.push('/media/$itemId?kind=${kind.code}');
+            }
           }
         },
         child: Row(
@@ -553,7 +691,7 @@ class _ResultCard extends StatelessWidget {
                       children: [
                         if (countLabel != null) ...[
                           Icon(
-                            isManga ? Icons.menu_book : Icons.tv,
+                            isManga ? Icons.menu_book : isGame ? Icons.sports_esports : Icons.tv,
                             size: 13,
                             color: colorScheme.onSurfaceVariant,
                           ),

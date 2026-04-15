@@ -28,14 +28,30 @@ const _mangaStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
-String _statusLabel(AppLocalizations l10n, String key, bool isManga) {
+const _gameStatusData = [
+  ('CURRENT', Icons.sports_esports_rounded),
+  ('PLANNING', Icons.bookmark_add_outlined),
+  ('COMPLETED', Icons.check_circle_outline),
+  ('DROPPED', Icons.cancel_outlined),
+  ('PAUSED', Icons.pause_circle_outline),
+  ('REPEATING', Icons.replay_rounded),
+];
+
+String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
   return switch (key) {
-    'CURRENT' => isManga ? l10n.statusCurrentManga : l10n.statusCurrentAnime,
+    'CURRENT' => switch (kind) {
+        MediaKind.manga => l10n.statusCurrentManga,
+        MediaKind.game => l10n.statusCurrentGame,
+        _ => l10n.statusCurrentAnime,
+      },
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
-    'REPEATING' => l10n.statusRepeating,
+    'REPEATING' => switch (kind) {
+        MediaKind.game => l10n.statusReplayingGame,
+        _ => l10n.statusRepeating,
+      },
     _ => key,
   };
 }
@@ -69,6 +85,18 @@ Future<bool> showAddToLibrarySheet({
     }
   }
 
+  if (kind == MediaKind.game) {
+    final prompted = await db.getKeyValue('twitch_prompt_shown');
+    if (prompted == null && context.mounted) {
+      await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _TwitchPromptDialog(),
+      );
+      await db.setKeyValue('twitch_prompt_shown', 'true');
+    }
+  }
+
   if (!context.mounted) return false;
 
   final result = await showModalBottomSheet<_AddResult>(
@@ -90,7 +118,6 @@ Future<bool> showAddToLibrarySheet({
 
   final title = item['title'] as Map<String, dynamic>? ?? {};
   final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
-  final isManga = kind == MediaKind.manga;
   final mediaId = item['id'];
 
   await db.upsertLibraryEntry(
@@ -111,9 +138,11 @@ Future<bool> showAddToLibrarySheet({
       score: drift.Value(result.score),
       progress: drift.Value(result.progress),
       totalEpisodes: drift.Value(
-        isManga
-            ? (item['chapters'] as num?)?.toInt()
-            : (item['episodes'] as num?)?.toInt(),
+        kind == MediaKind.game
+            ? null
+            : kind == MediaKind.manga
+                ? (item['chapters'] as num?)?.toInt()
+                : (item['episodes'] as num?)?.toInt(),
       ),
       notes: drift.Value(result.notes),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
@@ -207,6 +236,31 @@ class _AnilistPromptDialog extends StatelessWidget {
   }
 }
 
+class _TwitchPromptDialog extends StatelessWidget {
+  const _TwitchPromptDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      icon: Icon(Icons.sports_esports_rounded, size: 40, color: cs.primary),
+      title: Text(l10n.twitchSyncPromptTitle),
+      content: Text(
+        l10n.twitchSyncPromptBody,
+        style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop('skip'),
+          child: Text(l10n.twitchSyncPromptNoThanks),
+        ),
+      ],
+    );
+  }
+}
+
 class _AddToLibrarySheet extends StatefulWidget {
   const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry});
   final Map<String, dynamic> item;
@@ -235,13 +289,19 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
+  bool get _isGame => widget.kind == MediaKind.game;
 
-  List<(String, IconData)> get _statusData =>
-      _isManga ? _mangaStatusData : _animeStatusData;
+  List<(String, IconData)> get _statusData => switch (widget.kind) {
+        MediaKind.manga => _mangaStatusData,
+        MediaKind.game => _gameStatusData,
+        _ => _animeStatusData,
+      };
 
-  int? get _totalCount => _isManga
-      ? widget.item['chapters'] as int?
-      : widget.item['episodes'] as int?;
+  int? get _totalCount => _isGame
+      ? null
+      : _isManga
+          ? widget.item['chapters'] as int?
+          : widget.item['episodes'] as int?;
 
   @override
   void dispose() {
@@ -258,7 +318,11 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
         '';
-    final countLabel = _isManga ? l10n.addToListChapters : l10n.addToListEpisodes;
+    final countLabel = _isGame
+        ? l10n.addToListHoursPlayed
+        : _isManga
+            ? l10n.addToListChapters
+            : l10n.addToListEpisodes;
 
     final isEdit = widget.existingEntry != null;
     final bottomPad = MediaQuery.of(context).padding.bottom;
@@ -321,7 +385,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                       children: [
                         Icon(s.$2, size: 16),
                         const SizedBox(width: 4),
-                        Text(_statusLabel(l10n, s.$1, _isManga)),
+                        Text(_statusLabel(l10n, s.$1, widget.kind)),
                       ],
                     ),
                     onSelected: (_) => setState(() => _status = s.$1),

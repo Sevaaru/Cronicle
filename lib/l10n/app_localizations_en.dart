@@ -678,4 +678,72 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsHideTextActivitiesDesc =>
       'Don\'t show text posts in the feed';
+
+  @override
+  String get statusCurrentGame => 'Playing';
+
+  @override
+  String get statusReplayingGame => 'Replaying';
+
+  @override
+  String get searchTrendingGames => 'Trending games';
+
+  @override
+  String get igdbWebNotSupported =>
+      'IGDB is not available in the browser (IGDB does not allow requests from web apps). Use the Windows, Android, or iOS build to search games.';
+
+  @override
+  String get twitchSyncPromptTitle => 'Connect with Twitch';
+
+  @override
+  String get twitchSyncPromptBody =>
+      'Connect your Twitch account to sync your games in the future.\n\nYou can also do this later from Settings.';
+
+  @override
+  String get twitchSyncPromptNoThanks => 'No, thanks';
+
+  @override
+  String get twitchConnect => 'Connect Twitch';
+
+  @override
+  String get gameDetailPlatforms => 'Platforms';
+
+  @override
+  String get gameDetailGenres => 'Genres';
+
+  @override
+  String get gameDetailSynopsis => 'Synopsis';
+
+  @override
+  String get gameDetailStoryline => 'Storyline';
+
+  @override
+  String get gameDetailModes => 'Game modes';
+
+  @override
+  String get gameDetailThemes => 'Themes';
+
+  @override
+  String get gameDetailDeveloper => 'Developer';
+
+  @override
+  String get gameDetailPublisher => 'Publisher';
+
+  @override
+  String get gameDetailReleaseDate => 'Release date';
+
+  @override
+  String get gameDetailRating => 'Rating';
+
+  @override
+  String get gameDetailSimilarGames => 'Similar games';
+
+  @override
+  String get gameDetailNoData => 'No game data found';
+
+  @override
+  String get gameDetailCompanies => 'Companies';
+
+  @override
+  String get addToListHoursPlayed => 'Hours played';
 }
