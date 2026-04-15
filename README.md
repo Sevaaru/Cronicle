@@ -1,6 +1,6 @@
 # CRONICLE APP
 
-![Logo](https://i.imgur.com/QhVLrPB.png)
+<img src="https://i.imgur.com/QhVLrPB.png" width="300" alt="Logo del proyecto">
 
 A new Flutter project.
 
