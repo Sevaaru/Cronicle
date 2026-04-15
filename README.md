@@ -1,10 +1,10 @@
 <div align="center">
 
-# CRONICLE APP [App](#)
+# CRONICLE APP(#)
 An app for everything tracking. Integration With Anilist, Trackr, and more to come.
 
 <a>
-    <img src="[./.github/assets/logo.png](https://i.imgur.com/QhVLrPB.png)" alt="Cronicle logo" title="Cronicle logo" width="80"/>
+    <img src="https://i.imgur.com/QhVLrPB.png" alt="Cronicle logo" title="Cronicle logo" width="80"/>
 </a>
 
 ### Full-featured Tracker fore multiple services and full offline functionality alternative.
