@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -81,6 +82,9 @@ Future<bool> showAddToLibrarySheet({
 
   if (result.deleted && existingEntry != null) {
     await db.deleteLibraryEntry(existingEntry.id);
+    if (kind == MediaKind.anime || kind == MediaKind.manga) {
+      _deleteEntryFromAnilist(ref, int.tryParse(existingEntry.externalId));
+    }
     return true;
   }
 
@@ -121,6 +125,23 @@ Future<bool> showAddToLibrarySheet({
   }
 
   return true;
+}
+
+void _deleteEntryFromAnilist(WidgetRef ref, int? mediaId) async {
+  if (mediaId == null) return;
+  try {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) return;
+    final graphql = ref.read(anilistGraphqlProvider);
+    final entryId = await graphql.findMediaListEntryId(mediaId, token);
+    if (entryId != null) {
+      await graphql.deleteMediaListEntry(entryId, token);
+    } else if (kDebugMode) {
+      debugPrint('[Cronicle] No Anilist entry found for mediaId=$mediaId');
+    }
+  } catch (e) {
+    if (kDebugMode) debugPrint('[Cronicle] Error deleting from Anilist: $e');
+  }
 }
 
 void _syncEntryToAnilist(WidgetRef ref, int mediaId, _AddResult result) async {

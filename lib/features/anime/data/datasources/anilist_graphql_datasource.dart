@@ -529,6 +529,32 @@ class AnilistGraphqlDatasource {
     return data['data']?['RateReview'] as Map<String, dynamic>?;
   }
 
+  /// Find the Anilist MediaList entry ID for a given media.
+  Future<int?> findMediaListEntryId(int mediaId, String token) async {
+    final viewer = await fetchViewer(token);
+    if (viewer == null) return null;
+    final userId = viewer['id'] as int?;
+    if (userId == null) return null;
+
+    const query = r'''
+      query ($mediaId: Int, $userId: Int) {
+        MediaList(mediaId: $mediaId, userId: $userId) {
+          id
+        }
+      }
+    ''';
+    try {
+      final data = await _post(
+        query,
+        variables: {'mediaId': mediaId, 'userId': userId},
+        token: token,
+      );
+      return data['data']?['MediaList']?['id'] as int?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Delete a media list entry from Anilist by list entry ID.
   Future<void> deleteMediaListEntry(int entryId, String token) async {
     const query = r'''
