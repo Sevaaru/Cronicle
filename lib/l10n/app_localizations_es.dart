@@ -1030,6 +1030,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get anilistStep3 => 'Vuelve aquí y pégalo abajo';
 
   @override
+  String get anilistStep2Bridge =>
+      'Tras aceptar, copia el token largo de la página de Cronicle que se abre en el navegador.';
+
+  @override
+  String get anilistStep3Bridge => 'Pégalo abajo y pulsa Conectar.';
+
+  @override
+  String get anilistOAuthWebUnavailable =>
+      'Iniciar sesión en Anilist no está disponible en la versión web. Usa la app en móvil u ordenador.';
+
+  @override
+  String get anilistOAuthTimeout =>
+      'La autorización de Anilist tardó demasiado. Inténtalo de nuevo.';
+
+  @override
+  String get anilistOAuthLaunchFailed => 'No se pudo abrir el navegador.';
+
+  @override
+  String get anilistBridgeNotConfigured =>
+      'Define ANILIST_REDIRECT_URI con tu URL HTTPS (anilist_oauth_bridge.html) y regístrala igual en Anilist → Developer para entrar sin pegar token en el móvil.';
+
+  @override
   String get cancel => 'Cancelar';
 
   @override

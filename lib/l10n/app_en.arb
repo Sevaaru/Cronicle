@@ -347,6 +347,12 @@
   "anilistStep1": "Authorize Cronicle in the tab that opened",
   "anilistStep2": "Copy the token shown on screen",
   "anilistStep3": "Come back here and paste it below",
+  "anilistStep2Bridge": "After you approve, copy the long access token from the Cronicle page shown in the browser.",
+  "anilistStep3Bridge": "Paste it below and tap Connect.",
+  "anilistOAuthWebUnavailable": "Anilist sign-in from the web build isn’t supported. Use the mobile or desktop app.",
+  "anilistOAuthTimeout": "Anilist authorization timed out. Try again.",
+  "anilistOAuthLaunchFailed": "Could not open the browser.",
+  "anilistBridgeNotConfigured": "Set ANILIST_REDIRECT_URI to your HTTPS page (anilist_oauth_bridge.html) and register the same URL in Anilist → Developer for automatic login on phones.",
   "cancel": "Cancel",
   "connect": "Connect",
 

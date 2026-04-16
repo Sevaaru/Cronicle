@@ -42,6 +42,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="cronicle" android:host="trakt-oauth"/>
+                <data android:scheme="cronicle" android:host="anilist-oauth"/>
             </intent-filter>
         </activity>
         <!-- flutter_web_auth_2: solo Twitch (HTTPS→puente). Trakt va a MainActivity. -->

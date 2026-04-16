@@ -1,10 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/features/anime/presentation/anilist_connect_flow.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -29,11 +28,7 @@ class _AnimePageState extends ConsumerState<AnimePage> {
   }
 
   Future<void> _connectAnilist() async {
-    final auth = ref.read(anilistAuthProvider);
-    await launchUrl(
-      Uri.parse(auth.authorizeUrl),
-      mode: LaunchMode.externalApplication,
-    );
+    await showAnilistConnectFlow(context, ref);
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> anime) async {

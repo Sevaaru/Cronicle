@@ -3,6 +3,9 @@ abstract final class EnvConfig {
     'ANILIST_CLIENT_ID',
     defaultValue: '',
   );
+  /// Por defecto la página PIN (copiar token). Para OAuth en móvil vía puente, pon aquí la misma URL **HTTPS**
+  /// que en Anilist → Developer (sirve `web/anilist_oauth_bridge.html`). No se añade a la URL de autorización:
+  /// el implícito solo usa `client_id` + `response_type=token`; el redirect lo aplica Anilist según tu app.
   static const String anilistRedirectUri = String.fromEnvironment(
     'ANILIST_REDIRECT_URI',
     defaultValue: 'https://anilist.co/api/v2/oauth/pin',

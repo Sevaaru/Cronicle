@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
@@ -42,6 +48,66 @@ class AnilistToken extends _$AnilistToken {
   Future<void> clearToken() async {
     await ref.read(anilistAuthProvider).deleteToken();
     state = const AsyncData(null);
+  }
+
+  /// OAuth implícito vía HTTPS puente + `cronicle://anilist-oauth` (Android/iOS, navegador externo).
+  Future<void> connectOAuthBridge() async {
+    if (kIsWeb) {
+      throw UnsupportedError('web');
+    }
+    if (!AnilistAuthDatasource.usesHttpsImplicitBridge) {
+      throw StateError('not_configured');
+    }
+    if (defaultTargetPlatform != TargetPlatform.android &&
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      throw UnsupportedError('mobile_only');
+    }
+    final auth = ref.read(anilistAuthProvider);
+    final uri = Uri.parse(auth.authorizeUrl);
+    final token = await _anilistOAuthAccessToken(uri);
+    await setToken(token);
+  }
+}
+
+Future<String> _anilistOAuthAccessToken(Uri authUri) async {
+  final appLinks = AppLinks();
+  final completer = Completer<String>();
+
+  void completeIfMatch(Uri u) {
+    if (u.scheme != 'cronicle' || u.host != 'anilist-oauth') return;
+    final t = u.queryParameters['access_token'];
+    if (t != null && t.isNotEmpty && !completer.isCompleted) {
+      completer.complete(t);
+    }
+  }
+
+  final initial = await appLinks.getInitialLink();
+  if (initial != null) {
+    completeIfMatch(initial);
+  }
+
+  late final StreamSubscription<Uri> sub;
+  sub = appLinks.uriLinkStream.listen(completeIfMatch);
+
+  if (completer.isCompleted) {
+    await sub.cancel();
+    return completer.future;
+  }
+
+  final launched =
+      await launchUrl(authUri, mode: LaunchMode.externalApplication);
+  if (!launched) {
+    await sub.cancel();
+    throw StateError('launch_failed');
+  }
+
+  try {
+    return await completer.future.timeout(
+      const Duration(minutes: 10),
+      onTimeout: () => throw StateError('oauth_timeout'),
+    );
+  } finally {
+    await sub.cancel();
   }
 }
 

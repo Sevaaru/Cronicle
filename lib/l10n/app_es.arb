@@ -363,6 +363,12 @@
   "anilistStep1": "Autoriza Cronicle en la pestaña que se abrió",
   "anilistStep2": "Copia el token que aparece en pantalla",
   "anilistStep3": "Vuelve aquí y pégalo abajo",
+  "anilistStep2Bridge": "Tras aceptar, copia el token largo de la página de Cronicle que se abre en el navegador.",
+  "anilistStep3Bridge": "Pégalo abajo y pulsa Conectar.",
+  "anilistOAuthWebUnavailable": "Iniciar sesión en Anilist no está disponible en la versión web. Usa la app en móvil u ordenador.",
+  "anilistOAuthTimeout": "La autorización de Anilist tardó demasiado. Inténtalo de nuevo.",
+  "anilistOAuthLaunchFailed": "No se pudo abrir el navegador.",
+  "anilistBridgeNotConfigured": "Define ANILIST_REDIRECT_URI con tu URL HTTPS (anilist_oauth_bridge.html) y regístrala igual en Anilist → Developer para entrar sin pegar token en el móvil.",
   "cancel": "Cancelar",
   "connect": "Conectar",
 

@@ -1,17 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/backup/app_backup_bundle.dart';
@@ -23,6 +21,7 @@ import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
+import 'package:cronicle/features/anime/presentation/anilist_connect_flow.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
@@ -491,95 +490,7 @@ class _AnilistSection extends ConsumerWidget {
   }
 
   static void _startAnilistLogin(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final auth = ref.read(anilistAuthProvider);
-    final controller = TextEditingController();
-    final cs = Theme.of(context).colorScheme;
-
-    launchUrl(
-      Uri.parse(auth.authorizeUrl),
-      mode: LaunchMode.externalApplication,
-    );
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.animation_rounded, color: cs.primary, size: 22),
-            const SizedBox(width: 8),
-            Text(l10n.anilistConnectTitle),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withAlpha(50),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _StepRow(number: '1', text: l10n.anilistStep1, cs: cs),
-                  const SizedBox(height: 6),
-                  _StepRow(number: '2', text: l10n.anilistStep2, cs: cs),
-                  const SizedBox(height: 6),
-                  _StepRow(number: '3', text: l10n.anilistStep3, cs: cs),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: l10n.anilistTokenLabel,
-                hintText: l10n.anilistTokenHint,
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.key, size: 20),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.content_paste_go, size: 20),
-                  tooltip: l10n.anilistPasteTooltip,
-                  onPressed: () async {
-                    final data = await Clipboard.getData(Clipboard.kTextPlain);
-                    if (data?.text != null) {
-                      controller.text = data!.text!;
-                    }
-                  },
-                ),
-              ),
-              maxLines: 1,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton.icon(
-            icon: const Icon(Icons.check, size: 18),
-            label: Text(l10n.connect),
-            onPressed: () async {
-              final token = controller.text.trim();
-              if (token.isEmpty) return;
-              await ref.read(anilistTokenProvider.notifier).setToken(token);
-              if (!ctx.mounted) return;
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.anilistConnectSuccess),
-                  backgroundColor: Colors.green.shade700,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    showAnilistConnectFlow(context, ref);
   }
 }
 
@@ -887,29 +798,6 @@ class _AppDefaultsSection extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _StepRow extends StatelessWidget {
-  const _StepRow({required this.number, required this.text, required this.cs});
-  final String number;
-  final String text;
-  final ColorScheme cs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(
-          radius: 10,
-          backgroundColor: cs.primary,
-          child: Text(number, style: TextStyle(fontSize: 11, color: cs.onPrimary, fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text, style: TextStyle(fontSize: 12, color: cs.onSurface))),
-      ],
     );
   }
 }

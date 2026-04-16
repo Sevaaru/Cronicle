@@ -1964,6 +1964,42 @@ abstract class AppLocalizations {
   /// **'Vuelve aquí y pégalo abajo'**
   String get anilistStep3;
 
+  /// No description provided for @anilistStep2Bridge.
+  ///
+  /// In es, this message translates to:
+  /// **'Tras aceptar, copia el token largo de la página de Cronicle que se abre en el navegador.'**
+  String get anilistStep2Bridge;
+
+  /// No description provided for @anilistStep3Bridge.
+  ///
+  /// In es, this message translates to:
+  /// **'Pégalo abajo y pulsa Conectar.'**
+  String get anilistStep3Bridge;
+
+  /// No description provided for @anilistOAuthWebUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión en Anilist no está disponible en la versión web. Usa la app en móvil u ordenador.'**
+  String get anilistOAuthWebUnavailable;
+
+  /// No description provided for @anilistOAuthTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'La autorización de Anilist tardó demasiado. Inténtalo de nuevo.'**
+  String get anilistOAuthTimeout;
+
+  /// No description provided for @anilistOAuthLaunchFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el navegador.'**
+  String get anilistOAuthLaunchFailed;
+
+  /// No description provided for @anilistBridgeNotConfigured.
+  ///
+  /// In es, this message translates to:
+  /// **'Define ANILIST_REDIRECT_URI con tu URL HTTPS (anilist_oauth_bridge.html) y regístrala igual en Anilist → Developer para entrar sin pegar token en el móvil.'**
+  String get anilistBridgeNotConfigured;
+
   /// No description provided for @cancel.
   ///
   /// In es, this message translates to:
