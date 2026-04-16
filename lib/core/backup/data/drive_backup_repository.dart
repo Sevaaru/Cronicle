@@ -12,18 +12,68 @@ class DriveBackupRepository implements BackupRepository {
   DriveBackupRepository(this._googleSignIn);
 
   final GoogleSignIn _googleSignIn;
+
+  /// [GoogleDriveFailure.message] cuando no existe el fichero de copia en appData.
+  static const String noDriveBackupFailureMessage = 'No backup found';
+
   static const _fileName = 'cronicle_backup.json';
   static const _driveScopes = [
     'https://www.googleapis.com/auth/drive.appdata',
   ];
 
-  Future<drive.DriveApi?> _getDriveApi() async {
+  Future<drive.DriveApi?> _getDriveApi({bool allowAuthorize = true}) async {
     final authClient = _googleSignIn.authorizationClient;
-    // Try without user interaction first, then prompt if needed.
     var authorization = await authClient.authorizationForScopes(_driveScopes);
-    authorization ??= await authClient.authorizeScopes(_driveScopes);
+    if (authorization == null && allowAuthorize) {
+      authorization = await authClient.authorizeScopes(_driveScopes);
+    }
+    if (authorization == null) return null;
     final client = authorization.authClient(scopes: _driveScopes);
     return drive.DriveApi(client);
+  }
+
+  Future<AppResult<Unit>> _uploadWithApi(
+    drive.DriveApi driveApi,
+    Uint8List data,
+  ) async {
+    final existing = await driveApi.files.list(
+      spaces: 'appDataFolder',
+      q: "name = '$_fileName'",
+      $fields: 'files(id)',
+    );
+
+    final media = drive.Media(Stream.value(data), data.length);
+
+    if (existing.files != null && existing.files!.isNotEmpty) {
+      await driveApi.files.update(
+        drive.File(),
+        existing.files!.first.id!,
+        uploadMedia: media,
+      );
+    } else {
+      final file = drive.File()
+        ..name = _fileName
+        ..parents = ['appDataFolder'];
+      await driveApi.files.create(file, uploadMedia: media);
+    }
+
+    return right(unit);
+  }
+
+  /// Sube la copia solo si ya hay tokens de Drive **sin** abrir UI de permisos.
+  /// Para tareas en segundo plano (Workmanager).
+  Future<AppResult<Unit>> uploadBackupWithoutUserInteraction(
+    Uint8List data,
+  ) async {
+    try {
+      final driveApi = await _getDriveApi(allowAuthorize: false);
+      if (driveApi == null) {
+        return left(const GoogleDriveFailure('Not authenticated with Google'));
+      }
+      return _uploadWithApi(driveApi, data);
+    } catch (e) {
+      return left(GoogleDriveFailure(e.toString()));
+    }
   }
 
   @override
@@ -33,29 +83,7 @@ class DriveBackupRepository implements BackupRepository {
       if (driveApi == null) {
         return left(const GoogleDriveFailure('Not authenticated with Google'));
       }
-
-      final existing = await driveApi.files.list(
-        spaces: 'appDataFolder',
-        q: "name = '$_fileName'",
-        $fields: 'files(id)',
-      );
-
-      final media = drive.Media(Stream.value(data), data.length);
-
-      if (existing.files != null && existing.files!.isNotEmpty) {
-        await driveApi.files.update(
-          drive.File(),
-          existing.files!.first.id!,
-          uploadMedia: media,
-        );
-      } else {
-        final file = drive.File()
-          ..name = _fileName
-          ..parents = ['appDataFolder'];
-        await driveApi.files.create(file, uploadMedia: media);
-      }
-
-      return right(unit);
+      return _uploadWithApi(driveApi, data);
     } catch (e) {
       return left(GoogleDriveFailure(e.toString()));
     }
@@ -76,7 +104,9 @@ class DriveBackupRepository implements BackupRepository {
       );
 
       if (fileList.files == null || fileList.files!.isEmpty) {
-        return left(const GoogleDriveFailure('No backup found'));
+        return left(
+          GoogleDriveFailure(noDriveBackupFailureMessage),
+        );
       }
 
       final response = await driveApi.files.get(

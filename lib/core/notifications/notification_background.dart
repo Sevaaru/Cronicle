@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'package:cronicle/core/backup/google_drive_auto_backup_runner.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_sync_runner.dart';
 
@@ -29,7 +30,11 @@ void notificationCallbackDispatcher() {
     WidgetsFlutterBinding.ensureInitialized();
     DartPluginRegistrant.ensureInitialized();
     await CronicleLocalNotifications.init();
+    if (task == kCronicleDriveBackupWorkName) {
+      return await runGoogleDriveAutoBackupTask();
+    }
     final ok = await runNotificationSyncTask();
+    await runGoogleDriveAutoBackupTask();
     return ok;
   });
 }

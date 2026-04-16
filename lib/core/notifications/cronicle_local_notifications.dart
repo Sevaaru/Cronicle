@@ -13,6 +13,9 @@ const String kCronicleChannelAnilist = 'cronicle_anilist_v2';
 /// Nombre único de la tarea periódica de Workmanager.
 const String kCronicleNotifWorkName = 'cronicle_notif_sync';
 
+/// Tarea periódica opcional: subir copia JSON a Drive sin UI (si hay sesión).
+const String kCronicleDriveBackupWorkName = 'cronicle_drive_auto_backup';
+
 /// Agrupación en Android 7+ (NotificationCompat): un solo paquete para toda la app.
 const String kAndroidNotificationGroupCronicle =
     'com.cronicle.app.notifications';

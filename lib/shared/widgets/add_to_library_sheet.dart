@@ -140,9 +140,11 @@ Future<bool> showAddToLibrarySheet({
       totalEpisodes: drift.Value(
         kind == MediaKind.game
             ? null
-            : kind == MediaKind.manga
-                ? (item['chapters'] as num?)?.toInt()
-                : (item['episodes'] as num?)?.toInt(),
+            : kind == MediaKind.movie
+                ? 1
+                : kind == MediaKind.manga
+                    ? (item['chapters'] as num?)?.toInt()
+                    : (item['episodes'] as num?)?.toInt(),
       ),
       notes: drift.Value(result.notes),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
@@ -290,6 +292,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
 
   bool get _isManga => widget.kind == MediaKind.manga;
   bool get _isGame => widget.kind == MediaKind.game;
+  bool get _isMovie => widget.kind == MediaKind.movie;
 
   List<(String, IconData)> get _statusData => switch (widget.kind) {
         MediaKind.manga => _mangaStatusData,
@@ -299,9 +302,11 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
 
   int? get _totalCount => _isGame
       ? null
-      : _isManga
-          ? widget.item['chapters'] as int?
-          : widget.item['episodes'] as int?;
+      : _isMovie
+          ? 1
+          : _isManga
+              ? widget.item['chapters'] as int?
+              : widget.item['episodes'] as int?;
 
   @override
   void dispose() {
@@ -322,7 +327,9 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
         ? l10n.addToListHoursPlayed
         : _isManga
             ? l10n.addToListChapters
-            : l10n.addToListEpisodes;
+            : _isMovie
+                ? l10n.addToListMovieProgress
+                : l10n.addToListEpisodes;
 
     final isEdit = widget.existingEntry != null;
     final bottomPad = MediaQuery.of(context).padding.bottom;

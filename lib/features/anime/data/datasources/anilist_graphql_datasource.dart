@@ -7,6 +7,39 @@ class AnilistGraphqlDatasource {
   final Dio _dio;
   static const _url = 'https://graphql.anilist.co';
 
+  /// AniList devuelve a veces `message: "validation"` con el detalle en [validation].
+  static String formatGraphQLErrors(List<dynamic> errors) {
+    final lines = <String>[];
+    for (final raw in errors) {
+      if (raw is! Map) continue;
+      final err = Map<String, dynamic>.from(raw);
+      var addedFromValidation = false;
+      final validation = err['validation'];
+      if (validation is Map) {
+        for (final e in validation.entries) {
+          final field = e.key.toString();
+          final msgs = e.value;
+          if (msgs is List) {
+            for (final m in msgs) {
+              lines.add('$field: $m');
+              addedFromValidation = true;
+            }
+          } else if (msgs != null) {
+            lines.add('$field: $msgs');
+            addedFromValidation = true;
+          }
+        }
+      }
+      if (!addedFromValidation) {
+        final m = err['message'] as String?;
+        if (m != null && m.isNotEmpty) {
+          lines.add(m);
+        }
+      }
+    }
+    return lines.isNotEmpty ? lines.join('\n') : 'GraphQL error';
+  }
+
   Future<Map<String, dynamic>> _post(
     String query, {
     Map<String, dynamic>? variables,
@@ -45,8 +78,7 @@ class AnilistGraphqlDatasource {
 
     final errors = body['errors'] as List?;
     if (errors != null && errors.isNotEmpty) {
-      final msg = (errors.first as Map)['message'] as String? ?? 'GraphQL error';
-      throw Exception(msg);
+      throw Exception(formatGraphQLErrors(errors));
     }
     return body;
   }
@@ -786,8 +818,8 @@ class AnilistGraphqlDatasource {
   /// Post a text activity to the authenticated user's feed.
   Future<Map<String, dynamic>> saveTextActivity(String text, String token) async {
     const query = r'''
-      mutation ($activityText: String) {
-        SaveTextActivity(text: $activityText) {
+      mutation ($text: String!) {
+        SaveTextActivity(text: $text) {
           id
           type
           text(asHtml: false)
@@ -799,8 +831,13 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'activityText': text}, token: token);
-    return data['data']!['SaveTextActivity'] as Map<String, dynamic>;
+    final data = await _post(query, variables: {'text': text}, token: token);
+    final saved = data['data']?['SaveTextActivity'];
+    if (saved is Map<String, dynamic>) return saved;
+    if (saved is Map) {
+      return Map<String, dynamic>.from(saved);
+    }
+    throw Exception('SaveTextActivity returned no data');
   }
 
   /// Post a reply to an activity.

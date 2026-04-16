@@ -43,4 +43,23 @@ abstract final class EnvConfig {
     'GOOGLE_IOS_CLIENT_ID',
     defaultValue: '',
   );
+
+  /// API key de la app Trakt (cabecera `trakt-api-key`). Obligatoria para películas/TV.
+  static const String traktClientId = String.fromEnvironment(
+    'TRAKT_CLIENT_ID',
+    defaultValue: '',
+  );
+
+  /// Secreto OAuth Trakt (solo importa para conectar cuenta / sync).
+  static const String traktClientSecret = String.fromEnvironment(
+    'TRAKT_CLIENT_SECRET',
+    defaultValue: '',
+  );
+
+  /// Debe coincidir con el redirect registrado en trakt.tv/oauth/applications (p. ej.
+  /// `cronicle://trakt-oauth` o una URL https puente).
+  static const String traktRedirectUri = String.fromEnvironment(
+    'TRAKT_REDIRECT_URI',
+    defaultValue: '',
+  );
 }

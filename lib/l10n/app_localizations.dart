@@ -272,11 +272,23 @@ abstract class AppLocalizations {
   /// **'Cerrar sesión de Google'**
   String get googleSignOut;
 
+  /// No description provided for @googleSyncNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizar ahora'**
+  String get googleSyncNow;
+
   /// No description provided for @connectedWithGoogle.
   ///
   /// In es, this message translates to:
   /// **'Conectado con Google'**
   String get connectedWithGoogle;
+
+  /// No description provided for @googleDrivePermissionMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'La cuenta de Google está iniciada, pero no se concedió el acceso a la copia en Drive. Vuelve a intentarlo y acepta el permiso de datos de la app en Drive.'**
+  String get googleDrivePermissionMissing;
 
   /// No description provided for @googleSignInCanceledTitle.
   ///
@@ -311,7 +323,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupTitle.
   ///
   /// In es, this message translates to:
-  /// **'Copia en Google Drive'**
+  /// **'Copia de seguridad local'**
   String get backupTitle;
 
   /// No description provided for @backupUpload.
@@ -332,6 +344,12 @@ abstract class AppLocalizations {
   /// **'Backup subido correctamente'**
   String get backupUploadSuccess;
 
+  /// No description provided for @backupAnilistMergeFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo actualizar desde Anilist antes de la copia; se usarán los datos del dispositivo. {error}'**
+  String backupAnilistMergeFailed(Object error);
+
   /// No description provided for @backupExportReady.
   ///
   /// In es, this message translates to:
@@ -350,10 +368,22 @@ abstract class AppLocalizations {
   /// **'Restaurados {count} elementos'**
   String backupRestoredCount(Object count);
 
+  /// No description provided for @backupAutoGoogleTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia diaria en Google Drive'**
+  String get backupAutoGoogleTitle;
+
+  /// No description provided for @backupAutoGoogleSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Como mucho una vez al día con conexión, solo si mantienes la sesión de Google (Cuentas). Sin ventanas en segundo plano.'**
+  String get backupAutoGoogleSubtitle;
+
   /// No description provided for @backupSectionSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Incluye biblioteca, ajustes en este dispositivo y tokens de Anilist/Twitch (copia cifrada en la app). Con sesión de Google: sube o baja el JSON desde la carpeta privada de Drive; si no, comparte el archivo.'**
+  /// **'Mismo JSON que una exportación completa (biblioteca y ajustes en el dispositivo). Guárdalo en local con Compartir; si tienes sesión en Google en Cuentas, Subir también deja una copia en la carpeta de la app en Drive.'**
   String get backupSectionSubtitle;
 
   /// No description provided for @backupRestoreChooseSourceTitle.
@@ -1424,6 +1454,114 @@ abstract class AppLocalizations {
   /// **'Guardar'**
   String get addToListSave;
 
+  /// No description provided for @addToListMovieProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista (0–1)'**
+  String get addToListMovieProgress;
+
+  /// No description provided for @traktNotConfiguredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade TRAKT_CLIENT_ID a los dart-define para ver películas y series desde Trakt (sin género anime, para no duplicar AniList).'**
+  String get traktNotConfiguredHint;
+
+  /// No description provided for @traktSectionTrending.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencias'**
+  String get traktSectionTrending;
+
+  /// No description provided for @traktSectionWatchingNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Viendo ahora'**
+  String get traktSectionWatchingNow;
+
+  /// No description provided for @traktSectionPopular.
+  ///
+  /// In es, this message translates to:
+  /// **'Popular'**
+  String get traktSectionPopular;
+
+  /// No description provided for @traktTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Trakt.tv'**
+  String get traktTitle;
+
+  /// No description provided for @traktSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas y series (sin anime). Conecta tu cuenta para importar tu historial visto a la biblioteca local.'**
+  String get traktSubtitle;
+
+  /// No description provided for @traktConnectedAs.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado como {slug}'**
+  String traktConnectedAs(Object slug);
+
+  /// No description provided for @traktConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Trakt'**
+  String get traktConnect;
+
+  /// No description provided for @traktDisconnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconectar Trakt'**
+  String get traktDisconnect;
+
+  /// No description provided for @traktConnectSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta Trakt vinculada.'**
+  String get traktConnectSuccess;
+
+  /// No description provided for @traktDisconnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta Trakt desvinculada.'**
+  String get traktDisconnected;
+
+  /// No description provided for @traktOAuthMissingCredentials.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET y TRAKT_REDIRECT_URI (registrado en trakt.tv/oauth/applications).'**
+  String get traktOAuthMissingCredentials;
+
+  /// No description provided for @traktOAuthWebUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicio de sesión Trakt no disponible en web desde esta app; usa Android, iOS o escritorio.'**
+  String get traktOAuthWebUnavailable;
+
+  /// No description provided for @traktImportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar desde Trakt'**
+  String get traktImportTitle;
+
+  /// No description provided for @traktImportConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar'**
+  String get traktImportConfirm;
+
+  /// No description provided for @traktImportDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Trae películas y series vistas (sin anime) a la biblioteca de este dispositivo.'**
+  String get traktImportDesc;
+
+  /// No description provided for @traktImportedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Importados {count} títulos desde Trakt.'**
+  String traktImportedCount(Object count);
+
   /// No description provided for @syncTitle.
   ///
   /// In es, this message translates to:
@@ -1505,7 +1643,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAccountsSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Anilist sincroniza anime/manga con la nube. Twitch autentica las consultas a la API de IGDB. Google sirve para copias. Los juegos en Cronicle se guardan en el dispositivo.'**
+  /// **'Anilist sincroniza anime/manga con la nube. Trakt aporta películas y series (sin anime). Google sirve para la copia opcional en Drive. Los juegos en Cronicle se guardan en el dispositivo.'**
   String get settingsAccountsSubtitle;
 
   /// No description provided for @twitchIgdbTitle.
@@ -1633,6 +1771,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Google'**
   String get googleAccountTitle;
+
+  /// No description provided for @googleAccountSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional: el mismo JSON de copia en Google Drive (subida manual o diaria; ve Copia de seguridad local).'**
+  String get googleAccountSubtitle;
 
   /// No description provided for @anilistTitle.
   ///

@@ -20,7 +20,8 @@ void main() {
         child: const CronicleApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     expect(find.textContaining('Cronicle'), findsWidgets);
   });

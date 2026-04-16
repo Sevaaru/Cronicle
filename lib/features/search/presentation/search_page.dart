@@ -8,6 +8,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
@@ -202,18 +204,11 @@ class _PopularContent extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    if (filter == _SearchFilter.movie || filter == _SearchFilter.tv) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(filter.icon, size: 48, color: cs.onSurfaceVariant.withAlpha(80)),
-            const SizedBox(height: 12),
-            Text(l10n.searchComingSoon(_searchFilterLabel(filter, l10n)),
-                style: TextStyle(color: cs.onSurfaceVariant)),
-          ],
-        ),
-      );
+    if (filter == _SearchFilter.movie) {
+      return const TraktHomeFeedView(kind: MediaKind.movie);
+    }
+    if (filter == _SearchFilter.tv) {
+      return const TraktHomeFeedView(kind: MediaKind.tv);
     }
 
     if (filter == _SearchFilter.game) {
@@ -503,10 +498,18 @@ class _SearchResultsList extends ConsumerWidget {
           ref.watch(igdbSearchProvider(query))));
     }
     if (filter == _SearchFilter.movie) {
-      sections.add(_ResultSection.placeholder(l10n.filterMovies, MediaKind.movie));
+      sections.add(_ResultSection(
+        l10n.filterMovies,
+        MediaKind.movie,
+        ref.watch(traktSearchMoviesProvider(query)),
+      ));
     }
     if (filter == _SearchFilter.tv) {
-      sections.add(_ResultSection.placeholder(l10n.filterTv, MediaKind.tv));
+      sections.add(_ResultSection(
+        l10n.filterTv,
+        MediaKind.tv,
+        ref.watch(traktSearchShowsProvider(query)),
+      ));
     }
 
     if (sections.isEmpty) {
@@ -516,32 +519,7 @@ class _SearchResultsList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
       children: sections.map((section) {
-        if (section.isPlaceholder) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Column(
-                children: [
-                  Text(
-                    section.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.searchComingSoonApi,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return section.results!.when(
+        return section.results.when(
           loading: () => Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(
@@ -592,14 +570,10 @@ class _SearchResultsList extends ConsumerWidget {
 }
 
 class _ResultSection {
-  _ResultSection(this.title, this.kind, this.results) : isPlaceholder = false;
-  _ResultSection.placeholder(this.title, this.kind)
-      : results = null,
-        isPlaceholder = true;
+  _ResultSection(this.title, this.kind, this.results);
 
   final String title;
   final MediaKind kind;
-  final AsyncValue<List<Map<String, dynamic>>>? results;
-  final bool isPlaceholder;
+  final AsyncValue<List<Map<String, dynamic>>> results;
 }
 

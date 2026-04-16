@@ -100,7 +100,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get googleSignOut => 'Cerrar sesión de Google';
 
   @override
+  String get googleSyncNow => 'Sincronizar ahora';
+
+  @override
   String get connectedWithGoogle => 'Conectado con Google';
+
+  @override
+  String get googleDrivePermissionMissing =>
+      'La cuenta de Google está iniciada, pero no se concedió el acceso a la copia en Drive. Vuelve a intentarlo y acepta el permiso de datos de la app en Drive.';
 
   @override
   String get googleSignInCanceledTitle => 'Google no pudo completar el acceso';
@@ -122,7 +129,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'En la raíz del proyecto, copia dart_defines.example.json a dart_defines.local.json y rellena GOOGLE_SERVER_CLIENT_ID con el ID del cliente OAuth tipo «Aplicación web» de Google Cloud Console (termina en .apps.googleusercontent.com). Es obligatorio en Android para Google Sign-In 7.x.\n\nEn el mismo proyecto crea un cliente OAuth tipo «Android» con el nombre de paquete com.cronicle.app.cronicle y el SHA-1 del keystore con el que firmas esta APK (debug, release o firma de Play). Para ver los SHA-1: en la carpeta android ejecuta .\\gradlew.bat signingReport (Windows) o ./gradlew signingReport (macOS/Linux). Si publicas en Play Store, añade también el SHA-1 de «App signing» de la consola de Play.\n\nOpcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android. Después de guardar dart_defines.local.json, recompila con flutter run o scripts/build_android.ps1.';
 
   @override
-  String get backupTitle => 'Copia en Google Drive';
+  String get backupTitle => 'Copia de seguridad local';
 
   @override
   String get backupUpload => 'Subir';
@@ -132,6 +139,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get backupUploadSuccess => 'Backup subido correctamente';
+
+  @override
+  String backupAnilistMergeFailed(Object error) {
+    return 'No se pudo actualizar desde Anilist antes de la copia; se usarán los datos del dispositivo. $error';
+  }
 
   @override
   String get backupExportReady =>
@@ -146,8 +158,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get backupAutoGoogleTitle => 'Copia diaria en Google Drive';
+
+  @override
+  String get backupAutoGoogleSubtitle =>
+      'Como mucho una vez al día con conexión, solo si mantienes la sesión de Google (Cuentas). Sin ventanas en segundo plano.';
+
+  @override
   String get backupSectionSubtitle =>
-      'Incluye biblioteca, ajustes en este dispositivo y tokens de Anilist/Twitch (copia cifrada en la app). Con sesión de Google: sube o baja el JSON desde la carpeta privada de Drive; si no, comparte el archivo.';
+      'Mismo JSON que una exportación completa (biblioteca y ajustes en el dispositivo). Guárdalo en local con Compartir; si tienes sesión en Google en Cuentas, Subir también deja una copia en la carpeta de la app en Drive.';
 
   @override
   String get backupRestoreChooseSourceTitle => 'Origen de la copia';
@@ -722,6 +741,69 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addToListSave => 'Guardar';
 
   @override
+  String get addToListMovieProgress => 'Vista (0–1)';
+
+  @override
+  String get traktNotConfiguredHint =>
+      'Añade TRAKT_CLIENT_ID a los dart-define para ver películas y series desde Trakt (sin género anime, para no duplicar AniList).';
+
+  @override
+  String get traktSectionTrending => 'Tendencias';
+
+  @override
+  String get traktSectionWatchingNow => 'Viendo ahora';
+
+  @override
+  String get traktSectionPopular => 'Popular';
+
+  @override
+  String get traktTitle => 'Trakt.tv';
+
+  @override
+  String get traktSubtitle =>
+      'Películas y series (sin anime). Conecta tu cuenta para importar tu historial visto a la biblioteca local.';
+
+  @override
+  String traktConnectedAs(Object slug) {
+    return 'Conectado como $slug';
+  }
+
+  @override
+  String get traktConnect => 'Conectar Trakt';
+
+  @override
+  String get traktDisconnect => 'Desconectar Trakt';
+
+  @override
+  String get traktConnectSuccess => 'Cuenta Trakt vinculada.';
+
+  @override
+  String get traktDisconnected => 'Cuenta Trakt desvinculada.';
+
+  @override
+  String get traktOAuthMissingCredentials =>
+      'Configura TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET y TRAKT_REDIRECT_URI (registrado en trakt.tv/oauth/applications).';
+
+  @override
+  String get traktOAuthWebUnavailable =>
+      'Inicio de sesión Trakt no disponible en web desde esta app; usa Android, iOS o escritorio.';
+
+  @override
+  String get traktImportTitle => 'Importar desde Trakt';
+
+  @override
+  String get traktImportConfirm => 'Importar';
+
+  @override
+  String get traktImportDesc =>
+      'Trae películas y series vistas (sin anime) a la biblioteca de este dispositivo.';
+
+  @override
+  String traktImportedCount(Object count) {
+    return 'Importados $count títulos desde Trakt.';
+  }
+
+  @override
   String get syncTitle => 'Sincronizar con Anilist';
 
   @override
@@ -768,7 +850,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsAccountsSubtitle =>
-      'Anilist sincroniza anime/manga con la nube. Twitch autentica las consultas a la API de IGDB. Google sirve para copias. Los juegos en Cronicle se guardan en el dispositivo.';
+      'Anilist sincroniza anime/manga con la nube. Trakt aporta películas y series (sin anime). Google sirve para la copia opcional en Drive. Los juegos en Cronicle se guardan en el dispositivo.';
 
   @override
   String get twitchIgdbTitle => 'Twitch (IGDB)';
@@ -848,6 +930,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get googleAccountTitle => 'Google';
+
+  @override
+  String get googleAccountSubtitle =>
+      'Opcional: el mismo JSON de copia en Google Drive (subida manual o diaria; ve Copia de seguridad local).';
 
   @override
   String get anilistTitle => 'Anilist';

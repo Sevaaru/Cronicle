@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -61,6 +62,33 @@ Future<int> importAnilistToLocal({
     }
   }
   return count;
+}
+
+/// Si hay sesión de Anilist, descarga anime+manga desde la API y hace upsert en [db]
+/// (misma idea que «Combinar» en [showAnilistSyncDialog]), para que copias/exportaciones
+/// incluyan la lista completa aunque en local solo hubiera un subconjunto.
+Future<void> mergeAnilistLibraryIntoLocalIfSignedIn({
+  required AnilistGraphqlDatasource graphql,
+  required AppDatabase db,
+  required AnilistAuthDatasource auth,
+}) async {
+  final token = await auth.getToken();
+  if (token == null || token.isEmpty) return;
+
+  var userName = await auth.getUserName();
+  if (userName == null || userName.isEmpty) {
+    final viewer = await graphql.fetchViewer(token);
+    userName = viewer?['name'] as String? ?? '';
+    if (userName.isEmpty) return;
+    await auth.saveUserName(userName);
+  }
+
+  await importAnilistToLocal(
+    graphql: graphql,
+    db: db,
+    token: token,
+    userName: userName,
+  );
 }
 
 Future<bool> showAnilistSyncDialog({

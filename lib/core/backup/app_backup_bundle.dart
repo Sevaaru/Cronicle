@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
@@ -23,6 +24,11 @@ const _secureKeysForBackup = <String>[
   'twitch_user_refresh_token',
   'twitch_user_token_expires_ms',
   'twitch_user_login',
+  'trakt_access_token',
+  'trakt_refresh_token',
+  'trakt_token_expires_at_ms',
+  'trakt_user_slug',
+  'trakt_user_name',
 ];
 
 /// JSON de copia: biblioteca Drift, key-value Drift, SharedPreferences y tokens seguros.
@@ -202,5 +208,10 @@ abstract final class AppBackupBundle {
     ref.invalidate(igdbGameDetailProvider);
     ref.invalidate(igdbReviewByIdProvider);
     ref.invalidate(igdbSearchProvider);
+    ref.invalidate(traktSessionProvider);
+    ref.invalidate(traktMoviesHomeProvider);
+    ref.invalidate(traktShowsHomeProvider);
+    ref.invalidate(traktSearchMoviesProvider);
+    ref.invalidate(traktSearchShowsProvider);
   }
 }

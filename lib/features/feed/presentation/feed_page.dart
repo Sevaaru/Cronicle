@@ -8,6 +8,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -200,8 +202,10 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       case _FeedFilter.game:
         ref.invalidate(igdbPopularProvider);
         ref.invalidate(igdbGamesHomeAsideProvider);
-      default:
-        break;
+      case _FeedFilter.movie:
+        ref.invalidate(traktMoviesHomeProvider);
+      case _FeedFilter.tv:
+        ref.invalidate(traktShowsHomeProvider);
     }
   }
 
@@ -230,9 +234,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         );
   }
 
-  bool get _isPlaceholderFilter =>
-      _filter == _FeedFilter.movie || _filter == _FeedFilter.tv;
-
   bool get _showAnimeMangaBrowseRail =>
       _filter == _FeedFilter.anime || _filter == _FeedFilter.manga;
 
@@ -257,7 +258,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
 
     final feedLayout = ref.watch(feedFilterLayoutProvider);
     ref.listen<FeedFilterLayoutState>(feedFilterLayoutProvider, (prev, next) {
@@ -397,24 +397,10 @@ class _FeedPageState extends ConsumerState<FeedPage> {
           Expanded(
             child: _filter == _FeedFilter.game
                 ? const GamesHomeFeedView()
-                : _isPlaceholderFilter
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(_filter.icon, size: 48,
-                                color: colorScheme.onSurfaceVariant
-                                    .withAlpha(80)),
-                            const SizedBox(height: 12),
-                            Text(
-                              l10n.feedComingSoon(
-                                  _filterLabel(_filter, l10n)),
-                              style: TextStyle(
-                                  color: colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      )
+                : _filter == _FeedFilter.movie
+                    ? const TraktHomeFeedView(kind: MediaKind.movie)
+                    : _filter == _FeedFilter.tv
+                        ? const TraktHomeFeedView(kind: MediaKind.tv)
                     : _filter == _FeedFilter.feed
                         ? (_feedActivityScope == _FeedActivityScope.following
                             ? _FollowingFeedGuard(
@@ -794,7 +780,7 @@ class _ComposeCardState extends ConsumerState<_ComposeCard> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);

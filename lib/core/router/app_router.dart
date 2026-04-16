@@ -20,6 +20,8 @@ import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_show_detail_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -204,6 +206,20 @@ GoRouter appRouter(AppRouterRef ref) {
             builder: (context, state) {
               final reviewId = int.parse(state.pathParameters['id']!);
               return IgdbGameReviewDetailPage(reviewId: reviewId);
+            },
+          ),
+          GoRoute(
+            path: '/trakt-movie/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return TraktMovieDetailPage(traktId: id);
+            },
+          ),
+          GoRoute(
+            path: '/trakt-show/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return TraktShowDetailPage(traktId: id);
             },
           ),
         ],

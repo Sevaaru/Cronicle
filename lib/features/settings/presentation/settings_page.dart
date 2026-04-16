@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
@@ -15,13 +16,18 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/backup/app_backup_bundle.dart';
 import 'package:cronicle/core/backup/backup_repository_provider.dart';
+import 'package:cronicle/core/backup/data/drive_backup_repository.dart';
+import 'package:cronicle/core/errors/app_failure.dart';
+import 'package:cronicle/core/backup/google_drive_backup_prefs.dart';
+import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
-import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
-import 'package:cronicle/features/library/presentation/twitch_sync_service.dart';
+import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
@@ -162,62 +168,121 @@ class _AppearanceSection extends ConsumerWidget {
     final themeMode = ref.watch(themeModeNotifierProvider);
     final locale = ref.watch(localeNotifierProvider);
 
-    final themeButton = SegmentedButton<ThemeMode>(
-      style: SegmentedButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      segments: [
-        ButtonSegment<ThemeMode>(
-          value: ThemeMode.system,
-          tooltip: l10n.themeSystem,
-          icon: const Icon(Icons.brightness_auto_rounded, size: 20),
-        ),
-        ButtonSegment<ThemeMode>(
-          value: ThemeMode.light,
-          tooltip: l10n.themeLight,
-          icon: const Icon(Icons.light_mode_rounded, size: 20),
-        ),
-        ButtonSegment<ThemeMode>(
-          value: ThemeMode.dark,
-          tooltip: l10n.themeDark,
-          icon: const Icon(Icons.dark_mode_rounded, size: 20),
-        ),
-      ],
-      selected: {themeMode},
-      showSelectedIcon: false,
-      onSelectionChanged: (s) {
-        ref.read(themeModeNotifierProvider.notifier).setTheme(s.first);
-      },
-    );
+    Widget themeToggles(double maxWidth) {
+      const modes = [
+        ThemeMode.system,
+        ThemeMode.light,
+        ThemeMode.dark,
+      ];
+      const icons = [
+        Icons.brightness_auto_rounded,
+        Icons.light_mode_rounded,
+        Icons.dark_mode_rounded,
+      ];
+      const gap = 6.0;
 
-    final languageButton = SegmentedButton<Locale>(
-      style: SegmentedButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
+      Widget segIcon(int i) {
+        final mode = modes[i];
+        final selected = themeMode == mode;
+        final bg = selected
+            ? cs.primaryContainer
+            : cs.surfaceContainerHighest.withValues(alpha: 0.65);
+        final fg = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+        final tip = switch (i) {
+          0 => l10n.themeSystem,
+          1 => l10n.themeLight,
+          _ => l10n.themeDark,
+        };
+        return Expanded(
+          child: Tooltip(
+            message: tip,
+            child: Material(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => ref
+                    .read(themeModeNotifierProvider.notifier)
+                    .setTheme(mode),
+                child: SizedBox(
+                  height: 42,
+                  child: Center(
+                    child: Icon(icons[i], size: 20, color: fg),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return SizedBox(
+        width: maxWidth,
+        child: Row(
+          children: [
+            segIcon(0),
+            const SizedBox(width: gap),
+            segIcon(1),
+            const SizedBox(width: gap),
+            segIcon(2),
+          ],
         ),
-      ),
-      segments: const [
-        ButtonSegment<Locale>(
-          value: Locale('es'),
-          label: Text('ES'),
-          tooltip: 'Español',
+      );
+    }
+
+    Widget languageToggles(double maxWidth) {
+      const locales = [Locale('es'), Locale('en')];
+      const labels = ['ES', 'EN'];
+      const tips = ['Español', 'English'];
+      const gap = 6.0;
+
+      Widget segLang(int i) {
+        final selected = locale == locales[i];
+        final bg = selected
+            ? cs.primaryContainer
+            : cs.surfaceContainerHighest.withValues(alpha: 0.65);
+        final fg = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+        return Expanded(
+          child: Tooltip(
+            message: tips[i],
+            child: Material(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => ref
+                    .read(localeNotifierProvider.notifier)
+                    .setLocale(locales[i]),
+                child: SizedBox(
+                  height: 42,
+                  child: Center(
+                    child: Text(
+                      labels[i],
+                      style: textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: fg,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return SizedBox(
+        width: maxWidth,
+        child: Row(
+          children: [
+            segLang(0),
+            const SizedBox(width: gap),
+            segLang(1),
+          ],
         ),
-        ButtonSegment<Locale>(
-          value: Locale('en'),
-          label: Text('EN'),
-          tooltip: 'English',
-        ),
-      ],
-      selected: {locale},
-      showSelectedIcon: false,
-      onSelectionChanged: (s) {
-        ref.read(localeNotifierProvider.notifier).setLocale(s.first);
-      },
-    );
+      );
+    }
 
     return GlassCard(
       child: Column(
@@ -233,49 +298,37 @@ class _AppearanceSection extends ConsumerWidget {
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, c) {
-              const gap = 12.0;
-              const minSideBySide = 304.0;
-              final sideBySide = c.maxWidth >= minSideBySide;
-              final itemW = sideBySide ? (c.maxWidth - gap) / 2 : c.maxWidth;
-
-              Widget block(String label, Widget control) => SizedBox(
-                    width: itemW,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurfaceVariant,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          clipBehavior: Clip.none,
-                          child: control,
-                        ),
-                      ],
-                    ),
-                  );
-
-              return Wrap(
-                spacing: gap,
-                runSpacing: 14,
-                alignment: WrapAlignment.start,
-                children: [
-                  block(l10n.themeMode, themeButton),
-                  block(l10n.language, languageButton),
-                ],
-              );
-            },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.themeMode,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              LayoutBuilder(
+                builder: (context, c) => themeToggles(c.maxWidth),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l10n.language,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              LayoutBuilder(
+                builder: (context, c) => languageToggles(c.maxWidth),
+              ),
+            ],
           ),
           const Divider(height: 28),
           Text(
@@ -348,156 +401,11 @@ class _AccountsSection extends ConsumerWidget {
           const Divider(height: 24),
           const _AnilistSection(),
           const Divider(height: 24),
-          const _TwitchIgdbAccountSection(),
+          const _TraktSection(),
           const Divider(height: 24),
           _GoogleSection(googleSignIn: googleSignIn),
         ],
       ),
-    );
-  }
-}
-
-class _TwitchIgdbAccountSection extends ConsumerWidget {
-  const _TwitchIgdbAccountSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-    final twitchAsync = ref.watch(twitchIgdbAccountProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.sports_esports_rounded, size: 20, color: cs.primary),
-            const SizedBox(width: 8),
-            Text(
-              l10n.twitchIgdbTitle,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.twitchIgdbSubtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 12),
-        twitchAsync.when(
-          loading: () => const LinearProgressIndicator(),
-          error: (_, _) => Text(l10n.errorVerifyingToken),
-          data: (s) {
-            if (s.userConnected) {
-              final login = s.login;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle,
-                          size: 18, color: Colors.purpleAccent.shade100),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          login != null && login.isNotEmpty
-                              ? l10n.twitchConnectedAs(login)
-                              : l10n.anilistConnected,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.purpleAccent.shade100,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.logout, size: 18),
-                      label: Text(l10n.twitchDisconnectAccount),
-                      onPressed: () async {
-                        await ref
-                            .read(twitchIgdbAccountProvider.notifier)
-                            .disconnectUser();
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.twitchDisconnected)),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            }
-            return SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.login, size: 18),
-                label: Text(l10n.twitchConnectOAuth),
-                onPressed: () async {
-                  try {
-                    await ref
-                        .read(twitchIgdbAccountProvider.notifier)
-                        .connectOAuth();
-                    if (!context.mounted) return;
-                    final login = ref
-                            .read(twitchIgdbAccountProvider)
-                            .valueOrNull
-                            ?.login ??
-                        '';
-                    final syncRes = await showTwitchGameSyncDialog(
-                      context: context,
-                      ref: ref,
-                      login: login,
-                    );
-                    if (!context.mounted) return;
-                    if (syncRes == TwitchSyncDialogResult.skipped) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.twitchConnectSuccess)),
-                      );
-                    }
-                  } on UnsupportedError {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.twitchOAuthWebUnavailable)),
-                    );
-                  } on StateError catch (e) {
-                    if (!context.mounted) return;
-                    final msg = e.message;
-                    if (msg == 'no_credentials') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.twitchOAuthMissingSecrets)),
-                      );
-                    } else if (msg == 'no_redirect_uri' ||
-                        msg == 'invalid_redirect_uri') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.twitchRedirectNotConfigured)),
-                      );
-                    } else if (msg == 'redirect_must_be_https') {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.twitchRedirectMustBeHttps)),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.errorWithMessage(e))),
-                      );
-                    }
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.errorWithMessage(e))),
-                    );
-                  }
-                },
-              ),
-            );
-          },
-        ),
-      ],
     );
   }
 }
@@ -671,6 +579,139 @@ class _AnilistSection extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TraktSection extends ConsumerWidget {
+  const _TraktSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final sessionAsync = ref.watch(traktSessionProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.movie_filter_rounded, size: 20, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(l10n.traktTitle, style: Theme.of(context).textTheme.titleSmall),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.traktSubtitle,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        sessionAsync.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => Text(l10n.errorVerifyingToken),
+          data: (s) {
+            if (s.connected) {
+              final label = s.userSlug ?? s.userName ?? '—';
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          size: 18, color: Colors.green.shade400),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.traktConnectedAs(label),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.cloud_download_outlined, size: 18),
+                      label: Text(l10n.traktImportTitle),
+                      onPressed: () async {
+                        final token =
+                            await ref.read(traktAuthProvider).getValidAccessToken();
+                        if (token == null || !context.mounted) return;
+                        await showTraktImportDialog(
+                          context: context,
+                          api: ref.read(traktApiProvider),
+                          db: ref.read(databaseProvider),
+                          accessToken: token,
+                        );
+                        ref.invalidate(paginatedLibraryProvider);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: Text(l10n.traktDisconnect),
+                      onPressed: () async {
+                        await ref.read(traktSessionProvider.notifier).clear();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.traktDisconnected)),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.login, size: 18),
+                label: Text(l10n.traktConnect),
+                onPressed: () async {
+                  if (kIsWeb) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.traktOAuthWebUnavailable)),
+                    );
+                    return;
+                  }
+                  if (EnvConfig.traktClientId.isEmpty ||
+                      EnvConfig.traktClientSecret.isEmpty ||
+                      EnvConfig.traktRedirectUri.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(l10n.traktOAuthMissingCredentials)),
+                    );
+                    return;
+                  }
+                  try {
+                    await ref.read(traktSessionProvider.notifier).connectOAuth();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.traktConnectSuccess)),
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.errorWithMessage(e))),
+                    );
+                  }
+                },
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -886,9 +927,14 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   static const _driveScopes = [
     'https://www.googleapis.com/auth/drive.appdata',
   ];
+  static const _kPrefsGoogleDisplayEmail = 'google_sign_in_display_email';
+
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _authEventsSub;
 
   bool _loading = true;
   bool _signedIn = false;
+  String? _accountEmail;
+  bool _syncing = false;
 
   bool get _needsGoogleServerClientId {
     if (kIsWeb) return false;
@@ -921,36 +967,223 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   @override
   void initState() {
     super.initState();
+    _authEventsSub = widget.googleSignIn.authenticationEvents.listen(
+      (event) {
+        if (!mounted) return;
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          final e = event.user.email;
+          if (e.isNotEmpty) {
+            unawaited(
+              ref
+                  .read(sharedPreferencesProvider)
+                  .setString(_kPrefsGoogleDisplayEmail, e),
+            );
+          }
+          setState(() => _accountEmail = e.isEmpty ? null : e);
+          unawaited(_refreshSignedIn());
+        } else if (event is GoogleSignInAuthenticationEventSignOut) {
+          unawaited(
+            ref.read(sharedPreferencesProvider).remove(_kPrefsGoogleDisplayEmail),
+          );
+          setState(() => _accountEmail = null);
+          unawaited(_refreshSignedIn());
+        }
+      },
+      onError: (_) {},
+    );
     _refreshSignedIn();
   }
 
-  Future<void> _refreshSignedIn() async {
+  @override
+  void dispose() {
+    _authEventsSub?.cancel();
+    super.dispose();
+  }
+
+  /// Devuelve si hay autorización de Drive (sesión útil para copias en la nube).
+  Future<bool> _refreshSignedIn([GoogleSignInAccount? authenticatedAccount]) async {
     if (kIsWeb) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    final client = widget.googleSignIn.authorizationClient;
-    try {
-      final auth = await client.authorizationForScopes(_driveScopes);
       if (mounted) {
         setState(() {
-          _signedIn = auth != null;
+          _loading = false;
+          _signedIn = false;
+          _accountEmail = null;
+        });
+      }
+      return false;
+    }
+    final prefs = ref.read(sharedPreferencesProvider);
+    try {
+      final account = authenticatedAccount;
+
+      GoogleSignInAuthorizationClient authClientForUser() =>
+          account?.authorizationClient ?? widget.googleSignIn.authorizationClient;
+
+      var auth = await authClientForUser().authorizationForScopes(_driveScopes);
+
+      // Tras [authenticate], los scopes de Drive deben pedirse con el cliente
+      // de [GoogleSignInAccount]; el cliente global suele devolver null.
+      if (auth == null && account != null) {
+        try {
+          auth =
+              await account.authorizationClient.authorizeScopes(_driveScopes);
+        } on GoogleSignInException catch (e) {
+          if (e.code != GoogleSignInExceptionCode.canceled) rethrow;
+        }
+      }
+
+      final signedIn = auth != null;
+      String? email;
+      if (signedIn) {
+        if (account != null && account.email.isNotEmpty) {
+          email = account.email;
+          await prefs.setString(_kPrefsGoogleDisplayEmail, email);
+        } else {
+          email = prefs.getString(_kPrefsGoogleDisplayEmail);
+        }
+      } else {
+        if (account == null) {
+          await prefs.remove(_kPrefsGoogleDisplayEmail);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _signedIn = signedIn;
+          _accountEmail =
+              signedIn && (email != null && email.isNotEmpty) ? email : null;
           _loading = false;
         });
       }
+      return signedIn;
     } catch (_) {
       if (mounted) {
         setState(() {
           _signedIn = false;
+          _accountEmail = null;
           _loading = false;
         });
       }
+      return false;
+    }
+  }
+
+  Future<void> _syncNowToGoogle() async {
+    if (_syncing || !_signedIn || kIsWeb) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _syncing = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final prefs = ref.read(sharedPreferencesProvider);
+      const secure = FlutterSecureStorage();
+      try {
+        await mergeAnilistLibraryIntoLocalIfSignedIn(
+          graphql: ref.read(anilistGraphqlProvider),
+          db: db,
+          auth: ref.read(anilistAuthProvider),
+        );
+        ref.invalidate(paginatedLibraryProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                l10n.backupAnilistMergeFailed(l10n.errorWithMessage(e)),
+              ),
+            ),
+          );
+        }
+      }
+      final payload = await AppBackupBundle.build(
+        db: db,
+        prefs: prefs,
+        secure: secure,
+      );
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+      final bytes = Uint8List.fromList(utf8.encode(jsonStr));
+      final repo = ref.read(backupRepositoryProvider);
+      final res = await repo.uploadBackup(bytes);
+      if (!mounted) return;
+      res.fold(
+        (f) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage(f.toString()))),
+          );
+        },
+        (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.backupUploadSuccess)),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorWithMessage(e))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  /// Tras conectar Google con permiso de Drive: descarga la copia en la nube y fusiona en local.
+  Future<void> _restoreFromDriveAfterSignIn() async {
+    if (!mounted || kIsWeb) return;
+    if (_syncing) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _syncing = true);
+    try {
+      final repo = ref.read(backupRepositoryProvider);
+      final res = await repo.downloadBackup();
+      if (!mounted) return;
+      final bytes = res.fold(
+        (f) {
+          if (f is GoogleDriveFailure &&
+              f.message == DriveBackupRepository.noDriveBackupFailureMessage) {
+            return null;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage(f.toString()))),
+          );
+          return null;
+        },
+        (b) => b,
+      );
+      if (bytes == null || bytes.isEmpty) return;
+
+      final jsonStr = utf8.decode(bytes);
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+      final db = ref.read(databaseProvider);
+      final prefs = ref.read(sharedPreferencesProvider);
+      const secure = FlutterSecureStorage();
+      final imported = await AppBackupBundle.restoreFromJson(
+        json: json,
+        db: db,
+        prefs: prefs,
+        secure: secure,
+        ref: ref,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupRestoredCount(imported))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.errorWithMessage(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,7 +1191,7 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
         Row(
           children: [
             Icon(Icons.account_circle_outlined,
-                size: 20, color: Theme.of(context).colorScheme.primary),
+                size: 20, color: cs.primary),
             const SizedBox(width: 8),
             Text(
               l10n.googleAccountTitle,
@@ -966,13 +1199,18 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
             ),
           ],
         ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.googleAccountSubtitle,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
         const SizedBox(height: 12),
         if (_missingGoogleServerClientId) ...[
           Text(
             l10n.googleSignInNotConfiguredHint,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.error,
+              color: cs.error,
               height: 1.35,
             ),
           ),
@@ -983,16 +1221,76 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
         else if (_loading)
           const LinearProgressIndicator(minHeight: 2)
         else if (_signedIn)
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await widget.googleSignIn.signOut();
-                await _refreshSignedIn();
-              },
-              icon: const Icon(Icons.logout),
-              label: Text(l10n.googleSignOut),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle,
+                      size: 18, color: Colors.green.shade400),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.anilistConnected,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade400,
+                          ),
+                        ),
+                        if (_accountEmail != null &&
+                            _accountEmail!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            _accountEmail!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: _syncing ? null : _syncNowToGoogle,
+                  icon: _syncing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_upload_outlined, size: 20),
+                  label: Text(l10n.googleSyncNow),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _syncing
+                      ? null
+                      : () async {
+                          await widget.googleSignIn.signOut();
+                          await ref
+                              .read(sharedPreferencesProvider)
+                              .remove(_kPrefsGoogleDisplayEmail);
+                          await _refreshSignedIn();
+                        },
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: Text(l10n.googleSignOut),
+                ),
+              ),
+            ],
           )
         else
           SizedBox(
@@ -1004,16 +1302,26 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
                   return;
                 }
                 try {
-                  await widget.googleSignIn.authenticate(
+                  final account =
+                      await widget.googleSignIn.authenticate(
                     scopeHint: const [
                       'https://www.googleapis.com/auth/drive.appdata',
                     ],
                   );
-                  await _refreshSignedIn();
+                  final driveOk = await _refreshSignedIn(account);
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.connectedWithGoogle)),
-                  );
+                  if (driveOk) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.connectedWithGoogle)),
+                    );
+                    unawaited(_restoreFromDriveAfterSignIn());
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.googleDrivePermissionMissing),
+                      ),
+                    );
+                  }
                 } catch (e) {
                   if (!context.mounted) return;
                   if (e is GoogleSignInException &&
@@ -1085,6 +1393,24 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
       final db = ref.read(databaseProvider);
       final prefs = ref.read(sharedPreferencesProvider);
       const secure = FlutterSecureStorage();
+      try {
+        await mergeAnilistLibraryIntoLocalIfSignedIn(
+          graphql: ref.read(anilistGraphqlProvider),
+          db: db,
+          auth: ref.read(anilistAuthProvider),
+        );
+        ref.invalidate(paginatedLibraryProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                l10n.backupAnilistMergeFailed(l10n.errorWithMessage(e)),
+              ),
+            ),
+          );
+        }
+      }
       final payload = await AppBackupBundle.build(
         db: db,
         prefs: prefs,
@@ -1274,6 +1600,31 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
             l10n.backupSectionSubtitle,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
+          if (!kIsWeb) ...[
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.cloud_sync_outlined,
+                  color: cs.primary, size: 22),
+              title: Text(l10n.backupAutoGoogleTitle),
+              subtitle: Text(
+                l10n.backupAutoGoogleSubtitle,
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
+              trailing: Switch(
+                value: ref
+                        .read(sharedPreferencesProvider)
+                        .getBool(GoogleDriveBackupPrefs.autoEnabled) ??
+                    false,
+                onChanged: (v) async {
+                  final p = ref.read(sharedPreferencesProvider);
+                  await p.setBool(GoogleDriveBackupPrefs.autoEnabled, v);
+                  await GoogleDriveBackupScheduler.applyFromPrefs(p);
+                  if (mounted) setState(() {});
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Row(
             children: [

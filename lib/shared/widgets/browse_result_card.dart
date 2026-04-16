@@ -60,6 +60,10 @@ class BrowseResultCard extends StatelessWidget {
           if (itemId != null) {
             if (kind == MediaKind.game) {
               context.push('/game/$itemId');
+            } else if (kind == MediaKind.movie) {
+              context.push('/trakt-movie/$itemId');
+            } else if (kind == MediaKind.tv) {
+              context.push('/trakt-show/$itemId');
             } else {
               context.push('/media/$itemId?kind=${kind.code}');
             }
