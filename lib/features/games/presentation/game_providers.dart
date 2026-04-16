@@ -260,6 +260,9 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     final result = await FlutterWebAuth2.authenticate(
       url: uri.toString(),
       callbackUrlScheme: 'cronicle',
+      options: const FlutterWebAuth2Options(
+        intentFlags: ephemeralIntentFlags,
+      ),
     );
     final returned = Uri.parse(result);
     if (returned.queryParameters['state'] != oauthState) {

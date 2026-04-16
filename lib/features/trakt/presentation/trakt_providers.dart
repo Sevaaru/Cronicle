@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
@@ -88,10 +92,20 @@ class TraktSession extends _$TraktSession {
     await prefs.setString(_oauthStatePrefsKey, oauthState);
 
     final uri = auth.buildAuthorizeUri(oauthState);
-    final result = await FlutterWebAuth2.authenticate(
-      url: uri.toString(),
-      callbackUrlScheme: 'cronicle',
-    );
+    // Android: Chrome Custom Tab / Auth Tab no entregan bien cronicle:// ni cierran la pestaña;
+    // abrimos el navegador del sistema y esperamos el deep link en MainActivity (app_links).
+    final String result;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      result = await _traktOAuthAndroidExternalBrowser(uri, oauthState);
+    } else {
+      result = await FlutterWebAuth2.authenticate(
+        url: uri.toString(),
+        callbackUrlScheme: 'cronicle',
+        options: const FlutterWebAuth2Options(
+          intentFlags: ephemeralIntentFlags,
+        ),
+      );
+    }
     final returned = Uri.parse(result);
     if (returned.queryParameters['state'] != oauthState) {
       await prefs.remove(_oauthStatePrefsKey);
@@ -108,6 +122,54 @@ class TraktSession extends _$TraktSession {
     await prefs.remove(_oauthStatePrefsKey);
     await refreshFromNetwork();
     invalidateTraktHomeProviders(ref);
+  }
+}
+
+Future<String> _traktOAuthAndroidExternalBrowser(
+  Uri authUri,
+  String expectedState,
+) async {
+  final appLinks = AppLinks();
+  final completer = Completer<String>();
+
+  bool matches(Uri u) =>
+      u.scheme == 'cronicle' &&
+      u.host == 'trakt-oauth' &&
+      u.queryParameters['state'] == expectedState;
+
+  void completeIfMatch(Uri u) {
+    if (matches(u) && !completer.isCompleted) {
+      completer.complete(u.toString());
+    }
+  }
+
+  final initial = await appLinks.getInitialLink();
+  if (initial != null) {
+    completeIfMatch(initial);
+  }
+
+  late final StreamSubscription<Uri> sub;
+  sub = appLinks.uriLinkStream.listen(completeIfMatch);
+
+  if (completer.isCompleted) {
+    await sub.cancel();
+    return completer.future;
+  }
+
+  final launched =
+      await launchUrl(authUri, mode: LaunchMode.externalApplication);
+  if (!launched) {
+    await sub.cancel();
+    throw StateError('launch_failed');
+  }
+
+  try {
+    return await completer.future.timeout(
+      const Duration(minutes: 10),
+      onTimeout: () => throw StateError('oauth_timeout'),
+    );
+  } finally {
+    await sub.cancel();
   }
 }
 

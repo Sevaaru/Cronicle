@@ -35,8 +35,16 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Trakt OAuth: deep link al proceso principal (navegador externo + app_links).
+                 No usar CallbackActivity del plugin: Custom Tab no abre bien cronicle:// en Android 15+. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="cronicle" android:host="trakt-oauth"/>
+            </intent-filter>
         </activity>
-        <!-- flutter_web_auth_2: una entrada por host (Twitch HTTPS→puente; Trakt redirect nativo). -->
+        <!-- flutter_web_auth_2: solo Twitch (HTTPS→puente). Trakt va a MainActivity. -->
         <activity
             android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
             android:exported="true"
@@ -46,7 +54,6 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="cronicle" android:host="twitch-oauth"/>
-                <data android:scheme="cronicle" android:host="trakt-oauth"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

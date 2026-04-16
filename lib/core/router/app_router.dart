@@ -75,6 +75,14 @@ GoRouter appRouter(AppRouterRef ref) {
   return GoRouter(
     navigatorKey: cronicleRootNavigatorKey,
     initialLocation: startPage,
+    redirect: (context, state) {
+      // Android entrega el intent OAuth a MainActivity; el sistema puede
+      // exponerlo como "ruta" y GoRouter no tiene match → GoException.
+      if (state.uri.scheme == 'cronicle') {
+        return '/settings';
+      }
+      return null;
+    },
     routes: [
       ShellRoute(
         navigatorKey: _shellKey,
