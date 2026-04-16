@@ -8,6 +8,11 @@ description:
 alwaysApply: true
 ---
 
+---
+description: 
+alwaysApply: true
+---
+
 - Strict Clean Architecture: presentation → domain → data (never the reverse).
 - State: Riverpod 2.5+ with AsyncNotifier / Notifier; prefer `@riverpod` + codegen (`riverpod_generator`, `build_runner`).
 - Never use `setState` for app state; use Riverpod only.
@@ -24,3 +29,5 @@ alwaysApply: true
 - Google Sign-In uses `google_sign_in` 7.x: `GoogleSignIn.instance.initialize()` once in `main`, then `authenticate` / `authorizationClient` for scopes (e.g. Drive `appDataFolder`).
 
 - always put at the end of your messages what model you are after agent messages, specifying the ai model it is.
+
+- always keep track of everything new done in the app in the related .md  guide from the project

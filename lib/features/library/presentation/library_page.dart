@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -64,6 +67,9 @@ bool _libraryEntryHasDetailPage(LibraryEntry entry) {
   final kind = MediaKind.fromCode(entry.kind);
   if (kind == MediaKind.anime || kind == MediaKind.manga) return true;
   if (kind == MediaKind.game) return int.tryParse(entry.externalId) != null;
+  if (kind == MediaKind.movie || kind == MediaKind.tv) {
+    return int.tryParse(entry.externalId) != null;
+  }
   return false;
 }
 
@@ -72,6 +78,16 @@ void _openLibraryEntryDetail(BuildContext context, LibraryEntry entry) {
   if (kind == MediaKind.game) {
     final id = int.tryParse(entry.externalId);
     if (id != null) context.push('/game/$id');
+    return;
+  }
+  if (kind == MediaKind.movie) {
+    final id = int.tryParse(entry.externalId);
+    if (id != null) context.push('/trakt-movie/$id');
+    return;
+  }
+  if (kind == MediaKind.tv) {
+    final id = int.tryParse(entry.externalId);
+    if (id != null) context.push('/trakt-show/$id');
     return;
   }
   context.push('/media/${entry.externalId}?kind=${entry.kind}');
@@ -547,7 +563,11 @@ class _EntryCard extends StatelessWidget {
     final kind = MediaKind.fromCode(entry.kind);
     final canNavigate = _libraryEntryHasDetailPage(entry);
     final showProgressButton =
-        (kind == MediaKind.anime || kind == MediaKind.manga) &&
+        (kind == MediaKind.anime ||
+            kind == MediaKind.manga ||
+            (kind == MediaKind.tv &&
+                entry.totalEpisodes != null &&
+                entry.totalEpisodes! > 0)) &&
         entry.status == 'CURRENT';
 
     return GlassCard(
@@ -676,6 +696,11 @@ class _IncrementButtonState extends State<_IncrementButton> {
       final kind = MediaKind.fromCode(widget.entry.kind);
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();
+      } else if (kind == MediaKind.tv) {
+        final tid = int.tryParse(widget.entry.externalId);
+        if (tid != null) {
+          unawaited(syncTraktEntryFromLocalDatabase(widget.ref, MediaKind.tv, tid));
+        }
       }
     } finally {
       if (mounted) setState(() => _busy = false);

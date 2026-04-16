@@ -754,6 +754,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get traktSectionWatchingNow => 'Viendo ahora';
 
   @override
+  String get traktSectionAnticipatedMovies => 'Más esperadas';
+
+  @override
   String get traktSectionPopular => 'Popular';
 
   @override
@@ -802,6 +805,55 @@ class AppLocalizationsEs extends AppLocalizations {
   String traktImportedCount(Object count) {
     return 'Importados $count títulos desde Trakt.';
   }
+
+  @override
+  String get traktDetailLinks => 'Enlaces';
+
+  @override
+  String get traktLinkTrailer => 'Tráiler';
+
+  @override
+  String get traktLinkHomepage => 'Sitio web';
+
+  @override
+  String get traktDetailOnTrakt => 'Abrir en Trakt';
+
+  @override
+  String get traktEpisodeProgressTitle => 'Progreso de episodios';
+
+  @override
+  String get traktEpisodeProgressHint =>
+      'Añade esta serie a tu biblioteca para llevar la cuenta de episodios vistos.';
+
+  @override
+  String get traktEpisodeProgressMarkComplete => 'Marcar serie como completada';
+
+  @override
+  String get traktEpisodeMinusOne => 'Un episodio menos';
+
+  @override
+  String get traktEpisodePlusOne => 'Un episodio más';
+
+  @override
+  String get traktDetailVotes => 'Votos';
+
+  @override
+  String get traktDetailLanguage => 'Idioma';
+
+  @override
+  String get traktDetailOriginalTitle => 'Título original';
+
+  @override
+  String get traktDetailSubgenres => 'Subgéneros';
+
+  @override
+  String get traktDetailCountry => 'País';
+
+  @override
+  String get traktDetailYear => 'Año';
+
+  @override
+  String get traktDetailNetwork => 'Cadena';
 
   @override
   String get syncTitle => 'Sincronizar con Anilist';

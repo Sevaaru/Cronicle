@@ -751,6 +751,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get traktSectionWatchingNow => 'Watching now';
 
   @override
+  String get traktSectionAnticipatedMovies => 'Most anticipated';
+
+  @override
   String get traktSectionPopular => 'Popular';
 
   @override
@@ -799,6 +802,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String traktImportedCount(Object count) {
     return 'Imported $count titles from Trakt.';
   }
+
+  @override
+  String get traktDetailLinks => 'Links';
+
+  @override
+  String get traktLinkTrailer => 'Trailer';
+
+  @override
+  String get traktLinkHomepage => 'Website';
+
+  @override
+  String get traktDetailOnTrakt => 'Open on Trakt';
+
+  @override
+  String get traktEpisodeProgressTitle => 'Episode progress';
+
+  @override
+  String get traktEpisodeProgressHint =>
+      'Add this show to your library to track how many episodes you’ve watched.';
+
+  @override
+  String get traktEpisodeProgressMarkComplete => 'Mark show completed';
+
+  @override
+  String get traktEpisodeMinusOne => 'One episode less';
+
+  @override
+  String get traktEpisodePlusOne => 'One episode more';
+
+  @override
+  String get traktDetailVotes => 'Votes';
+
+  @override
+  String get traktDetailLanguage => 'Language';
+
+  @override
+  String get traktDetailOriginalTitle => 'Original title';
+
+  @override
+  String get traktDetailSubgenres => 'Subgenres';
+
+  @override
+  String get traktDetailCountry => 'Country';
+
+  @override
+  String get traktDetailYear => 'Year';
+
+  @override
+  String get traktDetailNetwork => 'Network';
 
   @override
   String get syncTitle => 'Sync with Anilist';

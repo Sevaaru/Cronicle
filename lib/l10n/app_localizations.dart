@@ -1478,6 +1478,12 @@ abstract class AppLocalizations {
   /// **'Viendo ahora'**
   String get traktSectionWatchingNow;
 
+  /// No description provided for @traktSectionAnticipatedMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Más esperadas'**
+  String get traktSectionAnticipatedMovies;
+
   /// No description provided for @traktSectionPopular.
   ///
   /// In es, this message translates to:
@@ -1561,6 +1567,102 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Importados {count} títulos desde Trakt.'**
   String traktImportedCount(Object count);
+
+  /// No description provided for @traktDetailLinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlaces'**
+  String get traktDetailLinks;
+
+  /// No description provided for @traktLinkTrailer.
+  ///
+  /// In es, this message translates to:
+  /// **'Tráiler'**
+  String get traktLinkTrailer;
+
+  /// No description provided for @traktLinkHomepage.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web'**
+  String get traktLinkHomepage;
+
+  /// No description provided for @traktDetailOnTrakt.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en Trakt'**
+  String get traktDetailOnTrakt;
+
+  /// No description provided for @traktEpisodeProgressTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso de episodios'**
+  String get traktEpisodeProgressTitle;
+
+  /// No description provided for @traktEpisodeProgressHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade esta serie a tu biblioteca para llevar la cuenta de episodios vistos.'**
+  String get traktEpisodeProgressHint;
+
+  /// No description provided for @traktEpisodeProgressMarkComplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Marcar serie como completada'**
+  String get traktEpisodeProgressMarkComplete;
+
+  /// No description provided for @traktEpisodeMinusOne.
+  ///
+  /// In es, this message translates to:
+  /// **'Un episodio menos'**
+  String get traktEpisodeMinusOne;
+
+  /// No description provided for @traktEpisodePlusOne.
+  ///
+  /// In es, this message translates to:
+  /// **'Un episodio más'**
+  String get traktEpisodePlusOne;
+
+  /// No description provided for @traktDetailVotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Votos'**
+  String get traktDetailVotes;
+
+  /// No description provided for @traktDetailLanguage.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get traktDetailLanguage;
+
+  /// No description provided for @traktDetailOriginalTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Título original'**
+  String get traktDetailOriginalTitle;
+
+  /// No description provided for @traktDetailSubgenres.
+  ///
+  /// In es, this message translates to:
+  /// **'Subgéneros'**
+  String get traktDetailSubgenres;
+
+  /// No description provided for @traktDetailCountry.
+  ///
+  /// In es, this message translates to:
+  /// **'País'**
+  String get traktDetailCountry;
+
+  /// No description provided for @traktDetailYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año'**
+  String get traktDetailYear;
+
+  /// No description provided for @traktDetailNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Cadena'**
+  String get traktDetailNetwork;
 
   /// No description provided for @syncTitle.
   ///

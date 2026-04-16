@@ -40,7 +40,7 @@ final traktApiProvider = Provider<TraktApiDatasource>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TraktApiRef = ProviderRef<TraktApiDatasource>;
-String _$traktMoviesHomeHash() => r'd1683e9701f28e7fb4f791c60eb3ac5b2361afe1';
+String _$traktMoviesHomeHash() => r'909396f1d7a9d68106d59acb7b278a21bef0de2d';
 
 /// See also [traktMoviesHome].
 @ProviderFor(traktMoviesHome)
@@ -609,5 +609,24 @@ final traktSessionProvider =
     );
 
 typedef _$TraktSession = AsyncNotifier<TraktSessionState>;
+String _$favoriteTraktTitlesHash() =>
+    r'93edd6043d7f3ba75036de3f18dff5041c128f5a';
+
+/// Películas y series Trakt marcadas como favoritas (solo local, SharedPreferences).
+///
+/// Copied from [FavoriteTraktTitles].
+@ProviderFor(FavoriteTraktTitles)
+final favoriteTraktTitlesProvider =
+    NotifierProvider<FavoriteTraktTitles, List<Map<String, dynamic>>>.internal(
+      FavoriteTraktTitles.new,
+      name: r'favoriteTraktTitlesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$favoriteTraktTitlesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$FavoriteTraktTitles = Notifier<List<Map<String, dynamic>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

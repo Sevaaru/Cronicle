@@ -126,19 +126,14 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  Future<List<Map<String, dynamic>>> moviesWatching({int limit = 30}) async {
+  /// Películas más esperadas (la API **no** expone `/movies/watching`; solo existe para series).
+  Future<List<Map<String, dynamic>>> moviesAnticipated({int limit = 30}) async {
     final res = await _dio.get<dynamic>(
-      '$_base/movies/watching',
+      '$_base/movies/anticipated',
       queryParameters: {'limit': limit, 'extended': _extended},
       options: await _options(),
     );
-    final rows = _list(res.data);
-    final movies = <Map<String, dynamic>>[];
-    for (final row in rows) {
-      final m = row['movie'] as Map<String, dynamic>?;
-      if (m != null) movies.add(m);
-    }
-    return _filterMovies(movies);
+    return _fromTrendingMovies(_list(res.data));
   }
 
   Future<List<Map<String, dynamic>>> showsWatching({int limit = 30}) async {
@@ -154,27 +149,6 @@ class TraktApiDatasource {
       if (s != null) shows.add(s);
     }
     return _filterShows(shows);
-  }
-
-  /// Actividad pública: usuarios viendo ahora (películas), sin duplicar anime.
-  Future<List<Map<String, dynamic>>> moviesWatchingActivity({int limit = 40}) async {
-    final res = await _dio.get<dynamic>(
-      '$_base/movies/watching',
-      queryParameters: {'limit': limit, 'extended': _extended},
-      options: await _options(),
-    );
-    final out = <Map<String, dynamic>>[];
-    for (final row in _list(res.data)) {
-      final m = row['movie'] as Map<String, dynamic>?;
-      final u = row['user'] as Map<String, dynamic>?;
-      if (m == null || rawTraktMovieIsAnime(m)) continue;
-      out.add({
-        'user': u,
-        'movie': m,
-        'expires_at': row['expires_at'],
-      });
-    }
-    return out;
   }
 
   Future<List<Map<String, dynamic>>> showsWatchingActivity({int limit = 40}) async {
@@ -309,6 +283,139 @@ class TraktApiDatasource {
     );
     if (res.statusCode != 200 || res.data is! Map) return null;
     return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  Future<Response<dynamic>> _postAuthorized(
+    String path,
+    Map<String, dynamic> body,
+    String accessToken,
+  ) async {
+    final baseOpts = await _options(bearerToken: accessToken);
+    return _dio.post<dynamic>(
+      '$_base$path',
+      data: body,
+      options: Options(
+        headers: baseOpts.headers,
+        contentType: Headers.jsonContentType,
+        validateStatus: (_) => true,
+      ),
+    );
+  }
+
+  void _ensureSync2xx(Response<dynamic> res, String endpoint) {
+    final c = res.statusCode ?? 0;
+    if (c < 200 || c >= 300) {
+      final msg = res.data is Map
+          ? '${(res.data as Map)['error'] ?? res.data}'
+          : '$res.data';
+      throw StateError('Trakt $endpoint HTTP $c: $msg');
+    }
+  }
+
+  /// Episodios en orden emisión (temporada asc, episodio asc). Omite temporada 0
+  /// (especiales) si existe al menos una temporada > 0.
+  Future<List<(int season, int episode)>> fetchShowEpisodesAiringOrder(int showTraktId) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/shows/$showTraktId/seasons',
+      queryParameters: {'extended': 'episodes'},
+      options: await _options(),
+    );
+    if (res.statusCode != 200 || res.data is! List) return [];
+    final list = _list(res.data);
+    final skipZero = list.any((s) => ((s['number'] as num?)?.toInt() ?? -1) > 0);
+    final seasons = [...list]..sort(
+        (a, b) => ((a['number'] as num?)?.toInt() ?? 0)
+            .compareTo((b['number'] as num?)?.toInt() ?? 0),
+      );
+    final out = <(int, int)>[];
+    for (final s in seasons) {
+      final sn = (s['number'] as num?)?.toInt() ?? 0;
+      if (skipZero && sn == 0) continue;
+      final eps = (s['episodes'] as List?) ?? [];
+      final sorted = [...eps]
+        ..sort(
+          (a, b) => ((((a as Map)['number'] as num?)?.toInt() ?? 0))
+              .compareTo((((b as Map)['number'] as num?)?.toInt() ?? 0)),
+        );
+      for (final ep in sorted) {
+        final m = ep as Map<String, dynamic>;
+        final en = (m['number'] as num?)?.toInt() ?? 0;
+        out.add((sn, en));
+      }
+    }
+    return out;
+  }
+
+  Future<void> syncHistoryAddMovies(String accessToken, List<Map<String, dynamic>> movies) async {
+    if (movies.isEmpty) return;
+    final r = await _postAuthorized('/sync/history', {'movies': movies}, accessToken);
+    _ensureSync2xx(r, '/sync/history');
+  }
+
+  Future<void> syncHistoryRemoveMovies(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/history/remove', {'movies': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/history/remove');
+  }
+
+  Future<void> syncHistoryAddShows(String accessToken, List<Map<String, dynamic>> shows) async {
+    if (shows.isEmpty) return;
+    final r = await _postAuthorized('/sync/history', {'shows': shows}, accessToken);
+    _ensureSync2xx(r, '/sync/history');
+  }
+
+  Future<void> syncHistoryRemoveShows(String accessToken, List<Map<String, dynamic>> shows) async {
+    if (shows.isEmpty) return;
+    final r = await _postAuthorized('/sync/history/remove', {'shows': shows}, accessToken);
+    _ensureSync2xx(r, '/sync/history/remove');
+  }
+
+  Future<void> syncWatchlistAddMovies(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/watchlist', {'movies': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/watchlist');
+  }
+
+  Future<void> syncWatchlistRemoveMovies(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/watchlist/remove', {'movies': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/watchlist/remove');
+  }
+
+  Future<void> syncWatchlistAddShows(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/watchlist', {'shows': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/watchlist');
+  }
+
+  Future<void> syncWatchlistRemoveShows(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/watchlist/remove', {'shows': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/watchlist/remove');
+  }
+
+  Future<void> syncRatingsMovies(String accessToken, List<Map<String, dynamic>> rows) async {
+    if (rows.isEmpty) return;
+    final r = await _postAuthorized('/sync/ratings', {'movies': rows}, accessToken);
+    _ensureSync2xx(r, '/sync/ratings');
+  }
+
+  Future<void> syncRatingsShows(String accessToken, List<Map<String, dynamic>> rows) async {
+    if (rows.isEmpty) return;
+    final r = await _postAuthorized('/sync/ratings', {'shows': rows}, accessToken);
+    _ensureSync2xx(r, '/sync/ratings');
+  }
+
+  Future<void> syncRatingsRemoveMovies(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/ratings/remove', {'movies': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/ratings/remove');
+  }
+
+  Future<void> syncRatingsRemoveShows(String accessToken, List<Map<String, dynamic>> idsMaps) async {
+    if (idsMaps.isEmpty) return;
+    final r = await _postAuthorized('/sync/ratings/remove', {'shows': idsMaps}, accessToken);
+    _ensureSync2xx(r, '/sync/ratings/remove');
   }
 }
 

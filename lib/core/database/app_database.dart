@@ -186,6 +186,43 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> setLibraryProgress(int entryId, int progress) async {
+    final entry = await getLibraryEntryById(entryId);
+    if (entry == null) return;
+    var p = progress;
+    if (p < 0) p = 0;
+    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
+      p = entry.totalEpisodes!;
+    }
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        progress: Value(p),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> setLibraryProgressAndStatus(
+    int entryId,
+    int progress,
+    String status,
+  ) async {
+    final entry = await getLibraryEntryById(entryId);
+    if (entry == null) return;
+    var p = progress;
+    if (p < 0) p = 0;
+    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
+      p = entry.totalEpisodes!;
+    }
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        progress: Value(p),
+        status: Value(status.toUpperCase()),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   /// Normaliza todos los status a uppercase para corregir entries guardados con lowercase.
   Future<void> normalizeStatuses() async {
     final all = await select(libraryEntries).get();

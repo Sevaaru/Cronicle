@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:drift/drift.dart' as drift;
@@ -113,6 +116,12 @@ Future<bool> showAddToLibrarySheet({
     if (kind == MediaKind.anime || kind == MediaKind.manga) {
       _deleteEntryFromAnilist(ref, int.tryParse(existingEntry.externalId));
     }
+    if (kind == MediaKind.movie || kind == MediaKind.tv) {
+      final tid = int.tryParse(existingEntry.externalId);
+      if (tid != null) {
+        unawaited(removeTraktRemoteForDeletedEntry(ref, kind, tid));
+      }
+    }
     return true;
   }
 
@@ -153,6 +162,13 @@ Future<bool> showAddToLibrarySheet({
 
   if ((kind == MediaKind.anime || kind == MediaKind.manga) && mediaId != null) {
     _syncEntryToAnilist(ref, mediaId as int, result);
+  }
+
+  if ((kind == MediaKind.movie || kind == MediaKind.tv) && mediaId != null) {
+    final tid = int.tryParse(mediaId.toString());
+    if (tid != null) {
+      unawaited(syncTraktEntryFromLocalDatabase(ref, kind, tid));
+    }
   }
 
   return true;

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 /// Listado Trakt (películas o series) para el feed o `/movies` / `/tv`.
 class TraktHomeFeedView extends ConsumerWidget {
@@ -49,7 +49,17 @@ class TraktHomeFeedView extends ConsumerWidget {
               child: Text(l10n.errorWithMessage(e)),
             ),
           ),
-          data: (d) => _homeList(l10n, d.trending, d.watching, d.popular, kind),
+          data: (d) => ScrollConfiguration(
+                behavior: const _TraktHomeScrollBehavior(),
+                child: _homeList(
+                  l10n,
+                  d.trending,
+                  l10n.traktSectionAnticipatedMovies,
+                  d.anticipated,
+                  d.popular,
+                  kind,
+                ),
+              ),
         ),
       );
     }
@@ -68,7 +78,17 @@ class TraktHomeFeedView extends ConsumerWidget {
             child: Text(l10n.errorWithMessage(e)),
           ),
         ),
-        data: (d) => _homeList(l10n, d.trending, d.watching, d.popular, kind),
+        data: (d) => ScrollConfiguration(
+              behavior: const _TraktHomeScrollBehavior(),
+              child: _homeList(
+                l10n,
+                d.trending,
+                l10n.traktSectionWatchingNow,
+                d.watching,
+                d.popular,
+                kind,
+              ),
+            ),
       ),
     );
   }
@@ -77,7 +97,8 @@ class TraktHomeFeedView extends ConsumerWidget {
 Widget _homeList(
   AppLocalizations l10n,
   List<Map<String, dynamic>> trending,
-  List<Map<String, dynamic>> watching,
+  String middleSectionTitle,
+  List<Map<String, dynamic>> middle,
   List<Map<String, dynamic>> popular,
   MediaKind kind,
 ) {
@@ -90,8 +111,8 @@ Widget _homeList(
         kind: kind,
       ),
       _TraktCarouselSection(
-        title: l10n.traktSectionWatchingNow,
-        items: watching,
+        title: middleSectionTitle,
+        items: middle,
         kind: kind,
       ),
       _TraktCarouselSection(
@@ -139,6 +160,8 @@ class _TraktCarouselSection extends StatelessWidget {
           SizedBox(
             height: 188,
             child: ListView.separated(
+              primary: false,
+              physics: const ClampingScrollPhysics(),
               scrollDirection: Axis.horizontal,
               itemCount: items.length,
               separatorBuilder: (_, _) => const SizedBox(width: 10),
@@ -161,7 +184,7 @@ class _TraktCarouselSection extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: cover != null
-                              ? CachedNetworkImage(
+                              ? RemoteNetworkImage(
                                   imageUrl: cover,
                                   width: 110,
                                   height: 150,
@@ -215,4 +238,19 @@ class _TraktCarouselSection extends StatelessWidget {
       ),
     );
   }
+}
+
+/// En web [ThemeData.platform] suele ser «android», y Material 3 aplica
+/// [StretchingOverscrollIndicator]: al soltar el scroll el contenido sigue
+/// animándose un momento (títulos y textos «se mueven» solos).
+class _TraktHomeScrollBehavior extends MaterialScrollBehavior {
+  const _TraktHomeScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) =>
+      child;
 }

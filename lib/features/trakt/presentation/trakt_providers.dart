@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
@@ -124,12 +126,13 @@ class TraktSessionState {
 class TraktMoviesHomeData {
   const TraktMoviesHomeData({
     required this.trending,
-    required this.watching,
+    required this.anticipated,
     required this.popular,
   });
 
   final List<Map<String, dynamic>> trending;
-  final List<Map<String, dynamic>> watching;
+  /// `/movies/anticipated` (Trakt no ofrece `/movies/watching`).
+  final List<Map<String, dynamic>> anticipated;
   final List<Map<String, dynamic>> popular;
 }
 
@@ -148,17 +151,17 @@ class TraktShowsHomeData {
 @riverpod
 Future<TraktMoviesHomeData> traktMoviesHome(TraktMoviesHomeRef ref) async {
   if (EnvConfig.traktClientId.isEmpty) {
-    return const TraktMoviesHomeData(trending: [], watching: [], popular: []);
+    return const TraktMoviesHomeData(trending: [], anticipated: [], popular: []);
   }
   final api = ref.watch(traktApiProvider);
   final results = await Future.wait([
     api.moviesTrending(limit: 18),
-    api.moviesWatching(limit: 18),
+    api.moviesAnticipated(limit: 18),
     api.moviesPopular(limit: 18),
   ]);
   return TraktMoviesHomeData(
     trending: results[0],
-    watching: results[1],
+    anticipated: results[1],
     popular: results[2],
   );
 }
@@ -215,6 +218,64 @@ Future<Map<String, dynamic>?> traktShowDetail(
 ) async {
   if (EnvConfig.traktClientId.isEmpty) return null;
   return ref.read(traktApiProvider).fetchShowSummary(traktId);
+}
+
+const _favoriteTraktPrefsKey = 'favorite_trakt_titles_v1';
+
+List<Map<String, dynamic>> _decodeFavoriteTraktJson(String? raw) {
+  if (raw == null || raw.isEmpty) return [];
+  try {
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Map<String, dynamic> _snapshotTraktTitleForFavorites(Map<String, dynamic> item) {
+  final title = item['title'] as Map<String, dynamic>? ?? {};
+  final cover = item['coverImage'] as Map<String, dynamic>? ?? {};
+  return {
+    'id': item['id'],
+    'trakt_type': item['trakt_type'] ?? 'movie',
+    'title': {
+      'english': title['english'],
+      'romaji': title['romaji'],
+    },
+    'coverImage': {
+      'large': cover['large'] ?? cover['extraLarge'],
+    },
+  };
+}
+
+/// Películas y series Trakt marcadas como favoritas (solo local, SharedPreferences).
+@Riverpod(keepAlive: true)
+class FavoriteTraktTitles extends _$FavoriteTraktTitles {
+  @override
+  List<Map<String, dynamic>> build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _decodeFavoriteTraktJson(prefs.getString(_favoriteTraktPrefsKey));
+  }
+
+  Future<void> toggleFavorite(Map<String, dynamic> item) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final id = (item['id'] as num?)?.toInt();
+    if (id == null || id <= 0) return;
+    final type = (item['trakt_type'] as String?) ?? 'movie';
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere((e) {
+      final eid = (e['id'] as num?)?.toInt() ?? 0;
+      final et = (e['trakt_type'] as String?) ?? 'movie';
+      return eid == id && et == type;
+    });
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add(_snapshotTraktTitleForFavorites(item));
+    }
+    await prefs.setString(_favoriteTraktPrefsKey, jsonEncode(next));
+    state = next;
+  }
 }
 
 void invalidateTraktHomeProviders(dynamic ref) {

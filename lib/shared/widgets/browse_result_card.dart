@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 /// Tarjeta estilo búsqueda (portada, chips, géneros, nota, botón + a biblioteca).
 class BrowseResultCard extends StatelessWidget {
@@ -75,7 +75,7 @@ class BrowseResultCard extends StatelessWidget {
               borderRadius:
                   const BorderRadius.horizontal(left: Radius.circular(20)),
               child: poster != null
-                  ? CachedNetworkImage(
+                  ? RemoteNetworkImage(
                       imageUrl: poster,
                       width: 75,
                       height: 105,
