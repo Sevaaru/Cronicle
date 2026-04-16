@@ -28,13 +28,39 @@ class DefaultFeedTab extends _$DefaultFeedTab {
   @override
   String build() {
     final prefs = ref.watch(sharedPreferencesProvider);
-    return prefs.getString(_key) ?? 'all';
+    final raw = prefs.getString(_key);
+    if (raw == null || raw.isEmpty) return 'feed';
+    if (raw == 'following' || raw == 'all') return 'feed';
+    return raw;
   }
 
   Future<void> set(String tab) async {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setString(_key, tab);
     state = tab;
+  }
+}
+
+@riverpod
+class DefaultFeedActivityScope extends _$DefaultFeedActivityScope {
+  static const _key = 'default_feed_activity_scope';
+
+  @override
+  String build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final raw = prefs.getString(_key);
+    if (raw == 'following') return 'following';
+    if (raw == 'global') return 'global';
+    final legacyTab = prefs.getString('default_feed_tab');
+    if (legacyTab == 'following') return 'following';
+    return 'global';
+  }
+
+  Future<void> set(String scope) async {
+    if (scope != 'following' && scope != 'global') return;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, scope);
+    state = scope;
   }
 }
 

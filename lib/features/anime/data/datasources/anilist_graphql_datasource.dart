@@ -254,6 +254,94 @@ class AnilistGraphqlDatasource {
     return [];
   }
 
+  /// Listado paginado por género y/o etiqueta Anilist ([genre] / [tag] son listas de un elemento).
+  ///
+  /// [sortKey]: `score` | `popularity` | `name` → SCORE_DESC, POPULARITY_DESC, TITLE_ROMAJI.
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
+      fetchMediaByGenreTagPage({
+    required String type,
+    required String sortKey,
+    String? genre,
+    String? tag,
+    int page = 1,
+    int perPage = 24,
+  }) async {
+    final sortEnum = switch (sortKey) {
+      'score' => 'SCORE_DESC',
+      'name' => 'TITLE_ROMAJI',
+      _ => 'POPULARITY_DESC',
+    };
+
+    const mediaFields = '''
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            episodes
+            chapters
+            volumes
+            averageScore
+            status
+            format
+            genres
+    ''';
+
+    final useGenre = genre != null && genre.isNotEmpty;
+    final useTag = tag != null && tag.isNotEmpty;
+    if (!useGenre && !useTag) {
+      return (items: <Map<String, dynamic>>[], hasNextPage: false);
+    }
+
+    final varLines = <String>[
+      r'$type: MediaType',
+      r'$page: Int',
+      r'$perPage: Int',
+      r'$sort: [MediaSort]',
+    ];
+    final mediaFilters = <String>[r'type: $type', r'sort: $sort'];
+    if (useGenre) {
+      varLines.add(r'$genre_in: [String]');
+      mediaFilters.add(r'genre_in: $genre_in');
+    }
+    if (useTag) {
+      varLines.add(r'$tag_in: [String]');
+      mediaFilters.add(r'tag_in: $tag_in');
+    }
+
+    final queryBuilt = StringBuffer()
+      ..write('query (')
+      ..write(varLines.join(', '))
+      ..writeln(') {')
+      ..writeln('  Page(page: \$page, perPage: \$perPage) {')
+      ..writeln('    pageInfo { hasNextPage }')
+      ..write('    media(')
+      ..write(mediaFilters.join(', '))
+      ..writeln(') {')
+      ..writeln(mediaFields)
+      ..writeln('    }')
+      ..writeln('  }')
+      ..write('}');
+
+    final queryStr = queryBuilt.toString();
+
+    final variables = <String, dynamic>{
+      'type': type,
+      'page': page,
+      'perPage': perPage,
+      'sort': [sortEnum],
+    };
+    if (useGenre) variables['genre_in'] = [genre];
+    if (useTag) variables['tag_in'] = [tag];
+
+    final data = await _post(queryStr, variables: variables);
+    final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+    final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+    final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+        <Map<String, dynamic>>[];
+    return (items: list, hasNextPage: hasNext);
+  }
+
   /// Search Anilist media by type (ANIME or MANGA).
   Future<List<Map<String, dynamic>>> searchMedia(
     String search, {
@@ -890,6 +978,47 @@ class AnilistGraphqlDatasource {
                 chapters
                 volumes
                 format
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'userName': userName, 'type': type},
+      token: token,
+    );
+    final lists = (data['data']?['MediaListCollection']?['lists'] as List?) ??
+        [];
+    final entries = <Map<String, dynamic>>[];
+    for (final list in lists) {
+      for (final entry in (list['entries'] as List? ?? [])) {
+        entries.add(entry as Map<String, dynamic>);
+      }
+    }
+    return entries;
+  }
+
+  /// Entradas en **CURRENT** (viendo/leyendo) con `media.status` y `nextAiringEpisode`
+  /// (para avisos de nuevos capítulos en segundo plano).
+  Future<List<Map<String, dynamic>>> fetchCurrentListWithAiringSchedule({
+    required String token,
+    required String userName,
+    required String type,
+  }) async {
+    const query = r'''
+      query ($userName: String, $type: MediaType) {
+        MediaListCollection(userName: $userName, type: $type, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                id
+                type
+                status
+                title { romaji english }
+                nextAiringEpisode { airingAt episode }
               }
             }
           }

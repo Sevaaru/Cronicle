@@ -22,7 +22,7 @@ final defaultStartPageProvider =
     );
 
 typedef _$DefaultStartPage = AutoDisposeNotifier<String>;
-String _$defaultFeedTabHash() => r'bf7cde38a6093990472e248f1fea1e2eb55443aa';
+String _$defaultFeedTabHash() => r'1783cfe747faff619d92f42e69defd014300d5bc';
 
 /// See also [DefaultFeedTab].
 @ProviderFor(DefaultFeedTab)
@@ -38,6 +38,23 @@ final defaultFeedTabProvider =
     );
 
 typedef _$DefaultFeedTab = AutoDisposeNotifier<String>;
+String _$defaultFeedActivityScopeHash() =>
+    r'b67194e05f2ccb4edb835e68b0b9f08ba440c5f1';
+
+/// See also [DefaultFeedActivityScope].
+@ProviderFor(DefaultFeedActivityScope)
+final defaultFeedActivityScopeProvider =
+    AutoDisposeNotifierProvider<DefaultFeedActivityScope, String>.internal(
+      DefaultFeedActivityScope.new,
+      name: r'defaultFeedActivityScopeProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$defaultFeedActivityScopeHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$DefaultFeedActivityScope = AutoDisposeNotifier<String>;
 String _$hideTextActivitiesHash() =>
     r'6bf85e67c98f3c6f79da23bb7d43126f344aa657';
 

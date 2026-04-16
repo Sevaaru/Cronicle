@@ -7,8 +7,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
 String _feedFilterTitle(String id, AppLocalizations l10n) => switch (id) {
-      'following' => l10n.filterFollowing,
-      'all' => l10n.filterGlobal,
+      'feed' => l10n.filterFeed,
       'anime' => l10n.filterAnime,
       'manga' => l10n.filterManga,
       'movie' => l10n.filterMovies,

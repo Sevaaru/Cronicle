@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -17,8 +19,7 @@ import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 enum _FeedFilter {
-  following,
-  all,
+  feed,
   anime,
   manga,
   movie,
@@ -26,8 +27,7 @@ enum _FeedFilter {
   game;
 
   IconData get icon => switch (this) {
-        _FeedFilter.following => Icons.people_rounded,
-        _FeedFilter.all => Icons.public_rounded,
+        _FeedFilter.feed => Icons.dynamic_feed_rounded,
         _FeedFilter.anime => Icons.animation_rounded,
         _FeedFilter.manga => Icons.menu_book_rounded,
         _FeedFilter.movie => Icons.movie_rounded,
@@ -36,9 +36,13 @@ enum _FeedFilter {
       };
 }
 
+enum _FeedActivityScope {
+  following,
+  global,
+}
+
 String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
-      _FeedFilter.following => l10n.filterFollowing,
-      _FeedFilter.all => l10n.filterGlobal,
+      _FeedFilter.feed => l10n.filterFeed,
       _FeedFilter.anime => l10n.filterAnime,
       _FeedFilter.manga => l10n.filterManga,
       _FeedFilter.movie => l10n.filterMovies,
@@ -96,6 +100,60 @@ String _timeAgo(DateTime dt, AppLocalizations l10n) {
   return l10n.timeWeeks((diff.inDays / 7).floor());
 }
 
+/// Siguiendo / Global: mismos [FilterChip] compactos que la barra de filtros del feed.
+class _FeedActivityScopeBar extends StatelessWidget {
+  const _FeedActivityScopeBar({
+    required this.scope,
+    required this.onChanged,
+    required this.l10n,
+  });
+
+  final _FeedActivityScope scope;
+  final ValueChanged<_FeedActivityScope> onChanged;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FilterChip(
+            selected: scope == _FeedActivityScope.following,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.people_rounded, size: 15),
+                const SizedBox(width: 4),
+                Text(l10n.filterFollowing, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+            onSelected: (_) => onChanged(_FeedActivityScope.following),
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+          ),
+          const SizedBox(width: 6),
+          FilterChip(
+            selected: scope == _FeedActivityScope.global,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.public_rounded, size: 15),
+                const SizedBox(width: 4),
+                Text(l10n.filterGlobal, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+            onSelected: (_) => onChanged(_FeedActivityScope.global),
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({super.key});
 
@@ -104,14 +162,18 @@ class FeedPage extends ConsumerStatefulWidget {
 }
 
 class _FeedPageState extends ConsumerState<FeedPage> {
-  _FeedFilter _filter = _FeedFilter.all;
+  _FeedFilter _filter = _FeedFilter.feed;
+  _FeedActivityScope _feedActivityScope = _FeedActivityScope.global;
   bool _filterInitialized = false;
   _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
 
   AsyncValue<List<FeedActivity>> _getFilteredFeed() {
     return switch (_filter) {
-      _FeedFilter.following => ref.watch(anilistFeedFollowingProvider),
-      _FeedFilter.all => ref.watch(anilistFeedProvider),
+      _FeedFilter.feed => switch (_feedActivityScope) {
+          _FeedActivityScope.following =>
+            ref.watch(anilistFeedFollowingProvider),
+          _FeedActivityScope.global => ref.watch(anilistFeedProvider),
+        },
       _FeedFilter.anime =>
         ref.watch(anilistFeedByTypeProvider('ANIME_LIST')),
       _FeedFilter.manga =>
@@ -122,9 +184,8 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   void _invalidateFeed() {
     switch (_filter) {
-      case _FeedFilter.following:
+      case _FeedFilter.feed:
         ref.invalidate(anilistFeedFollowingProvider);
-      case _FeedFilter.all:
         ref.invalidate(anilistFeedProvider);
       case _FeedFilter.anime:
         ref.invalidate(anilistFeedByTypeProvider('ANIME_LIST'));
@@ -146,10 +207,13 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   void _loadMore() {
     switch (_filter) {
-      case _FeedFilter.following:
-        ref.read(anilistFeedFollowingProvider.notifier).loadMore();
-      case _FeedFilter.all:
-        ref.read(anilistFeedProvider.notifier).loadMore();
+      case _FeedFilter.feed:
+        switch (_feedActivityScope) {
+          case _FeedActivityScope.following:
+            ref.read(anilistFeedFollowingProvider.notifier).loadMore();
+          case _FeedActivityScope.global:
+            ref.read(anilistFeedProvider.notifier).loadMore();
+        }
       case _FeedFilter.anime:
         ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).loadMore();
       case _FeedFilter.manga:
@@ -157,6 +221,13 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       default:
         break;
     }
+  }
+
+  void _setFeedActivityScope(_FeedActivityScope next) {
+    setState(() => _feedActivityScope = next);
+    ref.read(defaultFeedActivityScopeProvider.notifier).set(
+          next == _FeedActivityScope.following ? 'following' : 'global',
+        );
   }
 
   bool get _isPlaceholderFilter =>
@@ -202,14 +273,18 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     if (!_filterInitialized) {
       final defaultTab = ref.read(defaultFeedTabProvider);
+      final scopeStr = ref.read(defaultFeedActivityScopeProvider);
       final layout0 = ref.read(feedFilterLayoutProvider);
       _filter = _FeedFilter.values.firstWhere(
         (f) => f.name == defaultTab,
-        orElse: () => _FeedFilter.all,
+        orElse: () => _FeedFilter.feed,
       );
       if (!layout0.visibleIdSet.contains(_filter.name)) {
         _filter = _FeedFilter.values.byName(layout0.firstVisibleId);
       }
+      _feedActivityScope = scopeStr == 'following'
+          ? _FeedActivityScope.following
+          : _FeedActivityScope.global;
       _filterInitialized = true;
     }
 
@@ -318,7 +393,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
               ),
             ),
           ],
-          const SizedBox(height: 6),
+          SizedBox(height: _filter == _FeedFilter.feed ? 2 : 6),
           Expanded(
             child: _filter == _FeedFilter.game
                 ? const GamesHomeFeedView()
@@ -340,34 +415,54 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                           ],
                         ),
                       )
-                    : _filter == _FeedFilter.following
-                    ? _FollowingFeedGuard(
-                        onRefresh: _invalidateFeed,
-                        onLoadMore: _loadMore,
-                        filter: _filter,
-                        l10n: l10n,
-                      )
-                    : _showAnilistBrowseGrid
-                        ? _AnimeMangaBrowseList(
-                            mediaType: _filter == _FeedFilter.anime
-                                ? 'ANIME'
-                                : 'MANGA',
-                            category:
-                                _browseCategoryApiKey(_animeMangaBrowseTab),
-                            kind: _filter == _FeedFilter.anime
-                                ? MediaKind.anime
-                                : MediaKind.manga,
-                            onRefresh: _invalidateFeed,
-                            onAdd: _addToLibrary,
-                            l10n: l10n,
-                          )
-                        : _FeedList(
-                            feedAsync: _getFilteredFeed(),
-                            onRefresh: _invalidateFeed,
-                            onLoadMore: _loadMore,
-                            filter: _filter,
-                            l10n: l10n,
-                          ),
+                    : _filter == _FeedFilter.feed
+                        ? (_feedActivityScope == _FeedActivityScope.following
+                            ? _FollowingFeedGuard(
+                                feedScopeBar: _FeedActivityScopeBar(
+                                  scope: _feedActivityScope,
+                                  onChanged: _setFeedActivityScope,
+                                  l10n: l10n,
+                                ),
+                                onRefresh: _invalidateFeed,
+                                onLoadMore: _loadMore,
+                                l10n: l10n,
+                              )
+                            : _FeedList(
+                                feedAsync: ref.watch(anilistFeedProvider),
+                                onRefresh: _invalidateFeed,
+                                onLoadMore: _loadMore,
+                                filter: _filter,
+                                feedIsFollowing: false,
+                                feedScopeHeader: _FeedActivityScopeBar(
+                                  scope: _feedActivityScope,
+                                  onChanged: _setFeedActivityScope,
+                                  l10n: l10n,
+                                ),
+                                l10n: l10n,
+                              ))
+                        : (_showAnilistBrowseGrid
+                            ? _AnimeMangaBrowseList(
+                                mediaType: _filter == _FeedFilter.anime
+                                    ? 'ANIME'
+                                    : 'MANGA',
+                                category:
+                                    _browseCategoryApiKey(_animeMangaBrowseTab),
+                                kind: _filter == _FeedFilter.anime
+                                    ? MediaKind.anime
+                                    : MediaKind.manga,
+                                onRefresh: _invalidateFeed,
+                                onAdd: _addToLibrary,
+                                l10n: l10n,
+                              )
+                            : _FeedList(
+                                feedAsync: _getFilteredFeed(),
+                                onRefresh: _invalidateFeed,
+                                onLoadMore: _loadMore,
+                                filter: _filter,
+                                feedIsFollowing: false,
+                                feedScopeHeader: null,
+                                l10n: l10n,
+                              )),
           ),
         ],
       ),
@@ -377,14 +472,14 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
 class _FollowingFeedGuard extends ConsumerWidget {
   const _FollowingFeedGuard({
+    required this.feedScopeBar,
     required this.onRefresh,
     required this.onLoadMore,
-    required this.filter,
     required this.l10n,
   });
+  final Widget feedScopeBar;
   final VoidCallback onRefresh;
   final VoidCallback onLoadMore;
-  final _FeedFilter filter;
   final AppLocalizations l10n;
 
   @override
@@ -397,36 +492,51 @@ class _FollowingFeedGuard extends ConsumerWidget {
       data: (token) {
         if (token == null) {
           final cs = Theme.of(context).colorScheme;
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline_rounded, size: 56,
-                      color: cs.onSurfaceVariant.withAlpha(100)),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.loginRequiredFollowing,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.login, size: 18),
-                    label: Text(l10n.goToSettings),
-                    onPressed: () => context.go('/settings'),
-                  ),
-                ],
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: feedScopeBar,
+                ),
               ),
-            ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.people_outline_rounded, size: 56,
+                          color: cs.onSurfaceVariant.withAlpha(100)),
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.loginRequiredFollowing,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: cs.onSurfaceVariant, fontSize: 14),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.login, size: 18),
+                        label: Text(l10n.goToSettings),
+                        onPressed: () => context.go('/settings'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         }
         return _FeedList(
           feedAsync: ref.watch(anilistFeedFollowingProvider),
           onRefresh: onRefresh,
           onLoadMore: onLoadMore,
-          filter: filter,
+          filter: _FeedFilter.feed,
+          feedIsFollowing: true,
+          feedScopeHeader: feedScopeBar,
           l10n: l10n,
         );
       },
@@ -440,6 +550,8 @@ class _FeedList extends ConsumerStatefulWidget {
     required this.onRefresh,
     required this.onLoadMore,
     required this.filter,
+    required this.feedIsFollowing,
+    required this.feedScopeHeader,
     required this.l10n,
   });
 
@@ -447,6 +559,10 @@ class _FeedList extends ConsumerStatefulWidget {
   final VoidCallback onRefresh;
   final VoidCallback onLoadMore;
   final _FeedFilter filter;
+  /// Solo actividad «Siguiendo» dentro de la pestaña Feed.
+  final bool feedIsFollowing;
+  /// Dentro del scroll del feed (Siguiendo/Global); null en otras pestañas.
+  final Widget? feedScopeHeader;
   final AppLocalizations l10n;
 
   @override
@@ -472,9 +588,10 @@ class _FeedListState extends ConsumerState<_FeedList> {
   bool get _hasMore {
     try {
       return switch (widget.filter) {
-        _FeedFilter.following =>
+        _FeedFilter.feed when widget.feedIsFollowing =>
           ref.read(anilistFeedFollowingProvider.notifier).hasMore,
-        _FeedFilter.all => ref.read(anilistFeedProvider.notifier).hasMore,
+        _FeedFilter.feed =>
+          ref.read(anilistFeedProvider.notifier).hasMore,
         _FeedFilter.anime =>
           ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).hasMore,
         _FeedFilter.manga =>
@@ -496,50 +613,128 @@ class _FeedListState extends ConsumerState<_FeedList> {
     }
   }
 
+  int get _scopeHeaderLen => widget.feedScopeHeader != null ? 1 : 0;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasMore = _hasMore;
+    final scopeHeader = widget.feedScopeHeader;
+    final listPadding = EdgeInsets.fromLTRB(
+      16,
+      scopeHeader != null ? 0 : 4,
+      16,
+      100,
+    );
 
     return widget.feedAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
-            const SizedBox(height: 12),
-            Text(widget.l10n.errorNetwork),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: widget.onRefresh,
-              child: Text(widget.l10n.feedRetry),
-            ),
-          ],
-        ),
-      ),
+      loading: () {
+        if (scopeHeader != null) {
+          return LayoutBuilder(
+            builder: (context, c) {
+              return ListView(
+                controller: _scrollController,
+                padding: listPadding,
+                children: [
+                  scopeHeader,
+                  SizedBox(height: max(100.0, c.maxHeight * 0.22)),
+                  const Center(child: CircularProgressIndicator()),
+                ],
+              );
+            },
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
+      error: (e, _) {
+        if (scopeHeader != null) {
+          return LayoutBuilder(
+            builder: (context, c) {
+              return ListView(
+                controller: _scrollController,
+                padding: listPadding,
+                children: [
+                  scopeHeader,
+                  SizedBox(height: max(48.0, c.maxHeight * 0.12)),
+                  Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
+                  const SizedBox(height: 12),
+                  Center(child: Text(widget.l10n.errorNetwork)),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: FilledButton(
+                      onPressed: widget.onRefresh,
+                      child: Text(widget.l10n.feedRetry),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
+              const SizedBox(height: 12),
+              Text(widget.l10n.errorNetwork),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: widget.onRefresh,
+                child: Text(widget.l10n.feedRetry),
+              ),
+            ],
+          ),
+        );
+      },
       data: (activities) {
         final hideText = ref.watch(hideTextActivitiesProvider);
         final filtered = hideText
             ? activities.where((a) => !a.isTextActivity).toList()
             : activities;
+        final firstCompose = _scopeHeaderLen;
+
         if (filtered.isEmpty) {
-          return Center(child: Text(widget.l10n.feedEmpty));
+          return RefreshIndicator(
+            onRefresh: () async => widget.onRefresh(),
+            child: ListView(
+              controller: _scrollController,
+              padding: listPadding,
+              children: [
+                if (scopeHeader != null) scopeHeader,
+                _ComposeCard(onPosted: widget.onRefresh),
+                Padding(
+                  padding: const EdgeInsets.only(top: 28),
+                  child: Center(
+                    child: Text(
+                      widget.l10n.feedEmpty,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
-        final totalItems = 1 + filtered.length + (hasMore ? 1 : 0);
+
+        final totalItems =
+            firstCompose + 1 + filtered.length + (hasMore ? 1 : 0);
         return RefreshIndicator(
           onRefresh: () async => widget.onRefresh(),
           child: ListView.builder(
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            padding: listPadding,
             addRepaintBoundaries: true,
             addAutomaticKeepAlives: false,
             itemCount: totalItems,
             itemBuilder: (context, i) {
-              if (i == 0) {
+              if (scopeHeader != null && i == 0) {
+                return scopeHeader;
+              }
+              if (i == firstCompose) {
                 return _ComposeCard(onPosted: widget.onRefresh);
               }
-              final actIdx = i - 1;
+              final actIdx = i - firstCompose - 1;
               if (actIdx >= filtered.length) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),

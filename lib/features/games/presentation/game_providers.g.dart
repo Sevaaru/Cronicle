@@ -625,7 +625,7 @@ final favoriteGamesProvider =
     );
 
 typedef _$FavoriteGames = Notifier<List<Map<String, dynamic>>>;
-String _$twitchIgdbAccountHash() => r'f126bb0fccb1a634abd6f9a735db83b9fe6bd12f';
+String _$twitchIgdbAccountHash() => r'db8903f0cfabf2cc069065bbc7839a9a2c3c007b';
 
 /// See also [TwitchIgdbAccount].
 @ProviderFor(TwitchIgdbAccount)

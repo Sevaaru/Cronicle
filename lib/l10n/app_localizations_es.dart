@@ -103,6 +103,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get connectedWithGoogle => 'Conectado con Google';
 
   @override
+  String get googleSignInCanceledTitle => 'Google no pudo completar el acceso';
+
+  @override
+  String get googleSignInCanceledBody =>
+      'El mensaje «cancelado» suele indicar un fallo de OAuth, no que hayas cancelado tú. En Google Cloud Console: 1) Cliente Android con el package de la app y el SHA-1 del keystore de esta compilación (en la carpeta android: gradlew signingReport). 2) GOOGLE_SERVER_CLIENT_ID debe ser el ID del cliente Web del mismo proyecto. 3) Opcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android en las definiciones de compilación. Si publicas por Play Store, añade también el SHA-1 de firma de Play.';
+
+  @override
+  String get googleSignInNotConfiguredTitle =>
+      'Google no está configurado en esta compilación';
+
+  @override
+  String get googleSignInNotConfiguredHint =>
+      'Falta GOOGLE_SERVER_CLIENT_ID (cliente OAuth Web) en las defines de compilación.';
+
+  @override
+  String get googleSignInNotConfiguredBody =>
+      'En la raíz del proyecto, copia dart_defines.example.json a dart_defines.local.json y rellena GOOGLE_SERVER_CLIENT_ID con el ID del cliente OAuth tipo «Aplicación web» de Google Cloud Console (termina en .apps.googleusercontent.com). Es obligatorio en Android para Google Sign-In 7.x.\n\nEn el mismo proyecto crea un cliente OAuth tipo «Android» con el nombre de paquete com.cronicle.app.cronicle y el SHA-1 del keystore con el que firmas esta APK (debug, release o firma de Play). Para ver los SHA-1: en la carpeta android ejecuta .\\gradlew.bat signingReport (Windows) o ./gradlew signingReport (macOS/Linux). Si publicas en Play Store, añade también el SHA-1 de «App signing» de la consola de Play.\n\nOpcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android. Después de guardar dart_defines.local.json, recompila con flutter run o scripts/build_android.ps1.';
+
+  @override
   String get backupTitle => 'Copia en Google Drive';
 
   @override
@@ -163,6 +182,65 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notificationsLoginRequired =>
       'Inicia sesión en Anilist en Ajustes para ver notificaciones.';
+
+  @override
+  String get notifPermissionTitle => '¿Activar notificaciones?';
+
+  @override
+  String get notifPermissionBody =>
+      'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.';
+
+  @override
+  String get notifPermissionNotNow => 'Ahora no';
+
+  @override
+  String get notifPermissionAllow => 'Permitir';
+
+  @override
+  String get gallerySaveUnavailableWeb => 'Descarga no disponible en web';
+
+  @override
+  String get gallerySaveSuccess => 'Imagen guardada';
+
+  @override
+  String get gallerySaveErrorGeneric => 'Error al guardar';
+
+  @override
+  String get gallerySavePermissionDenied =>
+      'Sin permiso no se puede guardar en la galería.';
+
+  @override
+  String get gallerySaveOpenSettings => 'Ajustes';
+
+  @override
+  String get settingsNotificationsTitle => 'Notificaciones en el dispositivo';
+
+  @override
+  String get settingsNotificationsSubtitle =>
+      'Requiere sesión de Anilist. En Android la recomprobación en segundo plano es aprox. cada 15 min cuando el sistema lo permite; en iOS la frecuencia la decide el sistema. También se comprueba al salir de la app. El SO puede retrasar ejecuciones.';
+
+  @override
+  String get settingsNotificationsUnavailableWeb =>
+      'Las notificaciones del sistema no están disponibles en la versión web.';
+
+  @override
+  String get settingsNotifMaster => 'Notificaciones del sistema';
+
+  @override
+  String get settingsNotifAiring =>
+      'Nuevos capítulos (lista «En curso» y en emisión)';
+
+  @override
+  String get settingsNotifAnilistInbox =>
+      'Bandeja de Anilist en el dispositivo';
+
+  @override
+  String get settingsNotifAnilistSocial =>
+      'Incluir actividad y social (foros, menciones, seguidores…)';
+
+  @override
+  String get settingsNotifAnilistSocialDesc =>
+      'Si lo desactivas, solo se reenvían al sistema las notificaciones de emisión de Anilist (junto con las de nuevos capítulos de arriba, sin duplicar lógica).';
 
   @override
   String get notificationNoLink => 'Abre esta notificación en anilist.co';
@@ -267,6 +345,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get filterGlobal => 'Global';
+
+  @override
+  String get filterFeed => 'Feed';
 
   @override
   String get filterAnime => 'Anime';
@@ -582,6 +663,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mediaAnonymous => 'Anónimo';
 
   @override
+  String get mediaGenresSection => 'Géneros';
+
+  @override
+  String get mediaTagsSection => 'Etiquetas';
+
+  @override
+  String get mediaBrowseSortScore => 'Nota';
+
+  @override
+  String get mediaBrowseSortPopularity => 'Popularidad';
+
+  @override
+  String get mediaBrowseSortName => 'Nombre';
+
+  @override
+  String get mediaBrowseInvalidParams =>
+      'Falta género o etiqueta en el enlace.';
+
+  @override
   String mediaNextEp(Object episode, Object days, Object hours) {
     return 'Ep $episode en ${days}d ${hours}h';
   }
@@ -823,6 +923,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsFeedTab => 'Pestaña del feed por defecto';
 
   @override
+  String get settingsFeedActivityScope => 'Vista por defecto del feed';
+
+  @override
+  String get settingsAppearanceTitle => 'Apariencia';
+
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Tema, idioma y barras del inicio y la biblioteca.';
+
+  @override
   String get settingsLayoutCustomizationTitle =>
       'Barras de inicio y biblioteca';
 
@@ -835,7 +945,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsCustomizeFeedFiltersDesc =>
-      'Reordena u oculta Siguiendo, Global, Anime, etc. Debe quedar al menos un filtro visible.';
+      'Reordena u oculta Feed, Anime, etc. Debe quedar al menos un filtro visible.';
 
   @override
   String get settingsCustomizeLibraryKinds => 'Barra de tipos en Biblioteca';

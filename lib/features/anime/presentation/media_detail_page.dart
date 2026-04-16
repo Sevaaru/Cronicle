@@ -59,6 +59,31 @@ class _DetailContentState extends State<_DetailContent> {
   Map<String, dynamic> get media => widget.media;
   MediaKind get kind => widget.kind;
 
+  List<Map<String, dynamic>> _sortedBrowseTags() {
+    final raw = (media['tags'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final filtered = raw.where((t) {
+      final r = t['rank'] as int?;
+      return r != null && r >= 46;
+    }).toList();
+    filtered.sort((a, b) =>
+        ((b['rank'] as int?) ?? 0).compareTo((a['rank'] as int?) ?? 0));
+    return filtered.take(28).toList();
+  }
+
+  void _openBrowseByGenre(String genre) {
+    final kindCode = widget.kind.code;
+    context.push(
+      '/browse/media?kind=$kindCode&genre=${Uri.encodeQueryComponent(genre)}&sort=popularity',
+    );
+  }
+
+  void _openBrowseByTag(String tagName) {
+    final kindCode = widget.kind.code;
+    context.push(
+      '/browse/media?kind=$kindCode&tag=${Uri.encodeQueryComponent(tagName)}&sort=popularity',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -89,6 +114,7 @@ class _DetailContentState extends State<_DetailContent> {
     final source = media['source'] as String?;
     final isAdult = media['isAdult'] as bool? ?? false;
     final genres = (media['genres'] as List?)?.cast<String>() ?? [];
+    final browseTags = _sortedBrowseTags();
     final startDate = media['startDate'] as Map<String, dynamic>?;
     final endDate = media['endDate'] as Map<String, dynamic>?;
 
@@ -331,16 +357,51 @@ class _DetailContentState extends State<_DetailContent> {
                   _buildAiringCard(media['nextAiringEpisode'] as Map<String, dynamic>, colorScheme, l10n),
 
                 if (genres.isNotEmpty) ...[
+                  Text(
+                    l10n.mediaGenresSection,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: genres
-                        .map((g) => Chip(
-                              label: Text(g, style: const TextStyle(fontSize: 12)),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                            ))
+                        .map(
+                          (g) => ActionChip(
+                            label: Text(g, style: const TextStyle(fontSize: 12)),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _openBrowseByGenre(g),
+                          ),
+                        )
                         .toList(),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                if (browseTags.isNotEmpty) ...[
+                  Text(
+                    l10n.mediaTagsSection,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final t in browseTags)
+                        if ((t['name'] as String?)?.isNotEmpty ?? false)
+                          ActionChip(
+                            label: Text(
+                              t['name'] as String,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            onPressed: () =>
+                                _openBrowseByTag(t['name'] as String),
+                          ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                 ],

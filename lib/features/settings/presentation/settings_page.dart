@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/backup/app_backup_bundle.dart';
 import 'package:cronicle/core/backup/backup_repository_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -25,6 +26,7 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
+import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/core/utils/google_web_button.dart';
@@ -36,74 +38,33 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final themeMode = ref.watch(themeModeNotifierProvider);
-    final locale = ref.watch(localeNotifierProvider);
     final googleSignIn = ref.watch(googleSignInProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         children: [
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.themeMode,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 12),
-                SegmentedButton<ThemeMode>(
-                  segments: [
-                    ButtonSegment(
-                        value: ThemeMode.system,
-                        label: Text(l10n.themeSystem)),
-                    ButtonSegment(
-                        value: ThemeMode.light, label: Text(l10n.themeLight)),
-                    ButtonSegment(
-                        value: ThemeMode.dark, label: Text(l10n.themeDark)),
-                  ],
-                  selected: {themeMode},
-                  onSelectionChanged: (s) {
-                    ref
-                        .read(themeModeNotifierProvider.notifier)
-                        .setTheme(s.first);
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.language,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 12),
-                SegmentedButton<Locale>(
-                  segments: const [
-                    ButtonSegment(value: Locale('es'), label: Text('ES')),
-                    ButtonSegment(value: Locale('en'), label: Text('EN')),
-                  ],
-                  selected: {locale},
-                  onSelectionChanged: (s) {
-                    ref
-                        .read(localeNotifierProvider.notifier)
-                        .setLocale(s.first);
-                  },
-                ),
-              ],
-            ),
-          ),
+          const _AppearanceSection(),
           const SizedBox(height: 12),
 
           _DefaultFilterSection(),
           const SizedBox(height: 12),
 
-          _LayoutCustomizationSection(),
+          _AppDefaultsSection(),
           const SizedBox(height: 12),
 
-          _AppDefaultsSection(),
+          if (kIsWeb)
+            GlassCard(
+              child: Text(
+                l10n.settingsNotificationsUnavailableWeb,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            )
+          else
+            const _DeviceNotificationsSection(),
           const SizedBox(height: 12),
 
           _AccountsSection(googleSignIn: googleSignIn),
@@ -115,6 +76,250 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+}
+
+class _DeviceNotificationsSection extends ConsumerWidget {
+  const _DeviceNotificationsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final n = ref.watch(deviceNotificationSettingsProvider);
+    final notifier = ref.read(deviceNotificationSettingsProvider.notifier);
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_outlined,
+                  size: 22, color: cs.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.settingsNotificationsTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.settingsNotificationsSubtitle,
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          const Divider(height: 22),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsNotifMaster),
+            value: n.masterEnabled,
+            onChanged: (v) => notifier.setMasterEnabled(v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsNotifAiring),
+            value: n.airingEnabled,
+            onChanged: n.masterEnabled
+                ? (v) => notifier.setAiringEnabled(v)
+                : null,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsNotifAnilistInbox),
+            value: n.anilistInboxEnabled,
+            onChanged: n.masterEnabled
+                ? (v) => notifier.setAnilistInboxEnabled(v)
+                : null,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsNotifAnilistSocial),
+            subtitle: Text(
+              l10n.settingsNotifAnilistSocialDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            value: n.anilistSocialEnabled,
+            onChanged: (n.masterEnabled && n.anilistInboxEnabled)
+                ? (v) => notifier.setAnilistSocialEnabled(v)
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppearanceSection extends ConsumerWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final themeMode = ref.watch(themeModeNotifierProvider);
+    final locale = ref.watch(localeNotifierProvider);
+
+    final themeButton = SegmentedButton<ThemeMode>(
+      style: SegmentedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      segments: [
+        ButtonSegment<ThemeMode>(
+          value: ThemeMode.system,
+          tooltip: l10n.themeSystem,
+          icon: const Icon(Icons.brightness_auto_rounded, size: 20),
+        ),
+        ButtonSegment<ThemeMode>(
+          value: ThemeMode.light,
+          tooltip: l10n.themeLight,
+          icon: const Icon(Icons.light_mode_rounded, size: 20),
+        ),
+        ButtonSegment<ThemeMode>(
+          value: ThemeMode.dark,
+          tooltip: l10n.themeDark,
+          icon: const Icon(Icons.dark_mode_rounded, size: 20),
+        ),
+      ],
+      selected: {themeMode},
+      showSelectedIcon: false,
+      onSelectionChanged: (s) {
+        ref.read(themeModeNotifierProvider.notifier).setTheme(s.first);
+      },
+    );
+
+    final languageButton = SegmentedButton<Locale>(
+      style: SegmentedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+      ),
+      segments: const [
+        ButtonSegment<Locale>(
+          value: Locale('es'),
+          label: Text('ES'),
+          tooltip: 'Español',
+        ),
+        ButtonSegment<Locale>(
+          value: Locale('en'),
+          label: Text('EN'),
+          tooltip: 'English',
+        ),
+      ],
+      selected: {locale},
+      showSelectedIcon: false,
+      onSelectionChanged: (s) {
+        ref.read(localeNotifierProvider.notifier).setLocale(s.first);
+      },
+    );
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.settingsAppearanceTitle,
+            style: textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.settingsAppearanceSubtitle,
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, c) {
+              const gap = 12.0;
+              const minSideBySide = 304.0;
+              final sideBySide = c.maxWidth >= minSideBySide;
+              final itemW = sideBySide ? (c.maxWidth - gap) / 2 : c.maxWidth;
+
+              Widget block(String label, Widget control) => SizedBox(
+                    width: itemW,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurfaceVariant,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          clipBehavior: Clip.none,
+                          child: control,
+                        ),
+                      ],
+                    ),
+                  );
+
+              return Wrap(
+                spacing: gap,
+                runSpacing: 14,
+                alignment: WrapAlignment.start,
+                children: [
+                  block(l10n.themeMode, themeButton),
+                  block(l10n.language, languageButton),
+                ],
+              );
+            },
+          ),
+          const Divider(height: 28),
+          Text(
+            l10n.settingsLayoutCustomizationTitle,
+            style: textTheme.titleSmall?.copyWith(color: cs.onSurface),
+          ),
+          const SizedBox(height: 10),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.tune_rounded, color: cs.primary),
+            title: Text(l10n.settingsCustomizeFeedFilters),
+            subtitle: Text(
+              l10n.settingsCustomizeFeedFiltersDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                fullscreenDialog: false,
+                builder: (_) => const FeedFilterLayoutEditorPage(),
+              ),
+            ),
+          ),
+          const Divider(height: 20),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.view_list_rounded, color: cs.primary),
+            title: Text(l10n.settingsCustomizeLibraryKinds),
+            subtitle: Text(
+              l10n.settingsCustomizeLibraryKindsDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                fullscreenDialog: false,
+                builder: (_) => const LibraryKindLayoutEditorPage(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AccountsSection extends ConsumerWidget {
@@ -470,65 +675,6 @@ class _AnilistSection extends ConsumerWidget {
   }
 }
 
-class _LayoutCustomizationSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.settingsLayoutCustomizationTitle,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsLayoutCustomizationSubtitle,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.tune_rounded, color: cs.primary),
-            title: Text(l10n.settingsCustomizeFeedFilters),
-            subtitle: Text(
-              l10n.settingsCustomizeFeedFiltersDesc,
-              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                fullscreenDialog: false,
-                builder: (_) => const FeedFilterLayoutEditorPage(),
-              ),
-            ),
-          ),
-          const Divider(height: 20),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.view_list_rounded, color: cs.primary),
-            title: Text(l10n.settingsCustomizeLibraryKinds),
-            subtitle: Text(
-              l10n.settingsCustomizeLibraryKindsDesc,
-              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                fullscreenDialog: false,
-                builder: (_) => const LibraryKindLayoutEditorPage(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _DefaultFilterSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -582,6 +728,7 @@ class _AppDefaultsSection extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final currentPage = ref.watch(defaultStartPageProvider);
     final currentFeedTab = ref.watch(defaultFeedTabProvider);
+    final currentFeedScope = ref.watch(defaultFeedActivityScopeProvider);
     final hideText = ref.watch(hideTextActivitiesProvider);
     final visibleFeedIds = ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
@@ -591,8 +738,7 @@ class _AppDefaultsSection extends ConsumerWidget {
     ];
 
     final feedTabOptions = [
-      ('following', l10n.filterFollowing, Icons.people_rounded),
-      ('all', l10n.filterGlobal, Icons.public_rounded),
+      ('feed', l10n.filterFeed, Icons.dynamic_feed_rounded),
       ('anime', l10n.filterAnime, Icons.animation_rounded),
       ('manga', l10n.filterManga, Icons.menu_book_rounded),
       ('movie', l10n.filterMovies, Icons.movie_rounded),
@@ -652,6 +798,40 @@ class _AppDefaultsSection extends ConsumerWidget {
               );
             }).toList(),
           ),
+          if (currentFeedTab == 'feed' && visibleFeedIds.contains('feed')) ...[
+            const SizedBox(height: 10),
+            Text(l10n.settingsFeedActivityScope,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                (
+                  'following',
+                  l10n.filterFollowing,
+                  Icons.people_rounded,
+                ),
+                (
+                  'global',
+                  l10n.filterGlobal,
+                  Icons.public_rounded,
+                ),
+              ].map((o) {
+                final selected = currentFeedScope == o.$1;
+                return ChoiceChip(
+                  selected: selected,
+                  avatar: Icon(o.$3, size: 16),
+                  label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+                  onSelected: (_) => ref
+                      .read(defaultFeedActivityScopeProvider.notifier)
+                      .set(o.$1),
+                  showCheckmark: false,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
+          ],
 
           const Divider(height: 24),
           SwitchListTile.adaptive(
@@ -710,6 +890,34 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   bool _loading = true;
   bool _signedIn = false;
 
+  bool get _needsGoogleServerClientId {
+    if (kIsWeb) return false;
+    return Platform.isAndroid || Platform.isIOS;
+  }
+
+  bool get _missingGoogleServerClientId =>
+      _needsGoogleServerClientId &&
+      EnvConfig.googleServerClientId.trim().isEmpty;
+
+  Future<void> _showGoogleNotConfiguredDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.googleSignInNotConfiguredTitle),
+        content: SingleChildScrollView(
+          child: Text(l10n.googleSignInNotConfiguredBody),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -759,6 +967,17 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
           ],
         ),
         const SizedBox(height: 12),
+        if (_missingGoogleServerClientId) ...[
+          Text(
+            l10n.googleSignInNotConfiguredHint,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.error,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (kIsWeb)
           buildGoogleWebButton(context)
         else if (_loading)
@@ -780,10 +999,13 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: () async {
+                if (_missingGoogleServerClientId) {
+                  await _showGoogleNotConfiguredDialog();
+                  return;
+                }
                 try {
                   await widget.googleSignIn.authenticate(
                     scopeHint: const [
-                      'email',
                       'https://www.googleapis.com/auth/drive.appdata',
                     ],
                   );
@@ -794,6 +1016,27 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
                   );
                 } catch (e) {
                   if (!context.mounted) return;
+                  if (e is GoogleSignInException &&
+                      e.code == GoogleSignInExceptionCode.canceled) {
+                    await showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(l10n.googleSignInCanceledTitle),
+                        content: SingleChildScrollView(
+                          child: Text(l10n.googleSignInCanceledBody),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: Text(
+                              MaterialLocalizations.of(ctx).okButtonLabel,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    return;
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l10n.errorWithMessage(e))),
                   );

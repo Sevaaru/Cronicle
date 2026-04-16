@@ -278,6 +278,36 @@ abstract class AppLocalizations {
   /// **'Conectado con Google'**
   String get connectedWithGoogle;
 
+  /// No description provided for @googleSignInCanceledTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Google no pudo completar el acceso'**
+  String get googleSignInCanceledTitle;
+
+  /// No description provided for @googleSignInCanceledBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El mensaje «cancelado» suele indicar un fallo de OAuth, no que hayas cancelado tú. En Google Cloud Console: 1) Cliente Android con el package de la app y el SHA-1 del keystore de esta compilación (en la carpeta android: gradlew signingReport). 2) GOOGLE_SERVER_CLIENT_ID debe ser el ID del cliente Web del mismo proyecto. 3) Opcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android en las definiciones de compilación. Si publicas por Play Store, añade también el SHA-1 de firma de Play.'**
+  String get googleSignInCanceledBody;
+
+  /// No description provided for @googleSignInNotConfiguredTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Google no está configurado en esta compilación'**
+  String get googleSignInNotConfiguredTitle;
+
+  /// No description provided for @googleSignInNotConfiguredHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta GOOGLE_SERVER_CLIENT_ID (cliente OAuth Web) en las defines de compilación.'**
+  String get googleSignInNotConfiguredHint;
+
+  /// No description provided for @googleSignInNotConfiguredBody.
+  ///
+  /// In es, this message translates to:
+  /// **'En la raíz del proyecto, copia dart_defines.example.json a dart_defines.local.json y rellena GOOGLE_SERVER_CLIENT_ID con el ID del cliente OAuth tipo «Aplicación web» de Google Cloud Console (termina en .apps.googleusercontent.com). Es obligatorio en Android para Google Sign-In 7.x.\n\nEn el mismo proyecto crea un cliente OAuth tipo «Android» con el nombre de paquete com.cronicle.app.cronicle y el SHA-1 del keystore con el que firmas esta APK (debug, release o firma de Play). Para ver los SHA-1: en la carpeta android ejecuta .\\gradlew.bat signingReport (Windows) o ./gradlew signingReport (macOS/Linux). Si publicas en Play Store, añade también el SHA-1 de «App signing» de la consola de Play.\n\nOpcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android. Después de guardar dart_defines.local.json, recompila con flutter run o scripts/build_android.ps1.'**
+  String get googleSignInNotConfiguredBody;
+
   /// No description provided for @backupTitle.
   ///
   /// In es, this message translates to:
@@ -385,6 +415,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Inicia sesión en Anilist en Ajustes para ver notificaciones.'**
   String get notificationsLoginRequired;
+
+  /// No description provided for @notifPermissionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Activar notificaciones?'**
+  String get notifPermissionTitle;
+
+  /// No description provided for @notifPermissionBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.'**
+  String get notifPermissionBody;
+
+  /// No description provided for @notifPermissionNotNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora no'**
+  String get notifPermissionNotNow;
+
+  /// No description provided for @notifPermissionAllow.
+  ///
+  /// In es, this message translates to:
+  /// **'Permitir'**
+  String get notifPermissionAllow;
+
+  /// No description provided for @gallerySaveUnavailableWeb.
+  ///
+  /// In es, this message translates to:
+  /// **'Descarga no disponible en web'**
+  String get gallerySaveUnavailableWeb;
+
+  /// No description provided for @gallerySaveSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen guardada'**
+  String get gallerySaveSuccess;
+
+  /// No description provided for @gallerySaveErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Error al guardar'**
+  String get gallerySaveErrorGeneric;
+
+  /// No description provided for @gallerySavePermissionDenied.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin permiso no se puede guardar en la galería.'**
+  String get gallerySavePermissionDenied;
+
+  /// No description provided for @gallerySaveOpenSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get gallerySaveOpenSettings;
+
+  /// No description provided for @settingsNotificationsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones en el dispositivo'**
+  String get settingsNotificationsTitle;
+
+  /// No description provided for @settingsNotificationsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere sesión de Anilist. En Android la recomprobación en segundo plano es aprox. cada 15 min cuando el sistema lo permite; en iOS la frecuencia la decide el sistema. También se comprueba al salir de la app. El SO puede retrasar ejecuciones.'**
+  String get settingsNotificationsSubtitle;
+
+  /// No description provided for @settingsNotificationsUnavailableWeb.
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones del sistema no están disponibles en la versión web.'**
+  String get settingsNotificationsUnavailableWeb;
+
+  /// No description provided for @settingsNotifMaster.
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones del sistema'**
+  String get settingsNotifMaster;
+
+  /// No description provided for @settingsNotifAiring.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevos capítulos (lista «En curso» y en emisión)'**
+  String get settingsNotifAiring;
+
+  /// No description provided for @settingsNotifAnilistInbox.
+  ///
+  /// In es, this message translates to:
+  /// **'Bandeja de Anilist en el dispositivo'**
+  String get settingsNotifAnilistInbox;
+
+  /// No description provided for @settingsNotifAnilistSocial.
+  ///
+  /// In es, this message translates to:
+  /// **'Incluir actividad y social (foros, menciones, seguidores…)'**
+  String get settingsNotifAnilistSocial;
+
+  /// No description provided for @settingsNotifAnilistSocialDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Si lo desactivas, solo se reenvían al sistema las notificaciones de emisión de Anilist (junto con las de nuevos capítulos de arriba, sin duplicar lógica).'**
+  String get settingsNotifAnilistSocialDesc;
 
   /// No description provided for @notificationNoLink.
   ///
@@ -583,6 +715,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Global'**
   String get filterGlobal;
+
+  /// No description provided for @filterFeed.
+  ///
+  /// In es, this message translates to:
+  /// **'Feed'**
+  String get filterFeed;
 
   /// No description provided for @filterAnime.
   ///
@@ -1178,6 +1316,42 @@ abstract class AppLocalizations {
   /// **'Anónimo'**
   String get mediaAnonymous;
 
+  /// No description provided for @mediaGenresSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros'**
+  String get mediaGenresSection;
+
+  /// No description provided for @mediaTagsSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Etiquetas'**
+  String get mediaTagsSection;
+
+  /// No description provided for @mediaBrowseSortScore.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota'**
+  String get mediaBrowseSortScore;
+
+  /// No description provided for @mediaBrowseSortPopularity.
+  ///
+  /// In es, this message translates to:
+  /// **'Popularidad'**
+  String get mediaBrowseSortPopularity;
+
+  /// No description provided for @mediaBrowseSortName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get mediaBrowseSortName;
+
+  /// No description provided for @mediaBrowseInvalidParams.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta género o etiqueta en el enlace.'**
+  String get mediaBrowseInvalidParams;
+
   /// No description provided for @mediaNextEp.
   ///
   /// In es, this message translates to:
@@ -1604,6 +1778,24 @@ abstract class AppLocalizations {
   /// **'Pestaña del feed por defecto'**
   String get settingsFeedTab;
 
+  /// No description provided for @settingsFeedActivityScope.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista por defecto del feed'**
+  String get settingsFeedActivityScope;
+
+  /// No description provided for @settingsAppearanceTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariencia'**
+  String get settingsAppearanceTitle;
+
+  /// No description provided for @settingsAppearanceSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tema, idioma y barras del inicio y la biblioteca.'**
+  String get settingsAppearanceSubtitle;
+
   /// No description provided for @settingsLayoutCustomizationTitle.
   ///
   /// In es, this message translates to:
@@ -1625,7 +1817,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCustomizeFeedFiltersDesc.
   ///
   /// In es, this message translates to:
-  /// **'Reordena u oculta Siguiendo, Global, Anime, etc. Debe quedar al menos un filtro visible.'**
+  /// **'Reordena u oculta Feed, Anime, etc. Debe quedar al menos un filtro visible.'**
   String get settingsCustomizeFeedFiltersDesc;
 
   /// No description provided for @settingsCustomizeLibraryKinds.

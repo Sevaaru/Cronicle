@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
+import 'package:cronicle/features/anime/presentation/media_genre_tag_browse_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
@@ -20,12 +21,41 @@ import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 
 part 'app_router.g.dart';
 
-final _rootKey = GlobalKey<NavigatorState>();
+class _InvalidBrowseParamsPage extends StatelessWidget {
+  const _InvalidBrowseParamsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Text(
+            l10n.mediaBrowseInvalidParams,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// [Navigator] raíz de [GoRouter]. Usar para [showDialog] antes de que exista
+/// un [BuildContext] bajo el árbol del router (p. ej. desde [MaterialApp]).
+final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
 int _tabIndexFromPath(String path) {
@@ -41,7 +71,7 @@ GoRouter appRouter(AppRouterRef ref) {
   final startPage = ref.read(defaultStartPageProvider);
 
   return GoRouter(
-    navigatorKey: _rootKey,
+    navigatorKey: cronicleRootNavigatorKey,
     initialLocation: startPage,
     routes: [
       ShellRoute(
@@ -104,6 +134,32 @@ GoRouter appRouter(AppRouterRef ref) {
               return MediaDetailPage(
                 mediaId: id,
                 kind: MediaKind.fromCode(kindCode),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/browse/media',
+            builder: (context, state) {
+              final q = state.uri.queryParameters;
+              final kindCode = int.tryParse(q['kind'] ?? '') ?? 0;
+              final kind = switch (MediaKind.fromCode(kindCode)) {
+                MediaKind.manga => MediaKind.manga,
+                _ => MediaKind.anime,
+              };
+              final genre = q['genre'];
+              final tag = q['tag'];
+              final sort = q['sort'] ?? 'popularity';
+              final sortKey =
+                  sort == 'score' || sort == 'name' ? sort : 'popularity';
+              if ((genre == null || genre.isEmpty) &&
+                  (tag == null || tag.isEmpty)) {
+                return const _InvalidBrowseParamsPage();
+              }
+              return MediaGenreTagBrowsePage(
+                kind: kind,
+                genre: (genre != null && genre.isNotEmpty) ? genre : null,
+                tag: (tag != null && tag.isNotEmpty) ? tag : null,
+                initialSortKey: sortKey,
               );
             },
           ),

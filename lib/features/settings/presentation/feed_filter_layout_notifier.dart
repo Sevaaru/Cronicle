@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -8,8 +10,7 @@ part 'feed_filter_layout_notifier.g.dart';
 
 /// Orden fijo de ids válidos (coinciden con [Enum.name] de `_FeedFilter` en el feed).
 const feedFilterLayoutDefaultOrder = <String>[
-  'following',
-  'all',
+  'feed',
   'anime',
   'manga',
   'movie',
@@ -26,13 +27,53 @@ class FeedFilterLayoutState {
         feedFilterLayoutDefaultOrder.map((id) => LayoutSlot(id: id)).toList(),
       );
 
-  factory FeedFilterLayoutState.decode(String? raw) => FeedFilterLayoutState(
-        LayoutSlot.decodeList(
-          raw,
-          validIds: feedFilterLayoutDefaultOrder.toSet(),
-          defaultOrder: feedFilterLayoutDefaultOrder,
-        ),
-      );
+  factory FeedFilterLayoutState.decode(String? raw) {
+    const order = feedFilterLayoutDefaultOrder;
+    final valid = order.toSet();
+    if (raw == null || raw.isEmpty) {
+      return FeedFilterLayoutState.initial();
+    }
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      final out = <LayoutSlot>[];
+      var feedMerged = false;
+
+      for (final e in list) {
+        if (e is! Map) continue;
+        final m = Map<String, dynamic>.from(e);
+        var id = m['id'] as String?;
+        final vis = m['v'] as bool? ?? true;
+        if (id == null) continue;
+
+        if (id == 'following' || id == 'all') {
+          if (!feedMerged) {
+            out.add(LayoutSlot(id: 'feed', visible: vis));
+            feedMerged = true;
+          } else {
+            final idx = out.indexWhere((s) => s.id == 'feed');
+            if (idx >= 0) {
+              final cur = out[idx];
+              out[idx] = LayoutSlot(id: 'feed', visible: cur.visible || vis);
+            }
+          }
+          continue;
+        }
+
+        if (!valid.contains(id)) continue;
+        if (out.any((s) => s.id == id)) continue;
+        out.add(LayoutSlot(id: id, visible: vis));
+      }
+
+      for (final id in order) {
+        if (!out.any((s) => s.id == id)) {
+          out.add(LayoutSlot(id: id));
+        }
+      }
+      return FeedFilterLayoutState(out);
+    } catch (_) {
+      return FeedFilterLayoutState.initial();
+    }
+  }
 
   List<String> get visibleOrderedIds =>
       slots.where((s) => s.visible).map((s) => s.id).toList();
@@ -45,7 +86,7 @@ class FeedFilterLayoutState {
     for (final s in slots) {
       if (s.visible) return s.id;
     }
-    return 'all';
+    return 'feed';
   }
 
   FeedFilterLayoutState reorder(int oldIndex, int newIndex) {

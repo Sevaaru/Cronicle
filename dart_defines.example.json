@@ -1,0 +1,10 @@
+{
+  "ANILIST_CLIENT_ID": "",
+  "ANILIST_REDIRECT_URI": "https://anilist.co/api/v2/oauth/pin",
+  "TWITCH_CLIENT_ID": "",
+  "TWITCH_CLIENT_SECRET": "",
+  "TWITCH_REDIRECT_URI": "",
+  "GOOGLE_SERVER_CLIENT_ID": "",
+  "GOOGLE_ANDROID_CLIENT_ID": "",
+  "GOOGLE_IOS_CLIENT_ID": ""
+}

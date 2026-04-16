@@ -79,5 +79,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Cronicle guarda en Fotos las imágenes que descargues al ver pósters o capturas a pantalla completa.</string>
 </dict>
 </plist>

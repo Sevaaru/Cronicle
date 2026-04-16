@@ -28,6 +28,14 @@ class AnilistToken extends _$AnilistToken {
 
   Future<void> setToken(String token) async {
     await ref.read(anilistAuthProvider).saveToken(token);
+    try {
+      final viewer =
+          await ref.read(anilistGraphqlProvider).fetchViewer(token);
+      final name = viewer?['name'] as String?;
+      if (name != null && name.isNotEmpty) {
+        await ref.read(anilistAuthProvider).saveUserName(name);
+      }
+    } catch (_) {}
     state = AsyncData(token);
   }
 
@@ -323,6 +331,79 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
       for (final a in list)
         if (a.id == updated.id) updated else a,
     ]);
+  }
+}
+
+/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+@riverpod
+class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
+  static const _perPage = 24;
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
+  late String _mediaType;
+  late String _sortKey;
+  String? _genre;
+  String? _tag;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<Map<String, dynamic>>> build(
+    String mediaType,
+    String sortKey,
+    String genrePart,
+    String tagPart,
+  ) async {
+    _mediaType = mediaType;
+    _sortKey = sortKey;
+    _genre = genrePart.isEmpty ? null : genrePart;
+    _tag = tagPart.isEmpty ? null : tagPart;
+    _page = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
+    final graphql = ref.read(anilistGraphqlProvider);
+    final page = await graphql.fetchMediaByGenreTagPage(
+      type: _mediaType,
+      sortKey: _sortKey,
+      genre: _genre,
+      tag: _tag,
+      page: 1,
+      perPage: _perPage,
+    );
+    _hasMore = page.hasNextPage;
+    return page.items;
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
+    _page++;
+    final prev = state.valueOrNull ?? [];
+    final graphql = ref.read(anilistGraphqlProvider);
+    try {
+      final page = await graphql.fetchMediaByGenreTagPage(
+        type: _mediaType,
+        sortKey: _sortKey,
+        genre: _genre,
+        tag: _tag,
+        page: _page,
+        perPage: _perPage,
+      );
+      if (!page.hasNextPage) _hasMore = false;
+      if (page.items.isEmpty) _hasMore = false;
+      final seen = prev.map((m) => m['id'] as int).toSet();
+      final appended = [
+        ...prev,
+        ...page.items.where((m) => !seen.contains(m['id'] as int)),
+      ];
+      state = AsyncData(appended);
+    } catch (_) {
+      _page--;
+    } finally {
+      _isLoadingMore = false;
+    }
   }
 }
 

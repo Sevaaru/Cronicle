@@ -103,6 +103,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectedWithGoogle => 'Connected with Google';
 
   @override
+  String get googleSignInCanceledTitle => 'Google could not finish sign-in';
+
+  @override
+  String get googleSignInCanceledBody =>
+      'A “canceled” error usually means OAuth misconfiguration, not that you tapped cancel. In Google Cloud Console: 1) Android OAuth client with your app package and the SHA-1 of the keystore for this build (from the android folder: gradlew signingReport). 2) GOOGLE_SERVER_CLIENT_ID must be your Web client ID from the same project. 3) Optional: GOOGLE_ANDROID_CLIENT_ID with the Android client ID in your build defines. If you ship via Play, also add Play App Signing’s SHA-1.';
+
+  @override
+  String get googleSignInNotConfiguredTitle =>
+      'Google is not configured in this build';
+
+  @override
+  String get googleSignInNotConfiguredHint =>
+      'GOOGLE_SERVER_CLIENT_ID (Web OAuth client) is missing from your compile-time defines.';
+
+  @override
+  String get googleSignInNotConfiguredBody =>
+      'At the project root, copy dart_defines.example.json to dart_defines.local.json and set GOOGLE_SERVER_CLIENT_ID to your Google Cloud OAuth client of type “Web application” (ends with .apps.googleusercontent.com). It is required on Android for Google Sign-In 7.x.\n\nIn the same Google Cloud project, create an Android OAuth client with package name com.cronicle.app.cronicle and the SHA-1 of the keystore used for the APK you install (debug, release, or Play App Signing). To print SHA-1 fingerprints: from the android folder run .\\gradlew.bat signingReport on Windows or ./gradlew signingReport on macOS/Linux. If you publish on the Play Store, also add Play’s “App signing” SHA-1 in Cloud Console.\n\nOptional: GOOGLE_ANDROID_CLIENT_ID with the Android client ID. After saving dart_defines.local.json, rebuild with flutter run or scripts/build_android.ps1.';
+
+  @override
   String get backupTitle => 'Google Drive backup';
 
   @override
@@ -163,6 +182,65 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationsLoginRequired =>
       'Sign in with Anilist in Settings to see notifications.';
+
+  @override
+  String get notifPermissionTitle => 'Enable notifications?';
+
+  @override
+  String get notifPermissionBody =>
+      'Cronicle can notify you when a new episode or chapter airs for anime or manga you follow as in progress, and optionally mirror notifications from your Anilist inbox. You can change this later in Settings.';
+
+  @override
+  String get notifPermissionNotNow => 'Not now';
+
+  @override
+  String get notifPermissionAllow => 'Allow';
+
+  @override
+  String get gallerySaveUnavailableWeb =>
+      'Saving is not available on the web build';
+
+  @override
+  String get gallerySaveSuccess => 'Image saved';
+
+  @override
+  String get gallerySaveErrorGeneric => 'Could not save image';
+
+  @override
+  String get gallerySavePermissionDenied =>
+      'Gallery access is required to save images.';
+
+  @override
+  String get gallerySaveOpenSettings => 'Settings';
+
+  @override
+  String get settingsNotificationsTitle => 'On-device notifications';
+
+  @override
+  String get settingsNotificationsSubtitle =>
+      'Requires an Anilist session. On Android background checks run about every 15 minutes when the OS allows; on iOS the system sets the schedule. A check also runs when you leave the app. The OS may still defer runs.';
+
+  @override
+  String get settingsNotificationsUnavailableWeb =>
+      'System notifications are not available on the web build.';
+
+  @override
+  String get settingsNotifMaster => 'System notifications';
+
+  @override
+  String get settingsNotifAiring =>
+      'New episodes/chapters (in progress + releasing)';
+
+  @override
+  String get settingsNotifAnilistInbox => 'Anilist inbox on this device';
+
+  @override
+  String get settingsNotifAnilistSocial =>
+      'Include activity & social (forums, mentions, followers…)';
+
+  @override
+  String get settingsNotifAnilistSocialDesc =>
+      'When off, only Anilist airing-style notifications are mirrored (alongside new-chapter checks above).';
 
   @override
   String get notificationNoLink => 'Open this notification on anilist.co';
@@ -266,6 +344,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterGlobal => 'Global';
+
+  @override
+  String get filterFeed => 'Feed';
 
   @override
   String get filterAnime => 'Anime';
@@ -580,6 +661,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaAnonymous => 'Anonymous';
 
   @override
+  String get mediaGenresSection => 'Genres';
+
+  @override
+  String get mediaTagsSection => 'Tags';
+
+  @override
+  String get mediaBrowseSortScore => 'Score';
+
+  @override
+  String get mediaBrowseSortPopularity => 'Popularity';
+
+  @override
+  String get mediaBrowseSortName => 'Name';
+
+  @override
+  String get mediaBrowseInvalidParams => 'This link is missing a genre or tag.';
+
+  @override
   String mediaNextEp(Object episode, Object days, Object hours) {
     return 'Ep $episode in ${days}d ${hours}h';
   }
@@ -821,6 +920,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsFeedTab => 'Default feed tab';
 
   @override
+  String get settingsFeedActivityScope => 'Default feed view';
+
+  @override
+  String get settingsAppearanceTitle => 'Appearance';
+
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Theme, language, and home & library bars.';
+
+  @override
   String get settingsLayoutCustomizationTitle => 'Home & library bars';
 
   @override
@@ -832,7 +941,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsCustomizeFeedFiltersDesc =>
-      'Reorder or hide Following, Global, Anime, etc. At least one filter must stay visible.';
+      'Reorder or hide Feed, Anime, etc. At least one filter must stay visible.';
 
   @override
   String get settingsCustomizeLibraryKinds => 'Library type bar';

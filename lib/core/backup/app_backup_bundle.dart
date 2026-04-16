@@ -190,6 +190,7 @@ abstract final class AppBackupBundle {
     ref.invalidate(localeNotifierProvider);
     ref.invalidate(defaultStartPageProvider);
     ref.invalidate(defaultFeedTabProvider);
+    ref.invalidate(defaultFeedActivityScopeProvider);
     ref.invalidate(hideTextActivitiesProvider);
     ref.invalidate(libraryKindLayoutProvider);
     ref.invalidate(feedFilterLayoutProvider);

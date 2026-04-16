@@ -780,7 +780,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'1dac5649107efbd1e0acae1952c5cc1b05dd6e10';
+String _$anilistTokenHash() => r'1a7dc6aa9b97567c64a019dfcc86e97fbb2741ff';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)
@@ -976,5 +976,234 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AutoDisposeAsyncNotifier<List<FeedActivity>>;
+String _$anilistGenreTagBrowseHash() =>
+    r'852d6d158b5f3fa26afeba8af4ca8474cd730902';
+
+abstract class _$AnilistGenreTagBrowse
+    extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {
+  late final String mediaType;
+  late final String sortKey;
+  late final String genrePart;
+  late final String tagPart;
+
+  FutureOr<List<Map<String, dynamic>>> build(
+    String mediaType,
+    String sortKey,
+    String genrePart,
+    String tagPart,
+  );
+}
+
+/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+///
+/// Copied from [AnilistGenreTagBrowse].
+@ProviderFor(AnilistGenreTagBrowse)
+const anilistGenreTagBrowseProvider = AnilistGenreTagBrowseFamily();
+
+/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+///
+/// Copied from [AnilistGenreTagBrowse].
+class AnilistGenreTagBrowseFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+  ///
+  /// Copied from [AnilistGenreTagBrowse].
+  const AnilistGenreTagBrowseFamily();
+
+  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+  ///
+  /// Copied from [AnilistGenreTagBrowse].
+  AnilistGenreTagBrowseProvider call(
+    String mediaType,
+    String sortKey,
+    String genrePart,
+    String tagPart,
+  ) {
+    return AnilistGenreTagBrowseProvider(
+      mediaType,
+      sortKey,
+      genrePart,
+      tagPart,
+    );
+  }
+
+  @override
+  AnilistGenreTagBrowseProvider getProviderOverride(
+    covariant AnilistGenreTagBrowseProvider provider,
+  ) {
+    return call(
+      provider.mediaType,
+      provider.sortKey,
+      provider.genrePart,
+      provider.tagPart,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistGenreTagBrowseProvider';
+}
+
+/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+///
+/// Copied from [AnilistGenreTagBrowse].
+class AnilistGenreTagBrowseProvider
+    extends
+        AutoDisposeAsyncNotifierProviderImpl<
+          AnilistGenreTagBrowse,
+          List<Map<String, dynamic>>
+        > {
+  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
+  ///
+  /// Copied from [AnilistGenreTagBrowse].
+  AnilistGenreTagBrowseProvider(
+    String mediaType,
+    String sortKey,
+    String genrePart,
+    String tagPart,
+  ) : this._internal(
+        () => AnilistGenreTagBrowse()
+          ..mediaType = mediaType
+          ..sortKey = sortKey
+          ..genrePart = genrePart
+          ..tagPart = tagPart,
+        from: anilistGenreTagBrowseProvider,
+        name: r'anilistGenreTagBrowseProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistGenreTagBrowseHash,
+        dependencies: AnilistGenreTagBrowseFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistGenreTagBrowseFamily._allTransitiveDependencies,
+        mediaType: mediaType,
+        sortKey: sortKey,
+        genrePart: genrePart,
+        tagPart: tagPart,
+      );
+
+  AnilistGenreTagBrowseProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.mediaType,
+    required this.sortKey,
+    required this.genrePart,
+    required this.tagPart,
+  }) : super.internal();
+
+  final String mediaType;
+  final String sortKey;
+  final String genrePart;
+  final String tagPart;
+
+  @override
+  FutureOr<List<Map<String, dynamic>>> runNotifierBuild(
+    covariant AnilistGenreTagBrowse notifier,
+  ) {
+    return notifier.build(mediaType, sortKey, genrePart, tagPart);
+  }
+
+  @override
+  Override overrideWith(AnilistGenreTagBrowse Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistGenreTagBrowseProvider._internal(
+        () => create()
+          ..mediaType = mediaType
+          ..sortKey = sortKey
+          ..genrePart = genrePart
+          ..tagPart = tagPart,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        mediaType: mediaType,
+        sortKey: sortKey,
+        genrePart: genrePart,
+        tagPart: tagPart,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<
+    AnilistGenreTagBrowse,
+    List<Map<String, dynamic>>
+  >
+  createElement() {
+    return _AnilistGenreTagBrowseProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistGenreTagBrowseProvider &&
+        other.mediaType == mediaType &&
+        other.sortKey == sortKey &&
+        other.genrePart == genrePart &&
+        other.tagPart == tagPart;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, mediaType.hashCode);
+    hash = _SystemHash.combine(hash, sortKey.hashCode);
+    hash = _SystemHash.combine(hash, genrePart.hashCode);
+    hash = _SystemHash.combine(hash, tagPart.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistGenreTagBrowseRef
+    on AutoDisposeAsyncNotifierProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `mediaType` of this provider.
+  String get mediaType;
+
+  /// The parameter `sortKey` of this provider.
+  String get sortKey;
+
+  /// The parameter `genrePart` of this provider.
+  String get genrePart;
+
+  /// The parameter `tagPart` of this provider.
+  String get tagPart;
+}
+
+class _AnilistGenreTagBrowseProviderElement
+    extends
+        AutoDisposeAsyncNotifierProviderElement<
+          AnilistGenreTagBrowse,
+          List<Map<String, dynamic>>
+        >
+    with AnilistGenreTagBrowseRef {
+  _AnilistGenreTagBrowseProviderElement(super.provider);
+
+  @override
+  String get mediaType => (origin as AnilistGenreTagBrowseProvider).mediaType;
+  @override
+  String get sortKey => (origin as AnilistGenreTagBrowseProvider).sortKey;
+  @override
+  String get genrePart => (origin as AnilistGenreTagBrowseProvider).genrePart;
+  @override
+  String get tagPart => (origin as AnilistGenreTagBrowseProvider).tagPart;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

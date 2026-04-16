@@ -1,12 +1,14 @@
 # Build APK (o app bundle) usando defines en JSON.
 # 1) Copia dart_defines.example.json -> dart_defines.local.json (en la raíz del repo)
 # 2) Rellena valores; dart_defines.local.json está en .gitignore
-# 3) Ejecuta: .\scripts\build_android.ps1
-#    Opcional: .\scripts\build_android.ps1 -Target appbundle
+# 3) APK por defecto en DEBUG (instalable en el móvil para probar).
+#    Release (tienda / optimizado): .\scripts\build_android.ps1 -Release
+#    App bundle (Play Store, siempre release): .\scripts\build_android.ps1 -Target appbundle
 
 param(
   [ValidateSet("apk", "appbundle")]
   [string] $Target = "apk",
+  [switch] $Release,
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]] $FlutterArgs = @()
 )
@@ -32,6 +34,10 @@ $defineArg = "--dart-define-from-file=$DefinesFile"
 
 if ($Target -eq "appbundle") {
   flutter build appbundle $defineArg @FlutterArgs
-} else {
+} elseif ($Release) {
+  Write-Host "Compilando APK release..." -ForegroundColor Cyan
   flutter build apk $defineArg @FlutterArgs
+} else {
+  Write-Host "Compilando APK debug (usa -Release para release)..." -ForegroundColor Cyan
+  flutter build apk --debug $defineArg @FlutterArgs
 }

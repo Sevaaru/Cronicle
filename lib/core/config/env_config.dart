@@ -31,6 +31,13 @@ abstract final class EnvConfig {
     defaultValue: '',
   );
 
+  /// Cliente OAuth **Android** (tipo *Android* en Credenciales). Si lo defines, pásalo como
+  /// `clientId` en [GoogleSignIn.initialize] solo en Android; no uses aquí el ID del cliente iOS.
+  static const String googleAndroidClientId = String.fromEnvironment(
+    'GOOGLE_ANDROID_CLIENT_ID',
+    defaultValue: '',
+  );
+
   /// Cliente OAuth **iOS** (opcional si no va en `Info.plist` como `GIDClientID`).
   static const String googleIosClientId = String.fromEnvironment(
     'GOOGLE_IOS_CLIENT_ID',
