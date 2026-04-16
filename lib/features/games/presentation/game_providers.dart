@@ -69,13 +69,12 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   final api = ref.read(igdbApiProvider);
   final raw = await api.fetchGameDetail(gameId);
   if (raw == null) return null;
+  final reviewsRaw = raw.remove('__igdb_reviews');
+  final reviews = reviewsRaw is List
+      ? reviewsRaw.cast<Map<String, dynamic>>()
+      : <Map<String, dynamic>>[];
   final normalized = IgdbApiDatasource.normalize(raw);
-  try {
-    final reviews = await api.fetchGameReviews(gameId);
-    normalized['igdb_reviews'] = reviews;
-  } catch (_) {
-    normalized['igdb_reviews'] = <Map<String, dynamic>>[];
-  }
+  normalized['igdb_reviews'] = reviews;
   return normalized;
 }
 

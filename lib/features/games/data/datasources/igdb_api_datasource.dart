@@ -20,6 +20,9 @@ class IgdbApiDatasource {
   /// Resuelve el `popularity_type` de visitas IGDB (PopScore); cacheado en memoria.
   int? _cachedVisitPopularityTypeId;
 
+  /// Tras el primer acierto se reutiliza (evita probar `/review` y `/reviews` en cada lista).
+  String? _cachedReviewsPath;
+
   static const _queryRetryDelayMs = 180;
 
   Future<Options> _headers() async {
@@ -54,6 +57,19 @@ limit 20;
   /// Popular vía IGDB PopScore (`/popularity_primitives` + `/games` por ids en
   /// orden de visitas). Si no hay datos, orden estable por `total_rating`.
   Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 24}) async {
+    // Una sola petición: mucho más rápido que PopScore (2–3 RTT). Misma calidad
+    // que el primer fallback por rating cuando hay `total_rating`.
+    try {
+      final fast = await _postList('/games', '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, summary;
+where category = 0 & total_rating > 0;
+sort total_rating desc;
+limit $limit;
+''');
+      if (fast.isNotEmpty) return fast;
+    } catch (_) {}
+
     final viaPop = await _fetchPopularViaPopularityPrimitives(limit: limit);
     if (viaPop.isNotEmpty) return viaPop;
 
@@ -399,14 +415,21 @@ where id = $gameId;
 ''';
     final list = await _postList('/games', body);
     if (list.isEmpty) return null;
-    final game = list.first;
+    final game = Map<String, dynamic>.from(list.first);
     try {
-      final ttb = await _fetchGameTimeToBeat(gameId);
-      if (ttb != null) {
-        game['time_to_beat'] = ttb;
-      }
+      final ttbFuture = _fetchGameTimeToBeat(gameId);
+      final reviewsFuture = fetchGameReviews(gameId);
+      final results = await Future.wait<Object?>([
+        ttbFuture.catchError((_) => null),
+        reviewsFuture.catchError((_) => <Map<String, dynamic>>[]),
+      ]);
+      final ttb = results[0] as Map<String, dynamic>?;
+      final reviews = results[1] as List<Map<String, dynamic>>;
+      if (ttb != null) game['time_to_beat'] = ttb;
+      game['__igdb_reviews'] = reviews;
     } catch (_) {
-      // Pro tier / network: detail page still works without estimates.
+      // Pro tier / network: detail page still works without estimates/reviews.
+      game['__igdb_reviews'] = <Map<String, dynamic>>[];
     }
     return game;
   }
@@ -438,10 +461,21 @@ limit 15;
 
   /// Prueba `/review` y `/reviews` (Apicalypse); si ambos devuelven 404, [].
   Future<List<Map<String, dynamic>>> _postReviewsList(String body) async {
+    final cached = _cachedReviewsPath;
+    if (cached != null) {
+      try {
+        return await _postList(cached, body);
+      } on Object catch (e) {
+        if (!_isIgdbNotFound(e)) rethrow;
+        _cachedReviewsPath = null;
+      }
+    }
     const candidates = ['/review', '/reviews'];
     for (var i = 0; i < candidates.length; i++) {
       try {
-        return await _postList(candidates[i], body);
+        final rows = await _postList(candidates[i], body);
+        _cachedReviewsPath = candidates[i];
+        return rows;
       } on Object catch (e) {
         final is404 = _isIgdbNotFound(e);
         if (is404 && i < candidates.length - 1) {

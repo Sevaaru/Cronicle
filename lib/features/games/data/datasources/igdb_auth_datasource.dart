@@ -13,6 +13,17 @@ class IgdbAuthDatasource {
   final FlutterSecureStorage _storage;
   final Dio _dio;
 
+  /// Evita lecturas repetidas de [FlutterSecureStorage] y peticiones OAuth duplicadas
+  /// cuando varias llamadas IGDB van en paralelo (p. ej. home de juegos).
+  String? _memToken;
+  int? _memValidUntilMs;
+  Future<String>? _tokenInFlight;
+
+  void _clearTokenMemory() {
+    _memToken = null;
+    _memValidUntilMs = null;
+  }
+
   static const _appTokenKey = 'igdb_access_token';
   static const _appExpiresKey = 'igdb_token_expires_at';
 
@@ -39,6 +50,22 @@ class IgdbAuthDatasource {
 
   /// Devuelve un token válido para la API IGDB: prioriza OAuth de usuario; si no, client_credentials.
   Future<String> getValidToken() async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final until = _memValidUntilMs;
+    if (_memToken != null && until != null && now < until) {
+      return _memToken!;
+    }
+    _tokenInFlight ??= _resolveTokenUncached().whenComplete(() {
+      _tokenInFlight = null;
+    });
+    final token = await _tokenInFlight!;
+    _memToken = token;
+    // TTL conservador en memoria; el token real suele durar mucho más.
+    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 120_000;
+    return token;
+  }
+
+  Future<String> _resolveTokenUncached() async {
     final user = await _getValidUserAccessToken();
     if (user != null) return user;
 
@@ -101,6 +128,7 @@ class IgdbAuthDatasource {
       await _storage.write(key: _userAccessKey, value: token);
       await _storage.write(key: _userRefreshKey, value: newRefresh);
       await _storage.write(key: _userExpiresKey, value: expiresAt.toString());
+      _clearTokenMemory();
       return token;
     } catch (_) {
       await clearUserSession();
@@ -129,6 +157,7 @@ class IgdbAuthDatasource {
 
     await _storage.write(key: _appTokenKey, value: token);
     await _storage.write(key: _appExpiresKey, value: expiresAt.toString());
+    _clearTokenMemory();
 
     return token;
   }
@@ -177,6 +206,7 @@ class IgdbAuthDatasource {
     if (login != null) {
       await _storage.write(key: _userLoginKey, value: login);
     }
+    _clearTokenMemory();
   }
 
   Future<String?> _fetchHelixLogin(String userAccess) async {
@@ -203,6 +233,7 @@ class IgdbAuthDatasource {
   }
 
   Future<void> clearUserSession() async {
+    _clearTokenMemory();
     await _storage.delete(key: _userAccessKey);
     await _storage.delete(key: _userRefreshKey);
     await _storage.delete(key: _userExpiresKey);
@@ -227,6 +258,7 @@ class IgdbAuthDatasource {
 
   /// Borra tokens de app (client_credentials) y de usuario.
   Future<void> deleteToken() async {
+    _clearTokenMemory();
     await _storage.delete(key: _appTokenKey);
     await _storage.delete(key: _appExpiresKey);
     await clearUserSession();
