@@ -85,13 +85,24 @@ String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
         l10n.feedBrowseRecentlyReleased,
     };
 
-const List<_AnimeMangaBrowseTab> _animeMangaBrowseTabs = [
+const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
   _AnimeMangaBrowseTab.activity,
   _AnimeMangaBrowseTab.seasonal,
   _AnimeMangaBrowseTab.topRated,
   _AnimeMangaBrowseTab.upcoming,
   _AnimeMangaBrowseTab.recentlyReleased,
 ];
+
+/// Manga no tiene temporadas en Anilist como el anime; se omite «De temporada».
+const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
+  _AnimeMangaBrowseTab.activity,
+  _AnimeMangaBrowseTab.topRated,
+  _AnimeMangaBrowseTab.upcoming,
+  _AnimeMangaBrowseTab.recentlyReleased,
+];
+
+List<_AnimeMangaBrowseTab> _browseTabsFor(_FeedFilter filter) =>
+    filter == _FeedFilter.manga ? _mangaBrowseTabs : _animeBrowseTabs;
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
@@ -197,6 +208,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       case _FeedFilter.manga:
         ref.invalidate(anilistFeedByTypeProvider('MANGA_LIST'));
         for (final c in _anilistBrowseCategories) {
+          if (c == 'seasonal') continue;
           ref.invalidate(anilistBrowseMediaProvider('MANGA', c));
         }
       case _FeedFilter.game:
@@ -374,9 +386,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemCount: _animeMangaBrowseTabs.length,
+                itemCount: _browseTabsFor(_filter).length,
                 itemBuilder: (context, i) {
-                  final tab = _animeMangaBrowseTabs[i];
+                  final tab = _browseTabsFor(_filter)[i];
                   final selected = _animeMangaBrowseTab == tab;
                   return FilterChip(
                     selected: selected,
