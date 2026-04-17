@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/device_notification_prefs.dart';
 import 'package:cronicle/core/utils/anilist_media_title.dart';
+import 'package:cronicle/core/utils/anilist_notification_contexts.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 
 bool _shouldMirrorAnilistNotif(String? typename, bool includeSocial) {
@@ -52,11 +53,10 @@ String? _actorDisplayName(Map<String, dynamic> n) {
 String _contextOrSummaryLine(Map<String, dynamic> n) {
   final ctx = n['context'] as String?;
   if (ctx != null && ctx.isNotEmpty) return ctx;
-  final ctxs = n['contexts'] as List?;
-  if (ctxs != null && ctxs.isNotEmpty) {
-    final parts =
-        ctxs.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
-    if (parts.isNotEmpty) return parts.join(' ');
+  final ctxs = n['contexts'];
+  if (ctxs is List && ctxs.isNotEmpty) {
+    final flat = anilistFlattenContexts(ctxs).trim();
+    if (flat.isNotEmpty) return flat;
   }
   final t = n['__typename'] as String? ?? '';
   if (t == 'AiringNotification') {
@@ -112,17 +112,18 @@ String _anilistNotifTitle(String? typename, bool isEs) {
     final kindWord = isManga
         ? (isEs ? 'Capítulo' : 'Chapter')
         : (isEs ? 'Episodio' : 'Episode');
-    final structured = (episode != null && mediaTitle != 'Media')
-        ? '$kindWord $episode · $mediaTitle'
-        : (mediaTitle != 'Media' ? mediaTitle : '');
-    final body = contextLine.isNotEmpty
-        ? contextLine
-        : (structured.isNotEmpty
-            ? structured
-            : _anilistNotifTitle(typename, isEs));
     final title = mediaTitle != 'Media' && mediaTitle.isNotEmpty
         ? mediaTitle
         : _anilistNotifTitle(typename, isEs);
+    // Do not use raw `contexts` for the system body: Anilist fragments often
+    // render wrong when joined; title already shows the series name.
+    final body = episode != null
+        ? '$kindWord $episode'
+        : (contextLine.isNotEmpty
+            ? contextLine
+            : (mediaTitle != 'Media'
+                ? mediaTitle
+                : _anilistNotifTitle(typename, isEs)));
     return (title, body);
   }
 

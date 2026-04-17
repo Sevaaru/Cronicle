@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/utils/anilist_media_title.dart';
+import 'package:cronicle/core/utils/anilist_notification_contexts.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -35,13 +36,10 @@ class AnilistNotificationsPage extends ConsumerWidget {
   String _titleLine(Map<String, dynamic> n, AppLocalizations l10n) {
     final t = n['__typename'] as String? ?? '';
     if (t == 'AiringNotification') {
-      final ctxs = n['contexts'] as List?;
-      if (ctxs != null && ctxs.isNotEmpty) {
-        final parts = ctxs
-            .map((e) => e?.toString() ?? '')
-            .where((s) => s.isNotEmpty)
-            .toList();
-        if (parts.isNotEmpty) return parts.join(' ');
+      final ctxs = n['contexts'];
+      if (ctxs is List && ctxs.isNotEmpty) {
+        final flat = anilistFlattenContexts(ctxs).trim();
+        if (flat.isNotEmpty) return flat;
       }
       final media = n['media'] as Map<String, dynamic>? ?? {};
       final mediaTitle = anilistMediaDisplayTitle(media);
@@ -58,11 +56,10 @@ class AnilistNotificationsPage extends ConsumerWidget {
 
     final ctx = n['context'] as String?;
     if (ctx != null && ctx.isNotEmpty) return ctx;
-    final ctxs = n['contexts'] as List?;
-    if (ctxs != null && ctxs.isNotEmpty) {
-      final parts =
-          ctxs.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
-      if (parts.isNotEmpty) return parts.join(' ');
+    final ctxs = n['contexts'];
+    if (ctxs is List && ctxs.isNotEmpty) {
+      final flat = anilistFlattenContexts(ctxs).trim();
+      if (flat.isNotEmpty) return flat;
     }
     return switch (t) {
       'ActivityReplyNotification' => l10n.notificationTypeActivityReply,
@@ -100,12 +97,9 @@ class AnilistNotificationsPage extends ConsumerWidget {
   String? _subtitle(Map<String, dynamic> n, AppLocalizations l10n) {
     final t = n['__typename'] as String? ?? '';
     if (t == 'AiringNotification') {
-      final ctxs = n['contexts'] as List?;
-      final hasCtx = ctxs != null &&
-          ctxs
-              .map((e) => e?.toString() ?? '')
-              .where((s) => s.isNotEmpty)
-              .isNotEmpty;
+      final ctxs = n['contexts'];
+      final hasCtx =
+          ctxs is List && anilistFlattenContexts(ctxs).trim().isNotEmpty;
       if (!hasCtx) return null;
       final media = n['media'] as Map<String, dynamic>? ?? {};
       final mediaTitle = anilistMediaDisplayTitle(media);
