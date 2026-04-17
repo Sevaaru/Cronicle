@@ -15,6 +15,9 @@ import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/games/presentation/igdb_game_review_detail_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
+import 'package:cronicle/features/profile/presentation/personal_stats_page.dart';
+import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
+import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
@@ -63,7 +66,7 @@ final _shellKey = GlobalKey<NavigatorState>();
 int _tabIndexFromPath(String path) {
   if (path.startsWith('/library')) return 1;
   if (path.startsWith('/search')) return 2;
-  if (path.startsWith('/profile') && !path.startsWith('/profile/')) return 3;
+  if (path.startsWith('/profile')) return 3;
   if (path.startsWith('/settings')) return 4;
   return 0;
 }
@@ -127,6 +130,20 @@ GoRouter appRouter(AppRouterRef ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfilePage(),
             ),
+          ),
+          GoRoute(
+            path: '/profile/personal-stats',
+            builder: (context, state) => const PersonalStatsPage(),
+          ),
+          GoRoute(
+            path: '/profile/favorites/:kind',
+            builder: (context, state) {
+              final kind = ProfileFavoritesKind.tryParse(state.pathParameters['kind']);
+              if (kind == null) {
+                return const _InvalidBrowseParamsPage();
+              }
+              return ProfileFavoritesPage(kind: kind);
+            },
           ),
           GoRoute(
             path: '/settings',

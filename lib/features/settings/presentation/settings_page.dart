@@ -824,6 +824,15 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   String? _accountEmail;
   bool _syncing = false;
 
+  String _lastSyncWhen(AppLocalizations l10n) {
+    final ms =
+        ref.read(sharedPreferencesProvider).getInt(GoogleDriveBackupPrefs.lastRunMs);
+    if (ms == null || ms <= 0) return l10n.never;
+    final dt = DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
+    return MaterialLocalizations.of(context)
+        .formatTimeOfDay(TimeOfDay.fromDateTime(dt));
+  }
+
   bool get _needsGoogleServerClientId {
     if (kIsWeb) return false;
     return Platform.isAndroid || Platform.isIOS;
@@ -943,6 +952,8 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
           _loading = false;
         });
       }
+      await prefs.setBool(GoogleDriveBackupPrefs.autoEnabled, signedIn);
+      await GoogleDriveBackupScheduler.applyFromPrefs(prefs);
       return signedIn;
     } catch (_) {
       if (mounted) {
@@ -999,9 +1010,13 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
           );
         },
         (_) {
+          final prefs = ref.read(sharedPreferencesProvider);
+          final now = DateTime.now().millisecondsSinceEpoch;
+          unawaited(prefs.setInt(GoogleDriveBackupPrefs.lastRunMs, now));
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.backupUploadSuccess)),
           );
+          setState(() {});
         },
       );
     } catch (e) {
@@ -1147,6 +1162,11 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
                 ],
               ),
               const SizedBox(height: 10),
+              Text(
+                l10n.googleLastSyncLine(_lastSyncWhen(l10n)),
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 6),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.tonalIcon(
@@ -1307,36 +1327,26 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
       final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
       final bytes = Uint8List.fromList(utf8.encode(jsonStr));
 
-      if (!kIsWeb && await _googleAuthorizedForDrive()) {
-        final repo = ref.read(backupRepositoryProvider);
-        final res = await repo.uploadBackup(bytes);
-        res.fold(
-          (f) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.errorWithMessage(f.toString()))),
-            );
-          },
-          (_) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.backupUploadSuccess)),
-            );
-          },
-        );
-        return;
-      }
-
       if (kIsWeb) {
         await SharePlus.instance.share(ShareParams(text: jsonStr));
       } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/cronicle_backup.json');
-        await file.writeAsString(jsonStr);
-        await SharePlus.instance.share(ShareParams(
-          files: [XFile(file.path)],
-          subject: 'Cronicle Backup',
-        ));
+        final savePath = await FilePicker.saveFile(
+          dialogTitle: l10n.backupSaveFileDialogTitle,
+          fileName: 'cronicle_backup.json',
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+          bytes: bytes,
+        );
+
+        if (savePath == null || savePath.isEmpty) {
+          final dir = await getTemporaryDirectory();
+          final file = File('${dir.path}/cronicle_backup.json');
+          await file.writeAsString(jsonStr);
+          await SharePlus.instance.share(ShareParams(
+            files: [XFile(file.path)],
+            subject: 'Cronicle Backup',
+          ));
+        }
       }
 
       if (!mounted) return;
@@ -1488,51 +1498,44 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
             l10n.backupSectionSubtitle,
             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
-          if (!kIsWeb) ...[
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.cloud_sync_outlined,
-                  color: cs.primary, size: 22),
-              title: Text(l10n.backupAutoGoogleTitle),
-              subtitle: Text(
-                l10n.backupAutoGoogleSubtitle,
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-              ),
-              trailing: Switch(
-                value: ref
-                        .read(sharedPreferencesProvider)
-                        .getBool(GoogleDriveBackupPrefs.autoEnabled) ??
-                    false,
-                onChanged: (v) async {
-                  final p = ref.read(sharedPreferencesProvider);
-                  await p.setBool(GoogleDriveBackupPrefs.autoEnabled, v);
-                  await GoogleDriveBackupScheduler.applyFromPrefs(p);
-                  if (mounted) setState(() {});
-                },
-              ),
-            ),
-          ],
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  ),
                   onPressed: _exporting ? null : _exportBackup,
                   icon: _exporting
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.upload_file_rounded),
-                  label: Text(l10n.backupUpload),
+                  label: Text(
+                    l10n.backupExportButton,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  ),
                   onPressed: _importing ? null : _importBackup,
                   icon: _importing
                       ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))
                       : const Icon(Icons.download_rounded),
-                  label: Text(l10n.backupRestore),
+                  label: Text(
+                    l10n.backupRestore,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ],

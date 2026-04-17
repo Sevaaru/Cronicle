@@ -204,7 +204,7 @@ final igdbPopularProvider =
 // ignore: unused_element
 typedef IgdbPopularRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$igdbGameDetailHash() => r'256c66738a4115ea34ed1f15b1d0a614925880d1';
+String _$igdbGameDetailHash() => r'9b69004832c56422fd93b0280465d42917485448';
 
 /// See also [igdbGameDetail].
 @ProviderFor(igdbGameDetail)
@@ -625,7 +625,7 @@ final favoriteGamesProvider =
     );
 
 typedef _$FavoriteGames = Notifier<List<Map<String, dynamic>>>;
-String _$twitchIgdbAccountHash() => r'db8903f0cfabf2cc069065bbc7839a9a2c3c007b';
+String _$twitchIgdbAccountHash() => r'5da183d69d19f61ca3353574c2b7e1b6b828fd83';
 
 /// See also [TwitchIgdbAccount].
 @ProviderFor(TwitchIgdbAccount)

@@ -2,7 +2,7 @@ name: cronicle
 description: Cronicle — progreso y listas de anime, películas, series y juegos (offline-first).
 publish_to: "none"
 
-version: 1.0.0+6
+version: 1.0.0+8
 
 environment:
   sdk: ^3.11.4
@@ -79,6 +79,9 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_icon.png"
+  adaptive_icon_foreground_inset: 8
   min_sdk_android: 21
   remove_alpha_ios: true
   web:

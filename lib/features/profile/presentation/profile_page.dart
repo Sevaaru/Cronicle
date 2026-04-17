@@ -6,6 +6,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
+import 'package:cronicle/features/profile/presentation/profile_favorites_preview.dart';
+import 'package:cronicle/features/profile/presentation/profile_stats_shared.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
@@ -141,41 +145,47 @@ class _NotLoggedIn extends ConsumerWidget {
   }
 }
 
-class _ProfileContent extends StatelessWidget {
+class _ProfileContent extends ConsumerStatefulWidget {
   const _ProfileContent({required this.profile});
   final Map<String, dynamic> profile;
 
   @override
+  ConsumerState<_ProfileContent> createState() => _ProfileContentState();
+}
+
+class _ProfileContentState extends ConsumerState<_ProfileContent> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryRefreshTraktAvatar());
+  }
+
+  Future<void> _tryRefreshTraktAvatar() async {
+    if (!mounted) return;
+    final s = await ref.read(traktSessionProvider.future);
+    if (!mounted || !s.connected) return;
+    if ((s.userAvatarUrl ?? '').isEmpty) {
+      await ref.read(traktSessionProvider.notifier).refreshFromNetwork();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final traktSessionAsync = ref.watch(traktSessionProvider);
     final name = profile['name'] as String? ?? '';
     final avatar = (profile['avatar'] as Map?)?['large'] as String?;
     final banner = profile['bannerImage'] as String?;
     final about = profile['about'] as String?;
     final siteUrl = profile['siteUrl'] as String?;
 
-    final stats = profile['statistics'] as Map<String, dynamic>? ?? {};
-    final animeStats = stats['anime'] as Map<String, dynamic>? ?? {};
-    final mangaStats = stats['manga'] as Map<String, dynamic>? ?? {};
-
-    final animeCount = animeStats['count'] as int? ?? 0;
-    final episodesWatched = animeStats['episodesWatched'] as int? ?? 0;
-    final minutesWatched = animeStats['minutesWatched'] as int? ?? 0;
-    final animeMean = (animeStats['meanScore'] as num?)?.toDouble() ?? 0;
-
-    final mangaCount = mangaStats['count'] as int? ?? 0;
-    final chaptersRead = mangaStats['chaptersRead'] as int? ?? 0;
-    final volumesRead = mangaStats['volumesRead'] as int? ?? 0;
-    final mangaMean = (mangaStats['meanScore'] as num?)?.toDouble() ?? 0;
-
-    final animeGenres = (animeStats['genres'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final mangaGenres = (mangaStats['genres'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-    final animeStatuses = (animeStats['statuses'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final mangaStatuses = (mangaStats['statuses'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-    final daysWatched = (minutesWatched / 60 / 24).toStringAsFixed(1);
+    final trakt = traktSessionAsync.valueOrNull;
+    final traktConnected = trakt?.connected == true;
+    final traktImg = (trakt?.userAvatarUrl ?? '').trim();
+    final hasTraktImg = traktImg.isNotEmpty;
+    final traktName = trakt?.userName ?? '';
 
     final favs = profile['favourites'] as Map<String, dynamic>? ?? {};
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
@@ -211,23 +221,52 @@ class _ProfileContent extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        GestureDetector(
-                          onTap: avatar != null ? () => showFullscreenImage(context, avatar) : null,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: cs.surface, width: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: avatar != null ? () => showFullscreenImage(context, avatar) : null,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: cs.surface, width: 4),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 38,
+                                  backgroundImage:
+                                      avatar != null ? CachedNetworkImageProvider(avatar) : null,
+                                  child: avatar == null
+                                      ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                          style: const TextStyle(fontSize: 28))
+                                      : null,
+                                ),
+                              ),
                             ),
-                            child: CircleAvatar(
-                              radius: 38,
-                              backgroundImage:
-                                  avatar != null ? CachedNetworkImageProvider(avatar) : null,
-                              child: avatar == null
-                                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                      style: const TextStyle(fontSize: 28))
-                                  : null,
-                            ),
-                          ),
+                            if (traktConnected) ...[
+                              const SizedBox(width: 10),
+                              GestureDetector(
+                                onTap: hasTraktImg ? () => showFullscreenImage(context, traktImg) : null,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: cs.surface, width: 4),
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 34,
+                                    backgroundImage:
+                                        hasTraktImg ? CachedNetworkImageProvider(traktImg) : null,
+                                    child: !hasTraktImg
+                                        ? Text(
+                                            traktName.isNotEmpty ? traktName[0].toUpperCase() : 'T',
+                                            style: const TextStyle(fontSize: 24),
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -278,172 +317,119 @@ class _ProfileContent extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
 
-              // Anime stats
-              _SectionHeader(l10n.sectionAnime, Icons.animation_rounded, cs.primary),
-              const SizedBox(height: 8),
-              GlassCard(
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _BigStat('$animeCount', l10n.statTitles),
-                        _BigStat('$episodesWatched', l10n.statEpisodes),
-                        _BigStat('${daysWatched}d', l10n.statDaysWatching),
-                        _BigStat(animeMean.toStringAsFixed(1), l10n.statMeanScore),
-                      ],
-                    ),
-                    if (animeStatuses.isNotEmpty) ...[
-                      const Divider(height: 24),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: animeStatuses.map((s) {
-                          final status = _translateStatus(s['status'] as String? ?? '', l10n);
-                          final count = s['count'] as int? ?? 0;
-                          return Chip(
-                            label: Text('$status: $count', style: const TextStyle(fontSize: 11)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (animeGenres.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                GlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.sectionTopGenresAnime,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      ...animeGenres.map((g) => _GenreBar(
-                            genre: g['genre'] as String? ?? '',
-                            count: g['count'] as int? ?? 0,
-                            maxCount: (animeGenres.first['count'] as int?) ?? 1,
-                            color: cs.primary,
-                          )),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 16),
-
-              // Manga stats
-              _SectionHeader(l10n.sectionManga, Icons.menu_book_rounded, Colors.deepPurple),
-              const SizedBox(height: 8),
-              GlassCard(
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _BigStat('$mangaCount', l10n.statTitles),
-                        _BigStat('$chaptersRead', l10n.statChapters),
-                        _BigStat('$volumesRead', l10n.statVolumes),
-                        _BigStat(mangaMean.toStringAsFixed(1), l10n.statMeanScore),
-                      ],
-                    ),
-                    if (mangaStatuses.isNotEmpty) ...[
-                      const Divider(height: 24),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: mangaStatuses.map((s) {
-                          final status = _translateStatus(s['status'] as String? ?? '', l10n);
-                          final count = s['count'] as int? ?? 0;
-                          return Chip(
-                            label: Text('$status: $count', style: const TextStyle(fontSize: 11)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (mangaGenres.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                GlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.sectionTopGenresManga,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      ...mangaGenres.map((g) => _GenreBar(
-                            genre: g['genre'] as String? ?? '',
-                            count: g['count'] as int? ?? 0,
-                            maxCount: (mangaGenres.first['count'] as int?) ?? 1,
-                            color: Colors.deepPurple,
-                          )),
-                    ],
-                  ),
-                ),
-              ],
-
-              // Favoritos
-              if (favAnime.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                _SectionHeader(l10n.sectionFavAnime, Icons.favorite_rounded, Colors.red.shade400),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 160,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemCount: favAnime.length,
-                    itemBuilder: (context, i) {
-                      final media = favAnime[i] as Map<String, dynamic>;
-                      return _FavCard(media: media, kind: MediaKind.anime);
-                    },
-                  ),
-                ),
-              ],
-              if (favManga.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _SectionHeader(l10n.sectionFavManga, Icons.favorite_rounded, Colors.red.shade400),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 160,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemCount: favManga.length,
-                    itemBuilder: (context, i) {
-                      final media = favManga[i] as Map<String, dynamic>;
-                      return _FavCard(media: media, kind: MediaKind.manga);
-                    },
-                  ),
-                ),
-              ],
+              _PersonalStatsNavTile(l10n: l10n, colorScheme: cs),
+              const SizedBox(height: 12),
 
               Consumer(
                 builder: (context, ref, _) {
                   final favGames = ref.watch(favoriteGamesProvider);
-                  if (favGames.isEmpty) return const SizedBox.shrink();
+                  final favTraktAll = ref.watch(favoriteTraktTitlesProvider);
+                  final favMovies = favTraktAll
+                      .where((e) => (e['trakt_type'] as String?) != 'show')
+                      .toList();
+                  final favShows =
+                      favTraktAll.where((e) => (e['trakt_type'] as String?) == 'show').toList();
+
+                  List<ProfileFavPreviewThumb> thumbsFromNodes(List<dynamic> nodes, IconData fb) {
+                    return nodes
+                        .take(80)
+                        .map((raw) {
+                          final m = raw as Map<String, dynamic>;
+                          final u = (m['coverImage'] as Map?)?['large'] as String?;
+                          return ProfileFavPreviewThumb(imageUrl: u, fallbackIcon: fb);
+                        })
+                        .toList();
+                  }
+
+                  final previewRows = <Widget>[];
+                  if (favAnime.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.animation_rounded,
+                        iconColor: Colors.red.shade400,
+                        title: l10n.sectionFavAnime,
+                        count: favAnime.length,
+                        thumbs: thumbsFromNodes(favAnime, Icons.animation_rounded),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.anime.segment}'),
+                      ),
+                    );
+                  }
+                  if (favManga.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.menu_book_rounded,
+                        iconColor: Colors.deepPurple,
+                        title: l10n.sectionFavManga,
+                        count: favManga.length,
+                        thumbs: thumbsFromNodes(favManga, Icons.menu_book_rounded),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.manga.segment}'),
+                      ),
+                    );
+                  }
+                  if (favMovies.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.movie_outlined,
+                        iconColor: Colors.amber.shade700,
+                        title: l10n.sectionFavTraktMovies,
+                        count: favMovies.length,
+                        thumbs: thumbsFromNodes(favMovies, Icons.movie_outlined),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.movies.segment}'),
+                      ),
+                    );
+                  }
+                  if (favShows.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.tv_rounded,
+                        iconColor: Colors.teal,
+                        title: l10n.sectionFavTraktShows,
+                        count: favShows.length,
+                        thumbs: thumbsFromNodes(favShows, Icons.tv_rounded),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.tv.segment}'),
+                      ),
+                    );
+                  }
+                  if (favGames.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.sports_esports_rounded,
+                        iconColor: Colors.redAccent.shade400,
+                        title: l10n.sectionFavGames,
+                        count: favGames.length,
+                        thumbs: thumbsFromNodes(favGames, Icons.sports_esports_rounded),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.games.segment}'),
+                      ),
+                    );
+                  }
+
+                  if (previewRows.isEmpty) return const SizedBox.shrink();
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 16),
-                      _SectionHeader(l10n.sectionFavGames, Icons.favorite_rounded,
-                          Colors.redAccent.shade400),
+                      ProfileStatsSectionHeader(
+                        l10n.profileFavoritesSectionTitle,
+                        Icons.favorite_rounded,
+                        Colors.red.shade400,
+                      ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        height: 160,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          separatorBuilder: (_, _) => const SizedBox(width: 10),
-                          itemCount: favGames.length,
-                          itemBuilder: (context, i) {
-                            return _FavoriteGameCard(game: favGames[i]);
-                          },
+                      GlassCard(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (var i = 0; i < previewRows.length; i++) ...[
+                              if (i > 0)
+                                Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: cs.outlineVariant.withValues(alpha: 0.32),
+                                ),
+                              previewRows[i],
+                            ],
+                          ],
                         ),
                       ),
                     ],
@@ -454,15 +440,15 @@ class _ProfileContent extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Connected accounts
-              _SectionHeader(l10n.sectionConnectedAccounts, Icons.link_rounded, cs.tertiary),
+              ProfileStatsSectionHeader(l10n.sectionConnectedAccounts, Icons.link_rounded, cs.tertiary),
               const SizedBox(height: 8),
               GlassCard(
                 child: Row(
                   children: [
                     Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
                     const SizedBox(width: 8),
-                    const Text('Anilist',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(l10n.anilistTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                     const Spacer(),
                     Text(name,
                         style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
@@ -470,37 +456,73 @@ class _ProfileContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              GlassCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.circle_outlined, color: cs.onSurfaceVariant.withAlpha(100), size: 20),
-                    const SizedBox(width: 8),
-                    Text('Letterboxd',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: cs.onSurfaceVariant.withAlpha(120))),
-                    const Spacer(),
-                    Text(l10n.comingSoon,
-                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant.withAlpha(80))),
-                  ],
+              traktSessionAsync.when(
+                loading: () => GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: cs.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(l10n.traktTitle,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 14)),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              GlassCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.circle_outlined, color: cs.onSurfaceVariant.withAlpha(100), size: 20),
-                    const SizedBox(width: 8),
-                    Text(l10n.mediaKindGame,
+                error: (e, st) => GlassCard(
+                  child: Row(
+                    children: [
+                      Icon(Icons.circle_outlined,
+                          color: cs.onSurfaceVariant.withAlpha(100), size: 20),
+                      const SizedBox(width: 8),
+                      Text(l10n.traktTitle,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      const Spacer(),
+                      Text(l10n.profileTraktNotConnected,
+                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                data: (s) => GlassCard(
+                  child: Row(
+                    children: [
+                      Icon(
+                        s.connected ? Icons.check_circle : Icons.circle_outlined,
+                        color: s.connected
+                            ? Colors.green.shade400
+                            : cs.onSurfaceVariant.withAlpha(100),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.traktTitle,
                         style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: cs.onSurfaceVariant.withAlpha(120))),
-                    const Spacer(),
-                    Text(l10n.comingSoon,
-                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant.withAlpha(80))),
-                  ],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: s.connected
+                              ? cs.onSurface
+                              : cs.onSurfaceVariant.withAlpha(120),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        s.connected
+                            ? (s.userSlug ?? s.userName ?? '')
+                            : l10n.profileTraktNotConnected,
+                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -509,97 +531,62 @@ class _ProfileContent extends StatelessWidget {
       ],
     );
   }
-
-  String _translateStatus(String status, AppLocalizations l10n) => switch (status) {
-        'CURRENT' => l10n.statusCurrentAnime,
-        'PLANNING' => l10n.statusPlanning,
-        'COMPLETED' => l10n.statusCompleted,
-        'DROPPED' => l10n.statusDropped,
-        'PAUSED' => l10n.statusPaused,
-        'REPEATING' => l10n.statusRepeating,
-        _ => status,
-      };
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title, this.icon, this.color);
-  final String title;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 8),
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color)),
-      ],
-    );
-  }
-}
-
-class _BigStat extends StatelessWidget {
-  const _BigStat(this.value, this.label);
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cs.onSurface)),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
-      ],
-    );
-  }
-}
-
-class _GenreBar extends StatelessWidget {
-  const _GenreBar({
-    required this.genre,
-    required this.count,
-    required this.maxCount,
-    required this.color,
+/// Entrada a estadísticas personales (mismo estilo plano que el resto de `GlassCard` del perfil).
+class _PersonalStatsNavTile extends StatelessWidget {
+  const _PersonalStatsNavTile({
+    required this.l10n,
+    required this.colorScheme,
   });
-  final String genre;
-  final int count;
-  final int maxCount;
-  final Color color;
+
+  final AppLocalizations l10n;
+  final ColorScheme colorScheme;
+
+  static const double _radius = 20;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final ratio = maxCount > 0 ? count / maxCount : 0.0;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(genre, style: TextStyle(fontSize: 12, color: cs.onSurface)),
-          ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 8,
-                backgroundColor: cs.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(color.withAlpha(180)),
-              ),
+    final cs = colorScheme;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_radius),
+        onTap: () => context.push('/profile/personal-stats'),
+        splashColor: cs.primary.withValues(alpha: 0.12),
+        highlightColor: cs.primary.withValues(alpha: 0.06),
+        child: GlassCard(
+          borderRadius: _radius,
+          padding: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(Icons.insights_rounded, color: cs.primary, size: 28),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.profilePersonalStatsTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.profilePersonalStatsSubtitle,
+                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 30,
-            child: Text('$count',
-                textAlign: TextAlign.end,
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -663,58 +650,6 @@ class _FavoriteGameCard extends StatelessWidget {
                       height: 130,
                       color: cs.surfaceContainerHighest,
                       child: const Icon(Icons.sports_esports),
-                    ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FavCard extends StatelessWidget {
-  const _FavCard({required this.media, required this.kind});
-  final Map<String, dynamic> media;
-  final MediaKind kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final title = media['title'] as Map<String, dynamic>? ?? {};
-    final name = (title['english'] as String?) ??
-        (title['romaji'] as String?) ?? '';
-    final cover = (media['coverImage'] as Map?)?['large'] as String?;
-    final id = media['id'] as int?;
-
-    return GestureDetector(
-      onTap: id != null
-          ? () => context.push('/media/$id?kind=${kind.code}')
-          : null,
-      child: SizedBox(
-        width: 100,
-        child: Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: cover != null
-                  ? CachedNetworkImage(
-                      imageUrl: cover,
-                      width: 100,
-                      height: 130,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 100,
-                      height: 130,
-                      color: cs.surfaceContainerHighest,
-                      child: const Icon(Icons.image),
                     ),
             ),
             const SizedBox(height: 4),

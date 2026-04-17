@@ -591,7 +591,7 @@ class _TraktShowDetailProviderElement
   int get traktId => (origin as TraktShowDetailProvider).traktId;
 }
 
-String _$traktSessionHash() => r'474744aa481b96cbb87708494a77f72550c2b569';
+String _$traktSessionHash() => r'aa44d26fac4377a52d4cf3b0516161f9bd23ee8e';
 
 /// Sesión Trakt (OAuth opcional).
 ///

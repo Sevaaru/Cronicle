@@ -780,7 +780,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'1a7dc6aa9b97567c64a019dfcc86e97fbb2741ff';
+String _$anilistTokenHash() => r'13285f73bea2cef67a42d2e5eefee55a6f6a2352';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)

@@ -15,6 +15,7 @@ class TraktAuthDatasource {
   static const _expiresKey = 'trakt_token_expires_at_ms';
   static const _userSlugKey = 'trakt_user_slug';
   static const _userNameKey = 'trakt_user_name';
+  static const _userAvatarUrlKey = 'trakt_user_avatar_url';
 
   static const _tokenUrl = 'https://api.trakt.tv/oauth/token';
 
@@ -25,6 +26,8 @@ class TraktAuthDatasource {
   Future<String?> getUserSlug() => _storage.read(key: _userSlugKey);
 
   Future<String?> getUserName() => _storage.read(key: _userNameKey);
+
+  Future<String?> getUserAvatarUrl() => _storage.read(key: _userAvatarUrlKey);
 
   Future<bool> hasSession() async {
     final t = await getAccessToken();
@@ -37,6 +40,7 @@ class TraktAuthDatasource {
     await _storage.delete(key: _expiresKey);
     await _storage.delete(key: _userSlugKey);
     await _storage.delete(key: _userNameKey);
+    await _storage.delete(key: _userAvatarUrlKey);
   }
 
   /// Devuelve un access token válido o null si no hay sesión.
@@ -159,6 +163,24 @@ class TraktAuthDatasource {
     if (name != null && name.isNotEmpty) {
       await _storage.write(key: _userNameKey, value: name);
     }
+    final avatarUrl = _avatarUrlFromTraktUser(user);
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      await _storage.write(key: _userAvatarUrlKey, value: avatarUrl);
+    }
+  }
+
+  static String? _avatarUrlFromTraktUser(Map<String, dynamic> user) {
+    final images = user['images'] as Map<String, dynamic>?;
+    if (images == null) return null;
+    final av = images['avatar'];
+    if (av is String && av.isNotEmpty) return av;
+    if (av is Map<String, dynamic>) {
+      final full = (av['full'] as String?)?.trim();
+      if (full != null && full.isNotEmpty) return full;
+      final medium = (av['medium'] as String?)?.trim();
+      if (medium != null && medium.isNotEmpty) return medium;
+    }
+    return null;
   }
 
   Uri buildAuthorizeUri(String state) {

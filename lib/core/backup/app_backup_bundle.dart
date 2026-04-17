@@ -29,6 +29,7 @@ const _secureKeysForBackup = <String>[
   'trakt_token_expires_at_ms',
   'trakt_user_slug',
   'trakt_user_name',
+  'trakt_user_avatar_url',
 ];
 
 /// JSON de copia: biblioteca Drift, key-value Drift, SharedPreferences y tokens seguros.

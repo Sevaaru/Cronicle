@@ -33,7 +33,9 @@ class TraktApiDatasource {
       headers['Authorization'] = 'Bearer $bearerToken';
     }
     bool Function(int?)? validateStatus;
-    if (accept404) {
+    if (accept404 && accept401) {
+      validateStatus = (s) => s == 200 || s == 404 || s == 401;
+    } else if (accept404) {
       validateStatus = (s) => s == 200 || s == 404;
     } else if (accept401) {
       validateStatus = (s) => s == 200 || s == 401;
@@ -279,10 +281,87 @@ class TraktApiDatasource {
   Future<Map<String, dynamic>?> fetchUserSettings(String accessToken) async {
     final res = await _dio.get<dynamic>(
       '$_base/users/settings',
+      queryParameters: {'extended': _extended},
       options: await _options(bearerToken: accessToken, accept401: true),
     );
     if (res.statusCode != 200 || res.data is! Map) return null;
     return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Estadísticas públicas de usuario (`/users/{slug}/stats`).
+  Future<Map<String, dynamic>> fetchUserStats(String userSlug) async {
+    final enc = Uri.encodeComponent(userSlug);
+    final res = await _dio.get<dynamic>(
+      '$_base/users/$enc/stats',
+      options: await _options(accept404: true),
+    );
+    if (res.statusCode != 200 || res.data is! Map) return {};
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Favoritos de película en perfil Trakt (excluye anime en normalización).
+  ///
+  /// [accessToken]: OAuth del usuario; necesario si el perfil o los favoritos
+  /// son privados (sin token la API suele devolver 401 y la lista queda vacía).
+  Future<List<Map<String, dynamic>>> fetchUserFavoriteMovies(
+    String userSlug, {
+    int limit = 40,
+    String? accessToken,
+  }) async {
+    final enc = Uri.encodeComponent(userSlug);
+    final res = await _dio.get<dynamic>(
+      '$_base/users/$enc/favorites/movies',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(
+        bearerToken: accessToken,
+        accept404: true,
+        accept401: true,
+      ),
+    );
+    if (res.statusCode != 200) return [];
+    return _favoriteRowsToMedia(_list(res.data), nestedKey: 'movie', isShow: false);
+  }
+
+  /// Favoritos de serie en perfil Trakt (excluye anime en normalización).
+  ///
+  /// [accessToken]: OAuth del usuario para favoritos / perfil privado.
+  Future<List<Map<String, dynamic>>> fetchUserFavoriteShows(
+    String userSlug, {
+    int limit = 40,
+    String? accessToken,
+  }) async {
+    final enc = Uri.encodeComponent(userSlug);
+    final res = await _dio.get<dynamic>(
+      '$_base/users/$enc/favorites/shows',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(
+        bearerToken: accessToken,
+        accept404: true,
+        accept401: true,
+      ),
+    );
+    if (res.statusCode != 200) return [];
+    return _favoriteRowsToMedia(_list(res.data), nestedKey: 'show', isShow: true);
+  }
+
+  List<Map<String, dynamic>> _favoriteRowsToMedia(
+    List<Map<String, dynamic>> rows, {
+    required String nestedKey,
+    required bool isShow,
+  }) {
+    final out = <Map<String, dynamic>>[];
+    for (final row in rows) {
+      final raw = row[nestedKey] as Map<String, dynamic>?;
+      if (raw == null) continue;
+      if (isShow) {
+        if (rawTraktShowIsAnime(raw)) continue;
+        out.add(normalizeTraktShow(raw));
+      } else {
+        if (rawTraktMovieIsAnime(raw)) continue;
+        out.add(normalizeTraktMovie(raw));
+      }
+    }
+    return out;
   }
 
   Future<Response<dynamic>> _postAuthorized(

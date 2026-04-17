@@ -103,6 +103,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get googleSyncNow => 'Sincronizar ahora';
 
   @override
+  String get never => 'Nunca';
+
+  @override
+  String googleLastSyncLine(Object when) {
+    return 'Última sincronización: $when';
+  }
+
+  @override
+  String get backupSaveFileDialogTitle => 'Guardar copia de seguridad';
+
+  @override
   String get connectedWithGoogle => 'Conectado con Google';
 
   @override
@@ -114,7 +125,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get googleSignInCanceledBody =>
-      'El mensaje «cancelado» suele indicar un fallo de OAuth, no que hayas cancelado tú. En Google Cloud Console: 1) Cliente Android con el package de la app y el SHA-1 del keystore de esta compilación (en la carpeta android: gradlew signingReport). 2) GOOGLE_SERVER_CLIENT_ID debe ser el ID del cliente Web del mismo proyecto. 3) Opcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android en las definiciones de compilación. Si publicas por Play Store, añade también el SHA-1 de firma de Play.';
+      'Algo salió mal al iniciar sesión con Google. Inténtalo más tarde.';
 
   @override
   String get googleSignInNotConfiguredTitle =>
@@ -122,17 +133,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get googleSignInNotConfiguredHint =>
-      'Falta GOOGLE_SERVER_CLIENT_ID (cliente OAuth Web) en las defines de compilación.';
+      'En esta versión no está activada la copia de seguridad con Google.';
 
   @override
   String get googleSignInNotConfiguredBody =>
-      'En la raíz del proyecto, copia dart_defines.example.json a dart_defines.local.json y rellena GOOGLE_SERVER_CLIENT_ID con el ID del cliente OAuth tipo «Aplicación web» de Google Cloud Console (termina en .apps.googleusercontent.com). Es obligatorio en Android para Google Sign-In 7.x.\n\nEn el mismo proyecto crea un cliente OAuth tipo «Android» con el nombre de paquete com.cronicle.app.cronicle y el SHA-1 del keystore con el que firmas esta APK (debug, release o firma de Play). Para ver los SHA-1: en la carpeta android ejecuta .\\gradlew.bat signingReport (Windows) o ./gradlew signingReport (macOS/Linux). Si publicas en Play Store, añade también el SHA-1 de «App signing» de la consola de Play.\n\nOpcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android. Después de guardar dart_defines.local.json, recompila con flutter run o scripts/build_android.ps1.';
+      'A esta compilación le faltan los datos para iniciar sesión con Google y usar Drive. Si compilas Cronicle tú mismo, consulta guide/CRONICLE_GUIDE.md (variables de entorno / Google Cloud).';
 
   @override
   String get backupTitle => 'Copia de seguridad local';
 
   @override
   String get backupUpload => 'Subir';
+
+  @override
+  String get backupExportButton => 'Guardar copia';
 
   @override
   String get backupRestore => 'Restaurar';
@@ -142,7 +156,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String backupAnilistMergeFailed(Object error) {
-    return 'No se pudo actualizar desde Anilist antes de la copia; se usarán los datos del dispositivo. $error';
+    return 'No se pudo sincronizar con Anilist antes; se guardó lo que hay en el dispositivo. $error';
   }
 
   @override
@@ -162,18 +176,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get backupAutoGoogleSubtitle =>
-      'Como mucho una vez al día con conexión, solo si mantienes la sesión de Google (Cuentas). Sin ventanas en segundo plano.';
+      'Como mucho una vez al día con conexión, solo mientras mantengas la sesión de Google en Cuentas.';
 
   @override
   String get backupSectionSubtitle =>
-      'Mismo JSON que una exportación completa (biblioteca y ajustes en el dispositivo). Guárdalo en local con Compartir; si tienes sesión en Google en Cuentas, Subir también deja una copia en la carpeta de la app en Drive.';
+      'Guarda tu biblioteca y preferencias en un archivo.';
 
   @override
   String get backupRestoreChooseSourceTitle => 'Origen de la copia';
 
   @override
   String get backupRestoreChooseSourceBody =>
-      '¿Desde un archivo JSON o desde la copia guardada en Google Drive?';
+      '¿Restaurar desde un archivo guardado en el dispositivo o desde Google Drive?';
 
   @override
   String get backupRestoreFromFile => 'Archivo…';
@@ -186,7 +200,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String backupRestoreConfirmBody(Object count) {
-    return 'Se fusionarán $count entradas de biblioteca y, si la copia es reciente, preferencias y sesiones (Anilist/Twitch) incluidas en el archivo.';
+    return 'Se combinarán $count elementos de la biblioteca. Se aplicarán preferencias y cuentas vinculadas si vienen en la copia.';
   }
 
   @override
@@ -236,7 +250,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsNotificationsSubtitle =>
-      'Requiere sesión de Anilist. En Android la recomprobación en segundo plano es aprox. cada 15 min cuando el sistema lo permite; en iOS la frecuencia la decide el sistema. También se comprueba al salir de la app. El SO puede retrasar ejecuciones.';
+      'Necesitas cuenta de Anilist. Cada cuánto se comprueba en segundo plano lo decide el sistema.';
 
   @override
   String get settingsNotificationsUnavailableWeb =>
@@ -259,7 +273,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsNotifAnilistSocialDesc =>
-      'Si lo desactivas, solo se reenvían al sistema las notificaciones de emisión de Anilist (junto con las de nuevos capítulos de arriba, sin duplicar lógica).';
+      'Si lo desactivas, en el dispositivo se muestran menos avisos sociales de Anilist.';
 
   @override
   String get notificationNoLink => 'Abre esta notificación en anilist.co';
@@ -561,11 +575,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileTitle => 'Perfil';
 
   @override
+  String get profilePersonalStatsTitle => 'Estadísticas personales';
+
+  @override
+  String get profilePersonalStatsSubtitle =>
+      'Anime, manga, cine, series y juegos en el dispositivo';
+
+  @override
+  String get sectionProfileLocalGames => 'Juegos (en el dispositivo)';
+
+  @override
+  String get profileLocalGamesHoursTotal => 'Horas registradas';
+
+  @override
+  String get profileLocalGamesEmpty =>
+      'Aún no hay juegos en tu biblioteca local.';
+
+  @override
   String get profileLocalUser => 'Usuario local';
 
   @override
+  String get profileFavoritesSectionTitle => 'Favoritos';
+
+  @override
   String get profileConnectHint =>
-      'Conecta Anilist en Ajustes para ver tus estadísticas completas';
+      'Conecta AniList y Trakt en Ajustes para ver tus estadísticas completas';
 
   @override
   String get profileLocalLibrary => 'Biblioteca local';
@@ -593,6 +627,75 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sectionConnectedAccounts => 'Cuentas conectadas';
+
+  @override
+  String get profileSectionTrakt => 'Cine y series (Trakt)';
+
+  @override
+  String get profileTraktMoviesWatched => 'Películas vistas';
+
+  @override
+  String get profileTraktShowsWatched => 'Series vistas';
+
+  @override
+  String get profileTraktEpisodesWatched => 'Episodios vistos';
+
+  @override
+  String get profileTraktHoursApprox => 'Horas vistas (aprox.)';
+
+  @override
+  String get sectionFavTraktMovies => 'Películas favoritas';
+
+  @override
+  String get sectionFavTraktShows => 'Series favoritas';
+
+  @override
+  String get profileTraktNotConnected => 'Sin conectar';
+
+  @override
+  String get profileTraktSubMovies => 'Películas';
+
+  @override
+  String get profileTraktSubShows => 'Series';
+
+  @override
+  String get profileTraktSubEpisodes => 'Episodios';
+
+  @override
+  String get profileTraktSubSeasons => 'Temporadas';
+
+  @override
+  String get profileTraktSubNetwork => 'Red';
+
+  @override
+  String get statTraktPlays => 'Reproducciones';
+
+  @override
+  String get statTraktWatched => 'Vistos';
+
+  @override
+  String get statTraktCollected => 'En colección';
+
+  @override
+  String get statTraktRatings => 'Valoraciones';
+
+  @override
+  String get statTraktComments => 'Comentarios';
+
+  @override
+  String get statTraktWatchTimeHrs => 'Tiempo visionado (h)';
+
+  @override
+  String get statTraktFriends => 'Amigos';
+
+  @override
+  String get statTraktFollowers => 'Seguidores';
+
+  @override
+  String get statTraktFollowing => 'Siguiendo';
+
+  @override
+  String get profileTraktRatingsTotal => 'Valoraciones (totales)';
 
   @override
   String get sectionTopGenresAnime => 'Top géneros anime';
@@ -785,7 +888,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get traktOAuthMissingCredentials =>
-      'Configura TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET y TRAKT_REDIRECT_URI (registrado en trakt.tv/oauth/applications).';
+      'Inicio de sesión con Trakt no disponible en esta versión.';
 
   @override
   String get traktOAuthWebUnavailable =>
@@ -902,7 +1005,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsAccountsSubtitle =>
-      'Anilist sincroniza anime/manga con la nube. Trakt aporta películas y series (sin anime). Google sirve para la copia opcional en Drive. Los juegos en Cronicle se guardan en el dispositivo.';
+      'Anilist para anime y manga, Trakt para cine y series, Google opcional para copia en la nube. Los juegos quedan en el dispositivo.';
 
   @override
   String get twitchIgdbTitle => 'Twitch (IGDB)';
@@ -985,7 +1088,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get googleAccountSubtitle =>
-      'Opcional: el mismo JSON de copia en Google Drive (subida manual o diaria; ve Copia de seguridad local).';
+      'Opcional: guarda la misma copia en Google Drive (subida manual o copia diaria automática).';
 
   @override
   String get anilistTitle => 'Anilist';
@@ -1062,13 +1165,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsDefaultFilterDesc =>
-      'Al abrir la biblioteca se mostrará este estado';
+      'La biblioteca se abre con este filtro seleccionado.';
 
   @override
   String get settingsDefaultsTitle => 'Pantalla y pestaña por defecto';
 
   @override
-  String get settingsDefaultsDesc => 'Configura qué se muestra al abrir la app';
+  String get settingsDefaultsDesc =>
+      'Elige la primera pantalla y pestaña al abrir la app.';
 
   @override
   String get settingsStartPage => 'Página de inicio';
@@ -1090,7 +1194,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsAppearanceSubtitle =>
-      'Tema, idioma y barras del inicio y la biblioteca.';
+      'Tema, idioma y las barras de pestañas en Inicio y Biblioteca.';
 
   @override
   String get settingsLayoutCustomizationTitle =>
@@ -1098,25 +1202,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsLayoutCustomizationSubtitle =>
-      'Elige qué pestañas mostrar y en qué orden.';
+      'Elige qué pestañas se muestran y en qué orden.';
 
   @override
   String get settingsCustomizeFeedFilters => 'Barra de filtros del feed';
 
   @override
   String get settingsCustomizeFeedFiltersDesc =>
-      'Reordena u oculta Feed, Anime, etc. Debe quedar al menos un filtro visible.';
+      'Muestra, oculta o reordena las pestañas del feed. Al menos una debe quedar visible.';
 
   @override
   String get settingsCustomizeLibraryKinds => 'Barra de tipos en Biblioteca';
 
   @override
   String get settingsCustomizeLibraryKindsDesc =>
-      'Reordena u oculta Todo, Anime, Películas, TV, Juegos, Manga. Debe quedar al menos una opción visible.';
+      'Muestra, oculta o reordena los tipos de biblioteca. Al menos uno debe quedar visible.';
 
   @override
   String get settingsLayoutDragHint =>
-      'Mantén pulsada la barra de arrastre para mover y cambiar el orden.';
+      'Mantén pulsada la barra de arrastre y arrastra para cambiar el orden.';
 
   @override
   String get settingsLayoutReset => 'Restablecer';

@@ -278,6 +278,24 @@ abstract class AppLocalizations {
   /// **'Sincronizar ahora'**
   String get googleSyncNow;
 
+  /// No description provided for @never.
+  ///
+  /// In es, this message translates to:
+  /// **'Nunca'**
+  String get never;
+
+  /// No description provided for @googleLastSyncLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Última sincronización: {when}'**
+  String googleLastSyncLine(Object when);
+
+  /// No description provided for @backupSaveFileDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar copia de seguridad'**
+  String get backupSaveFileDialogTitle;
+
   /// No description provided for @connectedWithGoogle.
   ///
   /// In es, this message translates to:
@@ -299,7 +317,7 @@ abstract class AppLocalizations {
   /// No description provided for @googleSignInCanceledBody.
   ///
   /// In es, this message translates to:
-  /// **'El mensaje «cancelado» suele indicar un fallo de OAuth, no que hayas cancelado tú. En Google Cloud Console: 1) Cliente Android con el package de la app y el SHA-1 del keystore de esta compilación (en la carpeta android: gradlew signingReport). 2) GOOGLE_SERVER_CLIENT_ID debe ser el ID del cliente Web del mismo proyecto. 3) Opcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android en las definiciones de compilación. Si publicas por Play Store, añade también el SHA-1 de firma de Play.'**
+  /// **'Algo salió mal al iniciar sesión con Google. Inténtalo más tarde.'**
   String get googleSignInCanceledBody;
 
   /// No description provided for @googleSignInNotConfiguredTitle.
@@ -311,13 +329,13 @@ abstract class AppLocalizations {
   /// No description provided for @googleSignInNotConfiguredHint.
   ///
   /// In es, this message translates to:
-  /// **'Falta GOOGLE_SERVER_CLIENT_ID (cliente OAuth Web) en las defines de compilación.'**
+  /// **'En esta versión no está activada la copia de seguridad con Google.'**
   String get googleSignInNotConfiguredHint;
 
   /// No description provided for @googleSignInNotConfiguredBody.
   ///
   /// In es, this message translates to:
-  /// **'En la raíz del proyecto, copia dart_defines.example.json a dart_defines.local.json y rellena GOOGLE_SERVER_CLIENT_ID con el ID del cliente OAuth tipo «Aplicación web» de Google Cloud Console (termina en .apps.googleusercontent.com). Es obligatorio en Android para Google Sign-In 7.x.\n\nEn el mismo proyecto crea un cliente OAuth tipo «Android» con el nombre de paquete com.cronicle.app.cronicle y el SHA-1 del keystore con el que firmas esta APK (debug, release o firma de Play). Para ver los SHA-1: en la carpeta android ejecuta .\\gradlew.bat signingReport (Windows) o ./gradlew signingReport (macOS/Linux). Si publicas en Play Store, añade también el SHA-1 de «App signing» de la consola de Play.\n\nOpcional: GOOGLE_ANDROID_CLIENT_ID con el ID del cliente Android. Después de guardar dart_defines.local.json, recompila con flutter run o scripts/build_android.ps1.'**
+  /// **'A esta compilación le faltan los datos para iniciar sesión con Google y usar Drive. Si compilas Cronicle tú mismo, consulta guide/CRONICLE_GUIDE.md (variables de entorno / Google Cloud).'**
   String get googleSignInNotConfiguredBody;
 
   /// No description provided for @backupTitle.
@@ -331,6 +349,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Subir'**
   String get backupUpload;
+
+  /// No description provided for @backupExportButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar copia'**
+  String get backupExportButton;
 
   /// No description provided for @backupRestore.
   ///
@@ -347,7 +371,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupAnilistMergeFailed.
   ///
   /// In es, this message translates to:
-  /// **'No se pudo actualizar desde Anilist antes de la copia; se usarán los datos del dispositivo. {error}'**
+  /// **'No se pudo sincronizar con Anilist antes; se guardó lo que hay en el dispositivo. {error}'**
   String backupAnilistMergeFailed(Object error);
 
   /// No description provided for @backupExportReady.
@@ -377,13 +401,13 @@ abstract class AppLocalizations {
   /// No description provided for @backupAutoGoogleSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Como mucho una vez al día con conexión, solo si mantienes la sesión de Google (Cuentas). Sin ventanas en segundo plano.'**
+  /// **'Como mucho una vez al día con conexión, solo mientras mantengas la sesión de Google en Cuentas.'**
   String get backupAutoGoogleSubtitle;
 
   /// No description provided for @backupSectionSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Mismo JSON que una exportación completa (biblioteca y ajustes en el dispositivo). Guárdalo en local con Compartir; si tienes sesión en Google en Cuentas, Subir también deja una copia en la carpeta de la app en Drive.'**
+  /// **'Guarda tu biblioteca y preferencias en un archivo.'**
   String get backupSectionSubtitle;
 
   /// No description provided for @backupRestoreChooseSourceTitle.
@@ -395,7 +419,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupRestoreChooseSourceBody.
   ///
   /// In es, this message translates to:
-  /// **'¿Desde un archivo JSON o desde la copia guardada en Google Drive?'**
+  /// **'¿Restaurar desde un archivo guardado en el dispositivo o desde Google Drive?'**
   String get backupRestoreChooseSourceBody;
 
   /// No description provided for @backupRestoreFromFile.
@@ -419,7 +443,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupRestoreConfirmBody.
   ///
   /// In es, this message translates to:
-  /// **'Se fusionarán {count} entradas de biblioteca y, si la copia es reciente, preferencias y sesiones (Anilist/Twitch) incluidas en el archivo.'**
+  /// **'Se combinarán {count} elementos de la biblioteca. Se aplicarán preferencias y cuentas vinculadas si vienen en la copia.'**
   String backupRestoreConfirmBody(Object count);
 
   /// No description provided for @feedTitle.
@@ -509,7 +533,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotificationsSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Requiere sesión de Anilist. En Android la recomprobación en segundo plano es aprox. cada 15 min cuando el sistema lo permite; en iOS la frecuencia la decide el sistema. También se comprueba al salir de la app. El SO puede retrasar ejecuciones.'**
+  /// **'Necesitas cuenta de Anilist. Cada cuánto se comprueba en segundo plano lo decide el sistema.'**
   String get settingsNotificationsSubtitle;
 
   /// No description provided for @settingsNotificationsUnavailableWeb.
@@ -545,7 +569,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNotifAnilistSocialDesc.
   ///
   /// In es, this message translates to:
-  /// **'Si lo desactivas, solo se reenvían al sistema las notificaciones de emisión de Anilist (junto con las de nuevos capítulos de arriba, sin duplicar lógica).'**
+  /// **'Si lo desactivas, en el dispositivo se muestran menos avisos sociales de Anilist.'**
   String get settingsNotifAnilistSocialDesc;
 
   /// No description provided for @notificationNoLink.
@@ -1106,16 +1130,52 @@ abstract class AppLocalizations {
   /// **'Perfil'**
   String get profileTitle;
 
+  /// No description provided for @profilePersonalStatsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Estadísticas personales'**
+  String get profilePersonalStatsTitle;
+
+  /// No description provided for @profilePersonalStatsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime, manga, cine, series y juegos en el dispositivo'**
+  String get profilePersonalStatsSubtitle;
+
+  /// No description provided for @sectionProfileLocalGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos (en el dispositivo)'**
+  String get sectionProfileLocalGames;
+
+  /// No description provided for @profileLocalGamesHoursTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas registradas'**
+  String get profileLocalGamesHoursTotal;
+
+  /// No description provided for @profileLocalGamesEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay juegos en tu biblioteca local.'**
+  String get profileLocalGamesEmpty;
+
   /// No description provided for @profileLocalUser.
   ///
   /// In es, this message translates to:
   /// **'Usuario local'**
   String get profileLocalUser;
 
+  /// No description provided for @profileFavoritesSectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Favoritos'**
+  String get profileFavoritesSectionTitle;
+
   /// No description provided for @profileConnectHint.
   ///
   /// In es, this message translates to:
-  /// **'Conecta Anilist en Ajustes para ver tus estadísticas completas'**
+  /// **'Conecta AniList y Trakt en Ajustes para ver tus estadísticas completas'**
   String get profileConnectHint;
 
   /// No description provided for @profileLocalLibrary.
@@ -1171,6 +1231,144 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Cuentas conectadas'**
   String get sectionConnectedAccounts;
+
+  /// No description provided for @profileSectionTrakt.
+  ///
+  /// In es, this message translates to:
+  /// **'Cine y series (Trakt)'**
+  String get profileSectionTrakt;
+
+  /// No description provided for @profileTraktMoviesWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas vistas'**
+  String get profileTraktMoviesWatched;
+
+  /// No description provided for @profileTraktShowsWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Series vistas'**
+  String get profileTraktShowsWatched;
+
+  /// No description provided for @profileTraktEpisodesWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Episodios vistos'**
+  String get profileTraktEpisodesWatched;
+
+  /// No description provided for @profileTraktHoursApprox.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas vistas (aprox.)'**
+  String get profileTraktHoursApprox;
+
+  /// No description provided for @sectionFavTraktMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas favoritas'**
+  String get sectionFavTraktMovies;
+
+  /// No description provided for @sectionFavTraktShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series favoritas'**
+  String get sectionFavTraktShows;
+
+  /// No description provided for @profileTraktNotConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conectar'**
+  String get profileTraktNotConnected;
+
+  /// No description provided for @profileTraktSubMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas'**
+  String get profileTraktSubMovies;
+
+  /// No description provided for @profileTraktSubShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series'**
+  String get profileTraktSubShows;
+
+  /// No description provided for @profileTraktSubEpisodes.
+  ///
+  /// In es, this message translates to:
+  /// **'Episodios'**
+  String get profileTraktSubEpisodes;
+
+  /// No description provided for @profileTraktSubSeasons.
+  ///
+  /// In es, this message translates to:
+  /// **'Temporadas'**
+  String get profileTraktSubSeasons;
+
+  /// No description provided for @profileTraktSubNetwork.
+  ///
+  /// In es, this message translates to:
+  /// **'Red'**
+  String get profileTraktSubNetwork;
+
+  /// No description provided for @statTraktPlays.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproducciones'**
+  String get statTraktPlays;
+
+  /// No description provided for @statTraktWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Vistos'**
+  String get statTraktWatched;
+
+  /// No description provided for @statTraktCollected.
+  ///
+  /// In es, this message translates to:
+  /// **'En colección'**
+  String get statTraktCollected;
+
+  /// No description provided for @statTraktRatings.
+  ///
+  /// In es, this message translates to:
+  /// **'Valoraciones'**
+  String get statTraktRatings;
+
+  /// No description provided for @statTraktComments.
+  ///
+  /// In es, this message translates to:
+  /// **'Comentarios'**
+  String get statTraktComments;
+
+  /// No description provided for @statTraktWatchTimeHrs.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo visionado (h)'**
+  String get statTraktWatchTimeHrs;
+
+  /// No description provided for @statTraktFriends.
+  ///
+  /// In es, this message translates to:
+  /// **'Amigos'**
+  String get statTraktFriends;
+
+  /// No description provided for @statTraktFollowers.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguidores'**
+  String get statTraktFollowers;
+
+  /// No description provided for @statTraktFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiendo'**
+  String get statTraktFollowing;
+
+  /// No description provided for @profileTraktRatingsTotal.
+  ///
+  /// In es, this message translates to:
+  /// **'Valoraciones (totales)'**
+  String get profileTraktRatingsTotal;
 
   /// No description provided for @sectionTopGenresAnime.
   ///
@@ -1535,7 +1733,7 @@ abstract class AppLocalizations {
   /// No description provided for @traktOAuthMissingCredentials.
   ///
   /// In es, this message translates to:
-  /// **'Configura TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET y TRAKT_REDIRECT_URI (registrado en trakt.tv/oauth/applications).'**
+  /// **'Inicio de sesión con Trakt no disponible en esta versión.'**
   String get traktOAuthMissingCredentials;
 
   /// No description provided for @traktOAuthWebUnavailable.
@@ -1745,7 +1943,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAccountsSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Anilist sincroniza anime/manga con la nube. Trakt aporta películas y series (sin anime). Google sirve para la copia opcional en Drive. Los juegos en Cronicle se guardan en el dispositivo.'**
+  /// **'Anilist para anime y manga, Trakt para cine y series, Google opcional para copia en la nube. Los juegos quedan en el dispositivo.'**
   String get settingsAccountsSubtitle;
 
   /// No description provided for @twitchIgdbTitle.
@@ -1877,7 +2075,7 @@ abstract class AppLocalizations {
   /// No description provided for @googleAccountSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Opcional: el mismo JSON de copia en Google Drive (subida manual o diaria; ve Copia de seguridad local).'**
+  /// **'Opcional: guarda la misma copia en Google Drive (subida manual o copia diaria automática).'**
   String get googleAccountSubtitle;
 
   /// No description provided for @anilistTitle.
@@ -2021,7 +2219,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDefaultFilterDesc.
   ///
   /// In es, this message translates to:
-  /// **'Al abrir la biblioteca se mostrará este estado'**
+  /// **'La biblioteca se abre con este filtro seleccionado.'**
   String get settingsDefaultFilterDesc;
 
   /// No description provided for @settingsDefaultsTitle.
@@ -2033,7 +2231,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDefaultsDesc.
   ///
   /// In es, this message translates to:
-  /// **'Configura qué se muestra al abrir la app'**
+  /// **'Elige la primera pantalla y pestaña al abrir la app.'**
   String get settingsDefaultsDesc;
 
   /// No description provided for @settingsStartPage.
@@ -2075,7 +2273,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAppearanceSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Tema, idioma y barras del inicio y la biblioteca.'**
+  /// **'Tema, idioma y las barras de pestañas en Inicio y Biblioteca.'**
   String get settingsAppearanceSubtitle;
 
   /// No description provided for @settingsLayoutCustomizationTitle.
@@ -2087,7 +2285,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLayoutCustomizationSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Elige qué pestañas mostrar y en qué orden.'**
+  /// **'Elige qué pestañas se muestran y en qué orden.'**
   String get settingsLayoutCustomizationSubtitle;
 
   /// No description provided for @settingsCustomizeFeedFilters.
@@ -2099,7 +2297,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCustomizeFeedFiltersDesc.
   ///
   /// In es, this message translates to:
-  /// **'Reordena u oculta Feed, Anime, etc. Debe quedar al menos un filtro visible.'**
+  /// **'Muestra, oculta o reordena las pestañas del feed. Al menos una debe quedar visible.'**
   String get settingsCustomizeFeedFiltersDesc;
 
   /// No description provided for @settingsCustomizeLibraryKinds.
@@ -2111,13 +2309,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCustomizeLibraryKindsDesc.
   ///
   /// In es, this message translates to:
-  /// **'Reordena u oculta Todo, Anime, Películas, TV, Juegos, Manga. Debe quedar al menos una opción visible.'**
+  /// **'Muestra, oculta o reordena los tipos de biblioteca. Al menos uno debe quedar visible.'**
   String get settingsCustomizeLibraryKindsDesc;
 
   /// No description provided for @settingsLayoutDragHint.
   ///
   /// In es, this message translates to:
-  /// **'Mantén pulsada la barra de arrastre para mover y cambiar el orden.'**
+  /// **'Mantén pulsada la barra de arrastre y arrastra para cambiar el orden.'**
   String get settingsLayoutDragHint;
 
   /// No description provided for @settingsLayoutReset.

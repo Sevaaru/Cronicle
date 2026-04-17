@@ -39,10 +39,12 @@ class TraktSession extends _$TraktSession {
     final connected = await auth.hasSession();
     final slug = await auth.getUserSlug();
     final name = await auth.getUserName();
+    final avatarUrl = await auth.getUserAvatarUrl();
     return TraktSessionState(
       connected: connected,
       userSlug: slug,
       userName: name,
+      userAvatarUrl: avatarUrl,
     );
   }
 
@@ -51,7 +53,12 @@ class TraktSession extends _$TraktSession {
     final token = await auth.getValidAccessToken();
     if (token == null) {
       state = AsyncData(
-        TraktSessionState(connected: false, userSlug: null, userName: null),
+        TraktSessionState(
+          connected: false,
+          userSlug: null,
+          userName: null,
+          userAvatarUrl: null,
+        ),
       );
       return;
     }
@@ -60,8 +67,14 @@ class TraktSession extends _$TraktSession {
     await auth.saveUserFromSettings(settings);
     final slug = await auth.getUserSlug();
     final name = await auth.getUserName();
+    final avatarUrl = await auth.getUserAvatarUrl();
     state = AsyncData(
-      TraktSessionState(connected: true, userSlug: slug, userName: name),
+      TraktSessionState(
+        connected: true,
+        userSlug: slug,
+        userName: name,
+        userAvatarUrl: avatarUrl,
+      ),
     );
   }
 
@@ -69,7 +82,12 @@ class TraktSession extends _$TraktSession {
     await ref.read(traktAuthProvider).clearSession();
     invalidateTraktHomeProviders(ref);
     state = AsyncData(
-      TraktSessionState(connected: false, userSlug: null, userName: null),
+      TraktSessionState(
+        connected: false,
+        userSlug: null,
+        userName: null,
+        userAvatarUrl: null,
+      ),
     );
   }
 
@@ -178,11 +196,13 @@ class TraktSessionState {
     required this.connected,
     this.userSlug,
     this.userName,
+    this.userAvatarUrl,
   });
 
   final bool connected;
   final String? userSlug;
   final String? userName;
+  final String? userAvatarUrl;
 }
 
 class TraktMoviesHomeData {
