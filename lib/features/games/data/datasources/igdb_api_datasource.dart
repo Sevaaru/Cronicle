@@ -311,6 +311,64 @@ limit $limit;
     ]);
   }
 
+  /// IGDB genre ids (stable): Indie = 32, Horror = 19.
+  static const int genreIdIndie = 32;
+  static const int genreIdHorror = 19;
+
+  /// Juegos muy bien valorados con suficientes votos (usuarios IGDB).
+  Future<List<Map<String, dynamic>>> fetchGamesBestRated({int limit = 24}) async {
+    final body = '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, total_rating_count, first_release_date;
+where category = 0 & total_rating != null & total_rating_count >= 50
+      & total_rating >= 85;
+sort total_rating desc;
+limit $limit;
+''';
+    try {
+      return await _postList('/games', body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Carrusel por género (un id de [Genres] en IGDB).
+  Future<List<Map<String, dynamic>>> fetchGamesGenreSpotlight(
+    int genreId, {
+    int limit = 24,
+    int minRating = 72,
+  }) async {
+    final body = '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & genres = ($genreId) & total_rating >= $minRating;
+sort total_rating desc;
+limit $limit;
+''';
+    try {
+      return await _postList('/games', body);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Modo multijugador (IGDB game_mode id 2 = Multiplayer).
+  Future<List<Map<String, dynamic>>> fetchGamesMultiplayerPopular(
+      {int limit = 24}) async {
+    final body = '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & game_modes = (2) & total_rating >= 70;
+sort total_rating desc;
+limit $limit;
+''';
+    try {
+      return await _postList('/games', body);
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Reseñas recientes (comunidad IGDB).
   Future<List<Map<String, dynamic>>> fetchReviewsRecent({int limit = 30}) async {
     final body = '''

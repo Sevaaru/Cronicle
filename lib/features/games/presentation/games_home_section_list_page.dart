@@ -26,6 +26,10 @@ class GamesHomeSectionListPage extends ConsumerWidget {
       GamesHomeSectionSlug.reviewsCritics => l10n.gamesHomeCriticsReviews,
       GamesHomeSectionSlug.recentlyReleased => l10n.gamesHomeRecentlyReleased,
       GamesHomeSectionSlug.comingSoon => l10n.gamesHomeComingSoon,
+      GamesHomeSectionSlug.bestRated => l10n.gamesHomeBestRated,
+      GamesHomeSectionSlug.indie => l10n.gamesHomeIndiePicks,
+      GamesHomeSectionSlug.horror => l10n.gamesHomeHorrorPicks,
+      GamesHomeSectionSlug.multiplayer => l10n.gamesHomeMultiplayer,
       _ => l10n.gamesHomeNoItems,
     };
   }

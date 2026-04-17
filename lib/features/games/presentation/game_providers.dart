@@ -23,6 +23,10 @@ class IgdbGamesHomeAsideData {
     required this.comingSoon,
     required this.reviewsRecent,
     required this.reviewsFeatured,
+    required this.bestRated,
+    required this.indiePicks,
+    required this.horrorPicks,
+    required this.multiplayerHits,
   });
 
   final List<Map<String, dynamic>> anticipated;
@@ -30,6 +34,10 @@ class IgdbGamesHomeAsideData {
   final List<Map<String, dynamic>> comingSoon;
   final List<Map<String, dynamic>> reviewsRecent;
   final List<Map<String, dynamic>> reviewsFeatured;
+  final List<Map<String, dynamic>> bestRated;
+  final List<Map<String, dynamic>> indiePicks;
+  final List<Map<String, dynamic>> horrorPicks;
+  final List<Map<String, dynamic>> multiplayerHits;
 }
 
 @Riverpod(keepAlive: true)
@@ -87,6 +95,16 @@ Future<IgdbGamesHomeAsideData> igdbGamesHomeAside(IgdbGamesHomeAsideRef ref) asy
   final soonRaw = api.fetchGamesComingSoon(limit: 24);
   final reviewsRaw = api.fetchReviewsRecent(limit: 36);
   final featuredRaw = api.fetchReviewsHighScore(limit: 24);
+  final bestRatedRaw = api.fetchGamesBestRated(limit: 24);
+  final indieRaw = api.fetchGamesGenreSpotlight(
+    IgdbApiDatasource.genreIdIndie,
+    limit: 24,
+  );
+  final horrorRaw = api.fetchGamesGenreSpotlight(
+    IgdbApiDatasource.genreIdHorror,
+    limit: 24,
+  );
+  final mpRaw = api.fetchGamesMultiplayerPopular(limit: 24);
 
   final results = await Future.wait<List<Map<String, dynamic>>>([
     anticipatedRaw,
@@ -94,6 +112,10 @@ Future<IgdbGamesHomeAsideData> igdbGamesHomeAside(IgdbGamesHomeAsideRef ref) asy
     soonRaw,
     reviewsRaw,
     featuredRaw,
+    bestRatedRaw,
+    indieRaw,
+    horrorRaw,
+    mpRaw,
   ]);
 
   return IgdbGamesHomeAsideData(
@@ -102,6 +124,10 @@ Future<IgdbGamesHomeAsideData> igdbGamesHomeAside(IgdbGamesHomeAsideRef ref) asy
     comingSoon: results[2].map(IgdbApiDatasource.normalize).toList(),
     reviewsRecent: results[3],
     reviewsFeatured: results[4],
+    bestRated: results[5].map(IgdbApiDatasource.normalize).toList(),
+    indiePicks: results[6].map(IgdbApiDatasource.normalize).toList(),
+    horrorPicks: results[7].map(IgdbApiDatasource.normalize).toList(),
+    multiplayerHits: results[8].map(IgdbApiDatasource.normalize).toList(),
   );
 }
 
@@ -146,6 +172,24 @@ Future<List<Map<String, dynamic>>> igdbGamesSectionList(
       return raw
           .where((r) => (r['game'] as Map<String, dynamic>?) != null)
           .toList();
+    case 'best-rated':
+      final raw = await api.fetchGamesBestRated(limit: gameLimit);
+      return raw.map(IgdbApiDatasource.normalize).toList();
+    case 'indie':
+      final raw = await api.fetchGamesGenreSpotlight(
+        IgdbApiDatasource.genreIdIndie,
+        limit: gameLimit,
+      );
+      return raw.map(IgdbApiDatasource.normalize).toList();
+    case 'horror':
+      final raw = await api.fetchGamesGenreSpotlight(
+        IgdbApiDatasource.genreIdHorror,
+        limit: gameLimit,
+      );
+      return raw.map(IgdbApiDatasource.normalize).toList();
+    case 'multiplayer':
+      final raw = await api.fetchGamesMultiplayerPopular(limit: gameLimit);
+      return raw.map(IgdbApiDatasource.normalize).toList();
     default:
       return [];
   }

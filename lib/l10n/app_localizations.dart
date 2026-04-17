@@ -2810,6 +2810,30 @@ abstract class AppLocalizations {
   /// **'Próximamente'**
   String get gamesHomeComingSoon;
 
+  /// No description provided for @gamesHomeBestRated.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejor valorados'**
+  String get gamesHomeBestRated;
+
+  /// No description provided for @gamesHomeIndiePicks.
+  ///
+  /// In es, this message translates to:
+  /// **'Indie destacados'**
+  String get gamesHomeIndiePicks;
+
+  /// No description provided for @gamesHomeHorrorPicks.
+  ///
+  /// In es, this message translates to:
+  /// **'Terror'**
+  String get gamesHomeHorrorPicks;
+
+  /// No description provided for @gamesHomeMultiplayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Multijugador'**
+  String get gamesHomeMultiplayer;
+
   /// No description provided for @gamesHomeSectionExpand.
   ///
   /// In es, this message translates to:

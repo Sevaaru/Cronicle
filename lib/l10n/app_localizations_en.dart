@@ -1477,6 +1477,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gamesHomeComingSoon => 'Coming soon';
 
   @override
+  String get gamesHomeBestRated => 'Top rated';
+
+  @override
+  String get gamesHomeIndiePicks => 'Indie spotlight';
+
+  @override
+  String get gamesHomeHorrorPicks => 'Horror';
+
+  @override
+  String get gamesHomeMultiplayer => 'Multiplayer';
+
+  @override
   String get gamesHomeSectionExpand => 'Show more';
 
   @override

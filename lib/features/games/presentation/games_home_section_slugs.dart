@@ -6,6 +6,10 @@ abstract final class GamesHomeSectionSlug {
   static const reviewsCritics = 'reviews-critics';
   static const recentlyReleased = 'recently-released';
   static const comingSoon = 'coming-soon';
+  static const bestRated = 'best-rated';
+  static const indie = 'indie';
+  static const horror = 'horror';
+  static const multiplayer = 'multiplayer';
 
   static const values = <String>{
     popular,
@@ -14,6 +18,10 @@ abstract final class GamesHomeSectionSlug {
     reviewsCritics,
     recentlyReleased,
     comingSoon,
+    bestRated,
+    indie,
+    horror,
+    multiplayer,
   };
 
   static bool isValid(String s) => values.contains(s);
