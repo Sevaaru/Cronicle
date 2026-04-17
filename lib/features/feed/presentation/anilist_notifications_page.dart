@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/utils/anilist_media_title.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -33,6 +34,28 @@ class AnilistNotificationsPage extends ConsumerWidget {
 
   String _titleLine(Map<String, dynamic> n, AppLocalizations l10n) {
     final t = n['__typename'] as String? ?? '';
+    if (t == 'AiringNotification') {
+      final ctxs = n['contexts'] as List?;
+      if (ctxs != null && ctxs.isNotEmpty) {
+        final parts = ctxs
+            .map((e) => e?.toString() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (parts.isNotEmpty) return parts.join(' ');
+      }
+      final media = n['media'] as Map<String, dynamic>? ?? {};
+      final mediaTitle = anilistMediaDisplayTitle(media);
+      final ep = (n['episode'] as num?)?.toInt();
+      if (ep != null && mediaTitle != 'Media') {
+        final isManga = (media['type'] as String? ?? '') == 'MANGA';
+        return isManga
+            ? l10n.notificationAiringHeadlineManga(mediaTitle, ep)
+            : l10n.notificationAiringHeadlineAnime(mediaTitle, ep);
+      }
+      if (mediaTitle != 'Media') return mediaTitle;
+      return l10n.notificationTypeAiring;
+    }
+
     final ctx = n['context'] as String?;
     if (ctx != null && ctx.isNotEmpty) return ctx;
     final ctxs = n['contexts'] as List?;
@@ -42,7 +65,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
       if (parts.isNotEmpty) return parts.join(' ');
     }
     return switch (t) {
-      'AiringNotification' => l10n.notificationTypeAiring,
       'ActivityReplyNotification' => l10n.notificationTypeActivityReply,
       'ActivityMentionNotification' => l10n.notificationTypeActivityMention,
       'ActivityMessageNotification' => l10n.notificationTypeActivityMessage,
@@ -75,7 +97,28 @@ class AnilistNotificationsPage extends ConsumerWidget {
     };
   }
 
-  String? _subtitle(Map<String, dynamic> n) {
+  String? _subtitle(Map<String, dynamic> n, AppLocalizations l10n) {
+    final t = n['__typename'] as String? ?? '';
+    if (t == 'AiringNotification') {
+      final ctxs = n['contexts'] as List?;
+      final hasCtx = ctxs != null &&
+          ctxs
+              .map((e) => e?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .isNotEmpty;
+      if (!hasCtx) return null;
+      final media = n['media'] as Map<String, dynamic>? ?? {};
+      final mediaTitle = anilistMediaDisplayTitle(media);
+      final ep = (n['episode'] as num?)?.toInt();
+      if (ep != null && mediaTitle != 'Media') {
+        final isManga = (media['type'] as String? ?? '') == 'MANGA';
+        return isManga
+            ? l10n.notificationAiringHeadlineManga(mediaTitle, ep)
+            : l10n.notificationAiringHeadlineAnime(mediaTitle, ep);
+      }
+      return mediaTitle != 'Media' ? mediaTitle : null;
+    }
+
     final user = n['user'] as Map<String, dynamic>?;
     if (user != null) return user['name'] as String?;
     final staff = n['staff'] as Map<String, dynamic>?;
@@ -94,8 +137,8 @@ class AnilistNotificationsPage extends ConsumerWidget {
     if (submitted != null && submitted.isNotEmpty) return submitted;
     final media = n['media'] as Map<String, dynamic>?;
     if (media != null) {
-      final title = media['title'] as Map<String, dynamic>? ?? {};
-      return (title['english'] as String?) ?? (title['romaji'] as String?);
+      final resolved = anilistMediaDisplayTitle(media);
+      return resolved == 'Media' ? null : resolved;
     }
     final thread = n['thread'] as Map<String, dynamic>?;
     if (thread != null) return thread['title'] as String?;
@@ -258,7 +301,7 @@ class AnilistNotificationsPage extends ConsumerWidget {
                           ? DateTime.fromMillisecondsSinceEpoch(created * 1000)
                           : null;
                       final avatar = _avatarUrl(n);
-                      final subtitle = _subtitle(n);
+                      final subtitle = _subtitle(n, l10n);
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),

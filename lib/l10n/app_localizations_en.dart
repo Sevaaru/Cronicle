@@ -344,6 +344,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Character submission update';
 
   @override
+  String notificationAiringHeadlineAnime(Object title, int episode) {
+    return '$title · Episode $episode';
+  }
+
+  @override
+  String notificationAiringHeadlineManga(Object title, int episode) {
+    return '$title · Chapter $episode';
+  }
+
+  @override
   String get feedEmpty => 'No recent activity.';
 
   @override

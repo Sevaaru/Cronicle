@@ -541,7 +541,7 @@ class AnilistGraphqlDatasource {
               media {
                 id
                 type
-                title { romaji english }
+                title { romaji english native }
                 coverImage { large }
               }
             }
@@ -1054,7 +1054,7 @@ class AnilistGraphqlDatasource {
                 id
                 type
                 status
-                title { romaji english }
+                title { romaji english native }
                 nextAiringEpisode { airingAt episode }
               }
             }

@@ -139,6 +139,7 @@ class CronicleLocalNotifications {
     required int notificationId,
     required String title,
     required String body,
+    String? expandedBody,
   }) async {
     if (!_cronicleNotifInited) await init();
     if (kIsWeb || !_isAndroidOrIos) return;
@@ -156,7 +157,7 @@ class CronicleLocalNotifications {
           importance: Importance.high,
           priority: Priority.high,
           groupKey: kAndroidNotificationGroupCronicle,
-          styleInformation: BigTextStyleInformation(body),
+          styleInformation: BigTextStyleInformation(expandedBody ?? body),
         ),
         iOS: const DarwinNotificationDetails(
           presentAlert: true,

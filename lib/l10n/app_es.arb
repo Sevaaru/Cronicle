@@ -114,6 +114,20 @@
   "notificationTypeMediaSubmission": "Envío de medio (Anilist)",
   "notificationTypeStaffSubmission": "Envío de staff (Anilist)",
   "notificationTypeCharacterSubmission": "Envío de personaje (Anilist)",
+  "notificationAiringHeadlineAnime": "{title} · Episodio {episode}",
+  "@notificationAiringHeadlineAnime": {
+    "placeholders": {
+      "title": {},
+      "episode": { "type": "int" }
+    }
+  },
+  "notificationAiringHeadlineManga": "{title} · Capítulo {episode}",
+  "@notificationAiringHeadlineManga": {
+    "placeholders": {
+      "title": {},
+      "episode": { "type": "int" }
+    }
+  },
   "feedEmpty": "No hay actividad reciente.",
   "feedRetry": "Reintentar",
   "feedComingSoon": "Feed de {label} — próximamente",

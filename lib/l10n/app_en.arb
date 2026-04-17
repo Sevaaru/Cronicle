@@ -110,6 +110,20 @@
   "notificationTypeMediaSubmission": "Media submission update",
   "notificationTypeStaffSubmission": "Staff submission update",
   "notificationTypeCharacterSubmission": "Character submission update",
+  "notificationAiringHeadlineAnime": "{title} · Episode {episode}",
+  "@notificationAiringHeadlineAnime": {
+    "placeholders": {
+      "title": {},
+      "episode": { "type": "int" }
+    }
+  },
+  "notificationAiringHeadlineManga": "{title} · Chapter {episode}",
+  "@notificationAiringHeadlineManga": {
+    "placeholders": {
+      "title": {},
+      "episode": { "type": "int" }
+    }
+  },
   "feedEmpty": "No recent activity.",
   "feedRetry": "Retry",
   "feedComingSoon": "{label} feed — coming soon",

@@ -704,6 +704,18 @@ abstract class AppLocalizations {
   /// **'Envío de personaje (Anilist)'**
   String get notificationTypeCharacterSubmission;
 
+  /// No description provided for @notificationAiringHeadlineAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'{title} · Episodio {episode}'**
+  String notificationAiringHeadlineAnime(Object title, int episode);
+
+  /// No description provided for @notificationAiringHeadlineManga.
+  ///
+  /// In es, this message translates to:
+  /// **'{title} · Capítulo {episode}'**
+  String notificationAiringHeadlineManga(Object title, int episode);
+
   /// No description provided for @feedEmpty.
   ///
   /// In es, this message translates to:

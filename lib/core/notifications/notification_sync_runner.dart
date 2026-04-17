@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/device_notification_prefs.dart';
+import 'package:cronicle/core/utils/anilist_media_title.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 
 bool _shouldMirrorAnilistNotif(String? typename, bool includeSocial) {
@@ -18,13 +19,6 @@ bool _shouldMirrorAnilistNotif(String? typename, bool includeSocial) {
 int _stableNotifId(String salt, int id) {
   final h = (salt.hashCode ^ id).abs();
   return h == 0 ? id.abs() % 2000000000 : h % 2000000000;
-}
-
-String _mediaTitle(Map<String, dynamic> media) {
-  final t = media['title'] as Map<String, dynamic>? ?? {};
-  return (t['english'] as String?) ??
-      (t['romaji'] as String?) ??
-      'Media';
 }
 
 /// Nombre de usuario, staff, personaje, etc. (como el subtítulo en la pantalla
@@ -68,7 +62,7 @@ String _contextOrSummaryLine(Map<String, dynamic> n) {
   if (t == 'AiringNotification') {
     final ep = n['episode'];
     final media = n['media'] as Map<String, dynamic>? ?? {};
-    final title = _mediaTitle(media);
+    final title = anilistMediaDisplayTitle(media);
     return '$title · $ep';
   }
   return '';
@@ -76,7 +70,7 @@ String _contextOrSummaryLine(Map<String, dynamic> n) {
 
 String _fallbackBodyWhenNoContext(Map<String, dynamic> n) {
   final media = n['media'] as Map<String, dynamic>?;
-  if (media != null) return _mediaTitle(media);
+  if (media != null) return anilistMediaDisplayTitle(media);
   final thread = n['thread'] as Map<String, dynamic>?;
   if (thread != null) {
     final tt = thread['title'] as String?;
@@ -111,10 +105,25 @@ String _anilistNotifTitle(String? typename, bool isEs) {
   }
 
   if (typename == 'AiringNotification') {
-    return (
-      _anilistNotifTitle(typename, isEs),
-      contextLine.isNotEmpty ? contextLine : _anilistNotifTitle(typename, isEs),
-    );
+    final media = n['media'] as Map<String, dynamic>? ?? {};
+    final mediaTitle = anilistMediaDisplayTitle(media);
+    final episode = (n['episode'] as num?)?.toInt();
+    final isManga = (media['type'] as String? ?? '') == 'MANGA';
+    final kindWord = isManga
+        ? (isEs ? 'Capítulo' : 'Chapter')
+        : (isEs ? 'Episodio' : 'Episode');
+    final structured = (episode != null && mediaTitle != 'Media')
+        ? '$kindWord $episode · $mediaTitle'
+        : (mediaTitle != 'Media' ? mediaTitle : '');
+    final body = contextLine.isNotEmpty
+        ? contextLine
+        : (structured.isNotEmpty
+            ? structured
+            : _anilistNotifTitle(typename, isEs));
+    final title = mediaTitle != 'Media' && mediaTitle.isNotEmpty
+        ? mediaTitle
+        : _anilistNotifTitle(typename, isEs);
+    return (title, body);
   }
 
   if (actor != null && actor.isNotEmpty) {
@@ -246,21 +255,25 @@ Future<void> _syncAiringReleases(
     final dedupe = DeviceNotificationPrefs.airingDedupeKey(mediaId, episode);
     if (prefs.getBool(dedupe) == true) continue;
 
-    final title = _mediaTitle(media);
+    final mediaTitle = anilistMediaDisplayTitle(media);
     final isManga = (media['type'] as String? ?? '') == 'MANGA';
     final kindWord = isManga
         ? (isEs ? 'Capítulo' : 'Chapter')
         : (isEs ? 'Episodio' : 'Episode');
-    final body = isEs
-        ? '$kindWord $episode · $title'
-        : '$kindWord $episode · $title';
+    final body = '$kindWord $episode';
+    final notifTitle =
+        mediaTitle != 'Media' && mediaTitle.isNotEmpty ? mediaTitle : 'Cronicle';
+    final expandedBody = mediaTitle != 'Media' && mediaTitle.isNotEmpty
+        ? '$kindWord $episode · $mediaTitle'
+        : body;
 
     final notifId = _stableNotifId('air', mediaId * 100000 + episode);
 
     await CronicleLocalNotifications.showAiringNewEpisode(
       notificationId: notifId,
-      title: isEs ? 'Cronicle' : 'Cronicle',
+      title: notifTitle,
       body: body,
+      expandedBody: expandedBody,
     );
 
     await prefs.setBool(dedupe, true);

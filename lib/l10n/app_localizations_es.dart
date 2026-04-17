@@ -345,6 +345,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Envío de personaje (Anilist)';
 
   @override
+  String notificationAiringHeadlineAnime(Object title, int episode) {
+    return '$title · Episodio $episode';
+  }
+
+  @override
+  String notificationAiringHeadlineManga(Object title, int episode) {
+    return '$title · Capítulo $episode';
+  }
+
+  @override
   String get feedEmpty => 'No hay actividad reciente.';
 
   @override
