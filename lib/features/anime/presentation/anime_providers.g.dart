@@ -442,158 +442,6 @@ class _AnilistPopularProviderElement
   String get type => (origin as AnilistPopularProvider).type;
 }
 
-String _$anilistBrowseMediaHash() =>
-    r'e7edf270a325620d04912b4f570eb78b97ba5e18';
-
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-///
-/// Copied from [anilistBrowseMedia].
-@ProviderFor(anilistBrowseMedia)
-const anilistBrowseMediaProvider = AnilistBrowseMediaFamily();
-
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-///
-/// Copied from [anilistBrowseMedia].
-class AnilistBrowseMediaFamily
-    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-  ///
-  /// Copied from [anilistBrowseMedia].
-  const AnilistBrowseMediaFamily();
-
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-  ///
-  /// Copied from [anilistBrowseMedia].
-  AnilistBrowseMediaProvider call(String type, String category) {
-    return AnilistBrowseMediaProvider(type, category);
-  }
-
-  @override
-  AnilistBrowseMediaProvider getProviderOverride(
-    covariant AnilistBrowseMediaProvider provider,
-  ) {
-    return call(provider.type, provider.category);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'anilistBrowseMediaProvider';
-}
-
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-///
-/// Copied from [anilistBrowseMedia].
-class AnilistBrowseMediaProvider
-    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
-  ///
-  /// Copied from [anilistBrowseMedia].
-  AnilistBrowseMediaProvider(String type, String category)
-    : this._internal(
-        (ref) =>
-            anilistBrowseMedia(ref as AnilistBrowseMediaRef, type, category),
-        from: anilistBrowseMediaProvider,
-        name: r'anilistBrowseMediaProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$anilistBrowseMediaHash,
-        dependencies: AnilistBrowseMediaFamily._dependencies,
-        allTransitiveDependencies:
-            AnilistBrowseMediaFamily._allTransitiveDependencies,
-        type: type,
-        category: category,
-      );
-
-  AnilistBrowseMediaProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.type,
-    required this.category,
-  }) : super.internal();
-
-  final String type;
-  final String category;
-
-  @override
-  Override overrideWith(
-    FutureOr<List<Map<String, dynamic>>> Function(
-      AnilistBrowseMediaRef provider,
-    )
-    create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: AnilistBrowseMediaProvider._internal(
-        (ref) => create(ref as AnilistBrowseMediaRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        type: type,
-        category: category,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
-    return _AnilistBrowseMediaProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is AnilistBrowseMediaProvider &&
-        other.type == type &&
-        other.category == category;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, type.hashCode);
-    hash = _SystemHash.combine(hash, category.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin AnilistBrowseMediaRef
-    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
-  /// The parameter `type` of this provider.
-  String get type;
-
-  /// The parameter `category` of this provider.
-  String get category;
-}
-
-class _AnilistBrowseMediaProviderElement
-    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
-    with AnilistBrowseMediaRef {
-  _AnilistBrowseMediaProviderElement(super.provider);
-
-  @override
-  String get type => (origin as AnilistBrowseMediaProvider).type;
-  @override
-  String get category => (origin as AnilistBrowseMediaProvider).category;
-}
-
 String _$anilistMediaDetailHash() =>
     r'a8ddcfd22e60e5fc9e3a305b002fb2b2da212f03';
 
@@ -796,7 +644,184 @@ final anilistTokenProvider =
     );
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
-String _$anilistFeedHash() => r'3d2131797c42c47550cce0a1474a2fadd661f487';
+String _$anilistBrowseMediaHash() =>
+    r'c4db5c242c7a21337deda270fb9113bedb61e159';
+
+abstract class _$AnilistBrowseMedia
+    extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {
+  late final String type;
+  late final String category;
+
+  FutureOr<List<Map<String, dynamic>>> build(String type, String category);
+}
+
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+///
+/// Copied from [AnilistBrowseMedia].
+@ProviderFor(AnilistBrowseMedia)
+const anilistBrowseMediaProvider = AnilistBrowseMediaFamily();
+
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+///
+/// Copied from [AnilistBrowseMedia].
+class AnilistBrowseMediaFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  ///
+  /// Copied from [AnilistBrowseMedia].
+  const AnilistBrowseMediaFamily();
+
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  ///
+  /// Copied from [AnilistBrowseMedia].
+  AnilistBrowseMediaProvider call(String type, String category) {
+    return AnilistBrowseMediaProvider(type, category);
+  }
+
+  @override
+  AnilistBrowseMediaProvider getProviderOverride(
+    covariant AnilistBrowseMediaProvider provider,
+  ) {
+    return call(provider.type, provider.category);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistBrowseMediaProvider';
+}
+
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+///
+/// Copied from [AnilistBrowseMedia].
+class AnilistBrowseMediaProvider
+    extends
+        AutoDisposeAsyncNotifierProviderImpl<
+          AnilistBrowseMedia,
+          List<Map<String, dynamic>>
+        > {
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  ///
+  /// Copied from [AnilistBrowseMedia].
+  AnilistBrowseMediaProvider(String type, String category)
+    : this._internal(
+        () => AnilistBrowseMedia()
+          ..type = type
+          ..category = category,
+        from: anilistBrowseMediaProvider,
+        name: r'anilistBrowseMediaProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistBrowseMediaHash,
+        dependencies: AnilistBrowseMediaFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistBrowseMediaFamily._allTransitiveDependencies,
+        type: type,
+        category: category,
+      );
+
+  AnilistBrowseMediaProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.type,
+    required this.category,
+  }) : super.internal();
+
+  final String type;
+  final String category;
+
+  @override
+  FutureOr<List<Map<String, dynamic>>> runNotifierBuild(
+    covariant AnilistBrowseMedia notifier,
+  ) {
+    return notifier.build(type, category);
+  }
+
+  @override
+  Override overrideWith(AnilistBrowseMedia Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistBrowseMediaProvider._internal(
+        () => create()
+          ..type = type
+          ..category = category,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        type: type,
+        category: category,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<
+    AnilistBrowseMedia,
+    List<Map<String, dynamic>>
+  >
+  createElement() {
+    return _AnilistBrowseMediaProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistBrowseMediaProvider &&
+        other.type == type &&
+        other.category == category;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, type.hashCode);
+    hash = _SystemHash.combine(hash, category.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistBrowseMediaRef
+    on AutoDisposeAsyncNotifierProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `type` of this provider.
+  String get type;
+
+  /// The parameter `category` of this provider.
+  String get category;
+}
+
+class _AnilistBrowseMediaProviderElement
+    extends
+        AutoDisposeAsyncNotifierProviderElement<
+          AnilistBrowseMedia,
+          List<Map<String, dynamic>>
+        >
+    with AnilistBrowseMediaRef {
+  _AnilistBrowseMediaProviderElement(super.provider);
+
+  @override
+  String get type => (origin as AnilistBrowseMediaProvider).type;
+  @override
+  String get category => (origin as AnilistBrowseMediaProvider).category;
+}
+
+String _$anilistFeedHash() => r'a8c3e289db092b15bb49b8116d5135ff3695b381';
 
 /// See also [AnilistFeed].
 @ProviderFor(AnilistFeed)
@@ -812,7 +837,7 @@ final anilistFeedProvider =
     );
 
 typedef _$AnilistFeed = AutoDisposeAsyncNotifier<List<FeedActivity>>;
-String _$anilistFeedByTypeHash() => r'f1fbbc0c823103ebefbf00d7ec4599aeb5fd654e';
+String _$anilistFeedByTypeHash() => r'7e5640fd3b35f3c38f878c76331b629c158c907f';
 
 abstract class _$AnilistFeedByType
     extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
@@ -957,7 +982,7 @@ class _AnilistFeedByTypeProviderElement
 }
 
 String _$anilistFeedFollowingHash() =>
-    r'b64e6ee3114488e3eed062e230cab0789214d118';
+    r'a28c31d1d06ba0414b12ec5998b40a958b101657';
 
 /// See also [AnilistFeedFollowing].
 @ProviderFor(AnilistFeedFollowing)

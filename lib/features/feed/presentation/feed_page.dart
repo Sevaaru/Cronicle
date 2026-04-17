@@ -1221,7 +1221,7 @@ class _ActivityCard extends ConsumerWidget {
   }
 }
 
-class _AnimeMangaBrowseList extends ConsumerWidget {
+class _AnimeMangaBrowseList extends ConsumerStatefulWidget {
   const _AnimeMangaBrowseList({
     required this.mediaType,
     required this.category,
@@ -1239,9 +1239,49 @@ class _AnimeMangaBrowseList extends ConsumerWidget {
   final AppLocalizations l10n;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(anilistBrowseMediaProvider(mediaType, category));
+  ConsumerState<_AnimeMangaBrowseList> createState() =>
+      _AnimeMangaBrowseListState();
+}
+
+class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final n = ref.read(anilistBrowseMediaProvider(
+      widget.mediaType,
+      widget.category,
+    ).notifier);
+    if (!n.hasMore) return;
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 300) {
+      n.loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(
+      anilistBrowseMediaProvider(widget.mediaType, widget.category),
+    );
     final colorScheme = Theme.of(context).colorScheme;
+    final hasMore = ref
+        .read(anilistBrowseMediaProvider(widget.mediaType, widget.category)
+            .notifier)
+        .hasMore;
 
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -1251,37 +1291,52 @@ class _AnimeMangaBrowseList extends ConsumerWidget {
           children: [
             Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
             const SizedBox(height: 12),
-            Text(l10n.errorNetwork),
+            Text(widget.l10n.errorNetwork),
             const SizedBox(height: 12),
             FilledButton(
               onPressed: () {
                 ref.invalidate(
-                    anilistBrowseMediaProvider(mediaType, category));
-                onRefresh();
+                  anilistBrowseMediaProvider(widget.mediaType, widget.category),
+                );
+                widget.onRefresh();
               },
-              child: Text(l10n.feedRetry),
+              child: Text(widget.l10n.feedRetry),
             ),
           ],
         ),
       ),
       data: (list) {
         if (list.isEmpty) {
-          return Center(child: Text(l10n.feedBrowseEmpty));
+          return Center(child: Text(widget.l10n.feedBrowseEmpty));
         }
         return RefreshIndicator(
           onRefresh: () async {
-            ref.invalidate(anilistBrowseMediaProvider(mediaType, category));
-            onRefresh();
-            await ref.read(anilistBrowseMediaProvider(mediaType, category).future);
+            ref.invalidate(
+              anilistBrowseMediaProvider(widget.mediaType, widget.category),
+            );
+            widget.onRefresh();
+            await ref.read(
+              anilistBrowseMediaProvider(widget.mediaType, widget.category)
+                  .future,
+            );
           },
           child: ListView.builder(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-            itemCount: list.length,
-            itemBuilder: (_, i) => BrowseResultCard(
-              item: list[i],
-              kind: kind,
-              onAdd: onAdd,
-            ),
+            itemCount: list.length + (hasMore ? 1 : 0),
+            itemBuilder: (_, i) {
+              if (i >= list.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              return BrowseResultCard(
+                item: list[i],
+                kind: widget.kind,
+                onAdd: widget.onAdd,
+              );
+            },
           ),
         );
       },

@@ -179,7 +179,7 @@ class AnilistGraphqlDatasource {
 
   /// Home browse rails for Anilist: [category] is
   /// `seasonal`, `top_rated`, `upcoming`, `recently_released`.
-  Future<List<Map<String, dynamic>>> fetchBrowseMedia({
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})> fetchBrowseMedia({
     required String type,
     required String category,
     int page = 1,
@@ -205,6 +205,7 @@ class AnilistGraphqlDatasource {
       final query = '''
       query (\$type: MediaType, \$season: MediaSeason, \$seasonYear: Int, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, season: \$season, seasonYear: \$seasonYear, sort: POPULARITY_DESC) {
             $mediaFields
           }
@@ -218,15 +219,19 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'top_rated') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, sort: SCORE_DESC, averageScore_greater: 60) {
             $mediaFields
           }
@@ -238,15 +243,19 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'upcoming') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
             $mediaFields
           }
@@ -258,15 +267,19 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'recently_released') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, status: RELEASING, sort: START_DATE_DESC) {
             $mediaFields
           }
@@ -278,12 +291,15 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
-    return [];
+    return (items: <Map<String, dynamic>>[], hasNextPage: false);
   }
 
   /// Listado paginado por género y/o etiqueta Anilist ([genre] / [tag] son listas de un elemento).
@@ -736,7 +752,9 @@ class AnilistGraphqlDatasource {
 
   /// Recent public activity. Pass null [activityType] for all types.
   /// If [isFollowing] is true, only shows activity from users the viewer follows.
-  Future<List<Map<String, dynamic>>> fetchRecentActivityByType({
+  /// [hasNextPage] reflects Anilist pagination (do not infer from filtered length).
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
+      fetchRecentActivityByType({
     String? activityType,
     int page = 1,
     int perPage = 25,
@@ -746,6 +764,9 @@ class AnilistGraphqlDatasource {
     const query = r'''
       query ($page: Int, $perPage: Int, $type: ActivityType, $isFollowing: Boolean) {
         Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            hasNextPage
+          }
           activities(type: $type, sort: ID_DESC, isFollowing: $isFollowing) {
             ... on ListActivity {
               id
@@ -792,11 +813,15 @@ class AnilistGraphqlDatasource {
       if (activityType != null) 'type': activityType,
       'isFollowing': isFollowing ? true : null,
     }, token: token);
+    final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+    final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
     final activities =
-        (data['data']?['Page']?['activities'] as List?)
-                ?.cast<Map<String, dynamic>>() ??
-            [];
-    return activities.where((a) => a['media'] != null || a['type'] == 'TEXT').toList();
+        (pageMap?['activities'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final filtered = activities
+        .where((a) => a['media'] != null || a['type'] == 'TEXT')
+        .toList();
+    return (items: filtered, hasNextPage: hasNext);
   }
 
   /// Toggle like on an activity or reply. Requires auth token.
