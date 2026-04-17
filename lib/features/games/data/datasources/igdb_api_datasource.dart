@@ -23,16 +23,25 @@ class IgdbApiDatasource {
   /// Tras el primer acierto se reutiliza (evita probar `/review` y `/reviews` en cada lista).
   String? _cachedReviewsPath;
 
-  static const _queryRetryDelayMs = 180;
+  /// Breve pausa solo entre reintentos tras fallo o lista vacía (no bloquear el camino feliz).
+  static const _queryRetryDelayMs = 40;
+
+  String? _cachedHeaderToken;
+  Options? _cachedHeaderOptions;
 
   Future<Options> _headers() async {
     final token = await _auth.getValidToken();
-    return Options(
+    if (_cachedHeaderToken == token && _cachedHeaderOptions != null) {
+      return _cachedHeaderOptions!;
+    }
+    _cachedHeaderToken = token;
+    _cachedHeaderOptions = Options(
       headers: {
         'Client-ID': _auth.clientId,
         'Authorization': 'Bearer $token',
       },
     );
+    return _cachedHeaderOptions!;
   }
 
   /// Builds an IGDB image URL from an image_id.
@@ -48,7 +57,7 @@ class IgdbApiDatasource {
     final body = '''
 search "$escaped";
 fields name, cover.image_id, genres.name, platforms.abbreviation,
-       total_rating, first_release_date, summary;
+       total_rating, first_release_date;
 limit 20;
 ''';
     return _postList('/games', body);
@@ -62,7 +71,7 @@ limit 20;
     try {
       final fast = await _postList('/games', '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, summary;
+       total_rating, first_release_date;
 where category = 0 & total_rating > 0;
 sort total_rating desc;
 limit $limit;
@@ -76,20 +85,20 @@ limit $limit;
     final candidates = <String>[
       '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, summary;
+       total_rating, first_release_date;
 where category = 0 & total_rating > 0;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, summary;
+       total_rating, first_release_date;
 where category = 0;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, total_rating, first_release_date, summary;
+fields name, cover.image_id, total_rating, first_release_date;
 where category = 0;
 sort id desc;
 limit $limit;
@@ -174,7 +183,7 @@ limit $maxScan;
       final idList = orderedIds.join(',');
       final games = await _postList('/games', '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, summary, category;
+       total_rating, first_release_date, category;
 where id = ($idList);
 limit ${orderedIds.length};
 ''');
@@ -228,25 +237,19 @@ limit ${orderedIds.length};
     final twoYears = now + 730 * 24 * 3600;
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date, summary;
+fields name, cover.image_id, first_release_date;
 where category = 0 & first_release_date > $now & first_release_date < $twoYears;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, release_dates.date, summary;
+fields name, cover.image_id, release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $twoYears;
 sort release_dates.date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, summary;
-where category = 0 & first_release_date > $now;
-sort first_release_date asc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, summary, hypes;
+fields name, cover.image_id, first_release_date, hypes;
 where category = 0 & first_release_date > $now & first_release_date < $oneYear;
 sort hypes desc;
 limit $limit;
@@ -262,38 +265,20 @@ limit $limit;
     final pastWide = now - 1095 * 24 * 3600; // ~36 months
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date, total_rating, summary;
+fields name, cover.image_id, first_release_date, total_rating;
 where category = 0 & first_release_date <= $now & first_release_date >= $past;
 sort first_release_date desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, summary;
-where category = 0 & first_release_date <= $now & first_release_date >= $past & first_release_date != null;
-sort first_release_date desc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, release_dates.date, summary;
+fields name, cover.image_id, first_release_date, release_dates.date;
 where category = 0 & release_dates.date <= $now & release_dates.date >= $past;
 sort release_dates.date desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, summary;
+fields name, cover.image_id, first_release_date;
 where category = 0 & first_release_date <= $now & first_release_date >= $pastWide;
-sort first_release_date desc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, summary;
-where category = 0 & first_release_date <= $now & first_release_date != null;
-sort first_release_date desc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, summary;
-where first_release_date <= $now & first_release_date >= $past;
 sort first_release_date desc;
 limit $limit;
 ''',
@@ -306,26 +291,20 @@ limit $limit;
     final cap = now + 730 * 24 * 3600; // 2 years
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date, summary;
+fields name, cover.image_id, first_release_date;
 where category = 0 & first_release_date > $now & first_release_date < $cap;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, release_dates.date, summary;
+fields name, cover.image_id, release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $cap;
 sort release_dates.date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, summary;
+fields name, cover.image_id, first_release_date;
 where category = 0 & first_release_date > $now;
-sort first_release_date asc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, summary;
-where first_release_date > $now & first_release_date < $cap;
 sort first_release_date asc;
 limit $limit;
 ''',
@@ -390,47 +369,58 @@ where id = $reviewId;
   /// Playtime estimates live on the separate [GameTimeToBeat] resource
   /// (`/game_time_to_beats`), not as `game.time_to_beat` — requesting the
   /// latter in `fields` returns HTTP 400 from IGDB.
+  ///
+  /// Varias peticiones en **paralelo** (núcleo + extras + ttb + reseñas) para
+  /// no sumar latencias como una sola query gigante seguida de más RTT.
   Future<Map<String, dynamic>?> fetchGameDetail(int gameId) async {
-    final body = '''
+    final coreBody = '''
 fields name, summary, total_rating, total_rating_count,
        aggregated_rating, aggregated_rating_count,
        cover.image_id,
-       screenshots.image_id,
-       artworks.image_id,
+       first_release_date,
        genres.name,
        platforms.name, platforms.abbreviation,
+       status, category, url;
+where id = $gameId;
+''';
+    final extrasBody = '''
+fields screenshots.image_id,
+       artworks.image_id,
        involved_companies.company.name, involved_companies.developer,
        involved_companies.publisher,
-       first_release_date,
        similar_games.name, similar_games.cover.image_id,
        game_modes.name,
        themes.name,
-       status,
-       category,
-       url,
        websites.url, websites.category,
        external_games.url, external_games.category, external_games.uid,
        external_games.name, external_games.external_game_source.name;
 where id = $gameId;
 ''';
-    final list = await _postList('/games', body);
-    if (list.isEmpty) return null;
-    final game = Map<String, dynamic>.from(list.first);
-    try {
-      final ttbFuture = _fetchGameTimeToBeat(gameId);
-      final reviewsFuture = fetchGameReviews(gameId);
-      final results = await Future.wait<Object?>([
-        ttbFuture.catchError((_) => null),
-        reviewsFuture.catchError((_) => <Map<String, dynamic>>[]),
-      ]);
-      final ttb = results[0] as Map<String, dynamic>?;
-      final reviews = results[1] as List<Map<String, dynamic>>;
-      if (ttb != null) game['time_to_beat'] = ttb;
-      game['__igdb_reviews'] = reviews;
-    } catch (_) {
-      // Pro tier / network: detail page still works without estimates/reviews.
-      game['__igdb_reviews'] = <Map<String, dynamic>>[];
+
+    final results = await Future.wait<dynamic>([
+      _postList('/games', coreBody),
+      _postList('/games', extrasBody).catchError((_) => <Map<String, dynamic>>[]),
+      _fetchGameTimeToBeat(gameId).catchError((_) => null),
+      fetchGameReviews(gameId).catchError((_) => <Map<String, dynamic>>[]),
+    ]);
+
+    final mainList = results[0] as List<Map<String, dynamic>>;
+    if (mainList.isEmpty) return null;
+    final game = Map<String, dynamic>.from(mainList.first);
+
+    final extraList = results[1] as List<Map<String, dynamic>>;
+    if (extraList.isNotEmpty) {
+      final ex = extraList.first;
+      for (final e in ex.entries) {
+        if (e.key == 'id') continue;
+        final v = e.value;
+        if (v != null) game[e.key] = v;
+      }
     }
+
+    final ttb = results[2] as Map<String, dynamic>?;
+    if (ttb != null) game['time_to_beat'] = ttb;
+    game['__igdb_reviews'] = results[3] as List<Map<String, dynamic>>;
     return game;
   }
 

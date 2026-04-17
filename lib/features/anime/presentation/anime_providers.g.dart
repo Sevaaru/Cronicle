@@ -645,7 +645,7 @@ final anilistTokenProvider =
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
 String _$anilistBrowseMediaHash() =>
-    r'c4db5c242c7a21337deda270fb9113bedb61e159';
+    r'106e55779cd632b571dd364038ab5f7ca604caad';
 
 abstract class _$AnilistBrowseMedia
     extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {

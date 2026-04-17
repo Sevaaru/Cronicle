@@ -42,7 +42,7 @@ IgdbApiDatasource igdbApi(IgdbApiRef ref) {
   return IgdbApiDatasource(ref.watch(dioProvider), ref.watch(igdbAuthProvider));
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<Map<String, dynamic>>> igdbSearch(
   IgdbSearchRef ref,
   String query,
@@ -54,7 +54,7 @@ Future<List<Map<String, dynamic>>> igdbSearch(
 }
 
 /// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<Map<String, dynamic>>> igdbPopular(IgdbPopularRef ref) async {
   final api = ref.read(igdbApiProvider);
   final raw = await api.fetchPopularGames(limit: 24);
@@ -79,7 +79,7 @@ Future<Map<String, dynamic>?> igdbGameDetail(
 }
 
 /// Resto del home juegos en paralelo (Popular va aparte para pintarse antes).
-@riverpod
+@Riverpod(keepAlive: true)
 Future<IgdbGamesHomeAsideData> igdbGamesHomeAside(IgdbGamesHomeAsideRef ref) async {
   final api = ref.read(igdbApiProvider);
   final anticipatedRaw = api.fetchGamesMostAnticipated(limit: 24);

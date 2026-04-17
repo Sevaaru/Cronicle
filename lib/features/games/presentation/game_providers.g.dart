@@ -40,7 +40,7 @@ final igdbApiProvider = Provider<IgdbApiDatasource>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef IgdbApiRef = ProviderRef<IgdbApiDatasource>;
-String _$igdbSearchHash() => r'aaf86b5aef3f53a8ff442b40e18b67979255b3e5';
+String _$igdbSearchHash() => r'2a9b49fa8137ea85b6a520f011fb8fcea2457757';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -100,8 +100,7 @@ class IgdbSearchFamily extends Family<AsyncValue<List<Map<String, dynamic>>>> {
 }
 
 /// See also [igdbSearch].
-class IgdbSearchProvider
-    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
+class IgdbSearchProvider extends FutureProvider<List<Map<String, dynamic>>> {
   /// See also [igdbSearch].
   IgdbSearchProvider(String query)
     : this._internal(
@@ -148,7 +147,7 @@ class IgdbSearchProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
+  FutureProviderElement<List<Map<String, dynamic>>> createElement() {
     return _IgdbSearchProviderElement(this);
   }
 
@@ -168,14 +167,13 @@ class IgdbSearchProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin IgdbSearchRef
-    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
+mixin IgdbSearchRef on FutureProviderRef<List<Map<String, dynamic>>> {
   /// The parameter `query` of this provider.
   String get query;
 }
 
 class _IgdbSearchProviderElement
-    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
+    extends FutureProviderElement<List<Map<String, dynamic>>>
     with IgdbSearchRef {
   _IgdbSearchProviderElement(super.provider);
 
@@ -183,27 +181,25 @@ class _IgdbSearchProviderElement
   String get query => (origin as IgdbSearchProvider).query;
 }
 
-String _$igdbPopularHash() => r'e8c5442c02211582f5129507a189e340e9975274';
+String _$igdbPopularHash() => r'dc523ab9748c6bd4af24d2e52c1651d1c21071f8';
 
 /// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
 ///
 /// Copied from [igdbPopular].
 @ProviderFor(igdbPopular)
-final igdbPopularProvider =
-    AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
-      igdbPopular,
-      name: r'igdbPopularProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$igdbPopularHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final igdbPopularProvider = FutureProvider<List<Map<String, dynamic>>>.internal(
+  igdbPopular,
+  name: r'igdbPopularProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$igdbPopularHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef IgdbPopularRef =
-    AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
+typedef IgdbPopularRef = FutureProviderRef<List<Map<String, dynamic>>>;
 String _$igdbGameDetailHash() => r'9b69004832c56422fd93b0280465d42917485448';
 
 /// See also [igdbGameDetail].
@@ -326,14 +322,14 @@ class _IgdbGameDetailProviderElement
 }
 
 String _$igdbGamesHomeAsideHash() =>
-    r'247673a0d1a3060e546b3dffe5a7e8928f10a4c1';
+    r'42a18f26e31c1dd3d02389c763aa491b17c1ac70';
 
 /// Resto del home juegos en paralelo (Popular va aparte para pintarse antes).
 ///
 /// Copied from [igdbGamesHomeAside].
 @ProviderFor(igdbGamesHomeAside)
 final igdbGamesHomeAsideProvider =
-    AutoDisposeFutureProvider<IgdbGamesHomeAsideData>.internal(
+    FutureProvider<IgdbGamesHomeAsideData>.internal(
       igdbGamesHomeAside,
       name: r'igdbGamesHomeAsideProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -345,8 +341,7 @@ final igdbGamesHomeAsideProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef IgdbGamesHomeAsideRef =
-    AutoDisposeFutureProviderRef<IgdbGamesHomeAsideData>;
+typedef IgdbGamesHomeAsideRef = FutureProviderRef<IgdbGamesHomeAsideData>;
 String _$igdbReviewByIdHash() => r'27406cd579ea483b124241346a5d521a7d513ebb';
 
 /// See also [igdbReviewById].

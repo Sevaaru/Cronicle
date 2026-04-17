@@ -61,7 +61,7 @@ class IgdbAuthDatasource {
     final token = await _tokenInFlight!;
     _memToken = token;
     // TTL conservador en memoria; el token real suele durar mucho más.
-    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 120_000;
+    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
     return token;
   }
 
