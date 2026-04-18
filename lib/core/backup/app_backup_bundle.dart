@@ -190,7 +190,6 @@ abstract final class AppBackupBundle {
   }
 
   static void _invalidateAfterRestore(WidgetRef ref) {
-    clearIgdbHomeFeedCaches();
     ref.invalidate(anilistTokenProvider);
     ref.invalidate(twitchIgdbAccountProvider);
     ref.invalidate(paginatedLibraryProvider);
@@ -206,8 +205,7 @@ abstract final class AppBackupBundle {
     ref.invalidate(favoriteGamesProvider);
     ref.invalidate(favoriteTraktTitlesProvider);
     ref.invalidate(igdbPopularProvider);
-    ref.invalidate(igdbHomeGameRailProvider);
-    ref.invalidate(igdbHomeReviewRailProvider);
+    ref.invalidate(igdbGamesHomeFeedProvider);
     ref.invalidate(igdbGamesSectionListProvider);
     ref.invalidate(igdbGameDetailProvider);
     ref.invalidate(igdbReviewByIdProvider);

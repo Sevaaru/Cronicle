@@ -213,8 +213,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         }
       case _FeedFilter.game:
         ref.invalidate(igdbPopularProvider);
-        ref.invalidate(igdbHomeGameRailProvider);
-        ref.invalidate(igdbHomeReviewRailProvider);
+        ref.invalidate(igdbGamesHomeFeedProvider);
       case _FeedFilter.movie:
         ref.invalidate(traktMoviesHomeProvider);
       case _FeedFilter.tv:

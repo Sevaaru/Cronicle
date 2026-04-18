@@ -23,7 +23,7 @@ String? _formatIgdbReleaseDate(BuildContext context, Map<String, dynamic> item) 
   return DateFormat.yMMMd(locale).format(dt);
 }
 
-/// IGDB home: [igdbPopularProvider] first; other rows load independently.
+/// IGDB home: [igdbPopularProvider] + [igdbGamesHomeFeedProvider] (sequential IGDB).
 class GamesHomeFeedView extends ConsumerWidget {
   const GamesHomeFeedView({super.key});
 
@@ -43,22 +43,18 @@ class GamesHomeFeedView extends ConsumerWidget {
 
   Future<void> _onRefresh(WidgetRef ref) async {
     ref.invalidate(igdbPopularProvider);
-    ref.invalidate(igdbHomeGameRailProvider);
-    ref.invalidate(igdbHomeReviewRailProvider);
-    await ref.read(igdbPopularProvider.future);
-    for (final s in GamesFeedSection.gameRailSlugs) {
-      await ref.read(igdbHomeGameRailProvider(s).future);
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-    }
-    await ref.read(igdbHomeReviewRailProvider('recent').future);
-    await Future<void>.delayed(const Duration(milliseconds: 40));
-    await ref.read(igdbHomeReviewRailProvider('critics').future);
+    ref.invalidate(igdbGamesHomeFeedProvider);
+    await Future.wait([
+      ref.read(igdbPopularProvider.future),
+      ref.read(igdbGamesHomeFeedProvider.future),
+    ]);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final popularAsync = ref.watch(igdbPopularProvider);
+    final asideAsync = ref.watch(igdbGamesHomeFeedProvider);
 
     return RefreshIndicator(
       onRefresh: () => _onRefresh(ref),
@@ -81,63 +77,187 @@ class GamesHomeFeedView extends ConsumerWidget {
               );
             },
           ),
-          _DeferredGameRail(
-            section: GamesFeedSection.anticipated,
-            previewCount: _previewCount,
-            style: _GameRailStyle.featured(context),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.recentlyReleased,
-            previewCount: _previewCount,
-            style: _GameRailStyle.standard(context),
-          ),
-          _DeferredReviewRail(
-            slug: GamesFeedSection.reviewsRecent,
-            kind: 'recent',
-            previewCount: _previewCount,
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.comingSoon,
-            previewCount: _previewCount,
-            style: _GameRailStyle.compactDates(context),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.bestRated,
-            previewCount: _previewCount,
-            style: _GameRailStyle.tallScores(context),
-          ),
-          _DeferredReviewRail(
-            slug: GamesFeedSection.reviewsCritics,
-            kind: 'critics',
-            previewCount: _previewCount,
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.indie,
-            previewCount: _previewCount,
-            style: _GameRailStyle.wideTint(context, const Color(0xFF0D9488)),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.horror,
-            previewCount: _previewCount,
-            style: _GameRailStyle.wideTint(context, const Color(0xFF7C3AED)),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.multiplayer,
-            previewCount: _previewCount,
-            style: _GameRailStyle.standard(context),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.rpg,
-            previewCount: _previewCount,
-            style: _GameRailStyle.posterFocus(context),
-          ),
-          _DeferredGameRail(
-            section: GamesFeedSection.sports,
-            previewCount: _previewCount,
-            style: _GameRailStyle.wideTint(context, const Color(0xFF2563EB)),
+          asideAsync.when(
+            skipLoadingOnRefresh: true,
+            skipError: true,
+            loading: () => _AsideLoadingSkeletons(l10n: l10n),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _errorBox(context, e, l10n),
+            ),
+            data: (aside) => _AsideFromData(
+              l10n: l10n,
+              aside: aside,
+              previewCount: _previewCount,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AsideFromData extends StatelessWidget {
+  const _AsideFromData({
+    required this.l10n,
+    required this.aside,
+    required this.previewCount,
+  });
+
+  final AppLocalizations l10n;
+  final IgdbGamesHomeFeedData aside;
+  final int previewCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (aside.anticipated.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.anticipated),
+            slug: GamesFeedSection.anticipated,
+            items: aside.anticipated,
+            previewCount: previewCount,
+            style: _GameRailStyle.featured(context),
+          ),
+        if (aside.recentlyReleased.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.recentlyReleased),
+            slug: GamesFeedSection.recentlyReleased,
+            items: aside.recentlyReleased,
+            previewCount: previewCount,
+            style: _GameRailStyle.standard(context),
+          ),
+        if (aside.reviewsRecent.isNotEmpty)
+          _HomeReviewsSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.reviewsRecent),
+            slug: GamesFeedSection.reviewsRecent,
+            reviews: aside.reviewsRecent,
+            previewCount: previewCount,
+          ),
+        if (aside.comingSoon.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.comingSoon),
+            slug: GamesFeedSection.comingSoon,
+            items: aside.comingSoon,
+            previewCount: previewCount,
+            style: _GameRailStyle.compactDates(context),
+            showReleaseDate: true,
+          ),
+        if (aside.bestRated.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.bestRated),
+            slug: GamesFeedSection.bestRated,
+            items: aside.bestRated,
+            previewCount: previewCount,
+            style: _GameRailStyle.tallScores(context),
+          ),
+        if (aside.reviewsCritics.isNotEmpty)
+          _HomeReviewsSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.reviewsCritics),
+            slug: GamesFeedSection.reviewsCritics,
+            reviews: aside.reviewsCritics,
+            previewCount: previewCount,
+          ),
+        if (aside.indie.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.indie),
+            slug: GamesFeedSection.indie,
+            items: aside.indie,
+            previewCount: previewCount,
+            style: _GameRailStyle.wideTint(context, const Color(0xFF0D9488)),
+          ),
+        if (aside.horror.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.horror),
+            slug: GamesFeedSection.horror,
+            items: aside.horror,
+            previewCount: previewCount,
+            style: _GameRailStyle.wideTint(context, const Color(0xFF7C3AED)),
+          ),
+        if (aside.multiplayer.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.multiplayer),
+            slug: GamesFeedSection.multiplayer,
+            items: aside.multiplayer,
+            previewCount: previewCount,
+            style: _GameRailStyle.standard(context),
+          ),
+        if (aside.rpg.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.rpg),
+            slug: GamesFeedSection.rpg,
+            items: aside.rpg,
+            previewCount: previewCount,
+            style: _GameRailStyle.posterFocus(context),
+          ),
+        if (aside.sports.isNotEmpty)
+          _HomeGamesCarouselSection(
+            title: gamesHomeSectionTitle(l10n, GamesFeedSection.sports),
+            slug: GamesFeedSection.sports,
+            items: aside.sports,
+            previewCount: previewCount,
+            style: _GameRailStyle.wideTint(context, const Color(0xFF2563EB)),
+          ),
+      ],
+    );
+  }
+}
+
+class _AsideLoadingSkeletons extends StatelessWidget {
+  const _AsideLoadingSkeletons({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.anticipated),
+          style: _GameRailStyle.featured(context),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.recentlyReleased),
+          style: _GameRailStyle.standard(context),
+        ),
+        _ReviewsSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.reviewsRecent),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.comingSoon),
+          style: _GameRailStyle.compactDates(context),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.bestRated),
+          style: _GameRailStyle.tallScores(context),
+        ),
+        _ReviewsSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.reviewsCritics),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.indie),
+          style: _GameRailStyle.wideTint(context, const Color(0xFF0D9488)),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.horror),
+          style: _GameRailStyle.wideTint(context, const Color(0xFF7C3AED)),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.multiplayer),
+          style: _GameRailStyle.standard(context),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.rpg),
+          style: _GameRailStyle.posterFocus(context),
+        ),
+        _GameRailSkeleton(
+          title: gamesHomeSectionTitle(l10n, GamesFeedSection.sports),
+          style: _GameRailStyle.wideTint(context, const Color(0xFF2563EB)),
+        ),
+      ],
     );
   }
 }
@@ -213,77 +333,6 @@ class _GameRailStyle {
     return _GameRailStyle(
       cardWidth: 108,
       posterHeight: 172,
-    );
-  }
-}
-
-class _DeferredGameRail extends ConsumerWidget {
-  const _DeferredGameRail({
-    required this.section,
-    required this.previewCount,
-    required this.style,
-  });
-
-  final String section;
-  final int previewCount;
-  final _GameRailStyle style;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final title = gamesHomeSectionTitle(l10n, section);
-    final async = ref.watch(igdbHomeGameRailProvider(section));
-
-    return async.when(
-      skipLoadingOnRefresh: true,
-      skipError: true,
-      loading: () => _GameRailSkeleton(title: title, style: style),
-      error: (e, st) => const SizedBox.shrink(),
-      data: (items) {
-        if (items.isEmpty) return const SizedBox.shrink();
-        return _HomeGamesCarouselSection(
-          title: title,
-          slug: section,
-          items: items,
-          previewCount: previewCount,
-          style: style,
-        );
-      },
-    );
-  }
-}
-
-class _DeferredReviewRail extends ConsumerWidget {
-  const _DeferredReviewRail({
-    required this.slug,
-    required this.kind,
-    required this.previewCount,
-  });
-
-  final String slug;
-  final String kind;
-  final int previewCount;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final title = gamesHomeSectionTitle(l10n, slug);
-    final async = ref.watch(igdbHomeReviewRailProvider(kind));
-
-    return async.when(
-      skipLoadingOnRefresh: true,
-      skipError: true,
-      loading: () => _ReviewsSkeleton(title: title),
-      error: (e, st) => const SizedBox.shrink(),
-      data: (reviews) {
-        if (reviews.isEmpty) return const SizedBox.shrink();
-        return _HomeReviewsSection(
-          title: title,
-          slug: slug,
-          reviews: reviews,
-          previewCount: previewCount,
-        );
-      },
     );
   }
 }
@@ -496,6 +545,7 @@ class _HomeGamesCarouselSection extends StatelessWidget {
     required this.items,
     required this.previewCount,
     required this.style,
+    this.showReleaseDate,
   });
 
   final String title;
@@ -503,6 +553,7 @@ class _HomeGamesCarouselSection extends StatelessWidget {
   final List<Map<String, dynamic>> items;
   final int previewCount;
   final _GameRailStyle style;
+  final bool? showReleaseDate;
 
   @override
   Widget build(BuildContext context) {
@@ -512,6 +563,7 @@ class _HomeGamesCarouselSection extends StatelessWidget {
     final maxShow = previewCount.clamp(0, items.length);
     final slice = items.take(maxShow).toList(growable: false);
     final rowHeight = style.rowHeight;
+    final useDates = showReleaseDate ?? style.showReleaseDate;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -596,7 +648,7 @@ class _HomeGamesCarouselSection extends StatelessWidget {
                 final score = item['averageScore'] as int?;
                 final id = item['id'] as int?;
                 final dateLine =
-                    style.showReleaseDate ? _formatIgdbReleaseDate(context, item) : null;
+                    useDates ? _formatIgdbReleaseDate(context, item) : null;
 
                 return GestureDetector(
                   onTap: id != null ? () => context.push('/game/$id') : null,
@@ -625,7 +677,7 @@ class _HomeGamesCarouselSection extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           name,
-                          maxLines: style.showReleaseDate ? 1 : 2,
+                          maxLines: useDates ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: style.posterHeight > 165 ? 11.5 : 11,
