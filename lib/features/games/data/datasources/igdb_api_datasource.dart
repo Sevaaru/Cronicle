@@ -311,25 +311,37 @@ limit $limit;
     ]);
   }
 
-  /// IGDB genre ids (stable): Indie = 32, Horror = 19.
+  /// IGDB genre ids (stable): Indie = 32, Horror = 19, RPG = 12, Sport = 14.
   static const int genreIdIndie = 32;
   static const int genreIdHorror = 19;
+  static const int genreIdRpg = 12;
+  static const int genreIdSports = 14;
 
   /// Juegos muy bien valorados con suficientes votos (usuarios IGDB).
   Future<List<Map<String, dynamic>>> fetchGamesBestRated({int limit = 24}) async {
-    final body = '''
+    return _tryPostGameQueries([
+      '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, total_rating_count, first_release_date;
-where category = 0 & total_rating != null & total_rating_count >= 50
-      & total_rating >= 85;
+where category = 0 & total_rating_count >= 50 & total_rating >= 85;
 sort total_rating desc;
 limit $limit;
-''';
-    try {
-      return await _postList('/games', body);
-    } catch (_) {
-      return [];
-    }
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, total_rating_count, first_release_date;
+where category = 0 & total_rating_count >= 25 & total_rating >= 80;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, total_rating_count, first_release_date;
+where category = 0 & total_rating_count >= 10 & total_rating > 0;
+sort total_rating desc;
+limit $limit;
+''',
+    ]);
   }
 
   /// Carrusel por género (un id de [Genres] en IGDB).

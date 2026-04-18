@@ -12,32 +12,18 @@ import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.dart';
+import 'package:cronicle/features/games/data/games_feed_section.dart';
 
 part 'game_providers.g.dart';
 
-/// Carruseles del home IGDB excepto “Popular” (ese va en [igdbPopularProvider]).
-class IgdbGamesHomeAsideData {
-  const IgdbGamesHomeAsideData({
-    required this.anticipated,
-    required this.recentlyReleased,
-    required this.comingSoon,
-    required this.reviewsRecent,
-    required this.reviewsFeatured,
-    required this.bestRated,
-    required this.indiePicks,
-    required this.horrorPicks,
-    required this.multiplayerHits,
-  });
-
-  final List<Map<String, dynamic>> anticipated;
-  final List<Map<String, dynamic>> recentlyReleased;
-  final List<Map<String, dynamic>> comingSoon;
-  final List<Map<String, dynamic>> reviewsRecent;
-  final List<Map<String, dynamic>> reviewsFeatured;
-  final List<Map<String, dynamic>> bestRated;
-  final List<Map<String, dynamic>> indiePicks;
-  final List<Map<String, dynamic>> horrorPicks;
-  final List<Map<String, dynamic>> multiplayerHits;
+List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
+  final out = <Map<String, dynamic>>[];
+  for (final m in raw) {
+    try {
+      out.add(IgdbApiDatasource.normalize(m));
+    } catch (_) {}
+  }
+  return out;
 }
 
 @Riverpod(keepAlive: true)
@@ -58,7 +44,7 @@ Future<List<Map<String, dynamic>>> igdbSearch(
   if (query.trim().isEmpty) return [];
   final api = ref.read(igdbApiProvider);
   final raw = await api.searchGames(query);
-  return raw.map(IgdbApiDatasource.normalize).toList();
+  return _normalizeGamesSafe(raw);
 }
 
 /// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
@@ -66,7 +52,7 @@ Future<List<Map<String, dynamic>>> igdbSearch(
 Future<List<Map<String, dynamic>>> igdbPopular(IgdbPopularRef ref) async {
   final api = ref.read(igdbApiProvider);
   final raw = await api.fetchPopularGames(limit: 24);
-  return raw.map(IgdbApiDatasource.normalize).toList();
+  return _normalizeGamesSafe(raw);
 }
 
 @riverpod
@@ -86,49 +72,67 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-/// Resto del home juegos en paralelo (Popular va aparte para pintarse antes).
+/// One horizontal game rail for the games home feed; failures stay isolated.
 @Riverpod(keepAlive: true)
-Future<IgdbGamesHomeAsideData> igdbGamesHomeAside(IgdbGamesHomeAsideRef ref) async {
+Future<List<Map<String, dynamic>>> igdbHomeGameRail(
+  IgdbHomeGameRailRef ref,
+  String section,
+) async {
+  if (!GamesFeedSection.gameRailSlugs.contains(section)) return [];
   final api = ref.read(igdbApiProvider);
-  final anticipatedRaw = api.fetchGamesMostAnticipated(limit: 24);
-  final releasedRaw = api.fetchGamesRecentlyReleased(limit: 24);
-  final soonRaw = api.fetchGamesComingSoon(limit: 24);
-  final reviewsRaw = api.fetchReviewsRecent(limit: 36);
-  final featuredRaw = api.fetchReviewsHighScore(limit: 24);
-  final bestRatedRaw = api.fetchGamesBestRated(limit: 24);
-  final indieRaw = api.fetchGamesGenreSpotlight(
-    IgdbApiDatasource.genreIdIndie,
-    limit: 24,
-  );
-  final horrorRaw = api.fetchGamesGenreSpotlight(
-    IgdbApiDatasource.genreIdHorror,
-    limit: 24,
-  );
-  final mpRaw = api.fetchGamesMultiplayerPopular(limit: 24);
+  try {
+    final raw = switch (section) {
+      GamesFeedSection.anticipated => await api.fetchGamesMostAnticipated(limit: 24),
+      GamesFeedSection.recentlyReleased =>
+        await api.fetchGamesRecentlyReleased(limit: 24),
+      GamesFeedSection.comingSoon => await api.fetchGamesComingSoon(limit: 24),
+      GamesFeedSection.bestRated => await api.fetchGamesBestRated(limit: 24),
+      GamesFeedSection.indie => await api.fetchGamesGenreSpotlight(
+          IgdbApiDatasource.genreIdIndie,
+          limit: 24,
+        ),
+      GamesFeedSection.horror => await api.fetchGamesGenreSpotlight(
+          IgdbApiDatasource.genreIdHorror,
+          limit: 24,
+        ),
+      GamesFeedSection.multiplayer => await api.fetchGamesMultiplayerPopular(limit: 24),
+      GamesFeedSection.rpg => await api.fetchGamesGenreSpotlight(
+          IgdbApiDatasource.genreIdRpg,
+          limit: 24,
+        ),
+      GamesFeedSection.sports => await api.fetchGamesGenreSpotlight(
+          IgdbApiDatasource.genreIdSports,
+          limit: 24,
+        ),
+      _ => <Map<String, dynamic>>[],
+    };
+    return _normalizeGamesSafe(raw);
+  } catch (_) {
+    return [];
+  }
+}
 
-  final results = await Future.wait<List<Map<String, dynamic>>>([
-    anticipatedRaw,
-    releasedRaw,
-    soonRaw,
-    reviewsRaw,
-    featuredRaw,
-    bestRatedRaw,
-    indieRaw,
-    horrorRaw,
-    mpRaw,
-  ]);
-
-  return IgdbGamesHomeAsideData(
-    anticipated: results[0].map(IgdbApiDatasource.normalize).toList(),
-    recentlyReleased: results[1].map(IgdbApiDatasource.normalize).toList(),
-    comingSoon: results[2].map(IgdbApiDatasource.normalize).toList(),
-    reviewsRecent: results[3],
-    reviewsFeatured: results[4],
-    bestRated: results[5].map(IgdbApiDatasource.normalize).toList(),
-    indiePicks: results[6].map(IgdbApiDatasource.normalize).toList(),
-    horrorPicks: results[7].map(IgdbApiDatasource.normalize).toList(),
-    multiplayerHits: results[8].map(IgdbApiDatasource.normalize).toList(),
-  );
+/// Review list for the games home (`kind`: `recent` | `critics`).
+@Riverpod(keepAlive: true)
+Future<List<Map<String, dynamic>>> igdbHomeReviewRail(
+  IgdbHomeReviewRailRef ref,
+  String kind,
+) async {
+  if (kind != 'recent' && kind != 'critics') return [];
+  final api = ref.read(igdbApiProvider);
+  try {
+    final raw = switch (kind) {
+      'recent' => await api.fetchReviewsRecent(limit: 36),
+      'critics' => await api.fetchReviewsHighScore(limit: 24),
+      _ => <Map<String, dynamic>>[],
+    };
+    return raw
+        .where((r) => (r['game'] as Map<String, dynamic>?) != null)
+        .cast<Map<String, dynamic>>()
+        .toList();
+  } catch (_) {
+    return [];
+  }
 }
 
 @riverpod
@@ -150,46 +154,58 @@ Future<List<Map<String, dynamic>>> igdbGamesSectionList(
   const reviewLimit = 50;
   final api = ref.read(igdbApiProvider);
   switch (slug) {
-    case 'popular':
+    case GamesFeedSection.popular:
       final raw = await api.fetchPopularGames(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'anticipated':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.anticipated:
       final raw = await api.fetchGamesMostAnticipated(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'recently-released':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.recentlyReleased:
       final raw = await api.fetchGamesRecentlyReleased(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'coming-soon':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.comingSoon:
       final raw = await api.fetchGamesComingSoon(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'reviews-recent':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.reviewsRecent:
       final raw = await api.fetchReviewsRecent(limit: reviewLimit);
       return raw
           .where((r) => (r['game'] as Map<String, dynamic>?) != null)
           .toList();
-    case 'reviews-critics':
+    case GamesFeedSection.reviewsCritics:
       final raw = await api.fetchReviewsHighScore(limit: reviewLimit);
       return raw
           .where((r) => (r['game'] as Map<String, dynamic>?) != null)
           .toList();
-    case 'best-rated':
+    case GamesFeedSection.bestRated:
       final raw = await api.fetchGamesBestRated(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'indie':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.indie:
       final raw = await api.fetchGamesGenreSpotlight(
         IgdbApiDatasource.genreIdIndie,
         limit: gameLimit,
       );
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'horror':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.horror:
       final raw = await api.fetchGamesGenreSpotlight(
         IgdbApiDatasource.genreIdHorror,
         limit: gameLimit,
       );
-      return raw.map(IgdbApiDatasource.normalize).toList();
-    case 'multiplayer':
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.multiplayer:
       final raw = await api.fetchGamesMultiplayerPopular(limit: gameLimit);
-      return raw.map(IgdbApiDatasource.normalize).toList();
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.rpg:
+      final raw = await api.fetchGamesGenreSpotlight(
+        IgdbApiDatasource.genreIdRpg,
+        limit: gameLimit,
+      );
+      return _normalizeGamesSafe(raw);
+    case GamesFeedSection.sports:
+      final raw = await api.fetchGamesGenreSpotlight(
+        IgdbApiDatasource.genreIdSports,
+        limit: gameLimit,
+      );
+      return _normalizeGamesSafe(raw);
     default:
       return [];
   }
@@ -342,7 +358,8 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
 
 void invalidateIgdbProviders(Ref ref) {
   ref.invalidate(igdbPopularProvider);
-  ref.invalidate(igdbGamesHomeAsideProvider);
+  ref.invalidate(igdbHomeGameRailProvider);
+  ref.invalidate(igdbHomeReviewRailProvider);
   ref.invalidate(igdbGamesSectionListProvider);
   ref.invalidate(igdbGameDetailProvider);
   ref.invalidate(igdbReviewByIdProvider);

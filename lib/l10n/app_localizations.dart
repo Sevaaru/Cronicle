@@ -2834,6 +2834,18 @@ abstract class AppLocalizations {
   /// **'Multijugador'**
   String get gamesHomeMultiplayer;
 
+  /// No description provided for @gamesHomeRpgSpotlight.
+  ///
+  /// In es, this message translates to:
+  /// **'RPG destacados'**
+  String get gamesHomeRpgSpotlight;
+
+  /// No description provided for @gamesHomeSportsSpotlight.
+  ///
+  /// In es, this message translates to:
+  /// **'Deportes'**
+  String get gamesHomeSportsSpotlight;
+
   /// No description provided for @gamesHomeSectionExpand.
   ///
   /// In es, this message translates to:

@@ -40,7 +40,7 @@ final igdbApiProvider = Provider<IgdbApiDatasource>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef IgdbApiRef = ProviderRef<IgdbApiDatasource>;
-String _$igdbSearchHash() => r'2a9b49fa8137ea85b6a520f011fb8fcea2457757';
+String _$igdbSearchHash() => r'055bb28ec91b36fa333bb56d61d076744f99150c';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -181,7 +181,7 @@ class _IgdbSearchProviderElement
   String get query => (origin as IgdbSearchProvider).query;
 }
 
-String _$igdbPopularHash() => r'dc523ab9748c6bd4af24d2e52c1651d1c21071f8';
+String _$igdbPopularHash() => r'9bc7223bded62419f913a461ce4c5d6185bf8236';
 
 /// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
 ///
@@ -321,27 +321,279 @@ class _IgdbGameDetailProviderElement
   int get gameId => (origin as IgdbGameDetailProvider).gameId;
 }
 
-String _$igdbGamesHomeAsideHash() =>
-    r'42a18f26e31c1dd3d02389c763aa491b17c1ac70';
+String _$igdbHomeGameRailHash() => r'596c9699b6c814ffc0be1d7d30b77941742db896';
 
-/// Resto del home juegos en paralelo (Popular va aparte para pintarse antes).
+/// One horizontal game rail for the games home feed; failures stay isolated.
 ///
-/// Copied from [igdbGamesHomeAside].
-@ProviderFor(igdbGamesHomeAside)
-final igdbGamesHomeAsideProvider =
-    FutureProvider<IgdbGamesHomeAsideData>.internal(
-      igdbGamesHomeAside,
-      name: r'igdbGamesHomeAsideProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$igdbGamesHomeAsideHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
+/// Copied from [igdbHomeGameRail].
+@ProviderFor(igdbHomeGameRail)
+const igdbHomeGameRailProvider = IgdbHomeGameRailFamily();
+
+/// One horizontal game rail for the games home feed; failures stay isolated.
+///
+/// Copied from [igdbHomeGameRail].
+class IgdbHomeGameRailFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// One horizontal game rail for the games home feed; failures stay isolated.
+  ///
+  /// Copied from [igdbHomeGameRail].
+  const IgdbHomeGameRailFamily();
+
+  /// One horizontal game rail for the games home feed; failures stay isolated.
+  ///
+  /// Copied from [igdbHomeGameRail].
+  IgdbHomeGameRailProvider call(String section) {
+    return IgdbHomeGameRailProvider(section);
+  }
+
+  @override
+  IgdbHomeGameRailProvider getProviderOverride(
+    covariant IgdbHomeGameRailProvider provider,
+  ) {
+    return call(provider.section);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'igdbHomeGameRailProvider';
+}
+
+/// One horizontal game rail for the games home feed; failures stay isolated.
+///
+/// Copied from [igdbHomeGameRail].
+class IgdbHomeGameRailProvider
+    extends FutureProvider<List<Map<String, dynamic>>> {
+  /// One horizontal game rail for the games home feed; failures stay isolated.
+  ///
+  /// Copied from [igdbHomeGameRail].
+  IgdbHomeGameRailProvider(String section)
+    : this._internal(
+        (ref) => igdbHomeGameRail(ref as IgdbHomeGameRailRef, section),
+        from: igdbHomeGameRailProvider,
+        name: r'igdbHomeGameRailProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$igdbHomeGameRailHash,
+        dependencies: IgdbHomeGameRailFamily._dependencies,
+        allTransitiveDependencies:
+            IgdbHomeGameRailFamily._allTransitiveDependencies,
+        section: section,
+      );
+
+  IgdbHomeGameRailProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.section,
+  }) : super.internal();
+
+  final String section;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<Map<String, dynamic>>> Function(IgdbHomeGameRailRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: IgdbHomeGameRailProvider._internal(
+        (ref) => create(ref as IgdbHomeGameRailRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        section: section,
+      ),
     );
+  }
+
+  @override
+  FutureProviderElement<List<Map<String, dynamic>>> createElement() {
+    return _IgdbHomeGameRailProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is IgdbHomeGameRailProvider && other.section == section;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, section.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef IgdbGamesHomeAsideRef = FutureProviderRef<IgdbGamesHomeAsideData>;
+mixin IgdbHomeGameRailRef on FutureProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `section` of this provider.
+  String get section;
+}
+
+class _IgdbHomeGameRailProviderElement
+    extends FutureProviderElement<List<Map<String, dynamic>>>
+    with IgdbHomeGameRailRef {
+  _IgdbHomeGameRailProviderElement(super.provider);
+
+  @override
+  String get section => (origin as IgdbHomeGameRailProvider).section;
+}
+
+String _$igdbHomeReviewRailHash() =>
+    r'56e34ec28e9f3b5c16b2192fc79061a78002f3cf';
+
+/// Review list for the games home (`kind`: `recent` | `critics`).
+///
+/// Copied from [igdbHomeReviewRail].
+@ProviderFor(igdbHomeReviewRail)
+const igdbHomeReviewRailProvider = IgdbHomeReviewRailFamily();
+
+/// Review list for the games home (`kind`: `recent` | `critics`).
+///
+/// Copied from [igdbHomeReviewRail].
+class IgdbHomeReviewRailFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// Review list for the games home (`kind`: `recent` | `critics`).
+  ///
+  /// Copied from [igdbHomeReviewRail].
+  const IgdbHomeReviewRailFamily();
+
+  /// Review list for the games home (`kind`: `recent` | `critics`).
+  ///
+  /// Copied from [igdbHomeReviewRail].
+  IgdbHomeReviewRailProvider call(String kind) {
+    return IgdbHomeReviewRailProvider(kind);
+  }
+
+  @override
+  IgdbHomeReviewRailProvider getProviderOverride(
+    covariant IgdbHomeReviewRailProvider provider,
+  ) {
+    return call(provider.kind);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'igdbHomeReviewRailProvider';
+}
+
+/// Review list for the games home (`kind`: `recent` | `critics`).
+///
+/// Copied from [igdbHomeReviewRail].
+class IgdbHomeReviewRailProvider
+    extends FutureProvider<List<Map<String, dynamic>>> {
+  /// Review list for the games home (`kind`: `recent` | `critics`).
+  ///
+  /// Copied from [igdbHomeReviewRail].
+  IgdbHomeReviewRailProvider(String kind)
+    : this._internal(
+        (ref) => igdbHomeReviewRail(ref as IgdbHomeReviewRailRef, kind),
+        from: igdbHomeReviewRailProvider,
+        name: r'igdbHomeReviewRailProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$igdbHomeReviewRailHash,
+        dependencies: IgdbHomeReviewRailFamily._dependencies,
+        allTransitiveDependencies:
+            IgdbHomeReviewRailFamily._allTransitiveDependencies,
+        kind: kind,
+      );
+
+  IgdbHomeReviewRailProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.kind,
+  }) : super.internal();
+
+  final String kind;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<Map<String, dynamic>>> Function(
+      IgdbHomeReviewRailRef provider,
+    )
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: IgdbHomeReviewRailProvider._internal(
+        (ref) => create(ref as IgdbHomeReviewRailRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        kind: kind,
+      ),
+    );
+  }
+
+  @override
+  FutureProviderElement<List<Map<String, dynamic>>> createElement() {
+    return _IgdbHomeReviewRailProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is IgdbHomeReviewRailProvider && other.kind == kind;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, kind.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin IgdbHomeReviewRailRef on FutureProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `kind` of this provider.
+  String get kind;
+}
+
+class _IgdbHomeReviewRailProviderElement
+    extends FutureProviderElement<List<Map<String, dynamic>>>
+    with IgdbHomeReviewRailRef {
+  _IgdbHomeReviewRailProviderElement(super.provider);
+
+  @override
+  String get kind => (origin as IgdbHomeReviewRailProvider).kind;
+}
+
 String _$igdbReviewByIdHash() => r'27406cd579ea483b124241346a5d521a7d513ebb';
 
 /// See also [igdbReviewById].
@@ -464,7 +716,7 @@ class _IgdbReviewByIdProviderElement
 }
 
 String _$igdbGamesSectionListHash() =>
-    r'04581276b29789d2e0a898dd12046c917530ab94';
+    r'1f127f4d21f3ef6c671f023603a77d7aa76faf58';
 
 /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
 ///

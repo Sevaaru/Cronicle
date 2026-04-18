@@ -1489,6 +1489,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gamesHomeMultiplayer => 'Multiplayer';
 
   @override
+  String get gamesHomeRpgSpotlight => 'RPG spotlight';
+
+  @override
+  String get gamesHomeSportsSpotlight => 'Sports picks';
+
+  @override
   String get gamesHomeSectionExpand => 'Show more';
 
   @override

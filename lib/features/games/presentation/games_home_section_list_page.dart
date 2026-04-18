@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
     show IgdbWebUnsupportedException;
+import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
-import 'package:cronicle/features/games/presentation/games_home_section_slugs.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
+import 'package:cronicle/features/games/presentation/games_section_titles.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -18,25 +19,9 @@ class GamesHomeSectionListPage extends ConsumerWidget {
 
   final String slug;
 
-  static String _sectionTitle(AppLocalizations l10n, String slug) {
-    return switch (slug) {
-      GamesHomeSectionSlug.popular => l10n.gamesHomePopularNow,
-      GamesHomeSectionSlug.anticipated => l10n.gamesHomeMostAnticipated,
-      GamesHomeSectionSlug.reviewsRecent => l10n.gamesHomeRecentReviews,
-      GamesHomeSectionSlug.reviewsCritics => l10n.gamesHomeCriticsReviews,
-      GamesHomeSectionSlug.recentlyReleased => l10n.gamesHomeRecentlyReleased,
-      GamesHomeSectionSlug.comingSoon => l10n.gamesHomeComingSoon,
-      GamesHomeSectionSlug.bestRated => l10n.gamesHomeBestRated,
-      GamesHomeSectionSlug.indie => l10n.gamesHomeIndiePicks,
-      GamesHomeSectionSlug.horror => l10n.gamesHomeHorrorPicks,
-      GamesHomeSectionSlug.multiplayer => l10n.gamesHomeMultiplayer,
-      _ => l10n.gamesHomeNoItems,
-    };
-  }
-
   static bool _isReviews(String slug) =>
-      slug == GamesHomeSectionSlug.reviewsRecent ||
-      slug == GamesHomeSectionSlug.reviewsCritics;
+      slug == GamesFeedSection.reviewsRecent ||
+      slug == GamesFeedSection.reviewsCritics;
 
   static String? _releaseDateLabel(BuildContext context, Map<String, dynamic> item) {
     final ts = item['first_release_date'];
@@ -71,8 +56,8 @@ class GamesHomeSectionListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final title = _sectionTitle(l10n, slug);
-    final valid = GamesHomeSectionSlug.isValid(slug);
+    final title = gamesHomeSectionTitle(l10n, slug);
+    final valid = GamesFeedSection.isValid(slug);
     final async = valid ? ref.watch(igdbGamesSectionListProvider(slug)) : null;
 
     return Scaffold(
@@ -106,7 +91,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
                         GamesReviewHomeCard(review: items[i]),
                   );
                 }
-                final showDate = slug == GamesHomeSectionSlug.comingSoon;
+                final showDate = slug == GamesFeedSection.comingSoon;
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   itemCount: items.length,

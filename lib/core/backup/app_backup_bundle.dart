@@ -205,7 +205,8 @@ abstract final class AppBackupBundle {
     ref.invalidate(favoriteGamesProvider);
     ref.invalidate(favoriteTraktTitlesProvider);
     ref.invalidate(igdbPopularProvider);
-    ref.invalidate(igdbGamesHomeAsideProvider);
+    ref.invalidate(igdbHomeGameRailProvider);
+    ref.invalidate(igdbHomeReviewRailProvider);
     ref.invalidate(igdbGamesSectionListProvider);
     ref.invalidate(igdbGameDetailProvider);
     ref.invalidate(igdbReviewByIdProvider);
