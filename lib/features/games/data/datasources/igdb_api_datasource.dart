@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.dart';
 
-/// IGDB does not allow browser origins (no CORS); use Android, iOS, or desktop.
+/// IGDB no expone CORS al navegador; en web hace falta [EnvConfig.devApiProxyOrigin]
+/// o usar Android / escritorio.
 class IgdbWebUnsupportedException implements Exception {
   const IgdbWebUnsupportedException();
 }
@@ -15,7 +17,10 @@ class IgdbApiDatasource {
   final Dio _dio;
   final IgdbAuthDatasource _auth;
 
-  static const _baseUrl = 'https://api.igdb.com/v4';
+  static String get _baseUrl => EnvConfig.igdbApiV4BaseUrl;
+
+  static bool get _blockWebWithoutProxy =>
+      kIsWeb && !EnvConfig.hasDevApiProxy;
 
   /// Resuelve el `popularity_type` de visitas IGDB (PopScore); cacheado en memoria.
   int? _cachedVisitPopularityTypeId;
@@ -232,6 +237,7 @@ limit ${orderedIds.length};
 
   /// Ejecuta varias consultas `/games` hasta obtener resultados (p. ej. tras 400
   /// por campos retirados o listas vacías por filtros demasiado estrictos).
+  /// Se detiene inmediatamente en errores de rate-limit (429).
   Future<List<Map<String, dynamic>>> _tryPostGameQueries(
     List<String> candidates,
   ) async {
@@ -243,35 +249,39 @@ limit ${orderedIds.length};
       try {
         final list = await _postList('/games', candidates[i]);
         if (list.isNotEmpty) return list;
-      } catch (_) {}
+      } catch (e) {
+        // No seguir probando fallbacks si IGDB nos está limitando.
+        if (isRateLimitError(e)) rethrow;
+      }
     }
     return [];
   }
 
-  /// Próximos lanzamientos (fecha futura); intenta sin `hypes` primero porque
-  /// puede devolver HTTP 400 o cero filas.
+  /// Próximos lanzamientos con más **hypes** (alineado con “más esperados” en IGDB).
   Future<List<Map<String, dynamic>>> fetchGamesMostAnticipated(
       {int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final oneYear = now + 365 * 24 * 3600;
     final twoYears = now + 730 * 24 * 3600;
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date, hypes;
+where category = 0 & first_release_date > $now & first_release_date < $twoYears;
+sort hypes desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
 where category = 0 & first_release_date > $now & first_release_date < $twoYears;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, release_dates.date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $twoYears;
 sort release_dates.date asc;
-limit $limit;
-''',
-      '''
-fields name, cover.image_id, first_release_date, hypes;
-where category = 0 & first_release_date > $now & first_release_date < $oneYear;
-sort hypes desc;
 limit $limit;
 ''',
     ]);
@@ -285,19 +295,22 @@ limit $limit;
     final pastWide = now - 1095 * 24 * 3600; // ~36 months
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date, total_rating;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date, total_rating;
 where category = 0 & first_release_date <= $now & first_release_date >= $past;
 sort first_release_date desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, release_dates.date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date, release_dates.date;
 where category = 0 & release_dates.date <= $now & release_dates.date >= $past;
 sort release_dates.date desc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
 where category = 0 & first_release_date <= $now & first_release_date >= $pastWide;
 sort first_release_date desc;
 limit $limit;
@@ -311,19 +324,22 @@ limit $limit;
     final cap = now + 730 * 24 * 3600; // 2 years
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
 where category = 0 & first_release_date > $now & first_release_date < $cap;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, release_dates.date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $cap;
 sort release_dates.date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date;
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
 where category = 0 & first_release_date > $now;
 sort first_release_date asc;
 limit $limit;
@@ -706,7 +722,10 @@ limit 15;
         })
         .where((p) => p.isNotEmpty)
         .toList();
-    final rating = raw['total_rating'] as num?;
+    final userRating = raw['total_rating'] as num?;
+    final criticRating = raw['aggregated_rating'] as num?;
+    final userRatingCount = (raw['total_rating_count'] as num?)?.toInt();
+    final criticRatingCount = (raw['aggregated_rating_count'] as num?)?.toInt();
     final gameId = _readId(raw['id']);
 
     return {
@@ -722,7 +741,10 @@ limit 15;
           'extraLarge': coverUrl(coverImageId, size: 't_cover_big_2x'),
       },
       'genres': genres ?? <String>[],
-      'averageScore': rating?.round(),
+      'averageScore': userRating?.round(),
+      'aggregatedRating': criticRating?.round(),
+      'aggregatedRatingCount': criticRatingCount,
+      'totalRatingCount': userRatingCount,
       'format': platforms?.take(3).join(', '),
       'summary': raw['summary'],
       'first_release_date': raw['first_release_date'],
@@ -742,39 +764,198 @@ limit 15;
     };
   }
 
+  /// Thrown on HTTP 429 so callers can short-circuit fallback queries.
+  static bool isRateLimitError(Object e) {
+    final s = e.toString();
+    return s.contains('429') || s.contains('Too Many Requests');
+  }
+
+  /// Sends a multiquery body to `/multiquery` and returns results keyed by
+  /// the name given to each sub-query (e.g. `"anticipated"`, `"rpg"`).
+  ///
+  /// IGDB multiquery allows up to 10 sub-queries in a single HTTP POST,
+  /// completely avoiding the 4 req/sec rate limit for home-feed loads.
+  Future<Map<String, List<Map<String, dynamic>>>> _postMultiquery(
+      String body) async {
+    if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
+    final options = await _headers();
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final res = await _dio.post<dynamic>(
+        '$_baseUrl/multiquery',
+        data: body,
+        options: Options(
+          headers: options.headers,
+          contentType: 'text/plain',
+          validateStatus: (_) => true,
+        ),
+      );
+
+      final code = res.statusCode ?? 0;
+
+      if (code == 429 && attempt == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        continue;
+      }
+
+      if (code >= 400) {
+        final m = res.data is Map<String, dynamic>
+            ? res.data as Map<String, dynamic>
+            : <String, dynamic>{};
+        throw Exception('IGDB multiquery ($code): ${m['message'] ?? res.data}');
+      }
+
+      // IGDB returns HTTP 200 with a List on success.
+      // Error objects in the list (sub-query failures) have no 'name' key; skip them.
+      if (res.data is List) {
+        final raw = res.data as List;
+        final out = <String, List<Map<String, dynamic>>>{};
+        final errors = <String>[];
+        for (final item in raw) {
+          if (item is! Map<String, dynamic>) continue;
+          final name = item['name'] as String? ?? '';
+          if (name.isEmpty) {
+            // Collect IGDB sub-query error details for diagnostics.
+            final title = item['title'] ?? item['message'] ?? item['cause'] ?? item;
+            errors.add('$title');
+            continue;
+          }
+          final resultRaw = item['result'];
+          if (resultRaw is List) {
+            out[name] = resultRaw.whereType<Map<String, dynamic>>().toList();
+          } else {
+            out[name] = [];
+          }
+        }
+        // If every sub-query failed (all were error objects), surface the error.
+        if (out.isEmpty && errors.isNotEmpty) {
+          throw Exception('IGDB multiquery sub-queries all failed: ${errors.join('; ')}');
+        }
+        return out;
+      }
+      return {};
+    }
+    return {};
+  }
+
+  /// Fetches all 9 home-feed game carousels in a single multiquery POST.
+  ///
+  /// Returns a map keyed by carousel name. Empty list means no results for
+  /// that carousel (not an error). Throws on network/auth errors.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchHomeFeedGames() async {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final twoYears = now + 730 * 24 * 3600;
+    final past18m = now - 548 * 24 * 3600;
+
+    // All 9 carousels in one request (IGDB limit: 10 sub-queries per multiquery).
+    const f = 'fields name, cover.image_id, genres.name, '
+        'platforms.abbreviation, total_rating, first_release_date';
+
+    final body = '''
+query games "anticipated" {
+  $f;
+  where first_release_date > $now & first_release_date < $twoYears & version_parent = null;
+  sort first_release_date asc;
+  limit 24;
+};
+query games "recentlyReleased" {
+  $f;
+  where first_release_date <= $now & first_release_date >= $past18m & version_parent = null;
+  sort first_release_date desc;
+  limit 24;
+};
+query games "comingSoon" {
+  $f;
+  where first_release_date > $now & first_release_date < $twoYears & version_parent = null;
+  sort first_release_date desc;
+  limit 24;
+};
+query games "bestRated" {
+  $f, total_rating_count;
+  where total_rating > 80 & total_rating_count > 5 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+query games "indie" {
+  $f;
+  where genres = (32) & total_rating > 60 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+query games "horror" {
+  $f;
+  where themes = (19) & total_rating > 60 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+query games "multiplayer" {
+  $f;
+  where game_modes = (2) & total_rating > 50 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+query games "rpg" {
+  $f;
+  where genres = (12) & total_rating > 65 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+query games "sports" {
+  $f;
+  where genres = (14) & total_rating > 55 & version_parent = null;
+  sort total_rating desc;
+  limit 24;
+};
+''';
+
+    return _postMultiquery(body);
+  }
+
   Future<List<Map<String, dynamic>>> _postList(
       String endpoint, String body) async {
-    if (kIsWeb) {
+    if (_blockWebWithoutProxy) {
       throw const IgdbWebUnsupportedException();
     }
     final options = await _headers();
-    final res = await _dio.post<dynamic>(
-      '$_baseUrl$endpoint',
-      data: body,
-      options: Options(
-        headers: options.headers,
-        contentType: 'text/plain',
-        validateStatus: (_) => true,
-      ),
-    );
 
-    final code = res.statusCode ?? 0;
-    if (code >= 400) {
+    // Up to 2 attempts: retry once on 429 with backoff.
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final res = await _dio.post<dynamic>(
+        '$_baseUrl$endpoint',
+        data: body,
+        options: Options(
+          headers: options.headers,
+          contentType: 'text/plain',
+          validateStatus: (_) => true,
+        ),
+      );
+
+      final code = res.statusCode ?? 0;
+
+      // Rate-limited: wait and retry once.
+      if (code == 429 && attempt == 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        continue;
+      }
+
+      if (code >= 400) {
+        if (res.data is Map<String, dynamic>) {
+          final m = res.data as Map<String, dynamic>;
+          final msg = m['message'] as String? ?? m.toString();
+          throw Exception('IGDB ($code): $msg');
+        }
+        throw Exception('IGDB HTTP $code');
+      }
+
+      if (res.data is List) {
+        return (res.data as List).cast<Map<String, dynamic>>();
+      }
       if (res.data is Map<String, dynamic>) {
         final m = res.data as Map<String, dynamic>;
         final msg = m['message'] as String? ?? m.toString();
-        throw Exception('IGDB ($code): $msg');
+        throw Exception('IGDB: $msg');
       }
-      throw Exception('IGDB HTTP $code');
-    }
-
-    if (res.data is List) {
-      return (res.data as List).cast<Map<String, dynamic>>();
-    }
-    if (res.data is Map<String, dynamic>) {
-      final m = res.data as Map<String, dynamic>;
-      final msg = m['message'] as String? ?? m.toString();
-      throw Exception('IGDB: $msg');
+      return [];
     }
     return [];
   }

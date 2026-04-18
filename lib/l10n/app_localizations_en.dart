@@ -1345,7 +1345,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get igdbWebNotSupported =>
-      'IGDB is not available in the browser (IGDB does not allow requests from web apps). Use the Windows, Android, or iOS build to search games.';
+      'IGDB cannot call the API from the browser (no CORS). Use Android or desktop, or run node scripts/dev_api_proxy.mjs and set DEV_API_PROXY in your dart-defines (see dart_defines.example.json).';
 
   @override
   String get twitchSyncPromptTitle => 'Connect with Twitch';
@@ -1389,6 +1389,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gameDetailRating => 'Rating';
+
+  @override
+  String get gameDetailStatUserScore => 'User score';
+
+  @override
+  String get gameDetailStatCriticScore => 'Critics (IGDB)';
+
+  @override
+  String gameDetailStatRatingsCount(Object count) {
+    return '$count ratings';
+  }
+
+  @override
+  String gameDetailStatCriticReviewsCount(Object count) {
+    return '$count reviews';
+  }
 
   @override
   String get gameDetailSimilarGames => 'Similar games';
@@ -1540,6 +1556,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String gameDetailReviewBy(Object name) {
     return 'By $name';
   }
+
+  @override
+  String get gameDetailOpenCriticSection => 'Critic reviews (OpenCritic)';
+
+  @override
+  String gameDetailOpenCriticMeta(Object score, Object count) {
+    return 'Top critic score: $score · $count reviews';
+  }
+
+  @override
+  String get gameDetailOpenCriticNoMatch =>
+      'No OpenCritic match for this title.';
+
+  @override
+  String get gameDetailOpenCriticReadReview => 'Read review';
+
+  @override
+  String get gameDetailOpenCriticOpenSite => 'Open on OpenCritic';
 
   @override
   String gameDetailPlaytimeHoursMinutes(Object hours, Object minutes) {

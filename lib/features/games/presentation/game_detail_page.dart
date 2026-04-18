@@ -5,11 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
     show IgdbApiDatasource, IgdbWebUnsupportedException;
+import 'package:cronicle/features/games/data/datasources/opencritic_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/games/presentation/opencritic_providers.dart';
 import 'package:cronicle/features/games/presentation/igdb_detail_helpers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -79,7 +82,7 @@ class GameDetailPage extends ConsumerWidget {
           if (game == null) {
             return Center(child: Text(l10n.gameDetailNoData));
           }
-          return _GameDetailContent(game: game);
+          return _GameDetailContent(gameId: gameId, game: game);
         },
       ),
     );
@@ -87,8 +90,9 @@ class GameDetailPage extends ConsumerWidget {
 }
 
 class _GameDetailContent extends StatelessWidget {
-  const _GameDetailContent({required this.game});
+  const _GameDetailContent({required this.gameId, required this.game});
 
+  final int gameId;
   final Map<String, dynamic> game;
 
   @override
@@ -104,6 +108,9 @@ class _GameDetailContent extends StatelessWidget {
         (coverImage['large'] as String?);
     final summary = game['summary'] as String?;
     final score = game['averageScore'] as int?;
+    final criticScore = game['aggregatedRating'] as int?;
+    final criticReviewCount = game['aggregatedRatingCount'] as int?;
+    final userRatingCount = game['totalRatingCount'] as int?;
     final format = game['format'] as String?;
     final genres = (game['genres'] as List?)?.cast<String>() ?? [];
 
@@ -452,16 +459,50 @@ class _GameDetailContent extends StatelessWidget {
                       ),
                     ),
 
-                  if (score != null)
+                  if (EnvConfig.openCriticRapidApiKey.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _OpenCriticSection(gameId: gameId),
+                  ],
+
+                  if (score != null ||
+                      criticScore != null ||
+                      releaseDate != null)
                     GlassCard(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      child: Wrap(
+                        spacing: 20,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.spaceAround,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          _StatColumn(Icons.star, Colors.amber.shade600,
-                              '$score%', l10n.gameDetailRating),
+                          if (score != null)
+                            _StatColumn(
+                              Icons.star,
+                              Colors.amber.shade600,
+                              '$score%',
+                              l10n.gameDetailStatUserScore,
+                              footnote: userRatingCount != null &&
+                                      userRatingCount > 0
+                                  ? l10n.gameDetailStatRatingsCount(
+                                      userRatingCount,
+                                    )
+                                  : null,
+                            ),
+                          if (criticScore != null)
+                            _StatColumn(
+                              Icons.newspaper_outlined,
+                              Colors.deepOrange.shade400,
+                              '$criticScore%',
+                              l10n.gameDetailStatCriticScore,
+                              footnote: criticReviewCount != null &&
+                                      criticReviewCount > 0
+                                  ? l10n.gameDetailStatCriticReviewsCount(
+                                      criticReviewCount,
+                                    )
+                                  : null,
+                            ),
                           if (releaseDate != null)
                             _StatColumn(
                               Icons.calendar_today,
@@ -655,6 +696,222 @@ String _igdbReviewExcerpt(String text) {
   final t = text.trim();
   if (t.length <= 320) return t;
   return '${t.substring(0, 320)}…';
+}
+
+class _OpenCriticSection extends ConsumerWidget {
+  const _OpenCriticSection({required this.gameId});
+
+  final int gameId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final async = ref.watch(openCriticGameInsightsProvider(gameId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.gameDetailOpenCriticSection,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+        const SizedBox(height: 6),
+        async.when(
+          loading: () => GlassCard(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: cs.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '…',
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          error: (_, _) => GlassCard(
+            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              l10n.gameDetailOpenCriticNoMatch,
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+          ),
+          data: (insights) {
+            if (insights == null) {
+              return GlassCard(
+                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  l10n.gameDetailOpenCriticNoMatch,
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _OpenCriticInsightsBody(
+                insights: insights,
+                l10n: l10n,
+                cs: cs,
+                onOpenUrl: (u) => _launchGameLink(context, l10n, u),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _OpenCriticInsightsBody extends StatelessWidget {
+  const _OpenCriticInsightsBody({
+    required this.insights,
+    required this.l10n,
+    required this.cs,
+    required this.onOpenUrl,
+  });
+
+  final OpenCriticGameInsights insights;
+  final AppLocalizations l10n;
+  final ColorScheme cs;
+  final void Function(String url) onOpenUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final scoreLabel =
+        insights.topCriticScore != null ? '${insights.topCriticScore}' : '—';
+    final meta = l10n.gameDetailOpenCriticMeta(
+      scoreLabel,
+      insights.numReviews,
+    );
+    final page = insights.pageUrl;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                meta,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              if (page != null && page.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => onOpenUrl(page),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: Text(l10n.gameDetailOpenCriticOpenSite),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (insights.reviews.isEmpty && insights.numReviews == 0)
+          GlassCard(
+            padding: const EdgeInsets.all(14),
+            child: Text(
+              l10n.gameDetailOpenCriticNoMatch,
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+          )
+        else if (insights.reviews.isNotEmpty) ...[
+          for (final r in insights.reviews)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.all(14),
+                child: _OpenCriticReviewTile(
+                  review: r,
+                  l10n: l10n,
+                  cs: cs,
+                  onOpenUrl: onOpenUrl,
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _OpenCriticReviewTile extends StatelessWidget {
+  const _OpenCriticReviewTile({
+    required this.review,
+    required this.l10n,
+    required this.cs,
+    required this.onOpenUrl,
+  });
+
+  final OpenCriticCriticReview review;
+  final AppLocalizations l10n;
+  final ColorScheme cs;
+  final void Function(String url) onOpenUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final excerpt = _igdbReviewExcerpt(stripSimpleHtml(review.snippet));
+    final by = review.authorName;
+    final sub = StringBuffer(review.outletName);
+    if (review.score != null) {
+      sub.write(' · ${review.score}');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          review.headline,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          sub.toString(),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        if (by != null && by.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            l10n.gameDetailReviewBy(by),
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (excerpt.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            excerpt,
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (review.reviewUrl != null && review.reviewUrl!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => onOpenUrl(review.reviewUrl!),
+              icon: const Icon(Icons.article_outlined, size: 18),
+              label: Text(l10n.gameDetailOpenCriticReadReview),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _KeyValueRow extends StatelessWidget {
@@ -990,14 +1247,22 @@ class _Tag extends StatelessWidget {
 }
 
 class _StatColumn extends StatelessWidget {
-  const _StatColumn(this.icon, this.iconColor, this.value, this.label);
+  const _StatColumn(
+    this.icon,
+    this.iconColor,
+    this.value,
+    this.label, {
+    this.footnote,
+  });
   final IconData icon;
   final Color iconColor;
   final String value;
   final String label;
+  final String? footnote;
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1008,7 +1273,15 @@ class _StatColumn extends StatelessWidget {
         Text(label,
             style: TextStyle(
                 fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                color: cs.onSurfaceVariant)),
+        if (footnote != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            footnote!,
+            style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ],
     );
   }

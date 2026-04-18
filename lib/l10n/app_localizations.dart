@@ -2555,7 +2555,7 @@ abstract class AppLocalizations {
   /// No description provided for @igdbWebNotSupported.
   ///
   /// In es, this message translates to:
-  /// **'IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.'**
+  /// **'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).'**
   String get igdbWebNotSupported;
 
   /// No description provided for @twitchSyncPromptTitle.
@@ -2641,6 +2641,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Puntuación'**
   String get gameDetailRating;
+
+  /// No description provided for @gameDetailStatUserScore.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuarios'**
+  String get gameDetailStatUserScore;
+
+  /// No description provided for @gameDetailStatCriticScore.
+  ///
+  /// In es, this message translates to:
+  /// **'Críticos (IGDB)'**
+  String get gameDetailStatCriticScore;
+
+  /// No description provided for @gameDetailStatRatingsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} valoraciones'**
+  String gameDetailStatRatingsCount(Object count);
+
+  /// No description provided for @gameDetailStatCriticReviewsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reseñas'**
+  String gameDetailStatCriticReviewsCount(Object count);
 
   /// No description provided for @gameDetailSimilarGames.
   ///
@@ -2935,6 +2959,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Por {name}'**
   String gameDetailReviewBy(Object name);
+
+  /// No description provided for @gameDetailOpenCriticSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Críticas (OpenCritic)'**
+  String get gameDetailOpenCriticSection;
+
+  /// No description provided for @gameDetailOpenCriticMeta.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota destacada: {score} · {count} reseñas'**
+  String gameDetailOpenCriticMeta(Object score, Object count);
+
+  /// No description provided for @gameDetailOpenCriticNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay coincidencia en OpenCritic para este título.'**
+  String get gameDetailOpenCriticNoMatch;
+
+  /// No description provided for @gameDetailOpenCriticReadReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer reseña'**
+  String get gameDetailOpenCriticReadReview;
+
+  /// No description provided for @gameDetailOpenCriticOpenSite.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en OpenCritic'**
+  String get gameDetailOpenCriticOpenSite;
 
   /// No description provided for @gameDetailPlaytimeHoursMinutes.
   ///

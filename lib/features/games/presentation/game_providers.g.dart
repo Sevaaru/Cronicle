@@ -321,10 +321,11 @@ class _IgdbGameDetailProviderElement
   int get gameId => (origin as IgdbGameDetailProvider).gameId;
 }
 
-String _$igdbGamesHomeFeedHash() => r'40a40fe926d0442aff437d7a6257eb9f769a44b5';
+String _$igdbGamesHomeFeedHash() => r'4c8f4b013746dc46edd4036f402b0550dac9d47b';
 
-/// Single batched home payload: requests run **sequentially** with pacing to avoid
-/// IGDB/Twitch rate limits (parallel per-section providers were unreliable).
+/// Aside: un único POST a /multiquery carga los 9 carruseles de juegos a la vez,
+/// más 2 llamadas paralelas para las reseñas. Esto evita por completo el rate
+/// limit de IGDB (4 req/s), ya que el multiquery cuenta como 1 sola petición.
 ///
 /// Copied from [igdbGamesHomeFeed].
 @ProviderFor(igdbGamesHomeFeed)
@@ -464,25 +465,25 @@ class _IgdbReviewByIdProviderElement
 }
 
 String _$igdbGamesSectionListHash() =>
-    r'1f127f4d21f3ef6c671f023603a77d7aa76faf58';
+    r'637872dbb9a267b49e39ec7113c85942f511510b';
 
-/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+/// Listado extendido para `/games/section/:slug`.
 ///
 /// Copied from [igdbGamesSectionList].
 @ProviderFor(igdbGamesSectionList)
 const igdbGamesSectionListProvider = IgdbGamesSectionListFamily();
 
-/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+/// Listado extendido para `/games/section/:slug`.
 ///
 /// Copied from [igdbGamesSectionList].
 class IgdbGamesSectionListFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  /// Listado extendido para `/games/section/:slug`.
   ///
   /// Copied from [igdbGamesSectionList].
   const IgdbGamesSectionListFamily();
 
-  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  /// Listado extendido para `/games/section/:slug`.
   ///
   /// Copied from [igdbGamesSectionList].
   IgdbGamesSectionListProvider call(String slug) {
@@ -511,12 +512,12 @@ class IgdbGamesSectionListFamily
   String? get name => r'igdbGamesSectionListProvider';
 }
 
-/// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+/// Listado extendido para `/games/section/:slug`.
 ///
 /// Copied from [igdbGamesSectionList].
 class IgdbGamesSectionListProvider
     extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
-  /// Listado extendido para la pantalla `/games/section/:slug` (más ítems que el carrusel del home).
+  /// Listado extendido para `/games/section/:slug`.
   ///
   /// Copied from [igdbGamesSectionList].
   IgdbGamesSectionListProvider(String slug)
