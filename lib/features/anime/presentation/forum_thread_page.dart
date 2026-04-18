@@ -45,6 +45,9 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   final Map<int, bool> _commentIsLiked = {};
   final Map<int, int> _commentLikeCount = {};
 
+  ({int id, String name})? _replyTarget;
+  final _replyFocusNode = FocusNode();
+
   final _commentController = TextEditingController();
   bool _sending = false;
 
@@ -56,6 +59,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
 
   @override
   void dispose() {
+    _replyFocusNode.dispose();
     _commentController.dispose();
     super.dispose();
   }
@@ -79,6 +83,18 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           if (id != null) {
             _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
             _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
+          }
+          final children = (c['childComments'] as List?)
+                  ?.whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList() ??
+              [];
+          for (final child in children) {
+            final childId = child['id'] as int?;
+            if (childId != null) {
+              _commentIsLiked[childId] = child['isLiked'] as bool? ?? false;
+              _commentLikeCount[childId] = child['likeCount'] as int? ?? 0;
+            }
           }
         }
         _loading = false;
@@ -126,16 +142,16 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     if (token == null) { _showLoginSnack(); return; }
     setState(() => _sending = true);
     try {
-      final result = await ref.read(anilistGraphqlProvider)
-          .saveThreadComment(widget.threadId, text, token);
+      await ref.read(anilistGraphqlProvider).saveThreadComment(
+            widget.threadId,
+            text,
+            token,
+            replyCommentId: _replyTarget?.id,
+          );
       if (!mounted) return;
       _commentController.clear();
-      final id = result['id'] as int?;
-      if (id != null) {
-        _commentIsLiked[id] = false;
-        _commentLikeCount[id] = 0;
-      }
-      setState(() => _comments = [..._comments, result]);
+      setState(() => _replyTarget = null);
+      await _load();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -150,6 +166,13 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(AppLocalizations.of(context)!.loginRequiredLike)));
   }
+
+  void _setReplyTarget(int id, String name) {
+    setState(() => _replyTarget = (id: id, name: name));
+    _replyFocusNode.requestFocus();
+  }
+
+  void _clearReplyTarget() => setState(() => _replyTarget = null);
 
   @override
   Widget build(BuildContext context) {
@@ -208,8 +231,11 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           ),
           _ReplyInputBar(
             controller: _commentController,
+            focusNode: _replyFocusNode,
             sending: _sending,
             onSend: _sendComment,
+            replyTarget: _replyTarget,
+            onCancelReply: _clearReplyTarget,
           ),
         ],
       ),
@@ -332,12 +358,15 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                   return _CommentTile(
                     comment: c,
                     cs: cs,
-                    isLiked:
-                        id != null ? (_commentIsLiked[id] ?? false) : false,
+                    isLiked: id != null ? (_commentIsLiked[id] ?? false) : false,
                     likeCount: id != null
                         ? (_commentLikeCount[id] ?? 0)
                         : (c['likeCount'] as int? ?? 0),
                     onLike: id != null ? () => _toggleCommentLike(id) : null,
+                    onReply: _setReplyTarget,
+                    isLikedMap: _commentIsLiked,
+                    likeCountMap: _commentLikeCount,
+                    onToggleChildLike: _toggleCommentLike,
                   );
                 }),
               ] else
@@ -365,15 +394,19 @@ class _LikeButton extends StatelessWidget {
     required this.count,
     required this.onTap,
     required this.cs,
+    this.small = false,
   });
 
   final bool isLiked;
   final int count;
   final VoidCallback onTap;
   final ColorScheme cs;
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
+    final iconSize = small ? 14.0 : 18.0;
+    final fontSize = small ? 11.0 : 13.0;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -384,14 +417,14 @@ class _LikeButton extends StatelessWidget {
           children: [
             Icon(
               isLiked ? Icons.favorite : Icons.favorite_border,
-              size: 18,
+              size: iconSize,
               color: isLiked ? cs.error : cs.onSurfaceVariant,
             ),
             const SizedBox(width: 4),
             Text(
               '$count',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: fontSize,
                 color: isLiked ? cs.error : cs.onSurfaceVariant,
                 fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -404,13 +437,17 @@ class _LikeButton extends StatelessWidget {
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends StatefulWidget {
   const _CommentTile({
     required this.comment,
     required this.cs,
     required this.isLiked,
     required this.likeCount,
     required this.onLike,
+    required this.onReply,
+    required this.isLikedMap,
+    required this.likeCountMap,
+    required this.onToggleChildLike,
   });
 
   final Map<String, dynamic> comment;
@@ -418,6 +455,232 @@ class _CommentTile extends StatelessWidget {
   final bool isLiked;
   final int likeCount;
   final VoidCallback? onLike;
+  final void Function(int id, String name) onReply;
+  final Map<int, bool> isLikedMap;
+  final Map<int, int> likeCountMap;
+  final void Function(int id) onToggleChildLike;
+
+  @override
+  State<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<_CommentTile> {
+  bool _collapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+    final user = widget.comment['user'] as Map<String, dynamic>?;
+    final userName = user?['name'] as String? ?? '';
+    final avatar = (user?['avatar'] as Map?)?['medium'] as String?;
+    final body = widget.comment['comment'] as String?;
+    final createdAt = widget.comment['createdAt'] as int?;
+    final commentId = widget.comment['id'] as int?;
+    final children = (widget.comment['childComments'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        [];
+    final hasChildren = children.isNotEmpty;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CommentHeader(
+            avatar: avatar,
+            userName: userName,
+            createdAt: createdAt,
+            cs: cs,
+          ),
+          if (body != null && body.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            AnilistMarkdown(body,
+                style: TextStyle(
+                    fontSize: 13, color: cs.onSurface, height: 1.5)),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (widget.onLike != null)
+                _LikeButton(
+                  isLiked: widget.isLiked,
+                  count: widget.likeCount,
+                  onTap: widget.onLike!,
+                  cs: cs,
+                ),
+              const SizedBox(width: 12),
+              if (commentId != null)
+                _ReplyButton(
+                  onTap: () => widget.onReply(commentId, userName),
+                  cs: cs,
+                ),
+            ],
+          ),
+          if (hasChildren) ...[
+            const SizedBox(height: 10),
+            // Collapse/expand toggle strip
+            InkWell(
+              onTap: () => setState(() => _collapsed = !_collapsed),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withAlpha(180),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: cs.outlineVariant.withAlpha(80)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedRotation(
+                      turns: _collapsed ? -0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more_rounded,
+                          size: 14, color: cs.primary),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _collapsed
+                          ? '${children.length} respuesta${children.length == 1 ? '' : 's'}'
+                          : 'Ocultar respuestas',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: cs.primary,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (!_collapsed) ...[
+              const SizedBox(height: 8),
+              ...children.map((child) {
+                final childId = child['id'] as int?;
+                final childUser = child['user'] as Map<String, dynamic>?;
+                final childName = childUser?['name'] as String? ?? '';
+                return _ChildCommentTile(
+                  comment: child,
+                  cs: cs,
+                  isLiked: childId != null ? (widget.isLikedMap[childId] ?? false) : false,
+                  likeCount: childId != null
+                      ? (widget.likeCountMap[childId] ?? 0)
+                      : (child['likeCount'] as int? ?? 0),
+                  onLike: childId != null ? () => widget.onToggleChildLike(childId) : null,
+                  onReply: childId != null
+                      ? () => widget.onReply(childId, childName)
+                      : null,
+                );
+              }),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+class _CommentHeader extends StatelessWidget {
+  const _CommentHeader({
+    required this.avatar,
+    required this.userName,
+    required this.createdAt,
+    required this.cs,
+    this.small = false,
+  });
+
+  final String? avatar;
+  final String userName;
+  final int? createdAt;
+  final ColorScheme cs;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    final sz = small ? 18.0 : 22.0;
+    return Row(
+      children: [
+        if (avatar != null)
+          ClipOval(
+            child: CachedNetworkImage(
+                imageUrl: avatar!,
+                width: sz,
+                height: sz,
+                fit: BoxFit.cover),
+          ),
+        if (avatar != null) SizedBox(width: small ? 4 : 6),
+        Text(userName,
+            style: TextStyle(
+                fontSize: small ? 11.0 : 12.0,
+                fontWeight: FontWeight.w600)),
+        SizedBox(width: small ? 4 : 6),
+        Text(_timeAgoForum(createdAt),
+            style: TextStyle(
+                fontSize: small ? 10.0 : 11.0,
+                color: cs.onSurfaceVariant)),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+class _ReplyButton extends StatelessWidget {
+  const _ReplyButton({
+    required this.onTap,
+    required this.cs,
+    this.small = false,
+  });
+
+  final VoidCallback onTap;
+  final ColorScheme cs;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.reply_rounded,
+                size: small ? 14.0 : 16.0,
+                color: cs.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(l10n.forumReplyButton,
+                style: TextStyle(
+                    fontSize: small ? 11.0 : 12.0,
+                    color: cs.onSurfaceVariant)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+class _ChildCommentTile extends StatelessWidget {
+  const _ChildCommentTile({
+    required this.comment,
+    required this.cs,
+    required this.isLiked,
+    required this.likeCount,
+    required this.onLike,
+    required this.onReply,
+  });
+
+  final Map<String, dynamic> comment;
+  final ColorScheme cs;
+  final bool isLiked;
+  final int likeCount;
+  final VoidCallback? onLike;
+  final VoidCallback? onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -427,47 +690,58 @@ class _CommentTile extends StatelessWidget {
     final body = comment['comment'] as String?;
     final createdAt = comment['createdAt'] as int?;
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (avatar != null)
-                ClipOval(
-                  child: CachedNetworkImage(
-                      imageUrl: avatar,
-                      width: 22,
-                      height: 22,
-                      fit: BoxFit.cover),
-                ),
-              if (avatar != null) const SizedBox(width: 6),
-              Text(userName,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600)),
-              const SizedBox(width: 6),
-              Text(_timeAgoForum(createdAt),
-                  style:
-                      TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-              const Spacer(),
-              if (onLike != null)
-                _LikeButton(
-                  isLiked: isLiked,
-                  count: likeCount,
-                  onTap: onLike!,
-                  cs: cs,
-                ),
-            ],
-          ),
-          if (body != null && body.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            AnilistMarkdown(body,
-                style: TextStyle(
-                    fontSize: 13, color: cs.onSurface, height: 1.5)),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 2,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: cs.outlineVariant,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CommentHeader(
+                    avatar: avatar,
+                    userName: userName,
+                    createdAt: createdAt,
+                    cs: cs,
+                    small: true,
+                  ),
+                  if (body != null && body.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    AnilistMarkdown(body,
+                        style: TextStyle(
+                            fontSize: 12, color: cs.onSurface, height: 1.5)),
+                  ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (onLike != null)
+                        _LikeButton(
+                          isLiked: isLiked,
+                          count: likeCount,
+                          onTap: onLike!,
+                          cs: cs,
+                          small: true,
+                        ),
+                      const SizedBox(width: 10),
+                      if (onReply != null)
+                        _ReplyButton(onTap: onReply!, cs: cs, small: true),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -477,13 +751,19 @@ class _CommentTile extends StatelessWidget {
 class _ReplyInputBar extends ConsumerWidget {
   const _ReplyInputBar({
     required this.controller,
+    required this.focusNode,
     required this.sending,
     required this.onSend,
+    required this.replyTarget,
+    required this.onCancelReply,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool sending;
   final VoidCallback onSend;
+  final ({int id, String name})? replyTarget;
+  final VoidCallback onCancelReply;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -494,54 +774,88 @@ class _ReplyInputBar extends ConsumerWidget {
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         border:
             Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: isLoggedIn && !sending,
-              maxLines: 3,
-              minLines: 1,
-              textInputAction: TextInputAction.newline,
-              decoration: InputDecoration(
-                hintText: isLoggedIn
-                    ? l10n.writeReplyHint
-                    : l10n.loginRequiredLike,
-                hintStyle:
-                    TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
-                isDense: true,
+          if (replyTarget != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 8, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.reply_rounded,
+                      size: 14, color: cs.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.forumReplyingTo(replyTarget!.name),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: cs.primary,
+                          fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: onCancelReply,
+                    child: Icon(Icons.close_rounded,
+                        size: 16, color: cs.onSurfaceVariant),
+                  ),
+                ],
               ),
-              style: TextStyle(fontSize: 13, color: cs.onSurface),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    enabled: isLoggedIn && !sending,
+                    maxLines: 3,
+                    minLines: 1,
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      hintText: isLoggedIn
+                          ? l10n.writeReplyHint
+                          : l10n.loginRequiredComment,
+                      hintStyle:
+                          TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      isDense: true,
+                    ),
+                    style: TextStyle(fontSize: 13, color: cs.onSurface),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                sending
+                    ? const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: Icon(Icons.send_rounded, color: cs.primary),
+                        onPressed: isLoggedIn ? onSend : null,
+                      ),
+              ],
             ),
           ),
-          const SizedBox(width: 6),
-          sending
-              ? const SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: Icon(Icons.send_rounded, color: cs.primary),
-                  onPressed: isLoggedIn ? onSend : null,
-                ),
         ],
       ),
     );

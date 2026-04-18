@@ -1390,10 +1390,10 @@ class AnilistGraphqlDatasource {
 
   /// Post a comment on a forum thread. Requires auth.
   Future<Map<String, dynamic>> saveThreadComment(
-      int threadId, String text, String token) async {
+      int threadId, String text, String token, {int? replyCommentId}) async {
     const query = r'''
-      mutation ($threadId: Int, $comment: String) {
-        SaveThreadComment(threadId: $threadId, comment: $comment) {
+      mutation ($threadId: Int, $replyCommentId: Int, $comment: String) {
+        SaveThreadComment(threadId: $threadId, replyCommentId: $replyCommentId, comment: $comment) {
           id comment createdAt isLiked likeCount
           user { id name avatar { medium } }
         }
@@ -1401,7 +1401,7 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(
         query,
-        variables: {'threadId': threadId, 'comment': text},
+        variables: {'threadId': threadId, 'replyCommentId': replyCommentId, 'comment': text},
         token: token);
     final saved = data['data']?['SaveThreadComment'];
     if (saved is Map<String, dynamic>) return saved;
@@ -1440,6 +1440,7 @@ class AnilistGraphqlDatasource {
           threadComments(threadId: $id) {
             id comment createdAt isLiked likeCount
             user { id name avatar { medium } }
+            childComments
           }
         }
       }

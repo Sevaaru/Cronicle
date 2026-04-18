@@ -147,6 +147,7 @@
 
   "loginRequiredFollowing": "Sign in with Anilist to see activity from people you follow",
   "loginRequiredLike": "Sign in with Anilist to like",
+  "loginRequiredComment": "Sign in with Anilist to comment",
   "loginRequiredFavorite": "Sign in with Anilist in Settings to use favourites",
   "sectionFavGames": "Favourite games",
   "tooltipAddFavorite": "Add to favourites",
@@ -626,5 +627,8 @@
   "forumThread": "Forum thread",
   "forumReplies": "{count} replies",
   "@forumReplies": { "placeholders": { "count": { "type": "int" } } },
-  "forumNoReplies": "No replies yet"
+  "forumNoReplies": "No replies yet",
+  "forumReplyButton": "Reply",
+  "forumReplyingTo": "Replying to @{name}",
+  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } }
 }

@@ -420,6 +420,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginRequiredLike => 'Sign in with Anilist to like';
 
   @override
+  String get loginRequiredComment => 'Sign in with Anilist to comment';
+
+  @override
   String get loginRequiredFavorite =>
       'Sign in with Anilist in Settings to use favourites';
 
@@ -1787,4 +1790,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forumNoReplies => 'No replies yet';
+
+  @override
+  String get forumReplyButton => 'Reply';
+
+  @override
+  String forumReplyingTo(String name) {
+    return 'Replying to @$name';
+  }
 }

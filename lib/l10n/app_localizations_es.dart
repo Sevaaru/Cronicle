@@ -421,6 +421,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginRequiredLike => 'Inicia sesión en Anilist para dar like';
 
   @override
+  String get loginRequiredComment => 'Inicia sesión en Anilist para comentar';
+
+  @override
   String get loginRequiredFavorite =>
       'Inicia sesión en Anilist en Ajustes para usar favoritos';
 
@@ -1792,4 +1795,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get forumNoReplies => 'Aún no hay respuestas';
+
+  @override
+  String get forumReplyButton => 'Responder';
+
+  @override
+  String forumReplyingTo(String name) {
+    return 'Respondiendo a @$name';
+  }
 }

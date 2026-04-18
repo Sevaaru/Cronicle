@@ -153,6 +153,7 @@
 
   "loginRequiredFollowing": "Inicia sesión con Anilist para ver la actividad de las personas que sigues",
   "loginRequiredLike": "Inicia sesión en Anilist para dar like",
+  "loginRequiredComment": "Inicia sesión en Anilist para comentar",
   "loginRequiredFavorite": "Inicia sesión en Anilist en Ajustes para usar favoritos",
   "sectionFavGames": "Juegos favoritos",
   "tooltipAddFavorite": "Añadir a favoritos",
@@ -644,5 +645,8 @@
   "forumThread": "Hilo del foro",
   "forumReplies": "{count} respuestas",
   "@forumReplies": { "placeholders": { "count": { "type": "int" } } },
-  "forumNoReplies": "Aún no hay respuestas"
+  "forumNoReplies": "Aún no hay respuestas",
+  "forumReplyButton": "Responder",
+  "forumReplyingTo": "Respondiendo a @{name}",
+  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } }
 }

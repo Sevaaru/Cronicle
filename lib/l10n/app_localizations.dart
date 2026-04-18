@@ -842,6 +842,12 @@ abstract class AppLocalizations {
   /// **'Inicia sesión en Anilist para dar like'**
   String get loginRequiredLike;
 
+  /// No description provided for @loginRequiredComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión en Anilist para comentar'**
+  String get loginRequiredComment;
+
   /// No description provided for @loginRequiredFavorite.
   ///
   /// In es, this message translates to:
@@ -3391,6 +3397,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Aún no hay respuestas'**
   String get forumNoReplies;
+
+  /// No description provided for @forumReplyButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Responder'**
+  String get forumReplyButton;
+
+  /// No description provided for @forumReplyingTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Respondiendo a @{name}'**
+  String forumReplyingTo(String name);
 }
 
 class _AppLocalizationsDelegate

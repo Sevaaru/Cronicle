@@ -8,6 +8,7 @@ import 'package:cronicle/core/notifications/device_notification_prefs.dart';
 import 'package:cronicle/core/notifications/notification_work_scheduler.dart';
 import 'package:cronicle/core/router/app_router.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -31,8 +32,20 @@ class _NotificationPermissionBootstrapState
   @override
   void initState() {
     super.initState();
+    // Fire only after onboarding is complete so the dialog
+    // doesn't interrupt the initial setup flow.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeRequestNotificationPermission();
+      final alreadyDone = ref.read(onboardingCompletedProvider);
+      if (alreadyDone) {
+        _maybeRequestNotificationPermission();
+      } else {
+        ref.listenManual(
+          onboardingCompletedProvider,
+          (_, completed) {
+            if (completed) _maybeRequestNotificationPermission();
+          },
+        );
+      }
     });
   }
 
