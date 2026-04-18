@@ -2,7 +2,7 @@ name: cronicle
 description: Cronicle — progreso y listas de anime, películas, series y juegos (offline-first).
 publish_to: "none"
 
-version: 1.0.0+12
+version: 1.0.0+13
 
 environment:
   sdk: ^3.11.4
