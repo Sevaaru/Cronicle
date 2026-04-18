@@ -8,6 +8,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 TextStyle pageTitleStyle() => GoogleFonts.inter(
   fontSize: 20,
@@ -91,11 +92,29 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-class ProfileAvatarButton extends ConsumerWidget {
+class ProfileAvatarButton extends ConsumerStatefulWidget {
   const ProfileAvatarButton({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileAvatarButton> createState() => _ProfileAvatarButtonState();
+}
+
+class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
+  final GlobalKey _avatarBoundsKey = GlobalKey();
+  bool _hover = false;
+
+  void _openProfile() {
+    final box = _avatarBoundsKey.currentContext?.findRenderObject() as RenderBox?;
+    Rect? origin;
+    if (box != null && box.hasSize) {
+      final o = box.localToGlobal(Offset.zero);
+      origin = Rect.fromLTWH(o.dx, o.dy, box.size.width, box.size.height);
+    }
+    context.push('/profile', extra: origin);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     String? avatarUrl;
@@ -105,27 +124,54 @@ class ProfileAvatarButton extends ConsumerWidget {
     }
     avatarUrl ??= ref.watch(traktSessionProvider).valueOrNull?.userAvatarUrl;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => context.push('/profile'),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 12, top: 10, bottom: 10, right: 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: 28,
-              height: 28,
-              color: cs.surfaceContainerHighest,
-              child: avatarUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: avatarUrl,
-                      width: 28,
-                      height: 28,
-                      fit: BoxFit.cover,
-                    )
-                  : Icon(Icons.person, size: 16, color: cs.onSurfaceVariant),
+    final avatarCore = SizedBox(
+      key: _avatarBoundsKey,
+      width: kProfileLeadingCircleSize,
+      height: kProfileLeadingCircleSize,
+      child: ClipOval(
+        child: ColoredBox(
+          color: cs.surfaceContainerHighest,
+          child: avatarUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  fit: BoxFit.cover,
+                )
+              : Icon(Icons.person, size: 16, color: cs.onSurfaceVariant),
+        ),
+      ),
+    );
+
+    return Padding(
+      padding: kProfileLeadingPadding,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          // Sombra solo en el cículo del avatar (no en el padding del leading).
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: _hover
+                ? [
+                    BoxShadow(
+                      color: cs.primary.withAlpha(100),
+                      blurRadius: 12,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            clipBehavior: Clip.none,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _openProfile,
+              child: avatarCore,
             ),
           ),
         ),

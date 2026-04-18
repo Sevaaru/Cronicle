@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/core/router/profile_route_transition.dart';
+import 'package:cronicle/core/router/shell_nav_tab.dart';
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/media_genre_tag_browse_page.dart';
 import 'package:cronicle/features/anime/presentation/forum_media_threads_page.dart';
@@ -22,7 +24,6 @@ import 'package:cronicle/features/onboarding/presentation/onboarding_page.dart';
 import 'package:cronicle/features/profile/presentation/personal_stats_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
-import 'package:cronicle/features/profile/presentation/profile_page.dart';
 import 'package:cronicle/features/profile/presentation/user_follow_list_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
@@ -69,14 +70,6 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
-int _tabIndexFromPath(String path) {
-  if (path.startsWith('/library')) return 1;
-  if (path.startsWith('/search')) return 2;
-  if (path.startsWith('/social')) return 3;
-  if (path.startsWith('/settings')) return 4;
-  return 0;
-}
-
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
   final startPage = ref.read(defaultStartPageProvider);
@@ -107,7 +100,15 @@ GoRouter appRouter(AppRouterRef ref) {
         navigatorKey: _shellKey,
         builder: (context, state, child) {
           final location = state.uri.path;
-          final index = _tabIndexFromPath(location);
+          final index =
+              ref.read(shellNavTabProvider.notifier).bottomNavIndex(location);
+
+          // No modificar providers durante build; persistir tab principal después del frame.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(shellNavTabProvider.notifier)
+                .rememberPrimaryTabFromPath(location);
+          });
 
           return AppShell(
             currentIndex: index,
@@ -149,7 +150,7 @@ GoRouter appRouter(AppRouterRef ref) {
           ),
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const ProfilePage(),
+            pageBuilder: (context, state) => buildProfileTransitionPage(state),
           ),
           GoRoute(
             path: '/profile/personal-stats',

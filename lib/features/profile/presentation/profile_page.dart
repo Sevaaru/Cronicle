@@ -17,6 +17,7 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -28,7 +29,11 @@ class ProfilePage extends ConsumerWidget {
     final tokenAsync = ref.watch(anilistTokenProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.profileTitle)),
+      appBar: AppBar(
+        leading: const ProfileLeadingCloseButton(),
+        automaticallyImplyLeading: false,
+        title: Text(l10n.profileTitle),
+      ),
       body: tokenAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(child: Text(l10n.errorLoadingProfile)),
