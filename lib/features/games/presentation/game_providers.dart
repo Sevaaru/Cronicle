@@ -29,37 +29,17 @@ List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
 Future<void> _igdbPacingDelay() =>
     Future<void>.delayed(const Duration(milliseconds: 55));
 
-/// Reintentos ante fallos transitorios; si la consulta filtrada devuelve [] tras
-/// normalizar, [IgdbApiDatasource.fetchGamesHomeRatedPage] con [homeFallbackSlot]
-/// evita que todos los carruseles repitan exactamente los mismos títulos.
-Future<List<Map<String, dynamic>>> _igdbTryGames(
-  IgdbApiDatasource api,
-  Future<List<Map<String, dynamic>>> Function() fetch, {
-  int homeFallbackSlot = 0,
-}) async {
-  for (var attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      await Future<void>.delayed(Duration(milliseconds: 110 * attempt));
-    }
-    try {
-      final raw = await fetch();
-      final next = _normalizeGamesSafe(raw);
-      if (next.isNotEmpty) return next;
-      if (raw.isEmpty) break;
-    } catch (_) {}
-  }
-  try {
-    final off = (homeFallbackSlot * 7).clamp(0, 400);
-    var raw = await api.fetchGamesHomeRatedPage(limit: 24, offset: off);
-    var next = _normalizeGamesSafe(raw);
-    if (next.isNotEmpty) return next;
-    if (off > 0) {
-      raw = await api.fetchGamesHomeRatedPage(limit: 24, offset: 0);
-      next = _normalizeGamesSafe(raw);
-      if (next.isNotEmpty) return next;
-    }
-  } catch (_) {}
-  return [];
+/// Slices [pool] into carousels after the first 24 entries (shown in [igdbPopular]).
+List<Map<String, dynamic>> _homeGamesRailSlice(
+  List<Map<String, dynamic>> pool,
+  int railIndex, {
+  int pageSize = 22,
+  int skipFirst = 24,
+}) {
+  final start = skipFirst + railIndex * pageSize;
+  if (start >= pool.length) return <Map<String, dynamic>>[];
+  final end = start + pageSize;
+  return pool.sublist(start, end > pool.length ? pool.length : end);
 }
 
 List<Map<String, dynamic>> _filterReviewsWithGame(
@@ -93,6 +73,78 @@ Future<List<Map<String, dynamic>>> _igdbTryReviews(
     } catch (_) {}
   }
   return [];
+}
+
+List<int> _gameIdsFromPoolSkip(
+  List<Map<String, dynamic>> pool, {
+  int skip = 24,
+  int maxIds = 25,
+}) {
+  final out = <int>[];
+  final seen = <int>{};
+  for (final g in pool.skip(skip)) {
+    final id = (g['id'] as num?)?.toInt();
+    if (id == null || seen.contains(id)) continue;
+    seen.add(id);
+    out.add(id);
+    if (out.length >= maxIds) break;
+  }
+  return out;
+}
+
+int _reviewCreatedAtSec(Map<String, dynamic> r) {
+  final t = r['created_at'];
+  if (t is int) return t;
+  if (t is num) return t.toInt();
+  return 0;
+}
+
+int _reviewScoreSafe(Map<String, dynamic> r) {
+  final s = r['score'];
+  if (s is int) return s;
+  if (s is num) return s.toInt();
+  return 0;
+}
+
+/// Une listas priorizando el orden de [lists]; deduplica por `id` de reseña.
+List<Map<String, dynamic>> _mergeReviewsDedupe(
+  List<List<Map<String, dynamic>>> lists, {
+  required int maxItems,
+}) {
+  final seen = <int>{};
+  final out = <Map<String, dynamic>>[];
+  for (final list in lists) {
+    for (final r in list) {
+      final id = (r['id'] as num?)?.toInt();
+      if (id == null || seen.contains(id)) continue;
+      seen.add(id);
+      out.add(r);
+      if (out.length >= maxItems) return out;
+    }
+  }
+  return out;
+}
+
+List<Map<String, dynamic>> _sortReviewsByCreatedDesc(
+  List<Map<String, dynamic>> list,
+) {
+  final copy = List<Map<String, dynamic>>.from(list);
+  copy.sort(
+    (a, b) => _reviewCreatedAtSec(b).compareTo(_reviewCreatedAtSec(a)),
+  );
+  return copy;
+}
+
+List<Map<String, dynamic>> _sortReviewsByScoreDesc(
+  List<Map<String, dynamic>> list,
+) {
+  final copy = List<Map<String, dynamic>>.from(list);
+  copy.sort((a, b) {
+    final sb = _reviewScoreSafe(b).compareTo(_reviewScoreSafe(a));
+    if (sb != 0) return sb;
+    return _reviewCreatedAtSec(b).compareTo(_reviewCreatedAtSec(a));
+  });
+  return copy;
 }
 
 /// All IGDB home rows except [igdbPopular] (loaded separately for faster first paint).
@@ -170,86 +222,65 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-/// Aside del home: consultas IGDB **con filtros reales** (fechas, géneros,
-/// `game_modes`, ratings) como en [IgdbApiDatasource]; peticiones **secuenciales**
-/// con pacing para respetar rate limits. Reseñas: endpoints de review.
+/// Aside del home: **una sola** petición `/games` con la misma estrategia que
+/// [fetchPopularGames] (demostrada estable en [igdbPopular]), repartida en
+/// carruseles; evita docenas de consultas Apicalypse que fallaban o vaciaban el
+/// provider por tiempo / rate limit. Reseñas: listas globales + reseñas de los
+/// mismos juegos del pool (`fetchReviewsForGameIds`) para rellenar si IGDB
+/// devuelve pocas reseñas “recientes” / “altas” a nivel global.
 @Riverpod(keepAlive: true)
 Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
   final api = ref.read(igdbApiProvider);
-  const n = 24;
 
-  final anticipated = await _igdbTryGames(
-    api,
-    () => api.fetchGamesMostAnticipated(limit: n),
-    homeFallbackSlot: 0,
-  );
+  final rawPool = await api.fetchPopularGames(limit: 280);
+  final pool = _normalizeGamesSafe(rawPool);
+  final poolGameIds = _gameIdsFromPoolSkip(pool);
+
+  final reviewsForPoolGames = poolGameIds.isEmpty
+      ? <Map<String, dynamic>>[]
+      : await _igdbTryReviews(
+          api,
+          () => api.fetchReviewsForGameIds(poolGameIds, limit: 52),
+        );
   await _igdbPacingDelay();
-  final recentlyReleased = await _igdbTryGames(
-    api,
-    () => api.fetchGamesRecentlyReleased(limit: n),
-    homeFallbackSlot: 1,
-  );
-  await _igdbPacingDelay();
-  final reviewsRecent =
+
+  final reviewsRecentGlobal =
       await _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: 36));
   await _igdbPacingDelay();
-  final comingSoon = await _igdbTryGames(
-    api,
-    () => api.fetchGamesComingSoon(limit: n),
-    homeFallbackSlot: 2,
+
+  final reviewsCriticsGlobal =
+      await _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: 24));
+
+  final reviewsRecent = _sortReviewsByCreatedDesc(
+    _mergeReviewsDedupe(
+      [reviewsRecentGlobal, reviewsForPoolGames],
+      maxItems: 40,
+    ),
   );
-  await _igdbPacingDelay();
-  final bestRated = await _igdbTryGames(
-    api,
-    () => api.fetchGamesBestRated(limit: n),
-    homeFallbackSlot: 3,
-  );
-  await _igdbPacingDelay();
-  final reviewsCritics =
-      await _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: n));
-  await _igdbPacingDelay();
-  final indie = await _igdbTryGames(
-    api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: n),
-    homeFallbackSlot: 4,
-  );
-  await _igdbPacingDelay();
-  final horror = await _igdbTryGames(
-    api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: n),
-    homeFallbackSlot: 5,
-  );
-  await _igdbPacingDelay();
-  final multiplayer = await _igdbTryGames(
-    api,
-    () => api.fetchGamesMultiplayerPopular(limit: n),
-    homeFallbackSlot: 6,
-  );
-  await _igdbPacingDelay();
-  final rpg = await _igdbTryGames(
-    api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: n),
-    homeFallbackSlot: 7,
-  );
-  await _igdbPacingDelay();
-  final sports = await _igdbTryGames(
-    api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: n),
-    homeFallbackSlot: 8,
+
+  final highFromPool = reviewsForPoolGames
+      .where((r) => _reviewScoreSafe(r) >= 80)
+      .toList();
+
+  final reviewsCritics = _sortReviewsByScoreDesc(
+    _mergeReviewsDedupe(
+      [reviewsCriticsGlobal, highFromPool],
+      maxItems: 28,
+    ),
   );
 
   return IgdbGamesHomeFeedData(
-    anticipated: anticipated,
-    recentlyReleased: recentlyReleased,
+    anticipated: _homeGamesRailSlice(pool, 0),
+    recentlyReleased: _homeGamesRailSlice(pool, 1),
     reviewsRecent: reviewsRecent,
-    comingSoon: comingSoon,
-    bestRated: bestRated,
+    comingSoon: _homeGamesRailSlice(pool, 2),
+    bestRated: _homeGamesRailSlice(pool, 3),
     reviewsCritics: reviewsCritics,
-    indie: indie,
-    horror: horror,
-    multiplayer: multiplayer,
-    rpg: rpg,
-    sports: sports,
+    indie: _homeGamesRailSlice(pool, 4),
+    horror: _homeGamesRailSlice(pool, 5),
+    multiplayer: _homeGamesRailSlice(pool, 6),
+    rpg: _homeGamesRailSlice(pool, 7),
+    sports: _homeGamesRailSlice(pool, 8),
   );
 }
 

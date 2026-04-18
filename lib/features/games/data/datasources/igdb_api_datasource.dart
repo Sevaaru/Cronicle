@@ -257,22 +257,19 @@ limit ${orderedIds.length};
     final twoYears = now + 730 * 24 * 3600;
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, hypes;
+fields name, cover.image_id, first_release_date;
 where category = 0 & first_release_date > $now & first_release_date < $twoYears;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, release_dates.date;
+fields name, cover.image_id, release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $twoYears;
 sort release_dates.date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date, hypes;
+fields name, cover.image_id, first_release_date, hypes;
 where category = 0 & first_release_date > $now & first_release_date < $oneYear;
 sort hypes desc;
 limit $limit;
@@ -464,6 +461,40 @@ limit $limit;
 fields id, title, content, score, created_at, user.username,
        game.id, game.name, game.cover.image_id;
 where score >= $minScore;
+sort created_at desc;
+limit $limit;
+''';
+    try {
+      final raw = await _postReviewsList(body);
+      return raw
+          .where((r) => (r['game'] as Map<String, dynamic>?) != null)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Reseñas de juegos concretos (`where game = (…)`); alinea el aside con el
+  /// pool [fetchPopularGames] cuando las listas globales vienen vacías o escasas.
+  Future<List<Map<String, dynamic>>> fetchReviewsForGameIds(
+    List<int> gameIds, {
+    int limit = 48,
+  }) async {
+    if (gameIds.isEmpty) return [];
+    final uniq = <int>[];
+    final seen = <int>{};
+    for (final id in gameIds) {
+      if (seen.contains(id)) continue;
+      seen.add(id);
+      uniq.add(id);
+      if (uniq.length >= 25) break;
+    }
+    if (uniq.isEmpty) return [];
+    final joined = uniq.join(',');
+    final body = '''
+fields id, title, content, score, created_at, user.username,
+       game.id, game.name, game.cover.image_id;
+where game = ($joined);
 sort created_at desc;
 limit $limit;
 ''';
