@@ -1700,6 +1700,30 @@ abstract class AppLocalizations {
   /// **'Popular'**
   String get traktSectionPopular;
 
+  /// No description provided for @traktSectionMostPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'Más reproducidas'**
+  String get traktSectionMostPlayed;
+
+  /// No description provided for @traktSectionMostWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Más vistas'**
+  String get traktSectionMostWatched;
+
+  /// No description provided for @traktSectionMostCollected.
+  ///
+  /// In es, this message translates to:
+  /// **'Más coleccionadas'**
+  String get traktSectionMostCollected;
+
+  /// No description provided for @traktSectionAnticipatedShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series más esperadas'**
+  String get traktSectionAnticipatedShows;
+
   /// No description provided for @traktTitle.
   ///
   /// In es, this message translates to:

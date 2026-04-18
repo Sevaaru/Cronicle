@@ -873,6 +873,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get traktSectionPopular => 'Popular';
 
   @override
+  String get traktSectionMostPlayed => 'Más reproducidas';
+
+  @override
+  String get traktSectionMostWatched => 'Más vistas';
+
+  @override
+  String get traktSectionMostCollected => 'Más coleccionadas';
+
+  @override
+  String get traktSectionAnticipatedShows => 'Series más esperadas';
+
+  @override
   String get traktTitle => 'Trakt.tv';
 
   @override
