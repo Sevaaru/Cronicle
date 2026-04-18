@@ -29,11 +29,14 @@ List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
 Future<void> _igdbPacingDelay() =>
     Future<void>.delayed(const Duration(milliseconds: 55));
 
-/// Retries transient IGDB failures; returns normalized games (may be empty).
+/// Reintentos ante fallos transitorios; si la consulta filtrada devuelve [] tras
+/// normalizar, [IgdbApiDatasource.fetchGamesHomeRatedPage] con [homeFallbackSlot]
+/// evita que todos los carruseles repitan exactamente los mismos títulos.
 Future<List<Map<String, dynamic>>> _igdbTryGames(
   IgdbApiDatasource api,
-  Future<List<Map<String, dynamic>>> Function() fetch,
-) async {
+  Future<List<Map<String, dynamic>>> Function() fetch, {
+  int homeFallbackSlot = 0,
+}) async {
   for (var attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) {
       await Future<void>.delayed(Duration(milliseconds: 110 * attempt));
@@ -42,10 +45,38 @@ Future<List<Map<String, dynamic>>> _igdbTryGames(
       final raw = await fetch();
       final next = _normalizeGamesSafe(raw);
       if (next.isNotEmpty) return next;
-      if (raw.isEmpty) return next;
+      if (raw.isEmpty) break;
     } catch (_) {}
   }
+  try {
+    final off = (homeFallbackSlot * 7).clamp(0, 400);
+    var raw = await api.fetchGamesHomeRatedPage(limit: 24, offset: off);
+    var next = _normalizeGamesSafe(raw);
+    if (next.isNotEmpty) return next;
+    if (off > 0) {
+      raw = await api.fetchGamesHomeRatedPage(limit: 24, offset: 0);
+      next = _normalizeGamesSafe(raw);
+      if (next.isNotEmpty) return next;
+    }
+  } catch (_) {}
   return [];
+}
+
+List<Map<String, dynamic>> _filterReviewsWithGame(
+  List<Map<String, dynamic>> raw,
+) {
+  final out = <Map<String, dynamic>>[];
+  for (final r in raw) {
+    final g = r['game'];
+    if (g is Map<String, dynamic>) {
+      out.add(r);
+    } else if (g is Map) {
+      final copy = Map<String, dynamic>.from(r);
+      copy['game'] = Map<String, dynamic>.from(g);
+      out.add(copy);
+    }
+  }
+  return out;
 }
 
 Future<List<Map<String, dynamic>>> _igdbTryReviews(
@@ -58,10 +89,7 @@ Future<List<Map<String, dynamic>>> _igdbTryReviews(
     }
     try {
       final raw = await fetch();
-      return raw
-          .where((r) => (r['game'] as Map<String, dynamic>?) != null)
-          .cast<Map<String, dynamic>>()
-          .toList();
+      return _filterReviewsWithGame(raw);
     } catch (_) {}
   }
   return [];
@@ -142,52 +170,72 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-/// Single batched home payload: requests run **sequentially** with pacing to avoid
-/// IGDB/Twitch rate limits (parallel per-section providers were unreliable).
+/// Aside del home: consultas IGDB **con filtros reales** (fechas, géneros,
+/// `game_modes`, ratings) como en [IgdbApiDatasource]; peticiones **secuenciales**
+/// con pacing para respetar rate limits. Reseñas: endpoints de review.
 @Riverpod(keepAlive: true)
 Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
-  ref.watch(igdbApiProvider);
   final api = ref.read(igdbApiProvider);
+  const n = 24;
 
-  final anticipated =
-      await _igdbTryGames(api, () => api.fetchGamesMostAnticipated(limit: 24));
+  final anticipated = await _igdbTryGames(
+    api,
+    () => api.fetchGamesMostAnticipated(limit: n),
+    homeFallbackSlot: 0,
+  );
   await _igdbPacingDelay();
-  final recentlyReleased =
-      await _igdbTryGames(api, () => api.fetchGamesRecentlyReleased(limit: 24));
+  final recentlyReleased = await _igdbTryGames(
+    api,
+    () => api.fetchGamesRecentlyReleased(limit: n),
+    homeFallbackSlot: 1,
+  );
   await _igdbPacingDelay();
   final reviewsRecent =
       await _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: 36));
   await _igdbPacingDelay();
-  final comingSoon =
-      await _igdbTryGames(api, () => api.fetchGamesComingSoon(limit: 24));
+  final comingSoon = await _igdbTryGames(
+    api,
+    () => api.fetchGamesComingSoon(limit: n),
+    homeFallbackSlot: 2,
+  );
   await _igdbPacingDelay();
-  final bestRated =
-      await _igdbTryGames(api, () => api.fetchGamesBestRated(limit: 24));
+  final bestRated = await _igdbTryGames(
+    api,
+    () => api.fetchGamesBestRated(limit: n),
+    homeFallbackSlot: 3,
+  );
   await _igdbPacingDelay();
   final reviewsCritics =
-      await _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: 24));
+      await _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: n));
   await _igdbPacingDelay();
   final indie = await _igdbTryGames(
     api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: 24),
+    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: n),
+    homeFallbackSlot: 4,
   );
   await _igdbPacingDelay();
   final horror = await _igdbTryGames(
     api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: 24),
+    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: n),
+    homeFallbackSlot: 5,
   );
   await _igdbPacingDelay();
-  final multiplayer =
-      await _igdbTryGames(api, () => api.fetchGamesMultiplayerPopular(limit: 24));
+  final multiplayer = await _igdbTryGames(
+    api,
+    () => api.fetchGamesMultiplayerPopular(limit: n),
+    homeFallbackSlot: 6,
+  );
   await _igdbPacingDelay();
   final rpg = await _igdbTryGames(
     api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: 24),
+    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: n),
+    homeFallbackSlot: 7,
   );
   await _igdbPacingDelay();
   final sports = await _igdbTryGames(
     api,
-    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: 24),
+    () => api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: n),
+    homeFallbackSlot: 8,
   );
 
   return IgdbGamesHomeFeedData(

@@ -63,6 +63,26 @@ limit 20;
     return _postList('/games', body);
   }
 
+  /// Lista ancha para el home cuando un carrusel especializado devuelve [] (misma
+  /// base que Popular pero con [offset] para no repetir exactamente las mismas filas).
+  Future<List<Map<String, dynamic>>> fetchGamesHomeRatedPage({
+    int limit = 24,
+    int offset = 0,
+  }) async {
+    try {
+      return await _postList('/games', '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & total_rating > 0;
+sort total_rating desc;
+offset $offset;
+limit $limit;
+''');
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Popular vía IGDB PopScore (`/popularity_primitives` + `/games` por ids en
   /// orden de visitas). Si no hay datos, orden estable por `total_rating`.
   Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 24}) async {
@@ -237,19 +257,22 @@ limit ${orderedIds.length};
     final twoYears = now + 730 * 24 * 3600;
     return _tryPostGameQueries([
       '''
-fields name, cover.image_id, first_release_date;
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, hypes;
 where category = 0 & first_release_date > $now & first_release_date < $twoYears;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, release_dates.date;
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, release_dates.date;
 where category = 0 & release_dates.date > $now & release_dates.date < $twoYears;
 sort release_dates.date asc;
 limit $limit;
 ''',
       '''
-fields name, cover.image_id, first_release_date, hypes;
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, hypes;
 where category = 0 & first_release_date > $now & first_release_date < $oneYear;
 sort hypes desc;
 limit $limit;
@@ -618,7 +641,7 @@ limit 15;
   /// Normalizes a raw IGDB game map into the common format used by
   /// [SearchPage] and [AddToLibrarySheet].
   static Map<String, dynamic> normalize(Map<String, dynamic> raw) {
-    final name = raw['name'] as String? ?? '';
+    final name = raw['name']?.toString() ?? '';
     Map<String, dynamic>? cover;
     final coverRaw = raw['cover'];
     if (coverRaw is Map<String, dynamic>) {
