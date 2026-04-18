@@ -8,10 +8,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -100,8 +102,26 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    final searchLayout = ref.watch(searchFilterLayoutProvider);
+    final visibleFilters = _SearchFilter.values
+        .where((f) => searchLayout.isVisible(f.name))
+        .toList();
+
+    // If current filter was hidden, reset to first visible.
+    if (!visibleFilters.contains(_filter)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _filter = visibleFilters.first);
+        }
+      });
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.searchTitle)),
+      appBar: AppBar(
+        leading: const ProfileAvatarButton(),
+        titleSpacing: 0,
+        title: Text(l10n.searchTitle, style: pageTitleStyle()),
+      ),
       body: Column(
         children: [
           Padding(
@@ -141,9 +161,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: _SearchFilter.values.length,
+              itemCount: visibleFilters.length,
               itemBuilder: (context, i) {
-                final f = _SearchFilter.values[i];
+                final f = visibleFilters[i];
                 final selected = _filter == f;
                 return FilterChip(
                   selected: selected,

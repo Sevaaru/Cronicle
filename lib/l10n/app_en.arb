@@ -6,6 +6,7 @@
   "navLibrary": "Library",
   "navSearch": "Search",
   "navProfile": "Profile",
+  "navSocial": "Social",
   "navSettings": "Settings",
   "navAnime": "Anime",
   "navManga": "Manga",
@@ -579,5 +580,22 @@
   "gameDetailExtCatGog": "GOG",
   "gameDetailExtCatMicrosoft": "Microsoft Store",
   "gameDetailExtCatEpic": "Epic Games",
-  "gameDetailExtCatOther": "External store"
+  "gameDetailExtCatOther": "External store",
+
+  "onboardingTitle": "What are you into?",
+  "onboardingSubtitle": "Pick at least one category to personalize your experience",
+  "onboardingContinue": "Continue",
+  "onboardingInterestAnime": "Anime",
+  "onboardingInterestManga": "Manga",
+  "onboardingInterestMovies": "Movies",
+  "onboardingInterestTv": "TV Shows",
+  "onboardingInterestGames": "Games",
+
+  "settingsCustomizeSearchFilters": "Search filters",
+  "settingsCustomizeSearchFiltersDesc": "Reorder or hide filters in the search tab",
+  "settingsInterests": "Your interests",
+  "settingsInterestsDesc": "Change the content you see in home, library, and search",
+  "settingsInterestsChanged": "Interests updated",
+
+  "socialTitle": "Social"
 }

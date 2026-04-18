@@ -29,8 +29,8 @@ class DefaultFeedTab extends _$DefaultFeedTab {
   String build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     final raw = prefs.getString(_key);
-    if (raw == null || raw.isEmpty) return 'feed';
-    if (raw == 'following' || raw == 'all') return 'feed';
+    if (raw == null || raw.isEmpty) return 'anime';
+    if (raw == 'following' || raw == 'all' || raw == 'feed') return 'anime';
     return raw;
   }
 

@@ -323,9 +323,10 @@ class _IgdbGameDetailProviderElement
 
 String _$igdbGamesHomeFeedHash() => r'4c8f4b013746dc46edd4036f402b0550dac9d47b';
 
-/// Aside: un único POST a /multiquery carga los 9 carruseles de juegos a la vez,
-/// más 2 llamadas paralelas para las reseñas. Esto evita por completo el rate
-/// limit de IGDB (4 req/s), ya que el multiquery cuenta como 1 sola petición.
+/// Aside: un único POST a /multiquery trae los 9 carruseles de juegos (= 1 req
+/// contra el rate-limit de IGDB). Las reseñas van en 2 llamadas adicionales.
+/// Si algún sub-query falla la sección simplemente queda vacía; si el POST
+/// completo falla se propaga el error y la UI muestra el botón "Reintentar".
 ///
 /// Copied from [igdbGamesHomeFeed].
 @ProviderFor(igdbGamesHomeFeed)

@@ -31,10 +31,12 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/core/utils/google_web_button.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -45,7 +47,11 @@ class SettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final googleSignIn = ref.watch(googleSignInProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
+      appBar: AppBar(
+        leading: const ProfileAvatarButton(),
+        titleSpacing: 0,
+        title: Text(l10n.settingsTitle, style: pageTitleStyle()),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
         children: [
@@ -368,6 +374,25 @@ class _AppearanceSection extends ConsumerWidget {
               ),
             ),
           ),
+          const Divider(height: 20),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.manage_search_rounded, color: cs.primary),
+            title: Text(l10n.settingsCustomizeSearchFilters),
+            subtitle: Text(
+              l10n.settingsCustomizeSearchFiltersDesc,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                fullscreenDialog: false,
+                builder: (_) => const SearchFilterLayoutEditorPage(),
+              ),
+            ),
+          ),
+          const Divider(height: 20),
+          const _InterestsQuickEditor(),
         ],
       ),
     );
@@ -680,7 +705,6 @@ class _AppDefaultsSection extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final currentPage = ref.watch(defaultStartPageProvider);
     final currentFeedTab = ref.watch(defaultFeedTabProvider);
-    final currentFeedScope = ref.watch(defaultFeedActivityScopeProvider);
     final hideText = ref.watch(hideTextActivitiesProvider);
     final visibleFeedIds = ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
@@ -690,7 +714,6 @@ class _AppDefaultsSection extends ConsumerWidget {
     ];
 
     final feedTabOptions = [
-      ('feed', l10n.filterFeed, Icons.dynamic_feed_rounded),
       ('anime', l10n.filterAnime, Icons.animation_rounded),
       ('manga', l10n.filterManga, Icons.menu_book_rounded),
       ('movie', l10n.filterMovies, Icons.movie_rounded),
@@ -750,40 +773,6 @@ class _AppDefaultsSection extends ConsumerWidget {
               );
             }).toList(),
           ),
-          if (currentFeedTab == 'feed' && visibleFeedIds.contains('feed')) ...[
-            const SizedBox(height: 10),
-            Text(l10n.settingsFeedActivityScope,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                (
-                  'following',
-                  l10n.filterFollowing,
-                  Icons.people_rounded,
-                ),
-                (
-                  'global',
-                  l10n.filterGlobal,
-                  Icons.public_rounded,
-                ),
-              ].map((o) {
-                final selected = currentFeedScope == o.$1;
-                return ChoiceChip(
-                  selected: selected,
-                  avatar: Icon(o.$3, size: 16),
-                  label: Text(o.$2, style: const TextStyle(fontSize: 12)),
-                  onSelected: (_) => ref
-                      .read(defaultFeedActivityScopeProvider.notifier)
-                      .set(o.$1),
-                  showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                );
-              }).toList(),
-            ),
-          ],
 
           const Divider(height: 24),
           SwitchListTile.adaptive(
@@ -1542,6 +1531,97 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InterestsQuickEditor extends ConsumerWidget {
+  const _InterestsQuickEditor();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    // Derive currently selected interests from the feed layout.
+    final feedLayout = ref.watch(feedFilterLayoutProvider);
+    final selected = <String>{
+      for (final s in feedLayout.slots)
+        if (s.visible && onboardingInterestIds.contains(s.id)) s.id,
+    };
+
+    final items = <(String, String, IconData, Color)>[
+      ('anime', l10n.onboardingInterestAnime, Icons.animation_rounded, const Color(0xFF5C6BC0)),
+      ('manga', l10n.onboardingInterestManga, Icons.menu_book_rounded, const Color(0xFFEC407A)),
+      ('movie', l10n.onboardingInterestMovies, Icons.movie_rounded, const Color(0xFFFF7043)),
+      ('tv', l10n.onboardingInterestTv, Icons.tv_rounded, const Color(0xFF26A69A)),
+      ('game', l10n.onboardingInterestGames, Icons.sports_esports_rounded, const Color(0xFF42A5F5)),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.interests_rounded, size: 20, color: cs.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(l10n.settingsInterests,
+                  style: Theme.of(context).textTheme.titleSmall),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.settingsInterestsDesc,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items.map((item) {
+            final active = selected.contains(item.$1);
+            final bg = active
+                ? item.$4.withValues(alpha: 0.18)
+                : cs.surfaceContainerHighest.withValues(alpha: 0.55);
+            final border =
+                active ? item.$4 : cs.outlineVariant.withValues(alpha: 0.3);
+            final fg = active ? item.$4 : cs.onSurfaceVariant;
+
+            return FilterChip(
+              selected: active,
+              showCheckmark: false,
+              avatar: Icon(item.$3, size: 18, color: fg),
+              label: Text(item.$2, style: TextStyle(color: fg)),
+              backgroundColor: bg,
+              selectedColor: bg,
+              shape: StadiumBorder(
+                side: BorderSide(color: border, width: active ? 2 : 1),
+              ),
+              onSelected: (_) async {
+                final next = Set<String>.from(selected);
+                if (active) {
+                  if (next.length <= 1) return; // min 1
+                  next.remove(item.$1);
+                } else {
+                  next.add(item.$1);
+                }
+                await ref
+                    .read(onboardingCompletedProvider.notifier)
+                    .updateInterests(next);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.settingsInterestsChanged),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

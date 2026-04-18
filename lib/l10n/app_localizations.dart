@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'Perfil'**
   String get navProfile;
 
+  /// No description provided for @navSocial.
+  ///
+  /// In es, this message translates to:
+  /// **'Social'**
+  String get navSocial;
+
   /// No description provided for @navSettings.
   ///
   /// In es, this message translates to:
@@ -3151,6 +3157,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tienda externa'**
   String get gameDetailExtCatOther;
+
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué te interesa?'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona al menos una categoría para personalizar tu experiencia'**
+  String get onboardingSubtitle;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingInterestAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime'**
+  String get onboardingInterestAnime;
+
+  /// No description provided for @onboardingInterestManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga'**
+  String get onboardingInterestManga;
+
+  /// No description provided for @onboardingInterestMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas'**
+  String get onboardingInterestMovies;
+
+  /// No description provided for @onboardingInterestTv.
+  ///
+  /// In es, this message translates to:
+  /// **'Series de TV'**
+  String get onboardingInterestTv;
+
+  /// No description provided for @onboardingInterestGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Videojuegos'**
+  String get onboardingInterestGames;
+
+  /// No description provided for @settingsCustomizeSearchFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtros de búsqueda'**
+  String get settingsCustomizeSearchFilters;
+
+  /// No description provided for @settingsCustomizeSearchFiltersDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Reordena u oculta los filtros en la pestaña de búsqueda'**
+  String get settingsCustomizeSearchFiltersDesc;
+
+  /// No description provided for @settingsInterests.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus intereses'**
+  String get settingsInterests;
+
+  /// No description provided for @settingsInterestsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambia los contenidos que ves en inicio, biblioteca y búsqueda'**
+  String get settingsInterestsDesc;
+
+  /// No description provided for @settingsInterestsChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'Intereses actualizados'**
+  String get settingsInterestsChanged;
+
+  /// No description provided for @socialTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Social'**
+  String get socialTitle;
 }
 
 class _AppLocalizationsDelegate

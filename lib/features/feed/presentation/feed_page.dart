@@ -1,11 +1,10 @@
-import 'dart:math' show max;
-
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/feed/presentation/activity_feed_widgets.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
@@ -13,15 +12,11 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
-import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
-import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
 
 enum _FeedFilter {
-  feed,
   anime,
   manga,
   movie,
@@ -29,7 +24,6 @@ enum _FeedFilter {
   game;
 
   IconData get icon => switch (this) {
-        _FeedFilter.feed => Icons.dynamic_feed_rounded,
         _FeedFilter.anime => Icons.animation_rounded,
         _FeedFilter.manga => Icons.menu_book_rounded,
         _FeedFilter.movie => Icons.movie_rounded,
@@ -38,13 +32,7 @@ enum _FeedFilter {
       };
 }
 
-enum _FeedActivityScope {
-  following,
-  global,
-}
-
 String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
-      _FeedFilter.feed => l10n.filterFeed,
       _FeedFilter.anime => l10n.filterAnime,
       _FeedFilter.manga => l10n.filterManga,
       _FeedFilter.movie => l10n.filterMovies,
@@ -93,7 +81,7 @@ const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
   _AnimeMangaBrowseTab.recentlyReleased,
 ];
 
-/// Manga no tiene temporadas en Anilist como el anime; se omite «De temporada».
+/// Manga no tiene temporadas en Anilist como el anime; se omite Â«De temporadaÂ».
 const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
   _AnimeMangaBrowseTab.activity,
   _AnimeMangaBrowseTab.topRated,
@@ -104,69 +92,6 @@ const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
 List<_AnimeMangaBrowseTab> _browseTabsFor(_FeedFilter filter) =>
     filter == _FeedFilter.manga ? _mangaBrowseTabs : _animeBrowseTabs;
 
-String _timeAgo(DateTime dt, AppLocalizations l10n) {
-  final diff = DateTime.now().difference(dt);
-  if (diff.inMinutes < 1) return l10n.timeNow;
-  if (diff.inMinutes < 60) return l10n.timeMinutes(diff.inMinutes);
-  if (diff.inHours < 24) return l10n.timeHours(diff.inHours);
-  if (diff.inDays < 7) return l10n.timeDays(diff.inDays);
-  return l10n.timeWeeks((diff.inDays / 7).floor());
-}
-
-/// Siguiendo / Global: mismos [FilterChip] compactos que la barra de filtros del feed.
-class _FeedActivityScopeBar extends StatelessWidget {
-  const _FeedActivityScopeBar({
-    required this.scope,
-    required this.onChanged,
-    required this.l10n,
-  });
-
-  final _FeedActivityScope scope;
-  final ValueChanged<_FeedActivityScope> onChanged;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FilterChip(
-            selected: scope == _FeedActivityScope.following,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.people_rounded, size: 15),
-                const SizedBox(width: 4),
-                Text(l10n.filterFollowing, style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-            onSelected: (_) => onChanged(_FeedActivityScope.following),
-            showCheckmark: false,
-            visualDensity: VisualDensity.compact,
-          ),
-          const SizedBox(width: 6),
-          FilterChip(
-            selected: scope == _FeedActivityScope.global,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.public_rounded, size: 15),
-                const SizedBox(width: 4),
-                Text(l10n.filterGlobal, style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-            onSelected: (_) => onChanged(_FeedActivityScope.global),
-            showCheckmark: false,
-            visualDensity: VisualDensity.compact,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({super.key});
 
@@ -175,31 +100,12 @@ class FeedPage extends ConsumerStatefulWidget {
 }
 
 class _FeedPageState extends ConsumerState<FeedPage> {
-  _FeedFilter _filter = _FeedFilter.feed;
-  _FeedActivityScope _feedActivityScope = _FeedActivityScope.global;
+  _FeedFilter _filter = _FeedFilter.anime;
   bool _filterInitialized = false;
   _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
 
-  AsyncValue<List<FeedActivity>> _getFilteredFeed() {
-    return switch (_filter) {
-      _FeedFilter.feed => switch (_feedActivityScope) {
-          _FeedActivityScope.following =>
-            ref.watch(anilistFeedFollowingProvider),
-          _FeedActivityScope.global => ref.watch(anilistFeedProvider),
-        },
-      _FeedFilter.anime =>
-        ref.watch(anilistFeedByTypeProvider('ANIME_LIST')),
-      _FeedFilter.manga =>
-        ref.watch(anilistFeedByTypeProvider('MANGA_LIST')),
-      _ => const AsyncData([]),
-    };
-  }
-
   void _invalidateFeed() {
     switch (_filter) {
-      case _FeedFilter.feed:
-        ref.invalidate(anilistFeedFollowingProvider);
-        ref.invalidate(anilistFeedProvider);
       case _FeedFilter.anime:
         ref.invalidate(anilistFeedByTypeProvider('ANIME_LIST'));
         for (final c in _anilistBrowseCategories) {
@@ -223,13 +129,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   void _loadMore() {
     switch (_filter) {
-      case _FeedFilter.feed:
-        switch (_feedActivityScope) {
-          case _FeedActivityScope.following:
-            ref.read(anilistFeedFollowingProvider.notifier).loadMore();
-          case _FeedActivityScope.global:
-            ref.read(anilistFeedProvider.notifier).loadMore();
-        }
       case _FeedFilter.anime:
         ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).loadMore();
       case _FeedFilter.manga:
@@ -237,13 +136,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       default:
         break;
     }
-  }
-
-  void _setFeedActivityScope(_FeedActivityScope next) {
-    setState(() => _feedActivityScope = next);
-    ref.read(defaultFeedActivityScopeProvider.notifier).set(
-          next == _FeedActivityScope.following ? 'following' : 'global',
-        );
   }
 
   bool get _showAnimeMangaBrowseRail =>
@@ -285,18 +177,14 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     if (!_filterInitialized) {
       final defaultTab = ref.read(defaultFeedTabProvider);
-      final scopeStr = ref.read(defaultFeedActivityScopeProvider);
       final layout0 = ref.read(feedFilterLayoutProvider);
       _filter = _FeedFilter.values.firstWhere(
         (f) => f.name == defaultTab,
-        orElse: () => _FeedFilter.feed,
+        orElse: () => _FeedFilter.anime,
       );
       if (!layout0.visibleIdSet.contains(_filter.name)) {
         _filter = _FeedFilter.values.byName(layout0.firstVisibleId);
       }
-      _feedActivityScope = scopeStr == 'following'
-          ? _FeedActivityScope.following
-          : _FeedActivityScope.global;
       _filterInitialized = true;
     }
 
@@ -306,7 +194,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.feedTitle),
+        leading: const ProfileAvatarButton(),
+        titleSpacing: 0,
+        title: Text(l10n.feedTitle, style: pageTitleStyle()),
         actions: [
           Consumer(
             builder: (context, ref, _) {
@@ -405,7 +295,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
               ),
             ),
           ],
-          SizedBox(height: _filter == _FeedFilter.feed ? 2 : 6),
+          const SizedBox(height: 6),
           Expanded(
             child: _filter == _FeedFilter.game
                 ? const GamesHomeFeedView()
@@ -413,32 +303,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                     ? const TraktHomeFeedView(kind: MediaKind.movie)
                     : _filter == _FeedFilter.tv
                         ? const TraktHomeFeedView(kind: MediaKind.tv)
-                    : _filter == _FeedFilter.feed
-                        ? (_feedActivityScope == _FeedActivityScope.following
-                            ? _FollowingFeedGuard(
-                                feedScopeBar: _FeedActivityScopeBar(
-                                  scope: _feedActivityScope,
-                                  onChanged: _setFeedActivityScope,
-                                  l10n: l10n,
-                                ),
-                                onRefresh: _invalidateFeed,
-                                onLoadMore: _loadMore,
-                                l10n: l10n,
-                              )
-                            : _FeedList(
-                                feedAsync: ref.watch(anilistFeedProvider),
-                                onRefresh: _invalidateFeed,
-                                onLoadMore: _loadMore,
-                                filter: _filter,
-                                feedIsFollowing: false,
-                                feedScopeHeader: _FeedActivityScopeBar(
-                                  scope: _feedActivityScope,
-                                  onChanged: _setFeedActivityScope,
-                                  l10n: l10n,
-                                ),
-                                l10n: l10n,
-                              ))
-                        : (_showAnilistBrowseGrid
+                        : _showAnilistBrowseGrid
                             ? _AnimeMangaBrowseList(
                                 mediaType: _filter == _FeedFilter.anime
                                     ? 'ANIME'
@@ -452,15 +317,28 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                                 onAdd: _addToLibrary,
                                 l10n: l10n,
                               )
-                            : _FeedList(
-                                feedAsync: _getFilteredFeed(),
+                            : ActivityFeedList(
+                                feedAsync: _filter == _FeedFilter.anime
+                                    ? ref.watch(anilistFeedByTypeProvider('ANIME_LIST'))
+                                    : ref.watch(anilistFeedByTypeProvider('MANGA_LIST')),
                                 onRefresh: _invalidateFeed,
                                 onLoadMore: _loadMore,
-                                filter: _filter,
+                                hasMore: () {
+                                  try {
+                                    final type = _filter == _FeedFilter.anime
+                                        ? 'ANIME_LIST'
+                                        : 'MANGA_LIST';
+                                    return ref
+                                        .read(anilistFeedByTypeProvider(type).notifier)
+                                        .hasMore;
+                                  } catch (_) {
+                                    return false;
+                                  }
+                                },
                                 feedIsFollowing: false,
                                 feedScopeHeader: null,
                                 l10n: l10n,
-                              )),
+                              ),
           ),
         ],
       ),
@@ -468,758 +346,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   }
 }
 
-class _FollowingFeedGuard extends ConsumerWidget {
-  const _FollowingFeedGuard({
-    required this.feedScopeBar,
-    required this.onRefresh,
-    required this.onLoadMore,
-    required this.l10n,
-  });
-  final Widget feedScopeBar;
-  final VoidCallback onRefresh;
-  final VoidCallback onLoadMore;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tokenAsync = ref.watch(anilistTokenProvider);
-
-    return tokenAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, _) => Center(child: Text(l10n.errorVerifyingSession)),
-      data: (token) {
-        if (token == null) {
-          final cs = Theme.of(context).colorScheme;
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: feedScopeBar,
-                ),
-              ),
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.people_outline_rounded, size: 56,
-                          color: cs.onSurfaceVariant.withAlpha(100)),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.loginRequiredFollowing,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: cs.onSurfaceVariant, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.login, size: 18),
-                        label: Text(l10n.goToSettings),
-                        onPressed: () => context.go('/settings'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-        return _FeedList(
-          feedAsync: ref.watch(anilistFeedFollowingProvider),
-          onRefresh: onRefresh,
-          onLoadMore: onLoadMore,
-          filter: _FeedFilter.feed,
-          feedIsFollowing: true,
-          feedScopeHeader: feedScopeBar,
-          l10n: l10n,
-        );
-      },
-    );
-  }
-}
-
-class _FeedList extends ConsumerStatefulWidget {
-  const _FeedList({
-    required this.feedAsync,
-    required this.onRefresh,
-    required this.onLoadMore,
-    required this.filter,
-    required this.feedIsFollowing,
-    required this.feedScopeHeader,
-    required this.l10n,
-  });
-
-  final AsyncValue<List<FeedActivity>> feedAsync;
-  final VoidCallback onRefresh;
-  final VoidCallback onLoadMore;
-  final _FeedFilter filter;
-  /// Solo actividad «Siguiendo» dentro de la pestaña Feed.
-  final bool feedIsFollowing;
-  /// Dentro del scroll del feed (Siguiendo/Global); null en otras pestañas.
-  final Widget? feedScopeHeader;
-  final AppLocalizations l10n;
-
-  @override
-  ConsumerState<_FeedList> createState() => _FeedListState();
-}
-
-class _FeedListState extends ConsumerState<_FeedList> {
-  final _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  bool get _hasMore {
-    try {
-      return switch (widget.filter) {
-        _FeedFilter.feed when widget.feedIsFollowing =>
-          ref.read(anilistFeedFollowingProvider.notifier).hasMore,
-        _FeedFilter.feed =>
-          ref.read(anilistFeedProvider.notifier).hasMore,
-        _FeedFilter.anime =>
-          ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).hasMore,
-        _FeedFilter.manga =>
-          ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).hasMore,
-        _ => false,
-      };
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void _onScroll() {
-    if (!_hasMore) return;
-    if (!_scrollController.hasClients) return;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final current = _scrollController.position.pixels;
-    if (current >= maxScroll - 300) {
-      widget.onLoadMore();
-    }
-  }
-
-  int get _scopeHeaderLen => widget.feedScopeHeader != null ? 1 : 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final hasMore = _hasMore;
-    final scopeHeader = widget.feedScopeHeader;
-    final listPadding = EdgeInsets.fromLTRB(
-      16,
-      scopeHeader != null ? 0 : 4,
-      16,
-      100,
-    );
-
-    return widget.feedAsync.when(
-      loading: () {
-        if (scopeHeader != null) {
-          return LayoutBuilder(
-            builder: (context, c) {
-              return ListView(
-                controller: _scrollController,
-                padding: listPadding,
-                children: [
-                  scopeHeader,
-                  SizedBox(height: max(100.0, c.maxHeight * 0.22)),
-                  const Center(child: CircularProgressIndicator()),
-                ],
-              );
-            },
-          );
-        }
-        return const Center(child: CircularProgressIndicator());
-      },
-      error: (e, _) {
-        if (scopeHeader != null) {
-          return LayoutBuilder(
-            builder: (context, c) {
-              return ListView(
-                controller: _scrollController,
-                padding: listPadding,
-                children: [
-                  scopeHeader,
-                  SizedBox(height: max(48.0, c.maxHeight * 0.12)),
-                  Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
-                  const SizedBox(height: 12),
-                  Center(child: Text(widget.l10n.errorNetwork)),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: FilledButton(
-                      onPressed: widget.onRefresh,
-                      child: Text(widget.l10n.feedRetry),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
-              const SizedBox(height: 12),
-              Text(widget.l10n.errorNetwork),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: widget.onRefresh,
-                child: Text(widget.l10n.feedRetry),
-              ),
-            ],
-          ),
-        );
-      },
-      data: (activities) {
-        final hideText = ref.watch(hideTextActivitiesProvider);
-        final filtered = hideText
-            ? activities.where((a) => !a.isTextActivity).toList()
-            : activities;
-        final firstCompose = _scopeHeaderLen;
-
-        if (filtered.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: () async => widget.onRefresh(),
-            child: ListView(
-              controller: _scrollController,
-              padding: listPadding,
-              children: [
-                if (scopeHeader != null) scopeHeader,
-                _ComposeCard(onPosted: widget.onRefresh),
-                Padding(
-                  padding: const EdgeInsets.only(top: 28),
-                  child: Center(
-                    child: Text(
-                      widget.l10n.feedEmpty,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final totalItems =
-            firstCompose + 1 + filtered.length + (hasMore ? 1 : 0);
-        return RefreshIndicator(
-          onRefresh: () async => widget.onRefresh(),
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: listPadding,
-            addRepaintBoundaries: true,
-            addAutomaticKeepAlives: false,
-            itemCount: totalItems,
-            itemBuilder: (context, i) {
-              if (scopeHeader != null && i == 0) {
-                return scopeHeader;
-              }
-              if (i == firstCompose) {
-                return _ComposeCard(onPosted: widget.onRefresh);
-              }
-              final actIdx = i - firstCompose - 1;
-              if (actIdx >= filtered.length) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                );
-              }
-              return RepaintBoundary(
-                child: _ActivityCard(activity: filtered[actIdx]),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ComposeCard extends ConsumerStatefulWidget {
-  const _ComposeCard({required this.onPosted});
-  final VoidCallback onPosted;
-
-  @override
-  ConsumerState<_ComposeCard> createState() => _ComposeCardState();
-}
-
-class _ComposeCardState extends ConsumerState<_ComposeCard> {
-  final _controller = TextEditingController();
-  bool _sending = false;
-  bool _expanded = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _post() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    final l10n = AppLocalizations.of(context)!;
-    final token = await ref.read(anilistTokenProvider.future);
-    if (token == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loginRequiredLike)),
-      );
-      return;
-    }
-    setState(() => _sending = true);
-    try {
-      final graphql = ref.read(anilistGraphqlProvider);
-      await graphql.saveTextActivity(text, token);
-      if (!mounted) return;
-      _controller.clear();
-      setState(() => _expanded = false);
-      widget.onPosted();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorWithMessage(e))),
-      );
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final tokenAsync = ref.watch(anilistTokenProvider);
-    final isLoggedIn = tokenAsync.valueOrNull != null;
-
-    if (!isLoggedIn) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GlassCard(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!_expanded)
-              GestureDetector(
-                onTap: () => setState(() => _expanded = true),
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note_rounded, size: 20, color: cs.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.composeActivityHint,
-                      style: TextStyle(
-                          fontSize: 13, color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              )
-            else ...[
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                maxLines: 5,
-                minLines: 2,
-                enabled: !_sending,
-                decoration: InputDecoration(
-                  hintText: l10n.composeActivityHint,
-                  hintStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: cs.outlineVariant),
-                  ),
-                  filled: true,
-                  fillColor: cs.surfaceContainerHighest.withAlpha(80),
-                  contentPadding: const EdgeInsets.all(12),
-                  isDense: true,
-                ),
-                style: TextStyle(fontSize: 13, color: cs.onSurface),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _sending
-                        ? null
-                        : () => setState(() => _expanded = false),
-                    child: Text(l10n.cancelButton),
-                  ),
-                  const SizedBox(width: 6),
-                  _sending
-                      ? const SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: Padding(
-                            padding: EdgeInsets.all(6),
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      : FilledButton.icon(
-                          onPressed: _post,
-                          icon: const Icon(Icons.send_rounded, size: 16),
-                          label: Text(l10n.postButton),
-                        ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ExpandableText extends StatefulWidget {
-  const _ExpandableText({required this.text, this.style});
-  final String text;
-  final TextStyle? style;
-
-  @override
-  State<_ExpandableText> createState() => _ExpandableTextState();
-}
-
-class _ExpandableTextState extends State<_ExpandableText> {
-  static const _collapseThreshold = 200;
-  bool _expanded = false;
-
-  bool get _isLong => widget.text.length > _collapseThreshold;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isLong || _expanded) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnilistMarkdown(widget.text, style: widget.style),
-          if (_isLong)
-            _ExpandToggleButton(
-              label: 'Ver menos',
-              icon: Icons.expand_less_rounded,
-              onTap: () => setState(() => _expanded = false),
-            ),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: 100,
-          child: ClipRect(
-            child: ShaderMask(
-              shaderCallback: (rect) => LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.white, Colors.white.withAlpha(0)],
-                stops: const [0.6, 1.0],
-              ).createShader(rect),
-              blendMode: BlendMode.dstIn,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: AnilistMarkdown(widget.text, style: widget.style),
-              ),
-            ),
-          ),
-        ),
-        _ExpandToggleButton(
-          label: 'Ver más',
-          icon: Icons.expand_more_rounded,
-          onTap: () => setState(() => _expanded = true),
-        ),
-      ],
-    );
-  }
-}
-
-class _ExpandToggleButton extends StatelessWidget {
-  const _ExpandToggleButton({required this.label, required this.icon, required this.onTap});
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: cs.primary.withAlpha(18),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: cs.primary),
-              const SizedBox(width: 4),
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActivityCard extends ConsumerWidget {
-  const _ActivityCard({required this.activity});
-
-  final FeedActivity activity;
-
-  IconData _sourceIcon(MediaKind kind) => switch (kind) {
-        MediaKind.anime => Icons.animation_rounded,
-        MediaKind.manga => Icons.menu_book_rounded,
-        MediaKind.movie => Icons.movie_rounded,
-        MediaKind.tv => Icons.tv_rounded,
-        MediaKind.game => Icons.sports_esports_rounded,
-      };
-
-  Color _sourceColor(MediaKind kind, ColorScheme cs) => switch (kind) {
-        MediaKind.anime => cs.primary,
-        MediaKind.manga => Colors.deepPurple,
-        MediaKind.movie => Colors.amber.shade700,
-        MediaKind.tv => Colors.teal,
-        MediaKind.game => Colors.redAccent,
-      };
-
-  Future<void> _handleLike(BuildContext context, WidgetRef ref) async {
-    final token = await ref.read(anilistTokenProvider.future);
-    if (token == null) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
-      );
-      return;
-    }
-    final graphql = ref.read(anilistGraphqlProvider);
-    final actId = int.tryParse(activity.id);
-    if (actId == null) return;
-
-    final isLiked = await graphql.toggleLike(actId, token);
-    final updated = activity.copyWith(
-      isLiked: isLiked,
-      likeCount: isLiked
-          ? activity.likeCount + 1
-          : (activity.likeCount - 1).clamp(0, 999999),
-    );
-
-    try { ref.read(anilistFeedProvider.notifier).updateActivity(updated); } catch (_) {}
-    try { ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).updateActivity(updated); } catch (_) {}
-    try { ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).updateActivity(updated); } catch (_) {}
-    try { ref.read(anilistFeedFollowingProvider.notifier).updateActivity(updated); } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () {
-              if (activity.mediaId != null) {
-                context.push('/media/${activity.mediaId}?kind=${activity.source.code}');
-              }
-            },
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: activity.userId != null
-                      ? () => context.push('/user/${activity.userId}')
-                      : null,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    backgroundImage: activity.userAvatarUrl != null
-                        ? CachedNetworkImageProvider(activity.userAvatarUrl!)
-                        : null,
-                    child: activity.userAvatarUrl == null
-                        ? Text(
-                            activity.userName.isNotEmpty
-                                ? activity.userName[0].toUpperCase()
-                                : '?',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurface,
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: GestureDetector(
-                              onTap: activity.userId != null
-                                  ? () => context.push('/user/${activity.userId}')
-                                  : null,
-                              child: Text(
-                                activity.userName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            activity.isTextActivity
-                                ? Icons.edit_note_rounded
-                                : _sourceIcon(activity.source),
-                            size: 13,
-                            color: activity.isTextActivity
-                                ? colorScheme.onSurfaceVariant
-                                : _sourceColor(activity.source, colorScheme),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _timeAgo(activity.createdAt, l10n),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      if (activity.isTextActivity)
-                        _ExpandableText(
-                          text: activity.mediaTitle,
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-                        )
-                      else
-                        RichText(
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurface,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: activity.action,
-                                style: TextStyle(color: colorScheme.onSurfaceVariant),
-                              ),
-                              const TextSpan(text: ' '),
-                              TextSpan(
-                                text: activity.mediaTitle,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (activity.mediaPosterUrl != null) ...[
-                  const SizedBox(width: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CachedNetworkImage(
-                      imageUrl: activity.mediaPosterUrl!,
-                      width: 45,
-                      height: 64,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const SizedBox(width: 42),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _handleLike(context, ref),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        activity.isLiked ? Icons.favorite : Icons.favorite_border,
-                        size: 16,
-                        color: activity.isLiked ? Colors.red.shade400 : colorScheme.onSurfaceVariant,
-                      ),
-                      if (activity.likeCount > 0) ...[
-                        const SizedBox(width: 4),
-                        Text('${activity.likeCount}',
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => context.push('/activity/${activity.id}/replies'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline,
-                          size: 15, color: colorScheme.onSurfaceVariant),
-                      if (activity.replyCount > 0) ...[
-                        const SizedBox(width: 4),
-                        Text('${activity.replyCount}',
-                            style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _AnimeMangaBrowseList extends ConsumerStatefulWidget {
   const _AnimeMangaBrowseList({

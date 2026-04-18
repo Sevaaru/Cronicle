@@ -8,7 +8,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
-/// Home feed de películas o series usando datos de Trakt.tv.
+/// Home feed de pelÃ­culas o series usando datos de Trakt.tv.
 class TraktHomeFeedView extends ConsumerWidget {
   const TraktHomeFeedView({super.key, required this.kind});
 
@@ -116,7 +116,7 @@ class TraktHomeFeedView extends ConsumerWidget {
   }
 }
 
-// ─── Movies feed ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Movies feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MoviesFeed extends StatelessWidget {
   const _MoviesFeed({required this.data, required this.l10n});
@@ -188,7 +188,7 @@ class _MoviesFeed extends StatelessWidget {
   }
 }
 
-// ─── Shows feed ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Shows feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ShowsFeed extends StatelessWidget {
   const _ShowsFeed({required this.data, required this.l10n});
@@ -260,9 +260,9 @@ class _ShowsFeed extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 String? _coverUrl(Map<String, dynamic> item) =>
     (item['coverImage'] as Map?)?['large'] as String?;
@@ -287,7 +287,7 @@ String _formatVotes(int v) {
   return '$v';
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Section header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
@@ -329,7 +329,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Skeleton helper ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Skeleton helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Widget _skel(BuildContext ctx,
     {required double w, required double h, double r = 8, Color? color}) {
@@ -344,7 +344,7 @@ Widget _skel(BuildContext ctx,
   );
 }
 
-// ─── Poster placeholder ───────────────────────────────────────────────────────
+// â”€â”€â”€ Poster placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder({
@@ -378,7 +378,7 @@ class _PosterPlaceholder extends StatelessWidget {
   }
 }
 
-// ─── Score badge ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Score badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.score, this.small = false});
@@ -416,11 +416,11 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SECTION WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// ─── 1. Score Carousel ────────────────────────────────────────────────────────
+// â”€â”€â”€ 1. Score Carousel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ScoreCarouselSection extends StatelessWidget {
   const _ScoreCarouselSection({
@@ -445,7 +445,7 @@ class _ScoreCarouselSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final slice = items.take(10).toList();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 0, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -551,7 +551,7 @@ class _ScoreCarouselCard extends StatelessWidget {
   }
 }
 
-// ─── 2. Ranked List ───────────────────────────────────────────────────────────
+// â”€â”€â”€ 2. Ranked List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _RankedListSection extends StatelessWidget {
   const _RankedListSection({
@@ -572,7 +572,7 @@ class _RankedListSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final slice = items.take(6).toList();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -609,14 +609,14 @@ class _RankedRow extends StatelessWidget {
     final cert = item['certification'] as String?;
     final genresList = (item['genres'] as List?)?.cast<String>();
     final genres = genresList != null && genresList.isNotEmpty
-        ? genresList.take(2).join(' · ')
+        ? genresList.take(2).join(' Â· ')
         : null;
     final votes = item['votes'] as int?;
     final network = item['network'] as String?;
 
     final subtitle = genres ??
         [?network, if (year != null) '$year']
-            .join(' · ')
+            .join(' Â· ')
             .nullIfEmpty;
 
     final badge = cert ?? (year != null ? '$year' : null);
@@ -725,7 +725,7 @@ class _RankedRow extends StatelessWidget {
   }
 }
 
-// ─── 3. Hero Section ──────────────────────────────────────────────────────────
+// â”€â”€â”€ 3. Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
@@ -748,7 +748,7 @@ class _HeroSection extends StatelessWidget {
     final rest = items.skip(1).take(5).toList();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -830,7 +830,7 @@ class _HeroCard extends StatelessWidget {
     final id = item['id'] as int?;
     final genresList = (item['genres'] as List?)?.cast<String>();
     final genres = genresList != null && genresList.isNotEmpty
-        ? genresList.take(2).join(' · ')
+        ? genresList.take(2).join(' Â· ')
         : '';
     final year = item['year'] as int?;
     final cert = item['certification'] as String?;
@@ -940,7 +940,7 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ─── 4. Mood Band ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ 4. Mood Band â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MoodBandSection extends StatelessWidget {
   const _MoodBandSection({
@@ -963,7 +963,7 @@ class _MoodBandSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final slice = items.take(8).toList();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Container(
         decoration: BoxDecoration(
           color: darkBg,
@@ -1029,7 +1029,7 @@ class _MoodBandSection extends StatelessWidget {
   }
 }
 
-// ─── 5. Spotlight Rows ────────────────────────────────────────────────────────
+// â”€â”€â”€ 5. Spotlight Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SpotlightRowsSection extends StatelessWidget {
   const _SpotlightRowsSection({
@@ -1050,7 +1050,7 @@ class _SpotlightRowsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final slice = items.take(5).toList();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1104,13 +1104,13 @@ class _SpotlightRow extends StatelessWidget {
     final id = item['id'] as int?;
     final genresList = (item['genres'] as List?)?.cast<String>();
     final genres = genresList != null && genresList.isNotEmpty
-        ? genresList.take(2).join(' · ')
+        ? genresList.take(2).join(' Â· ')
         : null;
     final year = item['year'] as int?;
     final network = item['network'] as String?;
     final subtitle = genres ??
         [?network, if (year != null) '$year']
-            .join(' · ')
+            .join(' Â· ')
             .nullIfEmpty;
 
     return GestureDetector(
@@ -1176,9 +1176,9 @@ class _SpotlightRow extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SKELETON WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _MovieSkeletons extends StatelessWidget {
   const _MovieSkeletons({required this.l10n});
@@ -1248,7 +1248,7 @@ class _ScoreCarouselSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 0, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1292,7 +1292,7 @@ class _RankedListSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1340,7 +1340,7 @@ class _HeroSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1379,7 +1379,7 @@ class _MoodBandSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Container(
         decoration: BoxDecoration(
           color: darkBg,
@@ -1445,7 +1445,7 @@ class _SpotlightRowsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1502,7 +1502,7 @@ class _SpotlightRowsSkeleton extends StatelessWidget {
   }
 }
 
-// ─── Scroll behavior (suppress stretch on web) ────────────────────────────────
+// â”€â”€â”€ Scroll behavior (suppress stretch on web) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _NoStretchScrollBehavior extends MaterialScrollBehavior {
   const _NoStretchScrollBehavior();
@@ -1516,7 +1516,7 @@ class _NoStretchScrollBehavior extends MaterialScrollBehavior {
       child;
 }
 
-// ─── String extension ─────────────────────────────────────────────────────────
+// â”€â”€â”€ String extension â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 extension _StringNullIfEmpty on String {
   String? get nullIfEmpty => isEmpty ? null : this;

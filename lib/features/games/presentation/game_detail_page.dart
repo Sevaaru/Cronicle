@@ -423,21 +423,10 @@ class _GameDetailContent extends StatelessWidget {
                     ),
                   ],
 
-                  Text(l10n.gameDetailReviewsSection,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15)),
-                  const SizedBox(height: 6),
-                  if (reviews.isEmpty)
-                    GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        l10n.gameDetailNoReviews,
-                        style: TextStyle(
-                            fontSize: 13, color: cs.onSurfaceVariant),
-                      ),
-                    )
-                  else
+                  if (reviews.isNotEmpty) ...[                    Text(l10n.gameDetailReviewsSection,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 6),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Column(
@@ -458,6 +447,7 @@ class _GameDetailContent extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ],
 
                   if (EnvConfig.openCriticRapidApiKey.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -467,10 +457,12 @@ class _GameDetailContent extends StatelessWidget {
                   if (score != null ||
                       criticScore != null ||
                       releaseDate != null)
-                    GlassCard(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      margin: const EdgeInsets.only(bottom: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: GlassCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        margin: const EdgeInsets.only(bottom: 12),
                       child: Wrap(
                         spacing: 20,
                         runSpacing: 12,
@@ -513,6 +505,7 @@ class _GameDetailContent extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
 
                   SizedBox(
                     width: double.infinity,

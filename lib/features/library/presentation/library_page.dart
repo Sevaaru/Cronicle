@@ -15,6 +15,7 @@ import 'package:cronicle/features/settings/presentation/library_kind_layout_noti
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
@@ -228,7 +229,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.libraryTitle)),
+      appBar: AppBar(
+        leading: const ProfileAvatarButton(),
+        titleSpacing: 0,
+        title: Text(l10n.libraryTitle, style: pageTitleStyle()),
+      ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _LibrarySearchFab(

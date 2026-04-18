@@ -7,6 +7,7 @@
   "navLibrary": "Biblioteca",
   "navSearch": "Búsqueda",
   "navProfile": "Perfil",
+  "navSocial": "Social",
   "navSettings": "Ajustes",
   "navAnime": "Anime",
   "navManga": "Manga",
@@ -597,5 +598,22 @@
   "gameDetailExtCatGog": "GOG",
   "gameDetailExtCatMicrosoft": "Microsoft Store",
   "gameDetailExtCatEpic": "Epic Games",
-  "gameDetailExtCatOther": "Tienda externa"
+  "gameDetailExtCatOther": "Tienda externa",
+
+  "onboardingTitle": "¿Qué te interesa?",
+  "onboardingSubtitle": "Selecciona al menos una categoría para personalizar tu experiencia",
+  "onboardingContinue": "Continuar",
+  "onboardingInterestAnime": "Anime",
+  "onboardingInterestManga": "Manga",
+  "onboardingInterestMovies": "Películas",
+  "onboardingInterestTv": "Series de TV",
+  "onboardingInterestGames": "Videojuegos",
+
+  "settingsCustomizeSearchFilters": "Filtros de búsqueda",
+  "settingsCustomizeSearchFiltersDesc": "Reordena u oculta los filtros en la pestaña de búsqueda",
+  "settingsInterests": "Tus intereses",
+  "settingsInterestsDesc": "Cambia los contenidos que ves en inicio, biblioteca y búsqueda",
+  "settingsInterestsChanged": "Intereses actualizados",
+
+  "socialTitle": "Social"
 }

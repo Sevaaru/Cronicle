@@ -15,12 +15,15 @@ import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/games/presentation/igdb_game_review_detail_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_page.dart';
 import 'package:cronicle/features/profile/presentation/personal_stats_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
+import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
@@ -66,7 +69,7 @@ final _shellKey = GlobalKey<NavigatorState>();
 int _tabIndexFromPath(String path) {
   if (path.startsWith('/library')) return 1;
   if (path.startsWith('/search')) return 2;
-  if (path.startsWith('/profile')) return 3;
+  if (path.startsWith('/social')) return 3;
   if (path.startsWith('/settings')) return 4;
   return 0;
 }
@@ -74,10 +77,11 @@ int _tabIndexFromPath(String path) {
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
   final startPage = ref.read(defaultStartPageProvider);
+  final onboardingDone = ref.read(onboardingCompletedProvider);
 
   return GoRouter(
     navigatorKey: cronicleRootNavigatorKey,
-    initialLocation: startPage,
+    initialLocation: onboardingDone ? startPage : '/onboarding',
     redirect: (context, state) {
       // Android entrega el intent OAuth a MainActivity; el sistema puede
       // exponerlo como "ruta" y GoRouter no tiene match → GoException.
@@ -87,6 +91,15 @@ GoRouter appRouter(AppRouterRef ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
+        redirect: (context, state) {
+          final done = ref.read(onboardingCompletedProvider);
+          if (done) return startPage;
+          return null;
+        },
+      ),
       ShellRoute(
         navigatorKey: _shellKey,
         builder: (context, state, child) {
@@ -96,7 +109,7 @@ GoRouter appRouter(AppRouterRef ref) {
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              const routes = ['/feed', '/library', '/search', '/profile', '/settings'];
+              const routes = ['/feed', '/library', '/search', '/social', '/settings'];
               context.go(routes[i]);
             },
             child: child,
@@ -126,10 +139,14 @@ GoRouter appRouter(AppRouterRef ref) {
             ),
           ),
           GoRoute(
-            path: '/profile',
+            path: '/social',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfilePage(),
+              child: SocialPage(),
             ),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const ProfilePage(),
           ),
           GoRoute(
             path: '/profile/personal-stats',

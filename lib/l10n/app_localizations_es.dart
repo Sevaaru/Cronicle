@@ -24,6 +24,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navProfile => 'Perfil';
 
   @override
+  String get navSocial => 'Social';
+
+  @override
   String get navSettings => 'Ajustes';
 
   @override
@@ -1666,4 +1669,49 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gameDetailExtCatOther => 'Tienda externa';
+
+  @override
+  String get onboardingTitle => '¿Qué te interesa?';
+
+  @override
+  String get onboardingSubtitle =>
+      'Selecciona al menos una categoría para personalizar tu experiencia';
+
+  @override
+  String get onboardingContinue => 'Continuar';
+
+  @override
+  String get onboardingInterestAnime => 'Anime';
+
+  @override
+  String get onboardingInterestManga => 'Manga';
+
+  @override
+  String get onboardingInterestMovies => 'Películas';
+
+  @override
+  String get onboardingInterestTv => 'Series de TV';
+
+  @override
+  String get onboardingInterestGames => 'Videojuegos';
+
+  @override
+  String get settingsCustomizeSearchFilters => 'Filtros de búsqueda';
+
+  @override
+  String get settingsCustomizeSearchFiltersDesc =>
+      'Reordena u oculta los filtros en la pestaña de búsqueda';
+
+  @override
+  String get settingsInterests => 'Tus intereses';
+
+  @override
+  String get settingsInterestsDesc =>
+      'Cambia los contenidos que ves en inicio, biblioteca y búsqueda';
+
+  @override
+  String get settingsInterestsChanged => 'Intereses actualizados';
+
+  @override
+  String get socialTitle => 'Social';
 }
