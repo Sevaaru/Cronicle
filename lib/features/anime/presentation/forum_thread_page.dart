@@ -1,5 +1,6 @@
 ﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
@@ -294,6 +295,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     final createdAt = _thread?['createdAt'] as int?;
     final viewCount = _thread?['viewCount'] as int? ?? 0;
     final user = _thread?['user'] as Map<String, dynamic>?;
+    final userId = user?['id'] as int?;
     final userName = user?['name'] as String? ?? '';
     final avatar = (user?['avatar'] as Map?)?['medium'] as String?;
     final categories =
@@ -345,17 +347,23 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
               Row(
                 children: [
                   if (avatar != null)
-                    ClipOval(
-                      child: CachedNetworkImage(
-                          imageUrl: avatar,
-                          width: 24,
-                          height: 24,
-                          fit: BoxFit.cover),
+                    GestureDetector(
+                      onTap: userId != null ? () => context.push('/user/$userId') : null,
+                      child: ClipOval(
+                        child: CachedNetworkImage(
+                            imageUrl: avatar,
+                            width: 24,
+                            height: 24,
+                            fit: BoxFit.cover),
+                      ),
                     ),
                   if (avatar != null) const SizedBox(width: 6),
-                  Text(userName,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: userId != null ? () => context.push('/user/$userId') : null,
+                    child: Text(userName,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
                   const SizedBox(width: 6),
                   Text('Â· ${_timeAgoForum(createdAt)}',
                       style: TextStyle(
@@ -597,6 +605,7 @@ class _CommentTileState extends State<_CommentTile> {
           _CommentHeader(
             avatar: avatar,
             userName: userName,
+            userId: user?['id'] as int?,
             createdAt: createdAt,
             cs: cs,
           ),
@@ -694,6 +703,7 @@ class _CommentHeader extends StatelessWidget {
   const _CommentHeader({
     required this.avatar,
     required this.userName,
+    this.userId,
     required this.createdAt,
     required this.cs,
     this.small = false,
@@ -701,6 +711,7 @@ class _CommentHeader extends StatelessWidget {
 
   final String? avatar;
   final String userName;
+  final int? userId;
   final int? createdAt;
   final ColorScheme cs;
   final bool small;
@@ -708,21 +719,30 @@ class _CommentHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sz = small ? 18.0 : 22.0;
+    void goToProfile() {
+      if (userId != null) context.push('/user/$userId');
+    }
     return Row(
       children: [
         if (avatar != null)
-          ClipOval(
-            child: CachedNetworkImage(
-                imageUrl: avatar!,
-                width: sz,
-                height: sz,
-                fit: BoxFit.cover),
+          GestureDetector(
+            onTap: goToProfile,
+            child: ClipOval(
+              child: CachedNetworkImage(
+                  imageUrl: avatar!,
+                  width: sz,
+                  height: sz,
+                  fit: BoxFit.cover),
+            ),
           ),
         if (avatar != null) SizedBox(width: small ? 4 : 6),
-        Text(userName,
-            style: TextStyle(
-                fontSize: small ? 11.0 : 12.0,
-                fontWeight: FontWeight.w600)),
+        GestureDetector(
+          onTap: goToProfile,
+          child: Text(userName,
+              style: TextStyle(
+                  fontSize: small ? 11.0 : 12.0,
+                  fontWeight: FontWeight.w600)),
+        ),
         SizedBox(width: small ? 4 : 6),
         Text(_timeAgoForum(createdAt),
             style: TextStyle(
@@ -856,6 +876,7 @@ class _ChildCommentTile extends StatelessWidget {
                   _CommentHeader(
                     avatar: avatar,
                     userName: userName,
+                    userId: user?['id'] as int?,
                     createdAt: createdAt,
                     cs: cs,
                     small: true,

@@ -1,9 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
-import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class AnilistMarkdown extends StatelessWidget {
   const AnilistMarkdown(this.text, {super.key, this.style});
@@ -122,36 +122,51 @@ class _ImgWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final maxW = MediaQuery.of(context).size.width - 32;
+    final effectiveWidth = width != null && width! < maxW ? width! : maxW;
+
+    final errorWidget = GestureDetector(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.open_in_new, size: 16, color: cs.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text('Abrir imagen', style: TextStyle(fontSize: 12, color: cs.primary)),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: GestureDetector(
         onTap: () => showFullscreenImage(context, url),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: RemoteNetworkImage(
-            key: ValueKey(url),
-            imageUrl: url,
-            width: width,
-            fit: BoxFit.contain,
-            error: GestureDetector(
-              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.open_in_new, size: 16, color: cs.primary),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text('Abrir imagen', style: TextStyle(fontSize: 12, color: cs.primary)),
-                    ),
-                  ],
+          child: SizedBox(
+            width: effectiveWidth,
+            child: CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.scaleDown,
+              placeholder: (_, _) => SizedBox(
+                height: 80,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: cs.primary,
+                  ),
                 ),
               ),
+              errorWidget: (_, _, _) => errorWidget,
             ),
           ),
         ),
