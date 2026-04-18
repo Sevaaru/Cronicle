@@ -141,7 +141,7 @@ Future<List<Map<String, dynamic>>> anilistPopular(
   return graphql.fetchPopular(type: type);
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
 @riverpod
 class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   static const _perPage = 24;

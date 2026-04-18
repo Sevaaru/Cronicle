@@ -30,7 +30,9 @@ class ProfilePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        clipBehavior: Clip.none,
         leading: const ProfileLeadingCloseButton(),
+        leadingWidth: kProfileLeadingWidth,
         automaticallyImplyLeading: false,
         title: Text(l10n.profileTitle),
       ),

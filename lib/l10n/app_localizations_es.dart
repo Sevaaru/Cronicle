@@ -375,6 +375,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedBrowseSeasonal => 'De temporada';
 
   @override
+  String get feedBrowseTrending => 'Tendencias';
+
+  @override
   String get feedBrowseTopRated => 'Mejor valorados';
 
   @override

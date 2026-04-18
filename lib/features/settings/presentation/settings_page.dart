@@ -37,6 +37,7 @@ import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/core/utils/google_web_button.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -48,7 +49,9 @@ class SettingsPage extends ConsumerWidget {
     final googleSignIn = ref.watch(googleSignInProvider);
     return Scaffold(
       appBar: AppBar(
+        clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.settingsTitle, style: pageTitleStyle()),
       ),

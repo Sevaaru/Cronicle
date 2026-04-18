@@ -14,6 +14,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -118,7 +119,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     return Scaffold(
       appBar: AppBar(
+        clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.searchTitle, style: pageTitleStyle()),
       ),

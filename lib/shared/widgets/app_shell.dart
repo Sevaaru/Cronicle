@@ -138,40 +138,56 @@ class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
                   height: kProfileLeadingCircleSize,
                   fit: BoxFit.cover,
                 )
-              : Icon(Icons.person, size: 16, color: cs.onSurfaceVariant),
+              : Icon(Icons.person, size: 20, color: cs.onSurfaceVariant),
         ),
       ),
     );
 
-    return Padding(
-      padding: kProfileLeadingPadding,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          // Sombra solo en el cículo del avatar (no en el padding del leading).
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: _hover
-                ? [
-                    BoxShadow(
-                      color: cs.primary.withAlpha(100),
-                      blurRadius: 12,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 2),
+    return SizedBox(
+      width: kProfileLeadingWidth,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: kProfileLeadingPadding,
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              // Sombra solo en el círculo del avatar (no en el padding del leading).
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: _hover
+                    ? [
+                        BoxShadow(
+                          color: cs.primary.withAlpha(100),
+                          blurRadius: 12,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: SizedBox(
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    color: Colors.transparent,
+                    clipBehavior: Clip.none,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _openProfile,
+                      child: avatarCore,
                     ),
-                  ]
-                : const [],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            clipBehavior: Clip.none,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: _openProfile,
-              child: avatarCore,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

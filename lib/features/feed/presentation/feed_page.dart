@@ -14,6 +14,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 enum _FeedFilter {
   anime,
@@ -41,6 +42,7 @@ String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
 
 enum _AnimeMangaBrowseTab {
   seasonal,
+  trending,
   topRated,
   upcoming,
   recentlyReleased,
@@ -48,6 +50,15 @@ enum _AnimeMangaBrowseTab {
 
 const _anilistBrowseCategories = [
   'seasonal',
+  'trending',
+  'top_rated',
+  'upcoming',
+  'recently_released',
+];
+
+/// Categorías de browse para manga (sin «de temporada»; la primera es tendencias).
+const _mangaBrowseCategories = [
+  'trending',
   'top_rated',
   'upcoming',
   'recently_released',
@@ -55,6 +66,7 @@ const _anilistBrowseCategories = [
 
 String _browseCategoryApiKey(_AnimeMangaBrowseTab tab) => switch (tab) {
       _AnimeMangaBrowseTab.seasonal => 'seasonal',
+      _AnimeMangaBrowseTab.trending => 'trending',
       _AnimeMangaBrowseTab.topRated => 'top_rated',
       _AnimeMangaBrowseTab.upcoming => 'upcoming',
       _AnimeMangaBrowseTab.recentlyReleased => 'recently_released',
@@ -63,6 +75,7 @@ String _browseCategoryApiKey(_AnimeMangaBrowseTab tab) => switch (tab) {
 String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
     switch (tab) {
       _AnimeMangaBrowseTab.seasonal => l10n.feedBrowseSeasonal,
+      _AnimeMangaBrowseTab.trending => l10n.feedBrowseTrending,
       _AnimeMangaBrowseTab.topRated => l10n.feedBrowseTopRated,
       _AnimeMangaBrowseTab.upcoming => l10n.feedBrowseUpcoming,
       _AnimeMangaBrowseTab.recentlyReleased =>
@@ -76,8 +89,9 @@ const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
   _AnimeMangaBrowseTab.recentlyReleased,
 ];
 
-/// Manga no tiene temporadas en Anilist como el anime; se omite «De temporada».
+/// Manga: sin «De temporada»; se abre en tendencias (evita seasonal vacío).
 const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
+  _AnimeMangaBrowseTab.trending,
   _AnimeMangaBrowseTab.topRated,
   _AnimeMangaBrowseTab.upcoming,
   _AnimeMangaBrowseTab.recentlyReleased,
@@ -107,8 +121,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
         }
       case _FeedFilter.manga:
         ref.invalidate(anilistFeedByTypeProvider('MANGA_LIST'));
-        for (final c in _anilistBrowseCategories) {
-          if (c == 'seasonal') continue;
+        for (final c in _mangaBrowseCategories) {
           ref.invalidate(anilistBrowseMediaProvider('MANGA', c));
         }
       case _FeedFilter.game:
@@ -164,6 +177,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
       if (!layout0.visibleIdSet.contains(_filter.name)) {
         _filter = _FeedFilter.values.byName(layout0.firstVisibleId);
       }
+      _animeMangaBrowseTab = _filter == _FeedFilter.manga
+          ? _AnimeMangaBrowseTab.trending
+          : _AnimeMangaBrowseTab.seasonal;
       _filterInitialized = true;
     }
 
@@ -173,9 +189,12 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     return Scaffold(
       appBar: AppBar(
+        clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.feedTitle, style: pageTitleStyle()),
+        actionsPadding: const EdgeInsets.only(right: 12),
         actions: [
           Consumer(
             builder: (context, ref, _) {
@@ -237,7 +256,9 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                       _filter = f;
                       if (prev != f &&
                           (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
-                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.seasonal;
+                        _animeMangaBrowseTab = f == _FeedFilter.manga
+                            ? _AnimeMangaBrowseTab.trending
+                            : _AnimeMangaBrowseTab.seasonal;
                       }
                     });
                   },

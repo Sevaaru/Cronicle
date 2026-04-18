@@ -180,7 +180,7 @@ class AnilistGraphqlDatasource {
   }
 
   /// Home browse rails for Anilist: [category] is
-  /// `seasonal`, `top_rated`, `upcoming`, `recently_released`.
+  /// `seasonal`, `trending`, `top_rated`, `upcoming`, `recently_released`.
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})> fetchBrowseMedia({
     required String type,
     required String category,
@@ -218,6 +218,30 @@ class AnilistGraphqlDatasource {
         'type': type,
         'season': s.season,
         'seasonYear': s.seasonYear,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
+    if (category == 'trending') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: TRENDING_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
         'page': page,
         'perPage': perPage,
       });

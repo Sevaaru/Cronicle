@@ -752,6 +752,12 @@ abstract class AppLocalizations {
   /// **'De temporada'**
   String get feedBrowseSeasonal;
 
+  /// No description provided for @feedBrowseTrending.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencias'**
+  String get feedBrowseTrending;
+
   /// No description provided for @feedBrowseTopRated.
   ///
   /// In es, this message translates to:

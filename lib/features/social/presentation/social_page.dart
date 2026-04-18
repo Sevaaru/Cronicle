@@ -5,6 +5,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/feed/presentation/activity_feed_widgets.dart';
 import 'package:cronicle/features/social/presentation/forum_feed_tab.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -139,7 +140,9 @@ class _SocialPageState extends ConsumerState<SocialPage>
 
     return Scaffold(
       appBar: AppBar(
+        clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.socialTitle, style: pageTitleStyle()),
         bottom: TabBar(

@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 /// Mismo tamaño y padding que [ProfileAvatarButton] para alinear la transición perfil ↔ shell.
-const double kProfileLeadingCircleSize = 28;
+/// [left] cercano al margen del cuerpo (16); un poco más a la derecha para aire respecto al borde.
+const double kProfileLeadingCircleSize = 36;
 
 const EdgeInsets kProfileLeadingPadding =
-    EdgeInsets.only(left: 10, top: 8, bottom: 8, right: 4);
+    EdgeInsets.only(left: 18, top: 6, bottom: 6, right: 16);
+
+/// Espacio extra a la derecha del bloque (antes del título) para que el `AppBar` no comprima el icono.
+const double kProfileLeadingTrailingSlotExtra = 12;
+
+/// Ancho total del leading: contenido + reserva; debe coincidir con el `SizedBox` del avatar/cerrar.
+double get kProfileLeadingWidth =>
+    kProfileLeadingPadding.left +
+    kProfileLeadingCircleSize +
+    kProfileLeadingPadding.right +
+    kProfileLeadingTrailingSlotExtra;
 
 /// Botón circular con ✕ para cerrar el perfil; misma huella visual que el avatar del AppBar.
 class ProfileLeadingCloseButton extends StatefulWidget {
@@ -32,7 +43,7 @@ class _ProfileLeadingCloseButtonState extends State<ProfileLeadingCloseButton> {
           child: Center(
             child: Icon(
               Icons.close_rounded,
-              size: 18,
+              size: 22,
               color: cs.onSurfaceVariant,
             ),
           ),
@@ -42,34 +53,50 @@ class _ProfileLeadingCloseButtonState extends State<ProfileLeadingCloseButton> {
 
     return Tooltip(
       message: l10n.closeButtonLabel,
-      child: Padding(
-        padding: kProfileLeadingPadding,
-        child: MouseRegion(
-          onEnter: (_) => setState(() => _hover = true),
-          onExit: (_) => setState(() => _hover = false),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: _hover
-                  ? [
-                      BoxShadow(
-                        color: cs.primary.withAlpha(100),
-                        blurRadius: 12,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 2),
+      child: SizedBox(
+        width: kProfileLeadingWidth,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: kProfileLeadingPadding,
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _hover = true),
+              onExit: (_) => setState(() => _hover = false),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: _hover
+                      ? [
+                          BoxShadow(
+                            color: cs.primary.withAlpha(100),
+                            blurRadius: 12,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: SizedBox(
+                    width: kProfileLeadingCircleSize,
+                    height: kProfileLeadingCircleSize,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      color: Colors.transparent,
+                      clipBehavior: Clip.none,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => context.pop(),
+                        child: core,
                       ),
-                    ]
-                  : const [],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              clipBehavior: Clip.none,
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: () => context.pop(),
-                child: core,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

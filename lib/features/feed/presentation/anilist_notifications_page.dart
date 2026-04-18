@@ -10,6 +10,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
@@ -234,10 +235,30 @@ class AnilistNotificationsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+        clipBehavior: Clip.none,
+        leading: SizedBox(
+          width: kProfileLeadingWidth,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: kProfileLeadingPadding,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: kProfileLeadingCircleSize,
+                  minHeight: kProfileLeadingCircleSize,
+                ),
+                style: IconButton.styleFrom(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => context.pop(),
+              ),
+            ),
+          ),
         ),
+        leadingWidth: kProfileLeadingWidth,
+        automaticallyImplyLeading: false,
         title: Text(l10n.notificationsTitle),
       ),
       body: token == null
