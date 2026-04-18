@@ -45,13 +45,14 @@ class GamesHomeFeedView extends ConsumerWidget {
     ref.invalidate(igdbPopularProvider);
     ref.invalidate(igdbHomeGameRailProvider);
     ref.invalidate(igdbHomeReviewRailProvider);
-    await Future.wait([
-      ref.read(igdbPopularProvider.future),
-      ...GamesFeedSection.gameRailSlugs
-          .map((s) => ref.read(igdbHomeGameRailProvider(s).future)),
-      ref.read(igdbHomeReviewRailProvider('recent').future),
-      ref.read(igdbHomeReviewRailProvider('critics').future),
-    ]);
+    await ref.read(igdbPopularProvider.future);
+    for (final s in GamesFeedSection.gameRailSlugs) {
+      await ref.read(igdbHomeGameRailProvider(s).future);
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+    }
+    await ref.read(igdbHomeReviewRailProvider('recent').future);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    await ref.read(igdbHomeReviewRailProvider('critics').future);
   }
 
   @override
@@ -65,6 +66,8 @@ class GamesHomeFeedView extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 32),
         children: [
           popularAsync.when(
+            skipLoadingOnRefresh: true,
+            skipError: true,
             loading: () => _PopularSkeleton(title: l10n.gamesHomePopularNow),
             error: (e, _) => _errorBox(context, e, l10n),
             data: (popular) {
@@ -232,6 +235,8 @@ class _DeferredGameRail extends ConsumerWidget {
     final async = ref.watch(igdbHomeGameRailProvider(section));
 
     return async.when(
+      skipLoadingOnRefresh: true,
+      skipError: true,
       loading: () => _GameRailSkeleton(title: title, style: style),
       error: (e, st) => const SizedBox.shrink(),
       data: (items) {
@@ -266,6 +271,8 @@ class _DeferredReviewRail extends ConsumerWidget {
     final async = ref.watch(igdbHomeReviewRailProvider(kind));
 
     return async.when(
+      skipLoadingOnRefresh: true,
+      skipError: true,
       loading: () => _ReviewsSkeleton(title: title),
       error: (e, st) => const SizedBox.shrink(),
       data: (reviews) {
