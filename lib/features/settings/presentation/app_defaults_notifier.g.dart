@@ -6,6 +6,60 @@ part of 'app_defaults_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$scoringSystemSettingHash() =>
+    r'b736b12f520c8a397de8447ed87f129bdda81456';
+
+/// See also [ScoringSystemSetting].
+@ProviderFor(ScoringSystemSetting)
+final scoringSystemSettingProvider =
+    AutoDisposeNotifierProvider<ScoringSystemSetting, ScoringSystem>.internal(
+      ScoringSystemSetting.new,
+      name: r'scoringSystemSettingProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$scoringSystemSettingHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$ScoringSystemSetting = AutoDisposeNotifier<ScoringSystem>;
+String _$anilistAdvancedScoringEnabledHash() =>
+    r'41a6abf8584fc5a98b9130718be36eb256d80094';
+
+/// See also [AnilistAdvancedScoringEnabled].
+@ProviderFor(AnilistAdvancedScoringEnabled)
+final anilistAdvancedScoringEnabledProvider =
+    AutoDisposeNotifierProvider<AnilistAdvancedScoringEnabled, bool>.internal(
+      AnilistAdvancedScoringEnabled.new,
+      name: r'anilistAdvancedScoringEnabledProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistAdvancedScoringEnabledHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$AnilistAdvancedScoringEnabled = AutoDisposeNotifier<bool>;
+String _$anilistAdvancedScoresHash() =>
+    r'90803b9e09d1a2207d40b9b15cba5ea2a8c756c4';
+
+/// See also [AnilistAdvancedScores].
+@ProviderFor(AnilistAdvancedScores)
+final anilistAdvancedScoresProvider =
+    AutoDisposeNotifierProvider<
+      AnilistAdvancedScores,
+      Map<String, double>
+    >.internal(
+      AnilistAdvancedScores.new,
+      name: r'anilistAdvancedScoresProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistAdvancedScoresHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$AnilistAdvancedScores = AutoDisposeNotifier<Map<String, double>>;
 String _$defaultStartPageHash() => r'f75bb569dfa41c6604879abd0cb3d85a1e6ed792';
 
 /// See also [DefaultStartPage].
@@ -22,7 +76,7 @@ final defaultStartPageProvider =
     );
 
 typedef _$DefaultStartPage = AutoDisposeNotifier<String>;
-String _$defaultFeedTabHash() => r'1783cfe747faff619d92f42e69defd014300d5bc';
+String _$defaultFeedTabHash() => r'0ccb0cc60796ea309795c45f6aee3b815623419e';
 
 /// See also [DefaultFeedTab].
 @ProviderFor(DefaultFeedTab)

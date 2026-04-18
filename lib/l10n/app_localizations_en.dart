@@ -1709,4 +1709,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get socialTitle => 'Social';
+
+  @override
+  String get settingsScoringTitle => 'Scoring system';
+
+  @override
+  String get settingsScoringDesc => 'Choose how to score your content';
+
+  @override
+  String get scoringPoint100 => '100 Point';
+
+  @override
+  String get scoringPoint10Decimal => '10 Point Decimal';
+
+  @override
+  String get scoringPoint10 => '10 Point';
+
+  @override
+  String get scoringPoint5 => '5 Star';
+
+  @override
+  String get scoringPoint3 => '3 Point Smiley';
+
+  @override
+  String get settingsAdvancedScoring => 'Advanced scoring (Anilist)';
+
+  @override
+  String get settingsAdvancedScoringDesc =>
+      'Score by category: story, characters, visuals, audio, and enjoyment';
+
+  @override
+  String get advScoringStory => 'Story';
+
+  @override
+  String get advScoringCharacters => 'Characters';
+
+  @override
+  String get advScoringVisuals => 'Visuals';
+
+  @override
+  String get advScoringAudio => 'Audio';
+
+  @override
+  String get advScoringEnjoyment => 'Enjoyment';
+
+  @override
+  String get advScoringReset => 'Reset';
+
+  @override
+  String get mediaStatusFinished => 'Finished';
+
+  @override
+  String get mediaStatusReleasing => 'Releasing';
+
+  @override
+  String get mediaStatusNotYetReleased => 'Not Yet Released';
+
+  @override
+  String get mediaStatusCancelled => 'Cancelled';
+
+  @override
+  String get mediaStatusHiatus => 'On Hiatus';
+
+  @override
+  String get forumDiscussions => 'Forum discussions';
+
+  @override
+  String get forumViewAll => 'View more';
+
+  @override
+  String get forumThread => 'Forum thread';
+
+  @override
+  String forumReplies(int count) {
+    return '$count replies';
+  }
+
+  @override
+  String get forumNoReplies => 'No replies yet';
 }

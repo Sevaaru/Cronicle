@@ -64,6 +64,9 @@ class SettingsPage extends ConsumerWidget {
           _AppDefaultsSection(),
           const SizedBox(height: 12),
 
+          const _ScoringSection(),
+          const SizedBox(height: 12),
+
           if (kIsWeb)
             GlassCard(
               child: Text(
@@ -691,6 +694,68 @@ class _DefaultFilterSection extends ConsumerWidget {
                 visualDensity: VisualDensity.compact,
               );
             }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoringSection extends ConsumerWidget {
+  const _ScoringSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final current = ref.watch(scoringSystemSettingProvider);
+    final advEnabled = ref.watch(anilistAdvancedScoringEnabledProvider);
+
+    final options = [
+      (ScoringSystem.point100, l10n.scoringPoint100),
+      (ScoringSystem.point10Decimal, l10n.scoringPoint10Decimal),
+      (ScoringSystem.point10, l10n.scoringPoint10),
+      (ScoringSystem.point5, l10n.scoringPoint5),
+      (ScoringSystem.point3, l10n.scoringPoint3),
+    ];
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.settingsScoringTitle,
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 4),
+          Text(l10n.settingsScoringDesc,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+          const SizedBox(height: 14),
+
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: options.map((o) {
+              final selected = current == o.$1;
+              return ChoiceChip(
+                selected: selected,
+                label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+                onSelected: (_) =>
+                    ref.read(scoringSystemSettingProvider.notifier).set(o.$1),
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+
+          const Divider(height: 24),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsAdvancedScoring,
+                style: const TextStyle(fontSize: 13)),
+            subtitle: Text(l10n.settingsAdvancedScoringDesc,
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+            value: advEnabled,
+            onChanged: (_) =>
+                ref.read(anilistAdvancedScoringEnabledProvider.notifier).toggle(),
           ),
         ],
       ),

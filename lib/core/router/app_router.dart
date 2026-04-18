@@ -4,6 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/media_genre_tag_browse_page.dart';
+import 'package:cronicle/features/anime/presentation/forum_media_threads_page.dart';
+import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
@@ -227,6 +229,21 @@ GoRouter appRouter(AppRouterRef ref) {
               final reviewId = int.parse(state.pathParameters['id']!);
               final extra = state.extra as Map<String, dynamic>?;
               return ReviewDetailPage(reviewId: reviewId, initialData: extra);
+            },
+          ),
+          GoRoute(
+            path: '/forum/media/:id',
+            builder: (context, state) {
+              final mediaId = int.parse(state.pathParameters['id']!);
+              return ForumMediaThreadsPage(mediaId: mediaId);
+            },
+          ),
+          GoRoute(
+            path: '/forum/thread/:id',
+            builder: (context, state) {
+              final threadId = int.parse(state.pathParameters['id']!);
+              final extra = state.extra as Map<String, dynamic>?;
+              return ForumThreadPage(threadId: threadId, initialData: extra);
             },
           ),
           GoRoute(

@@ -597,5 +597,34 @@
   "settingsInterestsDesc": "Change the content you see in home, library, and search",
   "settingsInterestsChanged": "Interests updated",
 
-  "socialTitle": "Social"
+  "socialTitle": "Social",
+
+  "settingsScoringTitle": "Scoring system",
+  "settingsScoringDesc": "Choose how to score your content",
+  "scoringPoint100": "100 Point",
+  "scoringPoint10Decimal": "10 Point Decimal",
+  "scoringPoint10": "10 Point",
+  "scoringPoint5": "5 Star",
+  "scoringPoint3": "3 Point Smiley",
+  "settingsAdvancedScoring": "Advanced scoring (Anilist)",
+  "settingsAdvancedScoringDesc": "Score by category: story, characters, visuals, audio, and enjoyment",
+  "advScoringStory": "Story",
+  "advScoringCharacters": "Characters",
+  "advScoringVisuals": "Visuals",
+  "advScoringAudio": "Audio",
+  "advScoringEnjoyment": "Enjoyment",
+  "advScoringReset": "Reset",
+
+  "mediaStatusFinished": "Finished",
+  "mediaStatusReleasing": "Releasing",
+  "mediaStatusNotYetReleased": "Not Yet Released",
+  "mediaStatusCancelled": "Cancelled",
+  "mediaStatusHiatus": "On Hiatus",
+
+  "forumDiscussions": "Forum discussions",
+  "forumViewAll": "View more",
+  "forumThread": "Forum thread",
+  "forumReplies": "{count} replies",
+  "@forumReplies": { "placeholders": { "count": { "type": "int" } } },
+  "forumNoReplies": "No replies yet"
 }

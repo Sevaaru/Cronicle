@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -279,31 +280,36 @@ class _TwitchPromptDialog extends StatelessWidget {
   }
 }
 
-class _AddToLibrarySheet extends StatefulWidget {
+class _AddToLibrarySheet extends ConsumerStatefulWidget {
   const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry});
   final Map<String, dynamic> item;
   final MediaKind kind;
   final LibraryEntry? existingEntry;
 
   @override
-  State<_AddToLibrarySheet> createState() => _AddToLibrarySheetState();
+  ConsumerState<_AddToLibrarySheet> createState() => _AddToLibrarySheetState();
 }
 
-class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
+class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   late String _status;
   late double _score;
   late final TextEditingController _progressCtrl;
   late final TextEditingController _notesCtrl;
+  late final Map<String, double> _advScores;
+
+  bool get _isAnilist =>
+      widget.kind == MediaKind.anime || widget.kind == MediaKind.manga;
 
   @override
   void initState() {
     super.initState();
     final e = widget.existingEntry;
     _status = e?.status ?? 'PLANNING';
-    _score = (e?.score ?? 0).toDouble();
-    if (_score > 10) _score = _score / 10;
+    final scoring = ref.read(scoringSystemSettingProvider);
+    _score = scoring.fromStoredScore(e?.score);
     _progressCtrl = TextEditingController(text: '${e?.progress ?? 0}');
     _notesCtrl = TextEditingController(text: e?.notes ?? '');
+    _advScores = {for (final c in kAnilistAdvancedScoringCategories) c: 0};
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
@@ -428,7 +434,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                   )),
                   const Spacer(),
                   Text(
-                    _score == 0 ? '—' : '${_score.round()}/10',
+                    ref.watch(scoringSystemSettingProvider).formatScore(_score),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -440,11 +446,71 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
               Slider(
                 value: _score,
                 min: 0,
-                max: 10,
-                divisions: 10,
-                label: _score == 0 ? l10n.addToListNoScore : '${_score.round()}',
+                max: ref.watch(scoringSystemSettingProvider).max,
+                divisions: ref.watch(scoringSystemSettingProvider).divisions,
+                label: _score == 0 ? l10n.addToListNoScore : ref.watch(scoringSystemSettingProvider).formatScore(_score),
                 onChanged: (v) => setState(() => _score = v),
               ),
+
+              if (_isAnilist && ref.watch(anilistAdvancedScoringEnabledProvider)) ...[
+                const SizedBox(height: 4),
+                ...kAnilistAdvancedScoringCategories.map((cat) {
+                  final scoring = ref.watch(scoringSystemSettingProvider);
+                  final val = _advScores[cat] ?? 0;
+                  final label = switch (cat) {
+                    'Story' => l10n.advScoringStory,
+                    'Characters' => l10n.advScoringCharacters,
+                    'Visuals' => l10n.advScoringVisuals,
+                    'Audio' => l10n.advScoringAudio,
+                    'Enjoyment' => l10n.advScoringEnjoyment,
+                    _ => cat,
+                  };
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 85,
+                          child: Text(label,
+                              style: TextStyle(
+                                  fontSize: 12, color: cs.onSurfaceVariant)),
+                        ),
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 2,
+                              thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 6),
+                            ),
+                            child: Slider(
+                              value: val,
+                              min: 0,
+                              max: scoring.max,
+                              divisions: scoring.divisions,
+                              onChanged: (v) =>
+                                  setState(() => _advScores[cat] = v),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 38,
+                          child: Text(
+                            scoring.formatScore(val),
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: val > 0
+                                    ? Colors.amber.shade600
+                                    : cs.onSurfaceVariant),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+
               const SizedBox(height: 12),
 
               Row(
@@ -536,7 +602,7 @@ class _AddToLibrarySheetState extends State<_AddToLibrarySheet> {
                     final notes = _notesCtrl.text.trim();
                     Navigator.of(context).pop(_AddResult(
                       status: _status,
-                      score: _score > 0 ? _score.round() : null,
+                      score: _score > 0 ? ref.read(scoringSystemSettingProvider).toStoredScore(_score) : null,
                       progress: progress != null && progress > 0 ? progress : null,
                       notes: notes.isNotEmpty ? notes : null,
                     ));

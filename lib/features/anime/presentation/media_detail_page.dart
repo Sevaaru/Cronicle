@@ -269,8 +269,8 @@ class _DetailContentState extends State<_DetailContent> {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (format != null) _Tag(format, colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
-                    if (status != null) _Tag(status, colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
+                    if (format != null) _Tag(_formatMediaStatus(format, false, l10n), colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
+                    if (status != null) _Tag(_formatMediaStatus(status, true, l10n), colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
                     if (isAdult) _Tag('18+', colorScheme.errorContainer, colorScheme.onErrorContainer),
                   ],
                 ),
@@ -425,6 +425,8 @@ class _DetailContentState extends State<_DetailContent> {
                 _buildRecommendations(context, colorScheme),
 
                 _buildReviews(colorScheme, l10n),
+
+                _buildForumThreads(context, colorScheme, l10n),
 
                 _buildScoreDistribution(colorScheme, l10n),
 
@@ -790,9 +792,47 @@ class _DetailContentState extends State<_DetailContent> {
     );
   }
 
+  Widget _buildForumThreads(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final mediaId = media['id'] as int?;
+    if (mediaId == null) return const SizedBox.shrink();
+    return Consumer(
+      builder: (context, ref, _) {
+        final threadsAsync = ref.watch(anilistMediaThreadsProvider(mediaId));
+        return threadsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, st) => const SizedBox.shrink(),
+          data: (threads) {
+            if (threads.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.forumDiscussions,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                const SizedBox(height: 8),
+                ...threads.take(3).map((t) => _ForumThreadTile(thread: t, cs: cs)),
+                if (threads.length >= 3)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.arrow_forward, size: 16),
+                      label: Text(l10n.forumViewAll,
+                          style: const TextStyle(fontSize: 12)),
+                      onPressed: () => context.push(
+                        '/forum/media/$mediaId',
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildScoreDistribution(ColorScheme cs, AppLocalizations l10n) {
-    final stats = media['stats'] as Map<String, dynamic>?;
-    final scoreDist = (stats?['scoreDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final scoreDist = (media['stats']?['scoreDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (scoreDist.isEmpty) return const SizedBox.shrink();
 
     final maxAmount = scoreDist.fold<int>(0, (m, s) {
@@ -856,6 +896,33 @@ class _DetailContentState extends State<_DetailContent> {
     return '$n';
   }
 
+}
+
+String _formatMediaStatus(String raw, bool isStatus, AppLocalizations l10n) {
+  if (!isStatus) {
+    // format codes → pretty label
+    return switch (raw) {
+      'TV' => 'TV',
+      'TV_SHORT' => 'TV Short',
+      'MOVIE' => 'Movie',
+      'SPECIAL' => 'Special',
+      'OVA' => 'OVA',
+      'ONA' => 'ONA',
+      'MUSIC' => 'Music',
+      'MANGA' => 'Manga',
+      'NOVEL' => 'Novel',
+      'ONE_SHOT' => 'One Shot',
+      _ => raw,
+    };
+  }
+  return switch (raw) {
+    'FINISHED' => l10n.mediaStatusFinished,
+    'RELEASING' => l10n.mediaStatusReleasing,
+    'NOT_YET_RELEASED' => l10n.mediaStatusNotYetReleased,
+    'CANCELLED' => l10n.mediaStatusCancelled,
+    'HIATUS' => l10n.mediaStatusHiatus,
+    _ => raw,
+  };
 }
 
 class _Tag extends StatelessWidget {
@@ -1059,6 +1126,99 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
               },
             )
           : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _ForumThreadTile extends StatelessWidget {
+  const _ForumThreadTile({required this.thread, required this.cs});
+
+  final Map<String, dynamic> thread;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = thread['id'] as int?;
+    final title = thread['title'] as String? ?? '';
+    final replyCount = thread['replyCount'] as int? ?? 0;
+    final viewCount = thread['viewCount'] as int? ?? 0;
+    final createdAt = thread['createdAt'] as int?;
+    final user = thread['user'] as Map<String, dynamic>?;
+    final userName = user?['name'] as String? ?? '';
+    final avatar = (user?['avatar'] as Map?)?['medium'] as String?;
+
+    String timeAgo = '';
+    if (createdAt != null) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inDays > 365) {
+        timeAgo = '${diff.inDays ~/ 365}a';
+      } else if (diff.inDays > 30) {
+        timeAgo = '${diff.inDays ~/ 30}mo';
+      } else if (diff.inDays > 0) {
+        timeAgo = '${diff.inDays}d';
+      } else if (diff.inHours > 0) {
+        timeAgo = '${diff.inHours}h';
+      } else {
+        timeAgo = '${diff.inMinutes}min';
+      }
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: id == null
+            ? null
+            : () => context.push('/forum/thread/$id',
+                extra: thread),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                if (avatar != null)
+                  ClipOval(
+                    child: Image.network(avatar,
+                        width: 16, height: 16, fit: BoxFit.cover),
+                  ),
+                if (avatar != null) const SizedBox(width: 4),
+                Text(userName,
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+                if (timeAgo.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text('· $timeAgo',
+                      style: TextStyle(
+                          fontSize: 11, color: cs.onSurfaceVariant)),
+                ],
+                const Spacer(),
+                Icon(Icons.comment_outlined,
+                    size: 13, color: cs.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text('$replyCount',
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+                const SizedBox(width: 8),
+                Icon(Icons.visibility_outlined,
+                    size: 13, color: cs.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text('$viewCount',
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

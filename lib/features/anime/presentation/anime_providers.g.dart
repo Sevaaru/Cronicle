@@ -585,6 +585,258 @@ final anilistProfileProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AnilistProfileRef = AutoDisposeFutureProviderRef<Map<String, dynamic>?>;
+String _$anilistMediaThreadsHash() =>
+    r'9f78937dc5c0476e31a07c38b67be2721eca1194';
+
+/// See also [anilistMediaThreads].
+@ProviderFor(anilistMediaThreads)
+const anilistMediaThreadsProvider = AnilistMediaThreadsFamily();
+
+/// See also [anilistMediaThreads].
+class AnilistMediaThreadsFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// See also [anilistMediaThreads].
+  const AnilistMediaThreadsFamily();
+
+  /// See also [anilistMediaThreads].
+  AnilistMediaThreadsProvider call(int mediaId) {
+    return AnilistMediaThreadsProvider(mediaId);
+  }
+
+  @override
+  AnilistMediaThreadsProvider getProviderOverride(
+    covariant AnilistMediaThreadsProvider provider,
+  ) {
+    return call(provider.mediaId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistMediaThreadsProvider';
+}
+
+/// See also [anilistMediaThreads].
+class AnilistMediaThreadsProvider
+    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
+  /// See also [anilistMediaThreads].
+  AnilistMediaThreadsProvider(int mediaId)
+    : this._internal(
+        (ref) => anilistMediaThreads(ref as AnilistMediaThreadsRef, mediaId),
+        from: anilistMediaThreadsProvider,
+        name: r'anilistMediaThreadsProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistMediaThreadsHash,
+        dependencies: AnilistMediaThreadsFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistMediaThreadsFamily._allTransitiveDependencies,
+        mediaId: mediaId,
+      );
+
+  AnilistMediaThreadsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.mediaId,
+  }) : super.internal();
+
+  final int mediaId;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<Map<String, dynamic>>> Function(
+      AnilistMediaThreadsRef provider,
+    )
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistMediaThreadsProvider._internal(
+        (ref) => create(ref as AnilistMediaThreadsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        mediaId: mediaId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
+    return _AnilistMediaThreadsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistMediaThreadsProvider && other.mediaId == mediaId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, mediaId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistMediaThreadsRef
+    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `mediaId` of this provider.
+  int get mediaId;
+}
+
+class _AnilistMediaThreadsProviderElement
+    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
+    with AnilistMediaThreadsRef {
+  _AnilistMediaThreadsProviderElement(super.provider);
+
+  @override
+  int get mediaId => (origin as AnilistMediaThreadsProvider).mediaId;
+}
+
+String _$anilistForumThreadHash() =>
+    r'e9ac1cf50f2aa5a7968b249bf1c0551e45d52c8d';
+
+/// See also [anilistForumThread].
+@ProviderFor(anilistForumThread)
+const anilistForumThreadProvider = AnilistForumThreadFamily();
+
+/// See also [anilistForumThread].
+class AnilistForumThreadFamily
+    extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// See also [anilistForumThread].
+  const AnilistForumThreadFamily();
+
+  /// See also [anilistForumThread].
+  AnilistForumThreadProvider call(int threadId) {
+    return AnilistForumThreadProvider(threadId);
+  }
+
+  @override
+  AnilistForumThreadProvider getProviderOverride(
+    covariant AnilistForumThreadProvider provider,
+  ) {
+    return call(provider.threadId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistForumThreadProvider';
+}
+
+/// See also [anilistForumThread].
+class AnilistForumThreadProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// See also [anilistForumThread].
+  AnilistForumThreadProvider(int threadId)
+    : this._internal(
+        (ref) => anilistForumThread(ref as AnilistForumThreadRef, threadId),
+        from: anilistForumThreadProvider,
+        name: r'anilistForumThreadProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistForumThreadHash,
+        dependencies: AnilistForumThreadFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistForumThreadFamily._allTransitiveDependencies,
+        threadId: threadId,
+      );
+
+  AnilistForumThreadProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.threadId,
+  }) : super.internal();
+
+  final int threadId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(AnilistForumThreadRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistForumThreadProvider._internal(
+        (ref) => create(ref as AnilistForumThreadRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        threadId: threadId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _AnilistForumThreadProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistForumThreadProvider && other.threadId == threadId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, threadId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistForumThreadRef
+    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `threadId` of this provider.
+  int get threadId;
+}
+
+class _AnilistForumThreadProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with AnilistForumThreadRef {
+  _AnilistForumThreadProviderElement(super.provider);
+
+  @override
+  int get threadId => (origin as AnilistForumThreadProvider).threadId;
+}
+
 String _$anilistUnreadNotificationCountHash() =>
     r'cdbb49ad2a1a7302397663a5190b7950278a241a';
 

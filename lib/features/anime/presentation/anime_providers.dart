@@ -544,6 +544,25 @@ Future<Map<String, dynamic>?> anilistProfile(AnilistProfileRef ref) async {
   return graphql.fetchViewerProfile(token);
 }
 
+@riverpod
+Future<List<Map<String, dynamic>>> anilistMediaThreads(
+  AnilistMediaThreadsRef ref,
+  int mediaId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  return graphql.fetchMediaThreads(mediaId);
+}
+
+@riverpod
+Future<Map<String, dynamic>?> anilistForumThread(
+  AnilistForumThreadRef ref,
+  int threadId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.read(anilistTokenProvider.future);
+  return graphql.fetchForumThread(threadId, token: token);
+}
+
 /// Unread Anilist notification count (0 if not logged in).
 @riverpod
 Future<int> anilistUnreadNotificationCount(

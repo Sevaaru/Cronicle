@@ -12,6 +12,7 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -629,8 +630,15 @@ class _EntryCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           Icon(Icons.star, size: 12, color: Colors.amber.shade600),
                           const SizedBox(width: 2),
-                          Text('${entry.score}',
-                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final scoring = ref.watch(scoringSystemSettingProvider);
+                              return Text(
+                                scoring.formatScore(scoring.fromStoredScore(entry.score)),
+                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                              );
+                            },
+                          ),
                         ],
                         if (entry.progress != null) ...[
                           const SizedBox(width: 6),

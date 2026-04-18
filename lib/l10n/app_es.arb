@@ -615,5 +615,34 @@
   "settingsInterestsDesc": "Cambia los contenidos que ves en inicio, biblioteca y búsqueda",
   "settingsInterestsChanged": "Intereses actualizados",
 
-  "socialTitle": "Social"
+  "socialTitle": "Social",
+
+  "settingsScoringTitle": "Sistema de puntuación",
+  "settingsScoringDesc": "Elige cómo puntuar tu contenido",
+  "scoringPoint100": "100 puntos",
+  "scoringPoint10Decimal": "10 puntos decimal",
+  "scoringPoint10": "10 puntos",
+  "scoringPoint5": "5 estrellas",
+  "scoringPoint3": "3 caritas",
+  "settingsAdvancedScoring": "Puntuación avanzada (Anilist)",
+  "settingsAdvancedScoringDesc": "Puntúa por categorías: historia, personajes, visual, audio y disfrute",
+  "advScoringStory": "Historia",
+  "advScoringCharacters": "Personajes",
+  "advScoringVisuals": "Visual",
+  "advScoringAudio": "Audio",
+  "advScoringEnjoyment": "Disfrute",
+  "advScoringReset": "Restablecer",
+
+  "mediaStatusFinished": "Finalizado",
+  "mediaStatusReleasing": "En emisión",
+  "mediaStatusNotYetReleased": "Sin estrenar",
+  "mediaStatusCancelled": "Cancelado",
+  "mediaStatusHiatus": "En hiato",
+
+  "forumDiscussions": "Discusiones en el foro",
+  "forumViewAll": "Ver más",
+  "forumThread": "Hilo del foro",
+  "forumReplies": "{count} respuestas",
+  "@forumReplies": { "placeholders": { "count": { "type": "int" } } },
+  "forumNoReplies": "Aún no hay respuestas"
 }

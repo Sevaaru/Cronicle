@@ -3241,6 +3241,156 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Social'**
   String get socialTitle;
+
+  /// No description provided for @settingsScoringTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema de puntuación'**
+  String get settingsScoringTitle;
+
+  /// No description provided for @settingsScoringDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige cómo puntuar tu contenido'**
+  String get settingsScoringDesc;
+
+  /// No description provided for @scoringPoint100.
+  ///
+  /// In es, this message translates to:
+  /// **'100 puntos'**
+  String get scoringPoint100;
+
+  /// No description provided for @scoringPoint10Decimal.
+  ///
+  /// In es, this message translates to:
+  /// **'10 puntos decimal'**
+  String get scoringPoint10Decimal;
+
+  /// No description provided for @scoringPoint10.
+  ///
+  /// In es, this message translates to:
+  /// **'10 puntos'**
+  String get scoringPoint10;
+
+  /// No description provided for @scoringPoint5.
+  ///
+  /// In es, this message translates to:
+  /// **'5 estrellas'**
+  String get scoringPoint5;
+
+  /// No description provided for @scoringPoint3.
+  ///
+  /// In es, this message translates to:
+  /// **'3 caritas'**
+  String get scoringPoint3;
+
+  /// No description provided for @settingsAdvancedScoring.
+  ///
+  /// In es, this message translates to:
+  /// **'Puntuación avanzada (Anilist)'**
+  String get settingsAdvancedScoring;
+
+  /// No description provided for @settingsAdvancedScoringDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Puntúa por categorías: historia, personajes, visual, audio y disfrute'**
+  String get settingsAdvancedScoringDesc;
+
+  /// No description provided for @advScoringStory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get advScoringStory;
+
+  /// No description provided for @advScoringCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes'**
+  String get advScoringCharacters;
+
+  /// No description provided for @advScoringVisuals.
+  ///
+  /// In es, this message translates to:
+  /// **'Visual'**
+  String get advScoringVisuals;
+
+  /// No description provided for @advScoringAudio.
+  ///
+  /// In es, this message translates to:
+  /// **'Audio'**
+  String get advScoringAudio;
+
+  /// No description provided for @advScoringEnjoyment.
+  ///
+  /// In es, this message translates to:
+  /// **'Disfrute'**
+  String get advScoringEnjoyment;
+
+  /// No description provided for @advScoringReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer'**
+  String get advScoringReset;
+
+  /// No description provided for @mediaStatusFinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizado'**
+  String get mediaStatusFinished;
+
+  /// No description provided for @mediaStatusReleasing.
+  ///
+  /// In es, this message translates to:
+  /// **'En emisión'**
+  String get mediaStatusReleasing;
+
+  /// No description provided for @mediaStatusNotYetReleased.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin estrenar'**
+  String get mediaStatusNotYetReleased;
+
+  /// No description provided for @mediaStatusCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelado'**
+  String get mediaStatusCancelled;
+
+  /// No description provided for @mediaStatusHiatus.
+  ///
+  /// In es, this message translates to:
+  /// **'En hiato'**
+  String get mediaStatusHiatus;
+
+  /// No description provided for @forumDiscussions.
+  ///
+  /// In es, this message translates to:
+  /// **'Discusiones en el foro'**
+  String get forumDiscussions;
+
+  /// No description provided for @forumViewAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más'**
+  String get forumViewAll;
+
+  /// No description provided for @forumThread.
+  ///
+  /// In es, this message translates to:
+  /// **'Hilo del foro'**
+  String get forumThread;
+
+  /// No description provided for @forumReplies.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} respuestas'**
+  String forumReplies(int count);
+
+  /// No description provided for @forumNoReplies.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay respuestas'**
+  String get forumNoReplies;
 }
 
 class _AppLocalizationsDelegate

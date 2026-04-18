@@ -824,7 +824,7 @@ class AnilistGraphqlDatasource {
     return (items: filtered, hasNextPage: hasNext);
   }
 
-  /// Toggle like on an activity or reply. Requires auth token.
+  /// Toggle like on an activity, reply, thread or thread comment. Requires auth token.
   Future<bool> toggleLike(int id, String token, {String type = 'ACTIVITY'}) async {
     const query = r'''
       mutation ($id: Int, $type: LikeableType) {
@@ -832,6 +832,8 @@ class AnilistGraphqlDatasource {
           ... on ListActivity { id isLiked likeCount }
           ... on TextActivity { id isLiked likeCount }
           ... on ActivityReply { id isLiked likeCount }
+          ... on Thread { id isLiked likeCount }
+          ... on ThreadComment { id isLiked likeCount }
         }
       }
     ''';
@@ -1384,5 +1386,70 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(query, token: token);
     return data['data']?['Viewer'] as Map<String, dynamic>?;
+  }
+
+  /// Post a comment on a forum thread. Requires auth.
+  Future<Map<String, dynamic>> saveThreadComment(
+      int threadId, String text, String token) async {
+    const query = r'''
+      mutation ($threadId: Int, $comment: String) {
+        SaveThreadComment(threadId: $threadId, comment: $comment) {
+          id comment createdAt isLiked likeCount
+          user { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(
+        query,
+        variables: {'threadId': threadId, 'comment': text},
+        token: token);
+    final saved = data['data']?['SaveThreadComment'];
+    if (saved is Map<String, dynamic>) return saved;
+    if (saved is Map) return Map<String, dynamic>.from(saved);
+    throw Exception('SaveThreadComment returned no data');
+  }
+
+  /// Forum threads related to a media item.
+  Future<List<Map<String, dynamic>>> fetchMediaThreads(int mediaId, {int perPage = 10}) async {
+    const query = r'''
+      query ($mediaId: Int, $perPage: Int) {
+        Page(perPage: $perPage) {
+          threads(mediaCategoryId: $mediaId, sort: REPLIED_AT_DESC) {
+            id title createdAt updatedAt replyCount viewCount
+            user { id name avatar { medium } }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'mediaId': mediaId, 'perPage': perPage});
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Full forum thread with comments.
+  Future<Map<String, dynamic>?> fetchForumThread(int threadId, {String? token}) async {
+    const query = r'''
+      query ($id: Int, $perPage: Int) {
+        Thread(id: $id) {
+          id title body createdAt updatedAt replyCount viewCount isLiked likeCount
+          user { id name avatar { medium } }
+          categories { id name }
+          mediaCategories { id type title { romaji english } coverImage { large } }
+        }
+        Page(perPage: $perPage) {
+          threadComments(threadId: $id) {
+            id comment createdAt isLiked likeCount
+            user { id name avatar { medium } }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': threadId, 'perPage': 25}, token: token);
+    final thread = data['data']?['Thread'] as Map<String, dynamic>?;
+    if (thread == null) return null;
+    final comments = (data['data']?['Page']?['threadComments'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+    return {...thread, 'comments': comments};
   }
 }
