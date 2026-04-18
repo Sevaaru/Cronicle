@@ -219,6 +219,9 @@
   "profileLocalLibrary": "Local library",
   "profileLibraryEmpty": "Your library is empty",
   "profileNotFound": "User not found",
+  "anilistProfileFollowers": "Followers",
+  "anilistProfileFollowing": "Following",
+  "anilistFollowListEmpty": "No one here yet.",
 
   "sectionAnime": "Anime",
   "sectionManga": "Manga",

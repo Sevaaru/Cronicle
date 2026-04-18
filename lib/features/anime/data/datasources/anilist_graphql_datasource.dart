@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:cronicle/core/utils/json_int.dart';
+
 /// Queries the public Anilist GraphQL API.
 class AnilistGraphqlDatasource {
   AnilistGraphqlDatasource(this._dio);
@@ -1120,6 +1122,84 @@ class AnilistGraphqlDatasource {
     return data['data']?['Viewer'] as Map<String, dynamic>?;
   }
 
+  /// Totales de seguidores y seguidos (una sola petición con dos campos [Page]).
+  Future<Map<String, int>> fetchUserFollowCounts(int userId, {String? token}) async {
+    const query = r'''
+      query ($userId: Int!) {
+        fc: Page(page: 1, perPage: 1) {
+          pageInfo { total }
+          followers(userId: $userId) { id }
+        }
+        fg: Page(page: 1, perPage: 1) {
+          pageInfo { total }
+          following(userId: $userId) { id }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'userId': userId}, token: token);
+    final fc = data['data']?['fc'] as Map<String, dynamic>?;
+    final fg = data['data']?['fg'] as Map<String, dynamic>?;
+    final followers = jsonInt((fc?['pageInfo'] as Map?)?['total']);
+    final following = jsonInt((fg?['pageInfo'] as Map?)?['total']);
+    return {'followers': followers, 'following': following};
+  }
+
+  /// Lista paginada de seguidores o de cuentas que [userId] sigue.
+  Future<({List<Map<String, dynamic>> users, bool hasNextPage, int total})>
+      fetchUserFollowListPage(
+    int userId, {
+    required bool followers,
+    int page = 1,
+    int perPage = 50,
+    String? token,
+  }) async {
+    const followersQ = r'''
+      query ($userId: Int!, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            total
+            hasNextPage
+          }
+          followers(userId: $userId) {
+            id
+            name
+            avatar { large medium }
+          }
+        }
+      }
+    ''';
+    const followingQ = r'''
+      query ($userId: Int!, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            total
+            hasNextPage
+          }
+          following(userId: $userId) {
+            id
+            name
+            avatar { large medium }
+          }
+        }
+      }
+    ''';
+    final query = followers ? followersQ : followingQ;
+    final data = await _post(
+      query,
+      variables: {'userId': userId, 'page': page, 'perPage': perPage},
+      token: token,
+    );
+    final field = followers ? 'followers' : 'following';
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageData?['pageInfo'] as Map<String, dynamic>? ?? {};
+    final total = jsonInt(pageInfo['total']);
+    final hasNextPage = pageInfo['hasNextPage'] as bool? ?? false;
+    final users =
+        (pageData?[field] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
+            <Map<String, dynamic>>[];
+    return (users: users, hasNextPage: hasNextPage, total: total);
+  }
+
   /// Fetch a public user profile by ID, including favourites.
   Future<Map<String, dynamic>?> fetchUserProfile(int userId, {String? token}) async {
     const query = r'''
@@ -1162,8 +1242,18 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'id': userId}, token: token);
-    return data['data']?['User'] as Map<String, dynamic>?;
+    final results = await Future.wait([
+      _post(query, variables: {'id': userId}, token: token),
+      fetchUserFollowCounts(userId, token: token)
+          .catchError((Object _) => <String, int>{'followers': 0, 'following': 0}),
+    ]);
+    final body = results[0];
+    final user = body['data']?['User'] as Map<String, dynamic>?;
+    if (user == null) return null;
+    final counts = results[1];
+    user['followersCount'] = jsonInt(counts['followers']);
+    user['followingCount'] = jsonInt(counts['following']);
+    return user;
   }
 
   /// Fetch recent activity of a specific user.
@@ -1385,7 +1475,23 @@ class AnilistGraphqlDatasource {
       }
     ''';
     final data = await _post(query, token: token);
-    return data['data']?['Viewer'] as Map<String, dynamic>?;
+    final user = data['data']?['Viewer'] as Map<String, dynamic>?;
+    if (user == null) return null;
+    final id = jsonInt(user['id']);
+    if (id > 0) {
+      try {
+        final counts = await fetchUserFollowCounts(id, token: token);
+        user['followersCount'] = jsonInt(counts['followers']);
+        user['followingCount'] = jsonInt(counts['following']);
+      } catch (_) {
+        user['followersCount'] = 0;
+        user['followingCount'] = 0;
+      }
+    } else {
+      user['followersCount'] = 0;
+      user['followingCount'] = 0;
+    }
+    return user;
   }
 
   /// Post a comment on a forum thread. Requires auth.

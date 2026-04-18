@@ -1226,6 +1226,24 @@ abstract class AppLocalizations {
   /// **'No se encontró el usuario'**
   String get profileNotFound;
 
+  /// No description provided for @anilistProfileFollowers.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguidores'**
+  String get anilistProfileFollowers;
+
+  /// No description provided for @anilistProfileFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiendo'**
+  String get anilistProfileFollowing;
+
+  /// No description provided for @anilistFollowListEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie aquí todavía.'**
+  String get anilistFollowListEmpty;
+
   /// No description provided for @sectionAnime.
   ///
   /// In es, this message translates to:

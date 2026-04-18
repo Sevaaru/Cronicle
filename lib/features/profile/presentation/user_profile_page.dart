@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/utils/json_int.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/profile/presentation/anilist_profile_follow_row.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
@@ -120,6 +122,12 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Banner 150px; fila avatar en top: 105 con radio 38 + borde 4 → baja hasta ~189px.
+    const bannerH = 150.0;
+    const avatarRowTop = 105.0;
+    const avatarOuter = 84.0; // (38+4)*2
+    const headerStackHeight = avatarRowTop + avatarOuter;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarIconBrightness: (banner != null || isDark) ? Brightness.light : Brightness.dark,
@@ -131,13 +139,19 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                Stack(
+                SizedBox(
+                  height: headerStackHeight,
+                  child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    GestureDetector(
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: bannerH,
+                      child: GestureDetector(
                       onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
                       child: Container(
-                        height: 150,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           image: banner != null
@@ -168,8 +182,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                         ),
                       ),
                     ),
+                    ),
                     Positioned(
-                      left: 16, right: 16, top: 105,
+                      left: 16, right: 16, top: avatarRowTop,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -245,7 +260,16 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 46),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: AnilistProfileFollowRow(
+                    userId: widget.userId,
+                    followersCount: jsonInt(p['followersCount']),
+                    followingCount: jsonInt(p['followingCount']),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -681,8 +705,6 @@ class _ExpandableMarkdownState extends State<_ExpandableMarkdown> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     if (!_isLong || _expanded) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

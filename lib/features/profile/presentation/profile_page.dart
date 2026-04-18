@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/utils/json_int.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/profile/presentation/anilist_profile_follow_row.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_preview.dart';
 import 'package:cronicle/features/profile/presentation/profile_stats_shared.dart';
@@ -176,6 +178,7 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
     final l10n = AppLocalizations.of(context)!;
     final traktSessionAsync = ref.watch(traktSessionProvider);
     final name = profile['name'] as String? ?? '';
+    final anilistUserId = jsonInt(profile['id']);
     final avatar = (profile['avatar'] as Map?)?['large'] as String?;
     final banner = profile['bannerImage'] as String?;
     final about = profile['about'] as String?;
@@ -191,18 +194,30 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
     final favManga = (favs['manga'] as Map?)?['nodes'] as List? ?? [];
 
+    // Misma geometría que [UserProfilePage]: banner 150px + fila avatar (top 105, ~84px alto).
+    const bannerH = 150.0;
+    const avatarRowTop = 105.0;
+    const avatarOuter = 84.0;
+    const headerStackHeight = avatarRowTop + avatarOuter;
+
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
           child: Column(
             children: [
-              Stack(
+              SizedBox(
+                height: headerStackHeight,
+                child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  GestureDetector(
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: bannerH,
+                    child: GestureDetector(
                     onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
                     child: Container(
-                      height: 150,
                       decoration: BoxDecoration(
                         image: banner != null
                             ? DecorationImage(
@@ -216,8 +231,9 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                       ),
                     ),
                   ),
+                  ),
                   Positioned(
-                    left: 16, right: 16, top: 105,
+                    left: 16, right: 16, top: avatarRowTop,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -301,7 +317,17 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                   ),
                 ],
               ),
-              const SizedBox(height: 46),
+              ),
+              if (anilistUserId > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: AnilistProfileFollowRow(
+                    userId: anilistUserId,
+                    followersCount: jsonInt(profile['followersCount']),
+                    followingCount: jsonInt(profile['followingCount']),
+                  ),
+                ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

@@ -627,6 +627,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileNotFound => 'User not found';
 
   @override
+  String get anilistProfileFollowers => 'Followers';
+
+  @override
+  String get anilistProfileFollowing => 'Following';
+
+  @override
+  String get anilistFollowListEmpty => 'No one here yet.';
+
+  @override
   String get sectionAnime => 'Anime';
 
   @override

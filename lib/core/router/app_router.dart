@@ -23,6 +23,7 @@ import 'package:cronicle/features/profile/presentation/personal_stats_page.dart'
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
+import 'package:cronicle/features/profile/presentation/user_follow_list_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/social/presentation/social_page.dart';
@@ -207,6 +208,20 @@ GoRouter appRouter(AppRouterRef ref) {
                 tag: (tag != null && tag.isNotEmpty) ? tag : null,
                 initialSortKey: sortKey,
               );
+            },
+          ),
+          GoRoute(
+            path: '/user/:id/followers',
+            builder: (context, state) {
+              final userId = int.parse(state.pathParameters['id']!);
+              return UserFollowListPage(userId: userId, followers: true);
+            },
+          ),
+          GoRoute(
+            path: '/user/:id/following',
+            builder: (context, state) {
+              final userId = int.parse(state.pathParameters['id']!);
+              return UserFollowListPage(userId: userId, followers: false);
             },
           ),
           GoRoute(
