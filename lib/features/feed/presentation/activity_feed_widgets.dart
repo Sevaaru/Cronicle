@@ -47,7 +47,7 @@ class FeedActivityScopeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -99,11 +99,15 @@ class FollowingFeedGuard extends ConsumerWidget {
     required this.onRefresh,
     required this.onLoadMore,
     required this.l10n,
+    this.feedAsync,
+    this.hasMore,
   });
   final Widget feedScopeBar;
   final VoidCallback onRefresh;
   final VoidCallback onLoadMore;
   final AppLocalizations l10n;
+  final AsyncValue<List<FeedActivity>>? feedAsync;
+  final bool Function()? hasMore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -155,16 +159,19 @@ class FollowingFeedGuard extends ConsumerWidget {
           );
         }
         return ActivityFeedList(
-          feedAsync: ref.watch(anilistFeedFollowingProvider),
+          feedAsync: feedAsync ?? ref.watch(anilistFeedFollowingProvider),
           onRefresh: onRefresh,
           onLoadMore: onLoadMore,
-          hasMore: () {
-            try {
-              return ref.read(anilistFeedFollowingProvider.notifier).hasMore;
-            } catch (_) {
-              return false;
-            }
-          },
+          hasMore: hasMore ??
+              () {
+                try {
+                  return ref
+                      .read(anilistFeedFollowingProvider.notifier)
+                      .hasMore;
+                } catch (_) {
+                  return false;
+                }
+              },
           feedIsFollowing: true,
           feedScopeHeader: feedScopeBar,
           l10n: l10n,

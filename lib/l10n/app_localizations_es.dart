@@ -414,6 +414,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterAll => 'Todo';
 
   @override
+  String get filterStatus => 'Estado';
+
+  @override
   String get loginRequiredFollowing =>
       'Inicia sesión con Anilist para ver la actividad de las personas que sigues';
 
@@ -1803,4 +1806,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String forumReplyingTo(String name) {
     return 'Respondiendo a @$name';
   }
+
+  @override
+  String get socialFeedTab => 'Feed';
+
+  @override
+  String get socialForumTab => 'Foro';
+
+  @override
+  String get forumPinnedThreads => 'Hilos fijados';
+
+  @override
+  String get forumRecentlyReplied => 'Con actividad reciente';
+
+  @override
+  String get forumNewlyCreated => 'Recién creados';
+
+  @override
+  String get forumReleaseDiscussions => 'Discusiones de estrenos';
 }

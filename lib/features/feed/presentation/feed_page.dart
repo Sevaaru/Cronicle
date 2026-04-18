@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
-import 'package:cronicle/features/feed/presentation/activity_feed_widgets.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
@@ -41,7 +40,6 @@ String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
     };
 
 enum _AnimeMangaBrowseTab {
-  activity,
   seasonal,
   topRated,
   upcoming,
@@ -56,7 +54,6 @@ const _anilistBrowseCategories = [
 ];
 
 String _browseCategoryApiKey(_AnimeMangaBrowseTab tab) => switch (tab) {
-      _AnimeMangaBrowseTab.activity => '',
       _AnimeMangaBrowseTab.seasonal => 'seasonal',
       _AnimeMangaBrowseTab.topRated => 'top_rated',
       _AnimeMangaBrowseTab.upcoming => 'upcoming',
@@ -65,7 +62,6 @@ String _browseCategoryApiKey(_AnimeMangaBrowseTab tab) => switch (tab) {
 
 String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
     switch (tab) {
-      _AnimeMangaBrowseTab.activity => l10n.feedBrowseActivity,
       _AnimeMangaBrowseTab.seasonal => l10n.feedBrowseSeasonal,
       _AnimeMangaBrowseTab.topRated => l10n.feedBrowseTopRated,
       _AnimeMangaBrowseTab.upcoming => l10n.feedBrowseUpcoming,
@@ -74,16 +70,14 @@ String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
     };
 
 const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
-  _AnimeMangaBrowseTab.activity,
   _AnimeMangaBrowseTab.seasonal,
   _AnimeMangaBrowseTab.topRated,
   _AnimeMangaBrowseTab.upcoming,
   _AnimeMangaBrowseTab.recentlyReleased,
 ];
 
-/// Manga no tiene temporadas en Anilist como el anime; se omite Â«De temporadaÂ».
+/// Manga no tiene temporadas en Anilist como el anime; se omite «De temporada».
 const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
-  _AnimeMangaBrowseTab.activity,
   _AnimeMangaBrowseTab.topRated,
   _AnimeMangaBrowseTab.upcoming,
   _AnimeMangaBrowseTab.recentlyReleased,
@@ -102,7 +96,7 @@ class FeedPage extends ConsumerStatefulWidget {
 class _FeedPageState extends ConsumerState<FeedPage> {
   _FeedFilter _filter = _FeedFilter.anime;
   bool _filterInitialized = false;
-  _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
+  _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.seasonal;
 
   void _invalidateFeed() {
     switch (_filter) {
@@ -127,23 +121,8 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     }
   }
 
-  void _loadMore() {
-    switch (_filter) {
-      case _FeedFilter.anime:
-        ref.read(anilistFeedByTypeProvider('ANIME_LIST').notifier).loadMore();
-      case _FeedFilter.manga:
-        ref.read(anilistFeedByTypeProvider('MANGA_LIST').notifier).loadMore();
-      default:
-        break;
-    }
-  }
-
   bool get _showAnimeMangaBrowseRail =>
       _filter == _FeedFilter.anime || _filter == _FeedFilter.manga;
-
-  bool get _showAnilistBrowseGrid =>
-      _showAnimeMangaBrowseRail &&
-      _animeMangaBrowseTab != _AnimeMangaBrowseTab.activity;
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
     final added = await showAddToLibrarySheet(
@@ -258,7 +237,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                       _filter = f;
                       if (prev != f &&
                           (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
-                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.activity;
+                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.seasonal;
                       }
                     });
                   },
@@ -303,8 +282,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                     ? const TraktHomeFeedView(kind: MediaKind.movie)
                     : _filter == _FeedFilter.tv
                         ? const TraktHomeFeedView(kind: MediaKind.tv)
-                        : _showAnilistBrowseGrid
-                            ? _AnimeMangaBrowseList(
+                        : _AnimeMangaBrowseList(
                                 mediaType: _filter == _FeedFilter.anime
                                     ? 'ANIME'
                                     : 'MANGA',
@@ -315,28 +293,6 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                                     : MediaKind.manga,
                                 onRefresh: _invalidateFeed,
                                 onAdd: _addToLibrary,
-                                l10n: l10n,
-                              )
-                            : ActivityFeedList(
-                                feedAsync: _filter == _FeedFilter.anime
-                                    ? ref.watch(anilistFeedByTypeProvider('ANIME_LIST'))
-                                    : ref.watch(anilistFeedByTypeProvider('MANGA_LIST')),
-                                onRefresh: _invalidateFeed,
-                                onLoadMore: _loadMore,
-                                hasMore: () {
-                                  try {
-                                    final type = _filter == _FeedFilter.anime
-                                        ? 'ANIME_LIST'
-                                        : 'MANGA_LIST';
-                                    return ref
-                                        .read(anilistFeedByTypeProvider(type).notifier)
-                                        .hasMore;
-                                  } catch (_) {
-                                    return false;
-                                  }
-                                },
-                                feedIsFollowing: false,
-                                feedScopeHeader: null,
                                 l10n: l10n,
                               ),
           ),

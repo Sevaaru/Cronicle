@@ -144,6 +144,7 @@
   "filterTv": "TV Shows",
   "filterGames": "Games",
   "filterAll": "All",
+  "filterStatus": "Status",
 
   "loginRequiredFollowing": "Sign in with Anilist to see activity from people you follow",
   "loginRequiredLike": "Sign in with Anilist to like",
@@ -630,5 +631,12 @@
   "forumNoReplies": "No replies yet",
   "forumReplyButton": "Reply",
   "forumReplyingTo": "Replying to @{name}",
-  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } }
+  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } },
+
+  "socialFeedTab": "Feed",
+  "socialForumTab": "Forum",
+  "forumPinnedThreads": "Pinned threads",
+  "forumRecentlyReplied": "Recently active",
+  "forumNewlyCreated": "Newly created",
+  "forumReleaseDiscussions": "Release discussions"
 }

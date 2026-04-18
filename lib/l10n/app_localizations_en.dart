@@ -413,6 +413,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterAll => 'All';
 
   @override
+  String get filterStatus => 'Status';
+
+  @override
   String get loginRequiredFollowing =>
       'Sign in with Anilist to see activity from people you follow';
 
@@ -1798,4 +1801,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String forumReplyingTo(String name) {
     return 'Replying to @$name';
   }
+
+  @override
+  String get socialFeedTab => 'Feed';
+
+  @override
+  String get socialForumTab => 'Forum';
+
+  @override
+  String get forumPinnedThreads => 'Pinned threads';
+
+  @override
+  String get forumRecentlyReplied => 'Recently active';
+
+  @override
+  String get forumNewlyCreated => 'Newly created';
+
+  @override
+  String get forumReleaseDiscussions => 'Release discussions';
 }

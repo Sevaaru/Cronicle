@@ -713,7 +713,7 @@ class _AnilistMediaThreadsProviderElement
 }
 
 String _$anilistForumThreadHash() =>
-    r'e9ac1cf50f2aa5a7968b249bf1c0551e45d52c8d';
+    r'abc19f25e60d3fe87e4121eec4a222d059737278';
 
 /// See also [anilistForumThread].
 @ProviderFor(anilistForumThread)
@@ -1253,6 +1253,167 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AutoDisposeAsyncNotifier<List<FeedActivity>>;
+String _$anilistSocialFeedHash() => r'c15cf912b6a31afa296af12e8545dde84de7637b';
+
+abstract class _$AnilistSocialFeed
+    extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
+  late final String? activityType;
+  late final bool isFollowing;
+
+  FutureOr<List<FeedActivity>> build(String? activityType, bool isFollowing);
+}
+
+/// See also [AnilistSocialFeed].
+@ProviderFor(AnilistSocialFeed)
+const anilistSocialFeedProvider = AnilistSocialFeedFamily();
+
+/// See also [AnilistSocialFeed].
+class AnilistSocialFeedFamily extends Family<AsyncValue<List<FeedActivity>>> {
+  /// See also [AnilistSocialFeed].
+  const AnilistSocialFeedFamily();
+
+  /// See also [AnilistSocialFeed].
+  AnilistSocialFeedProvider call(String? activityType, bool isFollowing) {
+    return AnilistSocialFeedProvider(activityType, isFollowing);
+  }
+
+  @override
+  AnilistSocialFeedProvider getProviderOverride(
+    covariant AnilistSocialFeedProvider provider,
+  ) {
+    return call(provider.activityType, provider.isFollowing);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistSocialFeedProvider';
+}
+
+/// See also [AnilistSocialFeed].
+class AnilistSocialFeedProvider
+    extends
+        AutoDisposeAsyncNotifierProviderImpl<
+          AnilistSocialFeed,
+          List<FeedActivity>
+        > {
+  /// See also [AnilistSocialFeed].
+  AnilistSocialFeedProvider(String? activityType, bool isFollowing)
+    : this._internal(
+        () => AnilistSocialFeed()
+          ..activityType = activityType
+          ..isFollowing = isFollowing,
+        from: anilistSocialFeedProvider,
+        name: r'anilistSocialFeedProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistSocialFeedHash,
+        dependencies: AnilistSocialFeedFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistSocialFeedFamily._allTransitiveDependencies,
+        activityType: activityType,
+        isFollowing: isFollowing,
+      );
+
+  AnilistSocialFeedProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.activityType,
+    required this.isFollowing,
+  }) : super.internal();
+
+  final String? activityType;
+  final bool isFollowing;
+
+  @override
+  FutureOr<List<FeedActivity>> runNotifierBuild(
+    covariant AnilistSocialFeed notifier,
+  ) {
+    return notifier.build(activityType, isFollowing);
+  }
+
+  @override
+  Override overrideWith(AnilistSocialFeed Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistSocialFeedProvider._internal(
+        () => create()
+          ..activityType = activityType
+          ..isFollowing = isFollowing,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        activityType: activityType,
+        isFollowing: isFollowing,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<AnilistSocialFeed, List<FeedActivity>>
+  createElement() {
+    return _AnilistSocialFeedProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistSocialFeedProvider &&
+        other.activityType == activityType &&
+        other.isFollowing == isFollowing;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, activityType.hashCode);
+    hash = _SystemHash.combine(hash, isFollowing.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistSocialFeedRef
+    on AutoDisposeAsyncNotifierProviderRef<List<FeedActivity>> {
+  /// The parameter `activityType` of this provider.
+  String? get activityType;
+
+  /// The parameter `isFollowing` of this provider.
+  bool get isFollowing;
+}
+
+class _AnilistSocialFeedProviderElement
+    extends
+        AutoDisposeAsyncNotifierProviderElement<
+          AnilistSocialFeed,
+          List<FeedActivity>
+        >
+    with AnilistSocialFeedRef {
+  _AnilistSocialFeedProviderElement(super.provider);
+
+  @override
+  String? get activityType =>
+      (origin as AnilistSocialFeedProvider).activityType;
+  @override
+  bool get isFollowing => (origin as AnilistSocialFeedProvider).isFollowing;
+}
+
 String _$anilistGenreTagBrowseHash() =>
     r'852d6d158b5f3fa26afeba8af4ca8474cd730902';
 

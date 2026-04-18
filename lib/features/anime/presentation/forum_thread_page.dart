@@ -18,6 +18,8 @@ String _timeAgoForum(int? createdAt) {
   return '${diff.inMinutes}min';
 }
 
+enum _CommentSort { oldest, newest, mostLiked }
+
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class ForumThreadPage extends ConsumerStatefulWidget {
   const ForumThreadPage({
@@ -45,10 +47,13 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   final Map<int, bool> _commentIsLiked = {};
   final Map<int, int> _commentLikeCount = {};
 
+  _CommentSort _sort = _CommentSort.oldest;
+
   ({int id, String name})? _replyTarget;
   final _replyFocusNode = FocusNode();
 
   final _commentController = TextEditingController();
+  final _scrollController = ScrollController();
   bool _sending = false;
 
   @override
@@ -61,6 +66,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   void dispose() {
     _replyFocusNode.dispose();
     _commentController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -140,18 +146,54 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     final l10n = AppLocalizations.of(context)!;
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) { _showLoginSnack(); return; }
+    final replyTarget = _replyTarget;
     setState(() => _sending = true);
     try {
-      await ref.read(anilistGraphqlProvider).saveThreadComment(
+      final saved = await ref.read(anilistGraphqlProvider).saveThreadComment(
             widget.threadId,
             text,
             token,
-            replyCommentId: _replyTarget?.id,
+            parentCommentId: replyTarget?.id,
           );
       if (!mounted) return;
       _commentController.clear();
-      setState(() => _replyTarget = null);
-      await _load();
+      final newComment = Map<String, dynamic>.from(saved)
+        ..putIfAbsent('isLocked', () => false)
+        ..putIfAbsent('childComments', () => <dynamic>[]);
+      final newId = newComment['id'] as int?;
+      setState(() {
+        _replyTarget = null;
+        if (newId != null) {
+          _commentIsLiked[newId] = false;
+          _commentLikeCount[newId] = 0;
+        }
+        if (replyTarget == null) {
+          // Top-level comment — append to list
+          _comments = [..._comments, newComment];
+        } else {
+          // Reply — insert into parent's childComments
+          _comments = _comments.map((c) {
+            if (c['id'] == replyTarget.id) {
+              final children = List<dynamic>.from(
+                  (c['childComments'] as List?) ?? []);
+              children.add(newComment);
+              return Map<String, dynamic>.from(c)
+                ..['childComments'] = children;
+            }
+            return c;
+          }).toList();
+        }
+      });
+      // Scroll to bottom after adding a top-level comment
+      if (replyTarget == null && _scrollController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOut,
+          );
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -258,6 +300,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
         (_thread?['categories'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
     return CustomScrollView(
+      controller: _scrollController,
       slivers: [
         SliverAppBar(
           pinned: true,
@@ -347,28 +390,89 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
               const Divider(height: 32),
 
               if (_comments.isNotEmpty) ...[
-                Text(
-                  l10n.forumReplies(_comments.length),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.forumReplies(_comments.length),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                    ),
+                    SegmentedButton<_CommentSort>(
+                      style: SegmentedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 0),
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(fontSize: 11),
+                      ),
+                      segments: const [
+                        ButtonSegment<_CommentSort>(
+                          value: _CommentSort.oldest,
+                          icon: Icon(Icons.arrow_upward_rounded, size: 13),
+                          tooltip: 'Más antiguos',
+                        ),
+                        ButtonSegment<_CommentSort>(
+                          value: _CommentSort.newest,
+                          icon: Icon(Icons.arrow_downward_rounded, size: 13),
+                          tooltip: 'Más recientes',
+                        ),
+                        ButtonSegment<_CommentSort>(
+                          value: _CommentSort.mostLiked,
+                          icon: Icon(Icons.favorite_rounded, size: 13),
+                          tooltip: 'Más likes',
+                        ),
+                      ],
+                      selected: {_sort},
+                      onSelectionChanged: (s) {
+                        if (s.isNotEmpty) setState(() => _sort = s.first);
+                      },
+                      showSelectedIcon: false,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
-                ..._comments.map((c) {
-                  final id = c['id'] as int?;
-                  return _CommentTile(
-                    comment: c,
-                    cs: cs,
-                    isLiked: id != null ? (_commentIsLiked[id] ?? false) : false,
-                    likeCount: id != null
-                        ? (_commentLikeCount[id] ?? 0)
-                        : (c['likeCount'] as int? ?? 0),
-                    onLike: id != null ? () => _toggleCommentLike(id) : null,
-                    onReply: _setReplyTarget,
-                    isLikedMap: _commentIsLiked,
-                    likeCountMap: _commentLikeCount,
-                    onToggleChildLike: _toggleCommentLike,
-                  );
-                }),
+                ...(() {
+                  final sorted = [..._comments];
+                  switch (_sort) {
+                    case _CommentSort.oldest:
+                      sorted.sort((a, b) =>
+                          (a['createdAt'] as int? ?? 0)
+                              .compareTo(b['createdAt'] as int? ?? 0));
+                    case _CommentSort.newest:
+                      sorted.sort((a, b) =>
+                          (b['createdAt'] as int? ?? 0)
+                              .compareTo(a['createdAt'] as int? ?? 0));
+                    case _CommentSort.mostLiked:
+                      sorted.sort((a, b) =>
+                          (_commentLikeCount[b['id'] as int? ?? 0] ??
+                                  b['likeCount'] as int? ??
+                                  0)
+                              .compareTo(
+                                  _commentLikeCount[a['id'] as int? ?? 0] ??
+                                      a['likeCount'] as int? ??
+                                      0));
+                  }
+                  return sorted.map((c) {
+                    final id = c['id'] as int?;
+                    return _CommentTile(
+                      comment: c,
+                      cs: cs,
+                      isLiked:
+                          id != null ? (_commentIsLiked[id] ?? false) : false,
+                      likeCount: id != null
+                          ? (_commentLikeCount[id] ?? 0)
+                          : (c['likeCount'] as int? ?? 0),
+                      onLike: id != null
+                          ? () => _toggleCommentLike(id)
+                          : null,
+                      onReply: _setReplyTarget,
+                      isLikedMap: _commentIsLiked,
+                      likeCountMap: _commentLikeCount,
+                      onToggleChildLike: _toggleCommentLike,
+                    );
+                  });
+                })(),
               ] else
                 Center(
                   child: Padding(
@@ -476,6 +580,7 @@ class _CommentTileState extends State<_CommentTile> {
     final body = widget.comment['comment'] as String?;
     final createdAt = widget.comment['createdAt'] as int?;
     final commentId = widget.comment['id'] as int?;
+    final isLocked = widget.comment['isLocked'] as bool? ?? false;
     final children = (widget.comment['childComments'] as List?)
             ?.whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
@@ -513,10 +618,12 @@ class _CommentTileState extends State<_CommentTile> {
                 ),
               const SizedBox(width: 12),
               if (commentId != null)
-                _ReplyButton(
-                  onTap: () => widget.onReply(commentId, userName),
-                  cs: cs,
-                ),
+                isLocked
+                    ? _LockedChip(cs: cs)
+                    : _ReplyButton(
+                        onTap: () => widget.onReply(commentId, userName),
+                        cs: cs,
+                      ),
             ],
           ),
           if (hasChildren) ...[
@@ -665,6 +772,43 @@ class _ReplyButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+class _LockedChip extends StatelessWidget {
+  const _LockedChip({required this.cs, this.small = false});
+
+  final ColorScheme cs;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Este comentario está bloqueado y no acepta respuestas.'),
+          duration: Duration(seconds: 3),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_rounded,
+                size: small ? 13.0 : 15.0,
+                color: cs.onSurfaceVariant.withAlpha(160)),
+            const SizedBox(width: 4),
+            Text('Bloqueado',
+                style: TextStyle(
+                    fontSize: small ? 11.0 : 12.0,
+                    color: cs.onSurfaceVariant.withAlpha(160))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 class _ChildCommentTile extends StatelessWidget {
   const _ChildCommentTile({
     required this.comment,
@@ -689,6 +833,7 @@ class _ChildCommentTile extends StatelessWidget {
     final avatar = (user?['avatar'] as Map?)?['medium'] as String?;
     final body = comment['comment'] as String?;
     final createdAt = comment['createdAt'] as int?;
+    final isLocked = comment['isLocked'] as bool? ?? false;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -733,7 +878,9 @@ class _ChildCommentTile extends StatelessWidget {
                           small: true,
                         ),
                       const SizedBox(width: 10),
-                      if (onReply != null)
+                      if (isLocked)
+                        _LockedChip(cs: cs, small: true)
+                      else if (onReply != null)
                         _ReplyButton(onTap: onReply!, cs: cs, small: true),
                     ],
                   ),

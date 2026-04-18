@@ -830,6 +830,12 @@ abstract class AppLocalizations {
   /// **'Todo'**
   String get filterAll;
 
+  /// No description provided for @filterStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado'**
+  String get filterStatus;
+
   /// No description provided for @loginRequiredFollowing.
   ///
   /// In es, this message translates to:
@@ -3409,6 +3415,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Respondiendo a @{name}'**
   String forumReplyingTo(String name);
+
+  /// No description provided for @socialFeedTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Feed'**
+  String get socialFeedTab;
+
+  /// No description provided for @socialForumTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Foro'**
+  String get socialForumTab;
+
+  /// No description provided for @forumPinnedThreads.
+  ///
+  /// In es, this message translates to:
+  /// **'Hilos fijados'**
+  String get forumPinnedThreads;
+
+  /// No description provided for @forumRecentlyReplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Con actividad reciente'**
+  String get forumRecentlyReplied;
+
+  /// No description provided for @forumNewlyCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Recién creados'**
+  String get forumNewlyCreated;
+
+  /// No description provided for @forumReleaseDiscussions.
+  ///
+  /// In es, this message translates to:
+  /// **'Discusiones de estrenos'**
+  String get forumReleaseDiscussions;
 }
 
 class _AppLocalizationsDelegate

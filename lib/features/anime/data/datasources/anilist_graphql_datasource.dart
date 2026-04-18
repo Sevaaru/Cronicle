@@ -1390,10 +1390,10 @@ class AnilistGraphqlDatasource {
 
   /// Post a comment on a forum thread. Requires auth.
   Future<Map<String, dynamic>> saveThreadComment(
-      int threadId, String text, String token, {int? replyCommentId}) async {
+      int threadId, String text, String token, {int? parentCommentId}) async {
     const query = r'''
-      mutation ($threadId: Int, $replyCommentId: Int, $comment: String) {
-        SaveThreadComment(threadId: $threadId, replyCommentId: $replyCommentId, comment: $comment) {
+      mutation ($threadId: Int, $parentCommentId: Int, $comment: String) {
+        SaveThreadComment(threadId: $threadId, parentCommentId: $parentCommentId, comment: $comment) {
           id comment createdAt isLiked likeCount
           user { id name avatar { medium } }
         }
@@ -1401,7 +1401,7 @@ class AnilistGraphqlDatasource {
     ''';
     final data = await _post(
         query,
-        variables: {'threadId': threadId, 'replyCommentId': replyCommentId, 'comment': text},
+        variables: {'threadId': threadId, 'parentCommentId': parentCommentId, 'comment': text},
         token: token);
     final saved = data['data']?['SaveThreadComment'];
     if (saved is Map<String, dynamic>) return saved;
@@ -1438,7 +1438,7 @@ class AnilistGraphqlDatasource {
         }
         Page(perPage: $perPage) {
           threadComments(threadId: $id) {
-            id comment createdAt isLiked likeCount
+            id comment createdAt isLiked likeCount isLocked
             user { id name avatar { medium } }
             childComments
           }
@@ -1452,5 +1452,86 @@ class AnilistGraphqlDatasource {
             ?.cast<Map<String, dynamic>>() ??
         [];
     return {...thread, 'comments': comments};
+  }
+
+  /// Browse forum threads with optional category filter and sort.
+  /// [categoryId]: Anilist forum category (e.g. 1=General, 2=Anime, 3=Manga,
+  /// 5=Release Discussions, 7=Music, 9=Gaming, etc.)
+  /// [sort]: e.g. REPLIED_AT_DESC, CREATED_AT_DESC, IS_STICKY, etc.
+  Future<List<Map<String, dynamic>>> fetchForumThreads({
+    int? categoryId,
+    String sort = 'REPLIED_AT_DESC',
+    int perPage = 15,
+    int page = 1,
+  }) async {
+    const query = r'''
+      query ($categoryId: Int, $sort: [ThreadSort], $perPage: Int, $page: Int) {
+        Page(perPage: $perPage, page: $page) {
+          threads(categoryId: $categoryId, sort: $sort) {
+            id title createdAt updatedAt replyCount viewCount isSticky isLocked
+            user { id name avatar { medium } }
+            categories { id name }
+            repliedAt
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      if (categoryId != null) 'categoryId': categoryId,
+      'sort': [sort],
+      'perPage': perPage,
+      'page': page,
+    });
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Search forum threads by query string.
+  Future<List<Map<String, dynamic>>> searchForumThreads({
+    required String search,
+    int? categoryId,
+    int perPage = 20,
+    int page = 1,
+  }) async {
+    const query = r'''
+      query ($search: String, $categoryId: Int, $sort: [ThreadSort], $perPage: Int, $page: Int) {
+        Page(perPage: $perPage, page: $page) {
+          threads(search: $search, categoryId: $categoryId, sort: $sort) {
+            id title createdAt updatedAt replyCount viewCount isSticky isLocked
+            user { id name avatar { medium } }
+            categories { id name }
+            repliedAt
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      'search': search,
+      if (categoryId != null) 'categoryId': categoryId,
+      'sort': ['SEARCH_MATCH'],
+      'perPage': perPage,
+      'page': page,
+    });
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Fetch all forum feed sections using individual queries.
+  /// Returns a map with keys: 'sticky', 'recent', 'newest', 'releases'.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchForumFeed({
+    int? categoryId,
+  }) async {
+    final results = await Future.wait([
+      fetchForumThreads(categoryId: categoryId, sort: 'IS_STICKY', perPage: 10),
+      fetchForumThreads(categoryId: categoryId, sort: 'REPLIED_AT_DESC', perPage: 8),
+      fetchForumThreads(categoryId: categoryId, sort: 'CREATED_AT_DESC', perPage: 8),
+      fetchForumThreads(categoryId: 5, sort: 'REPLIED_AT_DESC', perPage: 8),
+    ]);
+    return {
+      'sticky': results[0].where((t) => t['isSticky'] == true).toList(),
+      'recent': results[1],
+      'newest': results[2],
+      'releases': results[3],
+    };
   }
 }

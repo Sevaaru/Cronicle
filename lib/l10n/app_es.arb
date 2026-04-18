@@ -150,6 +150,7 @@
   "filterTv": "Series",
   "filterGames": "Juegos",
   "filterAll": "Todo",
+  "filterStatus": "Estado",
 
   "loginRequiredFollowing": "Inicia sesión con Anilist para ver la actividad de las personas que sigues",
   "loginRequiredLike": "Inicia sesión en Anilist para dar like",
@@ -648,5 +649,12 @@
   "forumNoReplies": "Aún no hay respuestas",
   "forumReplyButton": "Responder",
   "forumReplyingTo": "Respondiendo a @{name}",
-  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } }
+  "@forumReplyingTo": { "placeholders": { "name": { "type": "String" } } },
+
+  "socialFeedTab": "Feed",
+  "socialForumTab": "Foro",
+  "forumPinnedThreads": "Hilos fijados",
+  "forumRecentlyReplied": "Con actividad reciente",
+  "forumNewlyCreated": "Recién creados",
+  "forumReleaseDiscussions": "Discusiones de estrenos"
 }

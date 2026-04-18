@@ -452,6 +452,80 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   }
 }
 
+@riverpod
+class AnilistSocialFeed extends _$AnilistSocialFeed {
+  static const _perPage = 25;
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+
+  bool get hasMore => _hasMore;
+
+  @override
+  Future<List<FeedActivity>> build(
+    String? activityType,
+    bool isFollowing,
+  ) async {
+    _page = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
+    return _fetchPage();
+  }
+
+  Future<List<FeedActivity>> _fetchPage() async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final token = await ref.read(anilistTokenProvider.future);
+    if (isFollowing && token == null) {
+      _hasMore = false;
+      return [];
+    }
+    final page = await graphql.fetchRecentActivityByType(
+      activityType: activityType,
+      page: _page,
+      perPage: _perPage,
+      token: token,
+      isFollowing: isFollowing,
+    );
+    _hasMore = page.hasNextPage;
+    final items = page.items
+        .map(feedActivityFromAnilistActivityMap)
+        .whereType<FeedActivity>()
+        .toList();
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;
+    _isLoadingMore = true;
+    _page++;
+    final prev = state.valueOrNull ?? [];
+    try {
+      final next = await _fetchPage();
+      final byId = <String, FeedActivity>{
+        for (final a in prev) a.id: a,
+        for (final a in next) a.id: a,
+      };
+      final merged = byId.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      state = AsyncData(merged);
+    } catch (_) {
+      _page--;
+    } finally {
+      _isLoadingMore = false;
+    }
+  }
+
+  void updateActivity(FeedActivity updated) {
+    final list = state.valueOrNull;
+    if (list == null) return;
+    state = AsyncData([
+      for (final a in list)
+        if (a.id == updated.id) updated else a,
+    ]);
+  }
+}
+
 /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
 @riverpod
 class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
