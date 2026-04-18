@@ -35,9 +35,13 @@ class GamesReviewHomeCard extends StatelessWidget {
     final by = user?['username'] as String? ?? '';
     final game = review['game'] as Map<String, dynamic>?;
     final gameName = game?['name'] as String? ?? '';
-    final gameId = game?['id'] as int?;
-    final cover = game?['cover'] as Map<String, dynamic>?;
-    final imgId = cover?['image_id'] as String?;
+    final gidRaw = game?['id'];
+    final int? gameId = gidRaw is int
+        ? gidRaw
+        : gidRaw is num
+            ? gidRaw.toInt()
+            : int.tryParse('$gidRaw');
+    final imgId = IgdbApiDatasource.reviewNestedCoverImageId(game);
     final coverUrl =
         imgId != null ? IgdbApiDatasource.coverUrl(imgId) : null;
 

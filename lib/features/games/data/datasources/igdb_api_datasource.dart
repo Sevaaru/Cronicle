@@ -344,41 +344,76 @@ limit $limit;
     ]);
   }
 
-  /// Carrusel por género (un id de [Genres] en IGDB).
+  /// Carrusel por género (un id de [Genres] en IGDB). Varias consultas por si el
+  /// filtro de nota deja la lista vacía (Apicalypse: `genres = (id)` = contiene ese género).
   Future<List<Map<String, dynamic>>> fetchGamesGenreSpotlight(
     int genreId, {
     int limit = 24,
     int minRating = 72,
   }) async {
-    final body = '''
+    return _tryPostGameQueries([
+      '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
 where category = 0 & genres = ($genreId) & total_rating >= $minRating;
 sort total_rating desc;
 limit $limit;
-''';
-    try {
-      return await _postList('/games', body);
-    } catch (_) {
-      return [];
-    }
-  }
-
-  /// Modo multijugador (IGDB game_mode id 2 = Multiplayer).
-  Future<List<Map<String, dynamic>>> fetchGamesMultiplayerPopular(
-      {int limit = 24}) async {
-    final body = '''
+''',
+      '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
-where category = 0 & game_modes = (2) & total_rating >= 70;
+where category = 0 & genres = ($genreId) & total_rating >= 50;
 sort total_rating desc;
 limit $limit;
-''';
-    try {
-      return await _postList('/games', body);
-    } catch (_) {
-      return [];
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & genres = ($genreId);
+sort total_rating desc;
+limit $limit;
+''',
+    ]);
+  }
+
+  /// Modo multijugador (`game_modes` id 2 en IGDB). Fallbacks si la nota mínima deja 0 filas.
+  Future<List<Map<String, dynamic>>> fetchGamesMultiplayerPopular(
+      {int limit = 24}) async {
+    return _tryPostGameQueries([
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & game_modes = (2) & total_rating >= 60;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & game_modes = (2);
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & game_modes = (3);
+sort total_rating desc;
+limit $limit;
+''',
+    ]);
+  }
+
+  /// `game.cover.image_id` en reseñas (mismo criterio que [normalize]).
+  static String? reviewNestedCoverImageId(Map<String, dynamic>? game) {
+    final coverRaw = game?['cover'];
+    Map<String, dynamic>? cover;
+    if (coverRaw is Map<String, dynamic>) {
+      cover = coverRaw;
+    } else if (coverRaw is Map) {
+      cover = Map<String, dynamic>.from(coverRaw);
     }
+    return _readCoverImageId(cover);
   }
 
   /// Reseñas recientes (comunidad IGDB).
@@ -564,30 +599,61 @@ limit 15;
     return 'https://$t';
   }
 
+  static int? _readId(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse('$v');
+  }
+
+  /// IGDB may return `image_id` as String or int depending on JSON decoder.
+  static String? _readCoverImageId(Map<String, dynamic>? cover) {
+    if (cover == null) return null;
+    final v = cover['image_id'];
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    return '$v';
+  }
+
   /// Normalizes a raw IGDB game map into the common format used by
   /// [SearchPage] and [AddToLibrarySheet].
   static Map<String, dynamic> normalize(Map<String, dynamic> raw) {
     final name = raw['name'] as String? ?? '';
-    final cover = raw['cover'] as Map<String, dynamic>?;
-    final coverImageId = cover?['image_id'] as String?;
+    Map<String, dynamic>? cover;
+    final coverRaw = raw['cover'];
+    if (coverRaw is Map<String, dynamic>) {
+      cover = coverRaw;
+    } else if (coverRaw is Map) {
+      cover = Map<String, dynamic>.from(coverRaw);
+    }
+    final coverImageId = _readCoverImageId(cover);
     final genres = (raw['genres'] as List?)
-        ?.map((g) => (g as Map<String, dynamic>)['name'] as String? ?? '')
+        ?.map((g) {
+          if (g is Map<String, dynamic>) {
+            return g['name'] as String? ?? '';
+          }
+          if (g is Map) {
+            return Map<String, dynamic>.from(g)['name'] as String? ?? '';
+          }
+          return '';
+        })
         .where((g) => g.isNotEmpty)
         .toList();
     final platforms = (raw['platforms'] as List?)
-        ?.map((p) =>
-            (p as Map<String, dynamic>)['abbreviation'] as String? ??
-            (p)['name'] as String? ??
-            '')
+        ?.map((p) {
+          if (p is Map<String, dynamic>) {
+            return p['abbreviation'] as String? ?? p['name'] as String? ?? '';
+          }
+          if (p is Map) {
+            final m = Map<String, dynamic>.from(p);
+            return m['abbreviation'] as String? ?? m['name'] as String? ?? '';
+          }
+          return '';
+        })
         .where((p) => p.isNotEmpty)
         .toList();
     final rating = raw['total_rating'] as num?;
-    final idRaw = raw['id'];
-    final gameId = idRaw is int
-        ? idRaw
-        : idRaw is num
-            ? idRaw.toInt()
-            : int.tryParse('$idRaw');
+    final gameId = _readId(raw['id']);
 
     return {
       'id': gameId,

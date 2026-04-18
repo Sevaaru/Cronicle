@@ -40,7 +40,9 @@ Future<List<Map<String, dynamic>>> _igdbTryGames(
     }
     try {
       final raw = await fetch();
-      return _normalizeGamesSafe(raw);
+      final next = _normalizeGamesSafe(raw);
+      if (next.isNotEmpty) return next;
+      if (raw.isEmpty) return next;
     } catch (_) {}
   }
   return [];
@@ -144,6 +146,7 @@ Future<Map<String, dynamic>?> igdbGameDetail(
 /// IGDB/Twitch rate limits (parallel per-section providers were unreliable).
 @Riverpod(keepAlive: true)
 Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
+  ref.watch(igdbApiProvider);
   final api = ref.read(igdbApiProvider);
 
   final anticipated =
