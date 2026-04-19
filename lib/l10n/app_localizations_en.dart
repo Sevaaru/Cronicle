@@ -1507,6 +1507,46 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String libraryChaptersRemaining(Object count) {
+    return '$count chapters left';
+  }
+
+  @override
+  String bookProgressPageOf(Object current, Object total, Object pct) {
+    return 'Page $current of $total ($pct%)';
+  }
+
+  @override
+  String bookProgressPageSimple(Object current) {
+    return 'Page $current';
+  }
+
+  @override
+  String bookProgressChapterOf(Object current, Object total, Object pct) {
+    return 'Chapter $current of $total ($pct%)';
+  }
+
+  @override
+  String bookProgressChapterSimple(Object current) {
+    return 'Chapter $current';
+  }
+
+  @override
+  String bookPercentRemaining(Object count) {
+    return '$count% left';
+  }
+
+  @override
+  String bookLibraryProgressChaptersShort(Object current, Object total) {
+    return '$current/$total ch';
+  }
+
+  @override
+  String bookLibraryProgressChapterOnly(Object current) {
+    return '$current ch';
+  }
+
+  @override
   String get gameDetailLinksSection => 'Links';
 
   @override

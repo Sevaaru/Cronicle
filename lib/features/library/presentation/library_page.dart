@@ -70,6 +70,7 @@ bool _libraryEntryHasDetailPage(LibraryEntry entry) {
   if (entry.externalId.isEmpty) return false;
   final kind = MediaKind.fromCode(entry.kind);
   if (kind == MediaKind.anime || kind == MediaKind.manga) return true;
+  if (kind == MediaKind.book) return true;
   if (kind == MediaKind.game) return int.tryParse(entry.externalId) != null;
   if (kind == MediaKind.movie || kind == MediaKind.tv) {
     return int.tryParse(entry.externalId) != null;
@@ -92,6 +93,10 @@ void _openLibraryEntryDetail(BuildContext context, LibraryEntry entry) {
   if (kind == MediaKind.tv) {
     final id = int.tryParse(entry.externalId);
     if (id != null) context.push('/trakt-show/$id');
+    return;
+  }
+  if (kind == MediaKind.book) {
+    context.push('/book/${entry.externalId}');
     return;
   }
   context.push('/media/${entry.externalId}?kind=${entry.kind}');
@@ -582,11 +587,11 @@ class _EntryCard extends StatelessWidget {
                 entry.totalEpisodes! > 0)) &&
         entry.status == 'CURRENT';
     final bookProgressLabel = kind == MediaKind.book
-      ? BookProgressCalculator.getShortProgressLabel(entry)
-      : null;
+        ? BookProgressCalculator.getShortProgressLabel(entry, l10n)
+        : null;
     final bookRemaining = kind == MediaKind.book
-      ? BookProgressCalculator.getRemainingText(entry)
-      : null;
+        ? BookProgressCalculator.getRemainingText(entry, l10n)
+        : null;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),

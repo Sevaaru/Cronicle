@@ -55,7 +55,7 @@ Future<List<Map<String, dynamic>>> bookSubject(
 // Work detail
 // ---------------------------------------------------------------------------
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
   final api = ref.watch(openLibraryApiProvider);
   return api.fetchWork(workKey);

@@ -1820,6 +1820,7 @@ class _InterestsQuickEditor extends ConsumerWidget {
       ('movie', l10n.onboardingInterestMovies, Icons.movie_rounded, const Color(0xFFFF7043)),
       ('tv', l10n.onboardingInterestTv, Icons.tv_rounded, const Color(0xFF26A69A)),
       ('game', l10n.onboardingInterestGames, Icons.sports_esports_rounded, const Color(0xFF42A5F5)),
+      ('book', l10n.onboardingInterestBooks, Icons.auto_stories_rounded, const Color(0xFFAB47BC)),
     ];
 
     return Column(

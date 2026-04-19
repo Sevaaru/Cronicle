@@ -68,8 +68,54 @@ class BooksHomeSectionListPage extends ConsumerWidget {
       body: !valid
           ? Center(child: Text(l10n.profileLibraryEmpty))
           : async!.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () {
+                final cs = Theme.of(context).colorScheme;
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                  children: List.generate(
+                    10,
+                    (_) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: cs.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  height: 12,
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    color: cs.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),

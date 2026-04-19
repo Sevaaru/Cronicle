@@ -534,9 +534,23 @@ class _BookPopularGrid extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
 
     return trendingAsync.when(
-      loading: () => const SizedBox(
-        height: 120,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      loading: () => SizedBox(
+        height: 168,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 5,
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (context, _) => Container(
+            width: 110,
+            height: 150,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
       ),
       error: (e, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -675,18 +689,8 @@ class _SearchResultsList extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
       children: sections.map((section) {
         return section.results.when(
-          loading: () => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Column(
-              children: [
-                Text(section.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(height: 12),
-                const CircularProgressIndicator(),
-              ],
-            ),
-          ),
+          loading: () =>
+              _SearchSectionLoadingPlaceholder(title: section.title),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
@@ -735,5 +739,72 @@ class _ResultSection {
   final String title;
   final MediaKind kind;
   final AsyncValue<List<Map<String, dynamic>>> results;
+}
+
+/// Placeholders grises mientras Open Library / otras APIs responden.
+class _SearchSectionLoadingPlaceholder extends StatelessWidget {
+  const _SearchSectionLoadingPlaceholder({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(
+            4,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 12,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 

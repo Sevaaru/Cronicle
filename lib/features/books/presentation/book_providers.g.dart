@@ -307,7 +307,7 @@ class _BookSubjectProviderElement
   String get subject => (origin as BookSubjectProvider).subject;
 }
 
-String _$bookWorkHash() => r'b17165aefdf2d01a9cae6fa7f401ef3f64c4a67e';
+String _$bookWorkHash() => r'a9ae6a20e85a3fd4f025b115e0fbb9fcb1567d12';
 
 /// See also [bookWork].
 @ProviderFor(bookWork)
@@ -344,7 +344,7 @@ class BookWorkFamily extends Family<AsyncValue<Map<String, dynamic>>> {
 }
 
 /// See also [bookWork].
-class BookWorkProvider extends AutoDisposeFutureProvider<Map<String, dynamic>> {
+class BookWorkProvider extends FutureProvider<Map<String, dynamic>> {
   /// See also [bookWork].
   BookWorkProvider(String workKey)
     : this._internal(
@@ -390,7 +390,7 @@ class BookWorkProvider extends AutoDisposeFutureProvider<Map<String, dynamic>> {
   }
 
   @override
-  AutoDisposeFutureProviderElement<Map<String, dynamic>> createElement() {
+  FutureProviderElement<Map<String, dynamic>> createElement() {
     return _BookWorkProviderElement(this);
   }
 
@@ -410,13 +410,13 @@ class BookWorkProvider extends AutoDisposeFutureProvider<Map<String, dynamic>> {
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin BookWorkRef on AutoDisposeFutureProviderRef<Map<String, dynamic>> {
+mixin BookWorkRef on FutureProviderRef<Map<String, dynamic>> {
   /// The parameter `workKey` of this provider.
   String get workKey;
 }
 
 class _BookWorkProviderElement
-    extends AutoDisposeFutureProviderElement<Map<String, dynamic>>
+    extends FutureProviderElement<Map<String, dynamic>>
     with BookWorkRef {
   _BookWorkProviderElement(super.provider);
 

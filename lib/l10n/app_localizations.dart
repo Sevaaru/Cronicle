@@ -2864,6 +2864,54 @@ abstract class AppLocalizations {
   /// **'{count} pág. restantes'**
   String libraryPagesRemaining(Object count);
 
+  /// No description provided for @libraryChaptersRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} capítulos restantes'**
+  String libraryChaptersRemaining(Object count);
+
+  /// No description provided for @bookProgressPageOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Página {current} de {total} ({pct}%)'**
+  String bookProgressPageOf(Object current, Object total, Object pct);
+
+  /// No description provided for @bookProgressPageSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Página {current}'**
+  String bookProgressPageSimple(Object current);
+
+  /// No description provided for @bookProgressChapterOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo {current} de {total} ({pct}%)'**
+  String bookProgressChapterOf(Object current, Object total, Object pct);
+
+  /// No description provided for @bookProgressChapterSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo {current}'**
+  String bookProgressChapterSimple(Object current);
+
+  /// No description provided for @bookPercentRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count}% restantes'**
+  String bookPercentRemaining(Object count);
+
+  /// No description provided for @bookLibraryProgressChaptersShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{current}/{total} cap.'**
+  String bookLibraryProgressChaptersShort(Object current, Object total);
+
+  /// No description provided for @bookLibraryProgressChapterOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'{current} cap.'**
+  String bookLibraryProgressChapterOnly(Object current);
+
   /// No description provided for @gameDetailLinksSection.
   ///
   /// In es, this message translates to:

@@ -100,14 +100,9 @@ class OpenLibraryApiDatasource {
   /// Fetch full work detail by key (e.g. "OL27448W" or "/works/OL27448W").
   Future<Map<String, dynamic>> fetchWork(String workKey) async {
     final key = workKey.startsWith('/works/') ? workKey : '/works/$workKey';
-    final res = await _dio.get<Map<String, dynamic>>(
-      '$_base$key.json',
-      options: _opts,
-    );
-    final data = res.data ?? {};
-
-    // Fetch editions (first entry for pages) + ratings in parallel
-    final futures = await Future.wait([
+    // Obra + ediciones + valoraciones en paralelo (antes: obra y luego el resto).
+    final batch = await Future.wait([
+      _dio.get<Map<String, dynamic>>('$_base$key.json', options: _opts),
       _dio.get<Map<String, dynamic>>(
         '$_base$key/editions.json',
         queryParameters: {'limit': 1},
@@ -119,7 +114,8 @@ class OpenLibraryApiDatasource {
       ),
     ]);
 
-    final editionsData = futures[0].data ?? {};
+    final data = batch[0].data ?? {};
+    final editionsData = batch[1].data ?? {};
     final editionCount = (editionsData['size'] as num?)?.toInt() ?? 0;
     final editionEntries = (editionsData['entries'] as List?) ?? [];
     int? pages;
@@ -127,9 +123,8 @@ class OpenLibraryApiDatasource {
       final firstEdition = editionEntries.first as Map<String, dynamic>;
       pages = (firstEdition['number_of_pages'] as num?)?.toInt();
     }
-    final ratingsData = futures[1].data ?? {};
+    final ratingsData = batch[2].data ?? {};
 
-    // Resolve author names
     final authorKeys = (data['authors'] as List?)
             ?.map((a) {
               if (a is Map) return (a['author']?['key'] ?? a['key']) as String?;
@@ -243,20 +238,22 @@ class OpenLibraryApiDatasource {
 
   Future<List<String>> _resolveAuthors(List<String> authorKeys) async {
     if (authorKeys.isEmpty) return [];
-    final names = <String>[];
-    for (final key in authorKeys.take(5)) {
-      try {
-        final res = await _dio.get<Map<String, dynamic>>(
-          '$_base$key.json',
-          options: _opts,
-        );
-        final name = res.data?['name'] as String?;
-        if (name != null) names.add(name);
-      } catch (_) {
-        // skip unresolvable authors
-      }
-    }
-    return names;
+    final keys = authorKeys.take(5).toList();
+    // Antes: un await por autor (muy lento). Open Library tolera varias peticiones en ráfaga con User-Agent.
+    final resolved = await Future.wait(
+      keys.map((key) async {
+        try {
+          final res = await _dio.get<Map<String, dynamic>>(
+            '$_base$key.json',
+            options: _opts,
+          );
+          return res.data?['name'] as String?;
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+    return resolved.whereType<String>().toList();
   }
 
   /// Build cover URL from cover ID.

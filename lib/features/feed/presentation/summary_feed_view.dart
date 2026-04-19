@@ -1128,7 +1128,7 @@ class _SectionShimmer extends StatelessWidget {
                 width: 110,
                 height: 160,
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withAlpha(120),
+                  color: cs.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),

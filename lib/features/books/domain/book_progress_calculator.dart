@@ -1,4 +1,5 @@
 import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/l10n/app_localizations.dart';
 
 /// Tracking modes for book progress.
 enum BookTrackingMode {
@@ -73,7 +74,7 @@ class BookProgressCalculator {
   // ---------------------------------------------------------------------------
 
   /// Human-readable progress string, e.g. "Page 120 of 350 (34%)".
-  static String getProgressText(LibraryEntry entry) {
+  static String getProgressText(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
     final pct = calculateProgressPercentage(entry).round();
 
@@ -82,9 +83,9 @@ class BookProgressCalculator {
         final total = getEffectiveTotalPages(entry);
         final current = entry.progress ?? 0;
         if (total != null && total > 0) {
-          return 'Page $current of $total ($pct%)';
+          return l10n.bookProgressPageOf(current, total, pct);
         }
-        return current > 0 ? 'Page $current' : '';
+        return current > 0 ? l10n.bookProgressPageSimple(current) : '';
 
       case BookTrackingMode.percentage:
         return '$pct%';
@@ -93,14 +94,14 @@ class BookProgressCalculator {
         final total = getEffectiveTotalChapters(entry);
         final current = entry.currentChapter ?? 0;
         if (total != null && total > 0) {
-          return 'Chapter $current of $total ($pct%)';
+          return l10n.bookProgressChapterOf(current, total, pct);
         }
-        return current > 0 ? 'Chapter $current' : '';
+        return current > 0 ? l10n.bookProgressChapterSimple(current) : '';
     }
   }
 
   /// "X pages left" / "X chapters left" depending on mode.
-  static String? getRemainingText(LibraryEntry entry) {
+  static String? getRemainingText(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
 
     switch (mode) {
@@ -108,23 +109,23 @@ class BookProgressCalculator {
         final total = getEffectiveTotalPages(entry);
         final current = entry.progress ?? 0;
         if (total == null || total <= current) return null;
-        return '${total - current} pages left';
+        return l10n.libraryPagesRemaining(total - current);
 
       case BookTrackingMode.percentage:
         final remaining = 100 - (entry.progress ?? 0);
         if (remaining <= 0) return null;
-        return '$remaining% left';
+        return l10n.bookPercentRemaining(remaining);
 
       case BookTrackingMode.chapters:
         final total = getEffectiveTotalChapters(entry);
         final current = entry.currentChapter ?? 0;
         if (total == null || total <= current) return null;
-        return '${total - current} chapters left';
+        return l10n.libraryChaptersRemaining(total - current);
     }
   }
 
   /// Short label for library list cards, e.g. "120/350" or "34%".
-  static String getShortProgressLabel(LibraryEntry entry) {
+  static String getShortProgressLabel(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
 
     switch (mode) {
@@ -140,8 +141,10 @@ class BookProgressCalculator {
       case BookTrackingMode.chapters:
         final total = getEffectiveTotalChapters(entry);
         final current = entry.currentChapter ?? 0;
-        if (total != null) return '$current/$total ch';
-        return '$current ch';
+        if (total != null) {
+          return l10n.bookLibraryProgressChaptersShort(current, total);
+        }
+        return l10n.bookLibraryProgressChapterOnly(current);
     }
   }
 

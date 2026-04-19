@@ -28,13 +28,147 @@ class BookDetailPage extends ConsumerWidget {
 
     return Scaffold(
       body: detailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _BookDetailLoadingView(),
         error: (e, _) => Center(
           child: Text(l10n.bookDetailNoData,
               style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ),
         data: (book) => _DetailContent(book: book, workKey: workKey),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Carga: layout similar al detalle (placeholders grises, sin spinner aislado)
+// ---------------------------------------------------------------------------
+
+class _BookDetailLoadingView extends StatelessWidget {
+  const _BookDetailLoadingView();
+
+  static const _bannerH = 170.0;
+  static const _posterH = 130.0;
+  static const _posterW = 90.0;
+  static const _overlap = 50.0;
+  static const _headerExtra = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    Widget line(double h, {double? w}) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        );
+
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              SizedBox(
+                height: _bannerH + _posterH - _overlap + _headerExtra,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      height: _bannerH,
+                      width: double.infinity,
+                      color: cs.surfaceContainerHighest,
+                    ),
+                    SafeArea(
+                      bottom: false,
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black26,
+                            ),
+                            onPressed: () => Navigator.of(context).maybePop(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      top: _bannerH - _overlap,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: _posterW,
+                            height: _posterH,
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(color: cs.surface, width: 3),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                line(24),
+                                const SizedBox(height: 8),
+                                line(14, w: 160),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        line(26, w: 56),
+                        const SizedBox(width: 8),
+                        line(26, w: 80),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    line(110),
+                    const SizedBox(height: 10),
+                    line(14),
+                    const SizedBox(height: 6),
+                    line(14),
+                    const SizedBox(height: 6),
+                    line(14, w: 200),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: cs.primary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -497,8 +631,8 @@ class _BookProgressCard extends ConsumerWidget {
         if (entry == null) return const SizedBox.shrink();
 
         final pct = BookProgressCalculator.calculateProgressPercentage(entry);
-        final progressText = BookProgressCalculator.getProgressText(entry);
-        final remainingText = BookProgressCalculator.getRemainingText(entry);
+        final progressText = BookProgressCalculator.getProgressText(entry, l10n);
+        final remainingText = BookProgressCalculator.getRemainingText(entry, l10n);
         final mode = BookProgressCalculator.getTrackingMode(entry);
         final modeLabel = switch (mode) {
           BookTrackingMode.pages => l10n.bookTrackingModePages,
