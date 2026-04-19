@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -95,11 +96,44 @@ class SettingsPage extends ConsumerWidget {
 
 }
 
-class _DeviceNotificationsSection extends ConsumerWidget {
+class _DeviceNotificationsSection extends ConsumerStatefulWidget {
   const _DeviceNotificationsSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DeviceNotificationsSection> createState() =>
+      _DeviceNotificationsSectionState();
+}
+
+class _DeviceNotificationsSectionState
+    extends ConsumerState<_DeviceNotificationsSection> {
+  Future<void> _onMasterChanged(bool v) async {
+    final notifier = ref.read(deviceNotificationSettingsProvider.notifier);
+    if (v) {
+      final status = await Permission.notification.status;
+      if (status.isPermanentlyDenied) {
+        // System won't show the dialog again — open app settings.
+        await openAppSettings();
+        // Re-check after returning from settings.
+        final after = await Permission.notification.status;
+        if (!after.isGranted) return;
+      } else if (!status.isGranted) {
+        final result = await Permission.notification.request();
+        if (!result.isGranted) {
+          if (mounted) {
+            final l10n = AppLocalizations.of(context)!;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.notifPermissionDeniedHint)),
+            );
+          }
+          return;
+        }
+      }
+    }
+    await notifier.setMasterEnabled(v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final n = ref.watch(deviceNotificationSettingsProvider);
@@ -132,7 +166,7 @@ class _DeviceNotificationsSection extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.settingsNotifMaster),
             value: n.masterEnabled,
-            onChanged: (v) => notifier.setMasterEnabled(v),
+            onChanged: (v) => _onMasterChanged(v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

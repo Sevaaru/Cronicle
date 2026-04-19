@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
@@ -40,6 +41,13 @@ class AnilistToken extends _$AnilistToken {
       final name = viewer?['name'] as String?;
       if (name != null && name.isNotEmpty) {
         await ref.read(anilistAuthProvider).saveUserName(name);
+      }
+      // Auto-set scoring format from AniList account.
+      final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
+      final fmt = opts?['scoreFormat'] as String?;
+      if (fmt != null) {
+        final system = ScoringSystem.fromId(fmt);
+        await ref.read(scoringSystemSettingProvider.notifier).set(system);
       }
     } catch (_) {}
     state = AsyncData(token);

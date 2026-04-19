@@ -70,34 +70,25 @@ Future<bool> showAddToLibrarySheet({
   final db = ref.read(databaseProvider);
 
   if (kind == MediaKind.anime || kind == MediaKind.manga) {
-    final prompted = await db.getKeyValue('anilist_prompt_shown');
-    if (prompted == null && context.mounted) {
-      final choice = await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _AnilistPromptDialog(),
-      );
-      await db.setKeyValue('anilist_prompt_shown', 'true');
-
-      if (choice == 'connect' && context.mounted) {
-        final auth = ref.read(anilistAuthProvider);
-        await launchUrl(
-          Uri.parse(auth.authorizeUrl),
-          mode: LaunchMode.externalApplication,
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null || token.isEmpty) {
+      final prompted = await db.getKeyValue('anilist_prompt_shown');
+      if (prompted == null && context.mounted) {
+        final choice = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const _AnilistPromptDialog(),
         );
-      }
-    }
-  }
+        await db.setKeyValue('anilist_prompt_shown', 'true');
 
-  if (kind == MediaKind.game) {
-    final prompted = await db.getKeyValue('twitch_prompt_shown');
-    if (prompted == null && context.mounted) {
-      await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _TwitchPromptDialog(),
-      );
-      await db.setKeyValue('twitch_prompt_shown', 'true');
+        if (choice == 'connect' && context.mounted) {
+          final auth = ref.read(anilistAuthProvider);
+          await launchUrl(
+            Uri.parse(auth.authorizeUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      }
     }
   }
 
@@ -249,31 +240,6 @@ class _AnilistPromptDialog extends StatelessWidget {
           icon: const Icon(Icons.login, size: 18),
           label: Text(l10n.anilistConnect),
           onPressed: () => Navigator.of(context).pop('connect'),
-        ),
-      ],
-    );
-  }
-}
-
-class _TwitchPromptDialog extends StatelessWidget {
-  const _TwitchPromptDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-
-    return AlertDialog(
-      icon: Icon(Icons.sports_esports_rounded, size: 40, color: cs.primary),
-      title: Text(l10n.twitchSyncPromptTitle),
-      content: Text(
-        l10n.twitchSyncPromptBody,
-        style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
-      ),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop('skip'),
-          child: Text(l10n.twitchSyncPromptNoThanks),
         ),
       ],
     );

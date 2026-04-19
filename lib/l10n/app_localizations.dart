@@ -476,29 +476,11 @@ abstract class AppLocalizations {
   /// **'Inicia sesión en Anilist en Ajustes para ver notificaciones.'**
   String get notificationsLoginRequired;
 
-  /// No description provided for @notifPermissionTitle.
+  /// No description provided for @notifPermissionDeniedHint.
   ///
   /// In es, this message translates to:
-  /// **'¿Activar notificaciones?'**
-  String get notifPermissionTitle;
-
-  /// No description provided for @notifPermissionBody.
-  ///
-  /// In es, this message translates to:
-  /// **'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.'**
-  String get notifPermissionBody;
-
-  /// No description provided for @notifPermissionNotNow.
-  ///
-  /// In es, this message translates to:
-  /// **'Ahora no'**
-  String get notifPermissionNotNow;
-
-  /// No description provided for @notifPermissionAllow.
-  ///
-  /// In es, this message translates to:
-  /// **'Permitir'**
-  String get notifPermissionAllow;
+  /// **'Puedes activar las notificaciones en cualquier momento desde Ajustes.'**
+  String get notifPermissionDeniedHint;
 
   /// No description provided for @gallerySaveUnavailableWeb.
   ///
@@ -781,6 +763,96 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hay títulos en esta lista.'**
   String get feedBrowseEmpty;
+
+  /// No description provided for @feedSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Descubrir'**
+  String get feedSummary;
+
+  /// No description provided for @summaryTrendingAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime en tendencia'**
+  String get summaryTrendingAnime;
+
+  /// No description provided for @summaryTrendingManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga en tendencia'**
+  String get summaryTrendingManga;
+
+  /// No description provided for @summaryTrendingMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas en tendencia'**
+  String get summaryTrendingMovies;
+
+  /// No description provided for @summaryTrendingShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series en tendencia'**
+  String get summaryTrendingShows;
+
+  /// No description provided for @summaryPopularGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos populares'**
+  String get summaryPopularGames;
+
+  /// No description provided for @summaryTopAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime mejor valorado'**
+  String get summaryTopAnime;
+
+  /// No description provided for @summaryTopManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga mejor valorado'**
+  String get summaryTopManga;
+
+  /// No description provided for @summaryAnticipatedMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas más esperadas'**
+  String get summaryAnticipatedMovies;
+
+  /// No description provided for @summaryAnticipatedShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series más esperadas'**
+  String get summaryAnticipatedShows;
+
+  /// No description provided for @summaryAnticipatedGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos más esperados'**
+  String get summaryAnticipatedGames;
+
+  /// No description provided for @summaryRandom.
+  ///
+  /// In es, this message translates to:
+  /// **'Descubre algo nuevo'**
+  String get summaryRandom;
+
+  /// No description provided for @summaryRandomButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Título al azar'**
+  String get summaryRandomButton;
+
+  /// No description provided for @summaryRandomSub.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba algo de tus intereses'**
+  String get summaryRandomSub;
+
+  /// No description provided for @summarySeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get summarySeeAll;
 
   /// No description provided for @filterFollowing.
   ///
@@ -2624,24 +2696,6 @@ abstract class AppLocalizations {
   /// **'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).'**
   String get igdbWebNotSupported;
 
-  /// No description provided for @twitchSyncPromptTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Conecta con Twitch'**
-  String get twitchSyncPromptTitle;
-
-  /// No description provided for @twitchSyncPromptBody.
-  ///
-  /// In es, this message translates to:
-  /// **'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.'**
-  String get twitchSyncPromptBody;
-
-  /// No description provided for @twitchSyncPromptNoThanks.
-  ///
-  /// In es, this message translates to:
-  /// **'No, gracias'**
-  String get twitchSyncPromptNoThanks;
-
   /// No description provided for @twitchConnect.
   ///
   /// In es, this message translates to:
@@ -3194,6 +3248,24 @@ abstract class AppLocalizations {
   /// **'Tienda externa'**
   String get gameDetailExtCatOther;
 
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenido a Cronicle'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra tu progreso en anime, manga, películas, series y juegos en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.'**
+  String get onboardingWelcomeBody;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get onboardingNext;
+
   /// No description provided for @onboardingTitle.
   ///
   /// In es, this message translates to:
@@ -3242,6 +3314,84 @@ abstract class AppLocalizations {
   /// **'Videojuegos'**
   String get onboardingInterestGames;
 
+  /// No description provided for @onboardingAccountsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta tus cuentas'**
+  String get onboardingAccountsTitle;
+
+  /// No description provided for @onboardingAccountsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Es recomendable iniciar sesión para tener tus datos sincronizados en la nube. Google sincroniza todos los datos y cuentas conectadas.'**
+  String get onboardingAccountsSubtitle;
+
+  /// No description provided for @onboardingConnectAnilist.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Anilist'**
+  String get onboardingConnectAnilist;
+
+  /// No description provided for @onboardingConnectAnilistDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincroniza tus listas de anime y manga'**
+  String get onboardingConnectAnilistDesc;
+
+  /// No description provided for @onboardingConnectTrakt.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Trakt'**
+  String get onboardingConnectTrakt;
+
+  /// No description provided for @onboardingConnectTraktDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincroniza tus películas y series'**
+  String get onboardingConnectTraktDesc;
+
+  /// No description provided for @onboardingConnectGoogle.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión con Google'**
+  String get onboardingConnectGoogle;
+
+  /// No description provided for @onboardingConnectGoogleDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia de seguridad en la nube de todos tus datos y cuentas'**
+  String get onboardingConnectGoogleDesc;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar sin cuentas'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingFinish.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizar configuración'**
+  String get onboardingFinish;
+
+  /// No description provided for @onboardingConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado'**
+  String get onboardingConnected;
+
+  /// No description provided for @onboardingAccountSynced.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizado'**
+  String get onboardingAccountSynced;
+
+  /// No description provided for @onboardingSyncing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando tus datos…'**
+  String get onboardingSyncing;
+
   /// No description provided for @settingsCustomizeSearchFilters.
   ///
   /// In es, this message translates to:
@@ -3287,7 +3437,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsScoringDesc.
   ///
   /// In es, this message translates to:
-  /// **'Elige cómo puntuar tu contenido'**
+  /// **'Cambia cómo se muestran e ingresan las puntuaciones en toda la app. Se sincroniza automáticamente con tu cuenta de AniList'**
   String get settingsScoringDesc;
 
   /// No description provided for @scoringPoint100.

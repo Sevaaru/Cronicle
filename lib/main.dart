@@ -108,6 +108,13 @@ Future<void> _handleAnilistOAuthCallback() async {
     if (name != null && name.isNotEmpty) {
       await auth.saveUserName(name);
     }
+    // Persist AniList scoring format so it becomes the app default.
+    final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
+    final fmt = opts?['scoreFormat'] as String?;
+    if (fmt != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('scoring_system', fmt);
+    }
   } catch (_) {}
   await clearPendingAnilistToken();
 

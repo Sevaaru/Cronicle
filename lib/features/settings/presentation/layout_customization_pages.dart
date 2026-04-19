@@ -9,6 +9,7 @@ import 'package:cronicle/shared/models/media_kind.dart';
 
 String _feedFilterTitle(String id, AppLocalizations l10n) => switch (id) {
       'feed' => l10n.filterFeed,
+      'summary' => l10n.feedSummary,
       'anime' => l10n.filterAnime,
       'manga' => l10n.filterManga,
       'movie' => l10n.filterMovies,

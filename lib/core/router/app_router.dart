@@ -81,8 +81,13 @@ GoRouter appRouter(AppRouterRef ref) {
     redirect: (context, state) {
       // Android entrega el intent OAuth a MainActivity; el sistema puede
       // exponerlo como "ruta" y GoRouter no tiene match → GoException.
+      // AppLinks ya maneja el deep link; mantener al usuario en la página actual.
       if (state.uri.scheme == 'cronicle') {
-        return '/settings';
+        final current =
+            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+        if (current.isNotEmpty && current != '/') return current;
+        final done = ref.read(onboardingCompletedProvider);
+        return done ? startPage : '/onboarding';
       }
       return null;
     },

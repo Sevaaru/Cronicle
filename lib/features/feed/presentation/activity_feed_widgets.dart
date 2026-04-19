@@ -11,6 +11,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 // ---------------------------------------------------------------------------
@@ -665,20 +666,20 @@ class ActivityCard extends ConsumerWidget {
         MediaKind.game => Colors.redAccent,
       };
 
-  Future<void> _handleLike(BuildContext context, WidgetRef ref) async {
+  Future<bool?> _handleLike(BuildContext context, WidgetRef ref) async {
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) {
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(
                 AppLocalizations.of(context)!.loginRequiredLike)),
       );
-      return;
+      return null;
     }
     final graphql = ref.read(anilistGraphqlProvider);
     final actId = int.tryParse(activity.id);
-    if (actId == null) return;
+    if (actId == null) return null;
 
     final isLiked = await graphql.toggleLike(actId, token);
     final updated = activity.copyWith(
@@ -688,24 +689,33 @@ class ActivityCard extends ConsumerWidget {
           : (activity.likeCount - 1).clamp(0, 999999),
     );
 
-    try {
-      ref.read(anilistFeedProvider.notifier).updateActivity(updated);
-    } catch (_) {}
-    try {
-      ref
-          .read(anilistFeedByTypeProvider('ANIME_LIST').notifier)
-          .updateActivity(updated);
-    } catch (_) {}
-    try {
-      ref
-          .read(anilistFeedByTypeProvider('MANGA_LIST').notifier)
-          .updateActivity(updated);
-    } catch (_) {}
-    try {
-      ref
-          .read(anilistFeedFollowingProvider.notifier)
-          .updateActivity(updated);
-    } catch (_) {}
+    if (ref.exists(anilistFeedProvider)) {
+      try {
+        ref.read(anilistFeedProvider.notifier).updateActivity(updated);
+      } catch (_) {}
+    }
+    if (ref.exists(anilistFeedByTypeProvider('ANIME_LIST'))) {
+      try {
+        ref
+            .read(anilistFeedByTypeProvider('ANIME_LIST').notifier)
+            .updateActivity(updated);
+      } catch (_) {}
+    }
+    if (ref.exists(anilistFeedByTypeProvider('MANGA_LIST'))) {
+      try {
+        ref
+            .read(anilistFeedByTypeProvider('MANGA_LIST').notifier)
+            .updateActivity(updated);
+      } catch (_) {}
+    }
+    if (ref.exists(anilistFeedFollowingProvider)) {
+      try {
+        ref
+            .read(anilistFeedFollowingProvider.notifier)
+            .updateActivity(updated);
+      } catch (_) {}
+    }
+    return isLiked;
   }
 
   @override
@@ -853,35 +863,10 @@ class ActivityCard extends ConsumerWidget {
           Row(
             children: [
               const SizedBox(width: 42),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _handleLike(context, ref),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        activity.isLiked
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        size: 16,
-                        color: activity.isLiked
-                            ? Colors.red.shade400
-                            : colorScheme.onSurfaceVariant,
-                      ),
-                      if (activity.likeCount > 0) ...[
-                        const SizedBox(width: 4),
-                        Text('${activity.likeCount}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    colorScheme.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
+              AnimatedLikeButton(
+                isLiked: activity.isLiked,
+                likeCount: activity.likeCount,
+                onToggle: () => _handleLike(context, ref),
               ),
               const SizedBox(width: 12),
               InkWell(

@@ -54,8 +54,8 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final items = [
       GlassNavItem(
-        icon: Icons.rss_feed_outlined,
-        activeIcon: Icons.rss_feed_rounded,
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
         label: l10n.navHome,
       ),
       GlassNavItem(

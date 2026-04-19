@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgoForum(int? createdAt) {
@@ -112,33 +113,35 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     }
   }
 
-  Future<void> _toggleThreadLike() async {
+  Future<bool?> _toggleThreadLike() async {
     final token = await ref.read(anilistTokenProvider.future);
-    if (token == null) { _showLoginSnack(); return; }
+    if (token == null) { _showLoginSnack(); return null; }
     final id = _thread?['id'] as int?;
-    if (id == null) return;
+    if (id == null) return null;
     final liked = await ref.read(anilistGraphqlProvider)
         .toggleLike(id, token, type: 'THREAD');
-    if (!mounted) return;
+    if (!mounted) return null;
     setState(() {
       _threadIsLiked = liked;
       _threadLikeCount =
           liked ? _threadLikeCount + 1 : (_threadLikeCount - 1).clamp(0, 99999);
     });
+    return liked;
   }
 
-  Future<void> _toggleCommentLike(int commentId) async {
+  Future<bool?> _toggleCommentLike(int commentId) async {
     final token = await ref.read(anilistTokenProvider.future);
-    if (token == null) { _showLoginSnack(); return; }
+    if (token == null) { _showLoginSnack(); return null; }
     final liked = await ref.read(anilistGraphqlProvider)
         .toggleLike(commentId, token, type: 'THREAD_COMMENT');
-    if (!mounted) return;
+    if (!mounted) return null;
     setState(() {
       _commentIsLiked[commentId] = liked;
       final prev = _commentLikeCount[commentId] ?? 0;
       _commentLikeCount[commentId] =
           liked ? prev + 1 : (prev - 1).clamp(0, 99999);
     });
+    return liked;
   }
 
   Future<void> _sendComment() async {
@@ -388,11 +391,10 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
               ],
 
               const SizedBox(height: 8),
-              _LikeButton(
+              AnimatedLikeButton(
                 isLiked: _threadIsLiked,
-                count: _threadLikeCount,
-                onTap: _toggleThreadLike,
-                cs: cs,
+                likeCount: _threadLikeCount,
+                onToggle: _toggleThreadLike,
               ),
 
               const Divider(height: 32),
@@ -499,56 +501,6 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-class _LikeButton extends StatelessWidget {
-  const _LikeButton({
-    required this.isLiked,
-    required this.count,
-    required this.onTap,
-    required this.cs,
-    this.small = false,
-  });
-
-  final bool isLiked;
-  final int count;
-  final VoidCallback onTap;
-  final ColorScheme cs;
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconSize = small ? 14.0 : 18.0;
-    final fontSize = small ? 11.0 : 13.0;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isLiked ? Icons.favorite : Icons.favorite_border,
-              size: iconSize,
-              color: isLiked ? cs.error : cs.onSurfaceVariant,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '$count',
-              style: TextStyle(
-                fontSize: fontSize,
-                color: isLiked ? cs.error : cs.onSurfaceVariant,
-                fontWeight: isLiked ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _CommentTile extends StatefulWidget {
   const _CommentTile({
     required this.comment,
@@ -566,11 +518,11 @@ class _CommentTile extends StatefulWidget {
   final ColorScheme cs;
   final bool isLiked;
   final int likeCount;
-  final VoidCallback? onLike;
+  final Future<bool?> Function()? onLike;
   final void Function(int id, String name) onReply;
   final Map<int, bool> isLikedMap;
   final Map<int, int> likeCountMap;
-  final void Function(int id) onToggleChildLike;
+  final Future<bool?> Function(int id) onToggleChildLike;
 
   @override
   State<_CommentTile> createState() => _CommentTileState();
@@ -619,11 +571,10 @@ class _CommentTileState extends State<_CommentTile> {
           Row(
             children: [
               if (widget.onLike != null)
-                _LikeButton(
+                AnimatedLikeButton(
                   isLiked: widget.isLiked,
-                  count: widget.likeCount,
-                  onTap: widget.onLike!,
-                  cs: cs,
+                  likeCount: widget.likeCount,
+                  onToggle: widget.onLike!,
                 ),
               const SizedBox(width: 12),
               if (commentId != null)
@@ -843,7 +794,7 @@ class _ChildCommentTile extends StatelessWidget {
   final ColorScheme cs;
   final bool isLiked;
   final int likeCount;
-  final VoidCallback? onLike;
+  final Future<bool?> Function()? onLike;
   final VoidCallback? onReply;
 
   @override
@@ -891,12 +842,12 @@ class _ChildCommentTile extends StatelessWidget {
                   Row(
                     children: [
                       if (onLike != null)
-                        _LikeButton(
+                        AnimatedLikeButton(
                           isLiked: isLiked,
-                          count: likeCount,
-                          onTap: onLike!,
-                          cs: cs,
-                          small: true,
+                          likeCount: likeCount,
+                          onToggle: onLike!,
+                          iconSize: 14,
+                          fontSize: 11,
                         ),
                       const SizedBox(width: 10),
                       if (isLocked)

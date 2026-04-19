@@ -14,14 +14,18 @@ class BrowseResultCard extends StatelessWidget {
     required this.kind,
     required this.onAdd,
     this.releaseDateLine,
+    this.inLibrary = false,
   });
 
   final Map<String, dynamic> item;
   final MediaKind kind;
   final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
 
-  /// Ej.: fecha de salida en listados IGDB “Próximamente”.
+  /// Ej.: fecha de salida en listados IGDB "Próximamente".
   final String? releaseDateLine;
+
+  /// Whether this item is already in the user's library.
+  final bool inLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -193,10 +197,12 @@ class BrowseResultCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: IconButton(
-                icon:
-                    Icon(Icons.add_circle_outline, color: colorScheme.primary),
+                icon: Icon(
+                  inLibrary ? Icons.edit : Icons.add_circle_outline,
+                  color: colorScheme.primary,
+                ),
                 onPressed: () => onAdd(item, kind),
-                tooltip: l10n.addToLibrary,
+                tooltip: inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
               ),
             ),
           ],

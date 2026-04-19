@@ -220,17 +220,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Inicia sesión en Anilist en Ajustes para ver notificaciones.';
 
   @override
-  String get notifPermissionTitle => '¿Activar notificaciones?';
-
-  @override
-  String get notifPermissionBody =>
-      'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.';
-
-  @override
-  String get notifPermissionNotNow => 'Ahora no';
-
-  @override
-  String get notifPermissionAllow => 'Permitir';
+  String get notifPermissionDeniedHint =>
+      'Puedes activar las notificaciones en cualquier momento desde Ajustes.';
 
   @override
   String get gallerySaveUnavailableWeb => 'Descarga no disponible en web';
@@ -388,6 +379,51 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedBrowseEmpty => 'No hay títulos en esta lista.';
+
+  @override
+  String get feedSummary => 'Descubrir';
+
+  @override
+  String get summaryTrendingAnime => 'Anime en tendencia';
+
+  @override
+  String get summaryTrendingManga => 'Manga en tendencia';
+
+  @override
+  String get summaryTrendingMovies => 'Películas en tendencia';
+
+  @override
+  String get summaryTrendingShows => 'Series en tendencia';
+
+  @override
+  String get summaryPopularGames => 'Juegos populares';
+
+  @override
+  String get summaryTopAnime => 'Anime mejor valorado';
+
+  @override
+  String get summaryTopManga => 'Manga mejor valorado';
+
+  @override
+  String get summaryAnticipatedMovies => 'Películas más esperadas';
+
+  @override
+  String get summaryAnticipatedShows => 'Series más esperadas';
+
+  @override
+  String get summaryAnticipatedGames => 'Juegos más esperados';
+
+  @override
+  String get summaryRandom => 'Descubre algo nuevo';
+
+  @override
+  String get summaryRandomButton => 'Título al azar';
+
+  @override
+  String get summaryRandomSub => 'Prueba algo de tus intereses';
+
+  @override
+  String get summarySeeAll => 'Ver todo';
 
   @override
   String get filterFollowing => 'Siguiendo';
@@ -1386,16 +1422,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).';
 
   @override
-  String get twitchSyncPromptTitle => 'Conecta con Twitch';
-
-  @override
-  String get twitchSyncPromptBody =>
-      'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.';
-
-  @override
-  String get twitchSyncPromptNoThanks => 'No, gracias';
-
-  @override
   String get twitchConnect => 'Conectar Twitch';
 
   @override
@@ -1689,6 +1715,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gameDetailExtCatOther => 'Tienda externa';
 
   @override
+  String get onboardingWelcomeTitle => 'Bienvenido a Cronicle';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Registra tu progreso en anime, manga, películas, series y juegos en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.';
+
+  @override
+  String get onboardingNext => 'Siguiente';
+
+  @override
   String get onboardingTitle => '¿Qué te interesa?';
 
   @override
@@ -1714,6 +1750,48 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingInterestGames => 'Videojuegos';
 
   @override
+  String get onboardingAccountsTitle => 'Conecta tus cuentas';
+
+  @override
+  String get onboardingAccountsSubtitle =>
+      'Es recomendable iniciar sesión para tener tus datos sincronizados en la nube. Google sincroniza todos los datos y cuentas conectadas.';
+
+  @override
+  String get onboardingConnectAnilist => 'Conectar Anilist';
+
+  @override
+  String get onboardingConnectAnilistDesc =>
+      'Sincroniza tus listas de anime y manga';
+
+  @override
+  String get onboardingConnectTrakt => 'Conectar Trakt';
+
+  @override
+  String get onboardingConnectTraktDesc => 'Sincroniza tus películas y series';
+
+  @override
+  String get onboardingConnectGoogle => 'Iniciar sesión con Google';
+
+  @override
+  String get onboardingConnectGoogleDesc =>
+      'Copia de seguridad en la nube de todos tus datos y cuentas';
+
+  @override
+  String get onboardingSkip => 'Usar sin cuentas';
+
+  @override
+  String get onboardingFinish => 'Finalizar configuración';
+
+  @override
+  String get onboardingConnected => 'Conectado';
+
+  @override
+  String get onboardingAccountSynced => 'Sincronizado';
+
+  @override
+  String get onboardingSyncing => 'Sincronizando tus datos…';
+
+  @override
   String get settingsCustomizeSearchFilters => 'Filtros de búsqueda';
 
   @override
@@ -1737,7 +1815,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsScoringTitle => 'Sistema de puntuación';
 
   @override
-  String get settingsScoringDesc => 'Elige cómo puntuar tu contenido';
+  String get settingsScoringDesc =>
+      'Cambia cómo se muestran e ingresan las puntuaciones en toda la app. Se sincroniza automáticamente con tu cuenta de AniList';
 
   @override
   String get scoringPoint100 => '100 puntos';

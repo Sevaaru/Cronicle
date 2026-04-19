@@ -36,6 +36,7 @@ Future<int> importTraktWatchedToLocal({
       final cover = norm['coverImage'] as Map<String, dynamic>? ?? {};
       final rating10 =
           ((raw['rating'] as num?) ?? 0).round().clamp(0, 10);
+      final score100 = rating10 * 10;
 
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(MediaKind.movie.code),
@@ -47,7 +48,7 @@ Future<int> importTraktWatchedToLocal({
         ),
         posterUrl: drift.Value(cover['large'] as String?),
         status: drift.Value(status),
-        score: drift.Value(rating10 > 0 ? rating10 : null),
+        score: drift.Value(score100 > 0 ? score100 : null),
         progress: drift.Value(plays > 0 ? 1 : 0),
         totalEpisodes: drift.Value(1),
         notes: drift.Value(null),
@@ -83,6 +84,7 @@ Future<int> importTraktWatchedToLocal({
       final cover = norm['coverImage'] as Map<String, dynamic>? ?? {};
       final rating10 =
           ((raw['rating'] as num?) ?? 0).round().clamp(0, 10);
+      final score100 = rating10 * 10;
 
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(MediaKind.tv.code),
@@ -94,7 +96,7 @@ Future<int> importTraktWatchedToLocal({
         ),
         posterUrl: drift.Value(cover['large'] as String?),
         status: drift.Value(status),
-        score: drift.Value(rating10 > 0 ? rating10 : null),
+        score: drift.Value(score100 > 0 ? score100 : null),
         progress: drift.Value(watchedEps),
         totalEpisodes: drift.Value(total > 0 ? total : null),
         notes: drift.Value(null),

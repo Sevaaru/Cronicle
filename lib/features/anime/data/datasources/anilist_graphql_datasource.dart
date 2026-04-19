@@ -54,28 +54,50 @@ class AnilistGraphqlDatasource {
     if (token != null) headers['Authorization'] = 'Bearer $token';
 
     late final Map<String, dynamic> body;
-    try {
-      final res = await _dio.post<dynamic>(
-        _url,
-        data: {'query': query, 'variables': variables},
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.json,
-          validateStatus: (_) => true,
-        ),
-      );
-      if (res.data is Map<String, dynamic>) {
-        body = res.data as Map<String, dynamic>;
-      } else {
-        throw Exception('HTTP ${res.statusCode}');
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final res = await _dio.post<dynamic>(
+          _url,
+          data: {'query': query, 'variables': variables},
+          options: Options(
+            headers: headers,
+            responseType: ResponseType.json,
+            validateStatus: (_) => true,
+          ),
+        );
+        // Retry on 429 Too Many Requests
+        if (res.statusCode == 429 && attempt < maxAttempts) {
+          final retryAfter = int.tryParse(
+                  res.headers.value('retry-after') ?? '') ??
+              (attempt * 2);
+          await Future<void>.delayed(
+              Duration(seconds: retryAfter.clamp(1, 60)));
+          continue;
+        }
+        if (res.data is Map<String, dynamic>) {
+          body = res.data as Map<String, dynamic>;
+        } else {
+          throw Exception('HTTP ${res.statusCode}');
+        }
+      } on DioException catch (e) {
+        // Retry on 429 from DioException too
+        if (e.response?.statusCode == 429 && attempt < maxAttempts) {
+          final retryAfter = int.tryParse(
+                  e.response?.headers.value('retry-after') ?? '') ??
+              (attempt * 2);
+          await Future<void>.delayed(
+              Duration(seconds: retryAfter.clamp(1, 60)));
+          continue;
+        }
+        final data = e.response?.data;
+        if (data is Map<String, dynamic>) {
+          body = data;
+        } else {
+          throw Exception('Network error: ${e.message}');
+        }
       }
-    } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map<String, dynamic>) {
-        body = data;
-      } else {
-        throw Exception('Network error: ${e.message}');
-      }
+      break;
     }
 
     final errors = body['errors'] as List?;
@@ -1055,7 +1077,7 @@ class AnilistGraphqlDatasource {
             entries {
               id
               status
-              score(format: POINT_10)
+              score(format: POINT_100)
               progress
               progressVolumes
               notes
@@ -1139,6 +1161,7 @@ class AnilistGraphqlDatasource {
           id
           name
           avatar { medium }
+          mediaListOptions { scoreFormat }
         }
       }
     ''';
@@ -1334,7 +1357,7 @@ class AnilistGraphqlDatasource {
   }
 
   /// Save (create/update) a media list entry on Anilist.
-  /// [score] expects POINT_10 format (0-10), converted to scoreRaw (0-100).
+  /// [score] expects 0-100 raw format, sent directly as scoreRaw.
   Future<Map<String, dynamic>?> saveMediaListEntry({
     required int mediaId,
     required String token,
@@ -1348,7 +1371,7 @@ class AnilistGraphqlDatasource {
         SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $scoreRaw, progress: $progress, notes: $notes) {
           id
           status
-          score(format: POINT_10)
+          score(format: POINT_100)
           progress
           notes
         }
@@ -1356,7 +1379,7 @@ class AnilistGraphqlDatasource {
     ''';
     final variables = <String, dynamic>{'mediaId': mediaId};
     if (status != null) variables['status'] = status;
-    if (score != null) variables['scoreRaw'] = score * 10;
+    if (score != null) variables['scoreRaw'] = score;
     if (progress != null) variables['progress'] = progress;
     if (notes != null) variables['notes'] = notes;
 

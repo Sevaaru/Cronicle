@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
     show IgdbWebUnsupportedException;
 import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
 import 'package:cronicle/features/games/presentation/games_section_titles.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -40,11 +42,17 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     Map<String, dynamic> item,
     MediaKind kind,
   ) async {
+    final db = ref.read(databaseProvider);
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      kind.code, item['id'].toString(),
+    );
+    if (!context.mounted) return;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: kind,
+      existingEntry: existing,
     );
     if (!context.mounted || !added) return;
     final l10n = AppLocalizations.of(context)!;
@@ -59,6 +67,11 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     final title = gamesHomeSectionTitle(l10n, slug);
     final valid = GamesFeedSection.isValid(slug);
     final async = valid ? ref.watch(igdbGamesSectionListProvider(slug)) : null;
+
+    final libraryEntries = ref.watch(libraryByKindProvider(MediaKind.game)).valueOrNull ?? [];
+    final libraryIds = {
+      for (final e in libraryEntries) e.externalId: true,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -105,6 +118,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
                       item: item,
                       kind: MediaKind.game,
                       releaseDateLine: dateLine,
+                      inLibrary: libraryIds.containsKey(id?.toString() ?? ''),
                       onAdd: (it, k) => _addToLibrary(context, ref, it, k),
                     );
                   },

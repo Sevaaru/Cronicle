@@ -2,21 +2,24 @@
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
-import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
+import 'package:cronicle/features/feed/presentation/summary_feed_view.dart';
 
 enum _FeedFilter {
+  summary,
   anime,
   manga,
   movie,
@@ -24,6 +27,7 @@ enum _FeedFilter {
   game;
 
   IconData get icon => switch (this) {
+        _FeedFilter.summary => Icons.auto_awesome_rounded,
         _FeedFilter.anime => Icons.animation_rounded,
         _FeedFilter.manga => Icons.menu_book_rounded,
         _FeedFilter.movie => Icons.movie_rounded,
@@ -33,6 +37,7 @@ enum _FeedFilter {
 }
 
 String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
+      _FeedFilter.summary => l10n.feedSummary,
       _FeedFilter.anime => l10n.filterAnime,
       _FeedFilter.manga => l10n.filterManga,
       _FeedFilter.movie => l10n.filterMovies,
@@ -83,6 +88,7 @@ String _browseTabLabel(_AnimeMangaBrowseTab tab, AppLocalizations l10n) =>
     };
 
 const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
+  _AnimeMangaBrowseTab.trending,
   _AnimeMangaBrowseTab.seasonal,
   _AnimeMangaBrowseTab.topRated,
   _AnimeMangaBrowseTab.upcoming,
@@ -107,23 +113,26 @@ class FeedPage extends ConsumerStatefulWidget {
   ConsumerState<FeedPage> createState() => _FeedPageState();
 }
 
-class _FeedPageState extends ConsumerState<FeedPage> {
+class _FeedPageState extends ConsumerState<FeedPage>
+    with TickerProviderStateMixin {
   _FeedFilter _filter = _FeedFilter.anime;
   bool _filterInitialized = false;
-  _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.seasonal;
+  _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
+  TabController? _browseTabController;
 
   void _invalidateFeed() {
     switch (_filter) {
+      case _FeedFilter.summary:
+        // Summary refreshes inside its own RefreshIndicator.
+        break;
       case _FeedFilter.anime:
         ref.invalidate(anilistFeedByTypeProvider('ANIME_LIST'));
-        for (final c in _anilistBrowseCategories) {
-          ref.invalidate(anilistBrowseMediaProvider('ANIME', c));
-        }
+        final cat = _browseCategoryApiKey(_animeMangaBrowseTab);
+        ref.invalidate(anilistBrowseMediaProvider('ANIME', cat));
       case _FeedFilter.manga:
         ref.invalidate(anilistFeedByTypeProvider('MANGA_LIST'));
-        for (final c in _mangaBrowseCategories) {
-          ref.invalidate(anilistBrowseMediaProvider('MANGA', c));
-        }
+        final cat = _browseCategoryApiKey(_animeMangaBrowseTab);
+        ref.invalidate(anilistBrowseMediaProvider('MANGA', cat));
       case _FeedFilter.game:
         ref.invalidate(igdbPopularProvider);
         ref.invalidate(igdbGamesHomeFeedProvider);
@@ -137,12 +146,52 @@ class _FeedPageState extends ConsumerState<FeedPage> {
   bool get _showAnimeMangaBrowseRail =>
       _filter == _FeedFilter.anime || _filter == _FeedFilter.manga;
 
+  void _ensureBrowseTabController() {
+    final tabs = _browseTabsFor(_filter);
+    final neededLength = tabs.length;
+    if (_browseTabController != null &&
+        _browseTabController!.length == neededLength) {
+      return;
+    }
+    _browseTabController?.removeListener(_onBrowseTabSwipe);
+    _browseTabController?.dispose();
+    final initialIndex = tabs.indexOf(_animeMangaBrowseTab).clamp(0, neededLength - 1);
+    _browseTabController = TabController(
+      length: neededLength,
+      initialIndex: initialIndex,
+      vsync: this,
+    );
+    _browseTabController!.addListener(_onBrowseTabSwipe);
+  }
+
+  void _onBrowseTabSwipe() {
+    if (_browseTabController == null) return;
+    final tabs = _browseTabsFor(_filter);
+    final idx = _browseTabController!.index;
+    if (idx >= 0 && idx < tabs.length && tabs[idx] != _animeMangaBrowseTab) {
+      setState(() => _animeMangaBrowseTab = tabs[idx]);
+    }
+  }
+
+  @override
+  void dispose() {
+    _browseTabController?.removeListener(_onBrowseTabSwipe);
+    _browseTabController?.dispose();
+    super.dispose();
+  }
+
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    final db = ref.read(databaseProvider);
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      kind.code, item['id'].toString(),
+    );
+    if (!mounted) return;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: kind,
+      existingEntry: existing,
     );
     if (!mounted || !added) return;
     final l10n = AppLocalizations.of(context)!;
@@ -157,7 +206,8 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
     final feedLayout = ref.watch(feedFilterLayoutProvider);
     ref.listen<FeedFilterLayoutState>(feedFilterLayoutProvider, (prev, next) {
-      if (!next.visibleIdSet.contains(_filter.name)) {
+      if (_filter != _FeedFilter.summary &&
+          !next.visibleIdSet.contains(_filter.name)) {
         final id = next.firstVisibleId;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -168,24 +218,16 @@ class _FeedPageState extends ConsumerState<FeedPage> {
     });
 
     if (!_filterInitialized) {
-      final defaultTab = ref.read(defaultFeedTabProvider);
-      final layout0 = ref.read(feedFilterLayoutProvider);
-      _filter = _FeedFilter.values.firstWhere(
-        (f) => f.name == defaultTab,
-        orElse: () => _FeedFilter.anime,
-      );
-      if (!layout0.visibleIdSet.contains(_filter.name)) {
-        _filter = _FeedFilter.values.byName(layout0.firstVisibleId);
-      }
-      _animeMangaBrowseTab = _filter == _FeedFilter.manga
-          ? _AnimeMangaBrowseTab.trending
-          : _AnimeMangaBrowseTab.seasonal;
+      _filter = _FeedFilter.summary;
+      _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
       _filterInitialized = true;
     }
 
-    final feedFilterChips = feedLayout.visibleOrderedIds
-        .map((id) => _FeedFilter.values.byName(id))
-        .toList();
+    final feedFilterChips = <_FeedFilter>[
+      _FeedFilter.summary,
+      ...feedLayout.visibleOrderedIds
+          .map((id) => _FeedFilter.values.byName(id)),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -256,9 +298,16 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                       _filter = f;
                       if (prev != f &&
                           (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
-                        _animeMangaBrowseTab = f == _FeedFilter.manga
-                            ? _AnimeMangaBrowseTab.trending
-                            : _AnimeMangaBrowseTab.seasonal;
+                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
+                        // Force controller rebuild for new filter
+                        _browseTabController?.removeListener(_onBrowseTabSwipe);
+                        _browseTabController?.dispose();
+                        _browseTabController = null;
+                      }
+                      if (f != _FeedFilter.anime && f != _FeedFilter.manga) {
+                        _browseTabController?.removeListener(_onBrowseTabSwipe);
+                        _browseTabController?.dispose();
+                        _browseTabController = null;
                       }
                     });
                   },
@@ -270,52 +319,110 @@ class _FeedPageState extends ConsumerState<FeedPage> {
           ),
           if (_showAnimeMangaBrowseRail) ...[
             const SizedBox(height: 4),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                separatorBuilder: (_, _) => const SizedBox(width: 6),
-                itemCount: _browseTabsFor(_filter).length,
-                itemBuilder: (context, i) {
-                  final tab = _browseTabsFor(_filter)[i];
-                  final selected = _animeMangaBrowseTab == tab;
-                  return FilterChip(
-                    selected: selected,
-                    label: Text(
-                      _browseTabLabel(tab, l10n),
-                      style: const TextStyle(fontSize: 12),
+            Builder(builder: (_) {
+              _ensureBrowseTabController();
+              final tabs = _browseTabsFor(_filter);
+              return AnimatedBuilder(
+                animation: _browseTabController!.animation!,
+                builder: (context, _) {
+                  final animValue = _browseTabController!.animation!.value;
+                  return SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      separatorBuilder: (_, _) => const SizedBox(width: 6),
+                      itemCount: tabs.length,
+                      itemBuilder: (context, i) {
+                        final tab = tabs[i];
+                        // Progressive selection: 1.0 = fully selected, 0.0 = unselected.
+                        final diff = (animValue - i).abs();
+                        final t = (1.0 - diff).clamp(0.0, 1.0);
+                        final cs = Theme.of(context).colorScheme;
+                        final selectedBg = cs.secondaryContainer;
+                        final unselectedBg = cs.surfaceContainerHighest;
+                        final bg = Color.lerp(unselectedBg, selectedBg, t)!;
+                        final selectedFg = cs.onSecondaryContainer;
+                        final unselectedFg = cs.onSurfaceVariant;
+                        final fg = Color.lerp(unselectedFg, selectedFg, t)!;
+                        return GestureDetector(
+                          onTap: () {
+                            final idx = tabs.indexOf(tab);
+                            setState(() => _animeMangaBrowseTab = tab);
+                            if (_browseTabController != null && idx >= 0) {
+                              _browseTabController!.animateTo(idx);
+                            }
+                          },
+                          child: Chip(
+                            label: Text(
+                              _browseTabLabel(tab, l10n),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: t > 0.5
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: fg,
+                              ),
+                            ),
+                            backgroundColor: bg,
+                            side: BorderSide.none,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                        );
+                      },
                     ),
-                    onSelected: (_) =>
-                        setState(() => _animeMangaBrowseTab = tab),
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
                   );
                 },
-              ),
-            ),
+              );
+            }),
           ],
           const SizedBox(height: 6),
           Expanded(
-            child: _filter == _FeedFilter.game
+            child: _filter == _FeedFilter.summary
+                ? SummaryFeedView(
+                    onRefresh: _invalidateFeed,
+                    onSwitchCategory: (cat) {
+                      setState(() {
+                        _filter = _FeedFilter.values.byName(cat);
+                        if (cat == 'anime' || cat == 'manga') {
+                          _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
+                          _browseTabController?.removeListener(_onBrowseTabSwipe);
+                          _browseTabController?.dispose();
+                          _browseTabController = null;
+                        }
+                      });
+                    },
+                  )
+                : _filter == _FeedFilter.game
                 ? const GamesHomeFeedView()
                 : _filter == _FeedFilter.movie
                     ? const TraktHomeFeedView(kind: MediaKind.movie)
                     : _filter == _FeedFilter.tv
                         ? const TraktHomeFeedView(kind: MediaKind.tv)
-                        : _AnimeMangaBrowseList(
-                                mediaType: _filter == _FeedFilter.anime
-                                    ? 'ANIME'
-                                    : 'MANGA',
-                                category:
-                                    _browseCategoryApiKey(_animeMangaBrowseTab),
-                                kind: _filter == _FeedFilter.anime
-                                    ? MediaKind.anime
-                                    : MediaKind.manga,
-                                onRefresh: _invalidateFeed,
-                                onAdd: _addToLibrary,
-                                l10n: l10n,
-                              ),
+                        : Builder(builder: (_) {
+                            _ensureBrowseTabController();
+                            final tabs = _browseTabsFor(_filter);
+                            final mediaType = _filter == _FeedFilter.anime
+                                ? 'ANIME'
+                                : 'MANGA';
+                            final kind = _filter == _FeedFilter.anime
+                                ? MediaKind.anime
+                                : MediaKind.manga;
+                            return TabBarView(
+                              controller: _browseTabController,
+                              children: tabs.map((tab) {
+                                return _AnimeMangaBrowseList(
+                                  mediaType: mediaType,
+                                  category: _browseCategoryApiKey(tab),
+                                  kind: kind,
+                                  onRefresh: _invalidateFeed,
+                                  onAdd: _addToLibrary,
+                                  l10n: l10n,
+                                );
+                              }).toList(),
+                            );
+                          }),
           ),
         ],
       ),
@@ -346,8 +453,13 @@ class _AnimeMangaBrowseList extends ConsumerStatefulWidget {
       _AnimeMangaBrowseListState();
 }
 
-class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList> {
+class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList>
+    with AutomaticKeepAliveClientMixin {
   final _scrollController = ScrollController();
+  var _libraryIds = <String, bool>{};
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -377,6 +489,11 @@ class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    final libraryEntries = ref.watch(libraryByKindProvider(widget.kind)).valueOrNull ?? [];
+    _libraryIds = {
+      for (final e in libraryEntries) '${e.kind}:${e.externalId}': true,
+    };
     final async = ref.watch(
       anilistBrowseMediaProvider(widget.mediaType, widget.category),
     );
@@ -434,9 +551,13 @@ class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList> {
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 );
               }
+              final item = list[i];
+              final id = item['id']?.toString() ?? '';
+              final inLib = _libraryIds.containsKey('${widget.kind.code}:$id');
               return BrowseResultCard(
-                item: list[i],
+                item: item,
                 kind: widget.kind,
+                inLibrary: inLib,
                 onAdd: widget.onAdd,
               );
             },

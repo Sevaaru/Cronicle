@@ -54,7 +54,7 @@ Future<void> pushCronicleLibraryStateToTrakt(
 
     if (score != null && score > 0) {
       await api.syncRatingsMovies(token, [
-        {'rating': score.clamp(1, 10), 'ids': <String, dynamic>{'trakt': traktId}},
+        {'rating': (score / 10).round().clamp(1, 10), 'ids': <String, dynamic>{'trakt': traktId}},
       ]);
     } else {
       await api.syncRatingsRemoveMovies(token, [
@@ -92,7 +92,7 @@ Future<void> pushCronicleLibraryStateToTrakt(
 
     if (score != null && score > 0) {
       await api.syncRatingsShows(token, [
-        {'rating': score.clamp(1, 10), 'ids': <String, dynamic>{'trakt': traktId}},
+        {'rating': (score / 10).round().clamp(1, 10), 'ids': <String, dynamic>{'trakt': traktId}},
       ]);
     } else {
       await api.syncRatingsRemoveShows(token, [

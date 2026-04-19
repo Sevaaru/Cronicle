@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
@@ -86,11 +88,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    final db = ref.read(databaseProvider);
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      kind.code, item['id'].toString(),
+    );
+    if (!mounted) return;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: kind,
+      existingEntry: existing,
     );
     if (!mounted || !added) return;
     final l10n = AppLocalizations.of(context)!;
@@ -508,6 +516,11 @@ class _SearchResultsList extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final sections = <_ResultSection>[];
 
+    final libraryEntries = ref.watch(libraryAllProvider()).valueOrNull ?? [];
+    final libraryIds = {
+      for (final e in libraryEntries) '${e.kind}:${e.externalId}': true,
+    };
+
     if (filter == _SearchFilter.all || filter == _SearchFilter.anime) {
       sections.add(_ResultSection(l10n.filterAnime, MediaKind.anime,
           ref.watch(anilistSearchProvider(query, 'ANIME'))));
@@ -578,11 +591,16 @@ class _SearchResultsList extends ConsumerWidget {
                           fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 8),
                 ],
-                ...list.map((item) => BrowseResultCard(
-                      item: item,
-                      kind: section.kind,
-                      onAdd: onAdd,
-                    )),
+                ...list.map((item) {
+                  final id = item['id']?.toString() ?? '';
+                  final inLib = libraryIds.containsKey('${section.kind.code}:$id');
+                  return BrowseResultCard(
+                    item: item,
+                    kind: section.kind,
+                    inLibrary: inLib,
+                    onAdd: onAdd,
+                  );
+                }),
               ],
             );
           },

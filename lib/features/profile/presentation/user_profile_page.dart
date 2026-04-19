@@ -10,6 +10,7 @@ import 'package:cronicle/features/profile/presentation/anilist_profile_follow_ro
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
@@ -421,25 +422,10 @@ class _FavCard extends StatelessWidget {
   }
 }
 
-class _UserActivityCard extends ConsumerStatefulWidget {
+class _UserActivityCard extends ConsumerWidget {
   const _UserActivityCard({required this.activity, required this.cs});
   final Map<String, dynamic> activity;
   final ColorScheme cs;
-
-  @override
-  ConsumerState<_UserActivityCard> createState() => _UserActivityCardState();
-}
-
-class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
-  late bool _isLiked;
-  late int _likeCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _isLiked = widget.activity['isLiked'] as bool? ?? false;
-    _likeCount = widget.activity['likeCount'] as int? ?? 0;
-  }
 
   String _timeAgo(int timestamp, AppLocalizations l10n) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
@@ -451,31 +437,24 @@ class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
     return l10n.timeWeeks((diff.inDays / 7).floor());
   }
 
-  Future<void> _handleLike() async {
+  Future<bool?> _handleLike(WidgetRef ref, BuildContext context) async {
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) {
-      if (!mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
       );
-      return;
+      return null;
     }
-    final actId = widget.activity['id'] as int?;
-    if (actId == null) return;
+    final actId = activity['id'] as int?;
+    if (actId == null) return null;
     final graphql = ref.read(anilistGraphqlProvider);
-    final liked = await graphql.toggleLike(actId, token);
-    if (!mounted) return;
-    setState(() {
-      _isLiked = liked;
-      _likeCount = liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
-    });
+    return graphql.toggleLike(actId, token);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = widget.cs;
-    final activity = widget.activity;
     final actType = activity['type'] as String? ?? '';
     final isText = actType == 'TEXT';
     final media = activity['media'] as Map<String, dynamic>? ?? {};
@@ -594,27 +573,10 @@ class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
             const SizedBox(height: 6),
             Row(
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _handleLike,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isLiked ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: _isLiked ? Colors.red.shade400 : cs.onSurfaceVariant,
-                        ),
-                        if (_likeCount > 0) ...[
-                          const SizedBox(width: 4),
-                          Text('$_likeCount',
-                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                        ],
-                      ],
-                    ),
-                  ),
+                AnimatedLikeButton(
+                  isLiked: activity['isLiked'] as bool? ?? false,
+                  likeCount: activity['likeCount'] as int? ?? 0,
+                  onToggle: () => _handleLike(ref, context),
                 ),
                 const SizedBox(width: 12),
                 if (actId != null)

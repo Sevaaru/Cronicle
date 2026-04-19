@@ -56,26 +56,28 @@ enum ScoringSystem {
     };
   }
 
-  /// Normalise any raw score (stored as 0-10 int in DB) to this system's range.
+  /// Normalise any raw score (stored as 0-100 int in DB) to this system's range.
   double fromStoredScore(int? raw) {
     if (raw == null || raw == 0) return 0;
-    final clamped = raw.clamp(0, 10).toDouble();
+    final clamped = raw.clamp(0, 100).toDouble();
     return switch (this) {
-      point100 => clamped * 10,
-      point10Decimal || point10 => clamped,
-      point5 => (clamped / 2).clamp(0, 5),
-      point3 => (clamped / 3.34).ceil().clamp(1, 3).toDouble(),
+      point100 => clamped,
+      point10Decimal => clamped / 10,
+      point10 => (clamped / 10).roundToDouble(),
+      point5 => (clamped / 20).roundToDouble().clamp(0, 5),
+      point3 => (clamped / 33.34).ceil().clamp(1, 3).toDouble(),
     };
   }
 
-  /// Convert the user-facing score back to 0-10 int for storage.
+  /// Convert the user-facing score back to 0-100 int for storage.
   int toStoredScore(double v) {
     if (v == 0) return 0;
     return switch (this) {
-      point100 => (v / 10).round().clamp(0, 10),
-      point10Decimal || point10 => v.round().clamp(0, 10),
-      point5 => (v * 2).round().clamp(0, 10),
-      point3 => (v * 3.34).round().clamp(0, 10),
+      point100 => v.round().clamp(0, 100),
+      point10Decimal => (v * 10).round().clamp(0, 100),
+      point10 => (v * 10).round().clamp(0, 100),
+      point5 => (v * 20).round().clamp(0, 100),
+      point3 => (v * 33.34).round().clamp(0, 100),
     };
   }
 }

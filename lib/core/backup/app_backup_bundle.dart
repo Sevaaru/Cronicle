@@ -34,7 +34,7 @@ const _secureKeysForBackup = <String>[
 
 /// JSON de copia: biblioteca Drift, key-value Drift, SharedPreferences y tokens seguros.
 abstract final class AppBackupBundle {
-  static const currentVersion = 2;
+  static const currentVersion = 3;
 
   static Future<Map<String, dynamic>> build({
     required AppDatabase db,
@@ -94,7 +94,7 @@ abstract final class AppBackupBundle {
     return m;
   }
 
-  /// Restaura desde JSON (v1 solo library/keyValues; v2 añade prefs y secure).
+  /// Restaura desde JSON (v1 solo library/keyValues; v2 añade prefs y secure; v3 scores 0-100).
   /// Devuelve número de filas de biblioteca importadas.
   static Future<int> restoreFromJson({
     required Map<String, dynamic> json,
@@ -103,6 +103,7 @@ abstract final class AppBackupBundle {
     required FlutterSecureStorage secure,
     required WidgetRef ref,
   }) async {
+    final backupVersion = (json['version'] as int?) ?? 1;
     final secureMap = json['secureStorage'];
     if (secureMap is Map) {
       for (final e in secureMap.entries) {
@@ -165,6 +166,11 @@ abstract final class AppBackupBundle {
     var imported = 0;
     for (final e in entries) {
       try {
+        final rawScore = e['score'] as int?;
+        // v1/v2 backups stored scores as 0-10; v3+ stores 0-100.
+        final score100 = (backupVersion < 3 && rawScore != null && rawScore > 0)
+            ? rawScore * 10
+            : rawScore;
         await db.upsertLibraryEntry(
           LibraryEntriesCompanion(
             kind: Value(e['kind'] as int),
@@ -172,7 +178,7 @@ abstract final class AppBackupBundle {
             title: Value(e['title'] as String),
             posterUrl: Value(e['posterUrl'] as String?),
             status: Value((e['status'] as String?) ?? 'PLANNING'),
-            score: Value(e['score'] as int?),
+            score: Value(score100),
             progress: Value(e['progress'] as int?),
             totalEpisodes: Value(e['totalEpisodes'] as int?),
             notes: Value(e['notes'] as String?),

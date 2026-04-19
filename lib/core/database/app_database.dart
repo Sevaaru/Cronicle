@@ -37,7 +37,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +47,12 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(libraryEntries);
+          }
+          if (from < 3) {
+            // Migrate scores from 0-10 to 0-100 scale.
+            await customStatement(
+              'UPDATE library_entries SET score = score * 10 WHERE score IS NOT NULL AND score > 0',
+            );
           }
         },
       );
