@@ -41,6 +41,10 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
   TapDownDetails? _doubleTapDetails;
   bool _saving = false;
 
+  /// Intercepta el botón atrás de Android/gesto del sistema antes de que
+  /// GoRouter procese el evento, para cerrar el visor primero.
+  ChildBackButtonDispatcher? _backDispatcher;
+
   /// Desplazamiento vertical manual (dismiss por arrastre).
   double _dragOffsetY = 0;
 
@@ -88,6 +92,25 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     WidgetsBinding.instance.addPostFrameCallback((_) => _enterImmersive());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _backDispatcher?.removeCallback(_handleSystemBack);
+    final dispatcher = Router.of(context).backButtonDispatcher;
+    if (dispatcher != null) {
+      _backDispatcher = dispatcher.createChildBackButtonDispatcher()
+        ..addCallback(_handleSystemBack)
+        ..takePriority();
+    }
+  }
+
+  Future<bool> _handleSystemBack() async {
+    if (!_runningDismissAnimation && mounted) {
+      Navigator.of(context, rootNavigator: true).maybePop();
+    }
+    return true; // Siempre consumir el evento.
+  }
+
   void _enterImmersive() {
     if (kIsWeb) return;
     switch (defaultTargetPlatform) {
@@ -125,6 +148,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
 
   @override
   void dispose() {
+    _backDispatcher?.removeCallback(_handleSystemBack);
     _restoreSystemUi();
     _zoomAnimCtrl.dispose();
     _dismissAnimCtrl.dispose();
