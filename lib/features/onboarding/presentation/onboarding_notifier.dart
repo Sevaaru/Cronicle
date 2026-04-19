@@ -9,7 +9,7 @@ import 'package:cronicle/features/settings/presentation/search_filter_layout_not
 part 'onboarding_notifier.g.dart';
 
 /// Interest IDs matching MediaKind names.
-const onboardingInterestIds = ['anime', 'manga', 'movie', 'tv', 'game'];
+const onboardingInterestIds = ['anime', 'manga', 'movie', 'tv', 'game', 'book'];
 
 @Riverpod(keepAlive: true)
 class OnboardingCompleted extends _$OnboardingCompleted {

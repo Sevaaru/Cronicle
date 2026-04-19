@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
@@ -101,6 +102,19 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
+    // ── Books (poster carousel) ─────────────────────────────────────────
+    if (visible.contains('book')) {
+      sections.add(
+        _AsyncCarouselSection(
+          provider: bookTrendingProvider,
+          title: l10n.summaryTrendingBooks,
+          icon: Icons.auto_stories_rounded,
+          kind: MediaKind.book,
+          onSeeAll: () => onSwitchCategory('book'),
+        ),
+      );
+    }
+
     if (sections.length <= 1) {
       // Only the random card – nothing visible.
       return Center(child: Text(l10n.feedBrowseEmpty));
@@ -124,6 +138,9 @@ class SummaryFeedView extends ConsumerWidget {
         if (visible.contains('game')) {
           ref.invalidate(igdbPopularProvider);
           ref.invalidate(igdbGamesHomeFeedProvider);
+        }
+        if (visible.contains('book')) {
+          ref.invalidate(bookTrendingProvider);
         }
         onRefresh();
       },
@@ -533,7 +550,7 @@ class _HeroCard extends StatelessWidget {
     final id = item['id'] as int?;
 
     return GestureDetector(
-      onTap: id != null ? () => context.push(_routeFor(kind, id)) : null,
+      onTap: () => _navigateToItem(context, kind, item),
       child: SizedBox(
         width: 155,
         child: Column(
@@ -709,7 +726,7 @@ class _WideCard extends StatelessWidget {
     final id = item['id'] as int?;
 
     return GestureDetector(
-      onTap: id != null ? () => context.push(_routeFor(kind, id)) : null,
+      onTap: () => _navigateToItem(context, kind, item),
       child: SizedBox(
         width: width,
         child: Column(
@@ -849,7 +866,7 @@ class _RankCard extends StatelessWidget {
     final id = item['id'] as int?;
 
     return GestureDetector(
-      onTap: id != null ? () => context.push(_routeFor(kind, id)) : null,
+      onTap: () => _navigateToItem(context, kind, item),
       child: Container(
         width: 220,
         padding: const EdgeInsets.all(8),
@@ -950,7 +967,7 @@ class _CarouselCard extends StatelessWidget {
     final id = item['id'] as int?;
 
     return GestureDetector(
-      onTap: id != null ? () => context.push(_routeFor(kind, id)) : null,
+      onTap: () => _navigateToItem(context, kind, item),
       child: SizedBox(
         width: width,
         child: Column(
@@ -1170,4 +1187,15 @@ String _routeFor(MediaKind kind, int id) => switch (kind) {
       MediaKind.movie => '/trakt-movie/$id',
       MediaKind.tv => '/trakt-show/$id',
       MediaKind.game => '/game/$id',
+      MediaKind.book => '/book/$id', // fallback – books prefer workKey routing
     };
+
+void _navigateToItem(BuildContext context, MediaKind kind, Map<String, dynamic> item) {
+  final workKey = item['workKey'] as String?;
+  if (kind == MediaKind.book && workKey != null) {
+    context.push('/book/$workKey');
+    return;
+  }
+  final id = item['id'] as int?;
+  if (id != null) context.push(_routeFor(kind, id));
+}

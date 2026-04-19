@@ -880,7 +880,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'13285f73bea2cef67a42d2e5eefee55a6f6a2352';
+String _$anilistTokenHash() => r'a4a92ca102a7771ce6377956d87e00c299a0d856';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)
@@ -907,23 +907,23 @@ abstract class _$AnilistBrowseMedia
   FutureOr<List<Map<String, dynamic>>> build(String type, String category);
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
 ///
 /// Copied from [AnilistBrowseMedia].
 @ProviderFor(AnilistBrowseMedia)
 const anilistBrowseMediaProvider = AnilistBrowseMediaFamily();
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
 ///
 /// Copied from [AnilistBrowseMedia].
 class AnilistBrowseMediaFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
   ///
   /// Copied from [AnilistBrowseMedia].
   const AnilistBrowseMediaFamily();
 
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
   ///
   /// Copied from [AnilistBrowseMedia].
   AnilistBrowseMediaProvider call(String type, String category) {
@@ -952,7 +952,7 @@ class AnilistBrowseMediaFamily
   String? get name => r'anilistBrowseMediaProvider';
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
 ///
 /// Copied from [AnilistBrowseMedia].
 class AnilistBrowseMediaProvider
@@ -961,7 +961,7 @@ class AnilistBrowseMediaProvider
           AnilistBrowseMedia,
           List<Map<String, dynamic>>
         > {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
   ///
   /// Copied from [AnilistBrowseMedia].
   AnilistBrowseMediaProvider(String type, String category)
@@ -1643,5 +1643,22 @@ class _AnilistGenreTagBrowseProviderElement
   String get tagPart => (origin as AnilistGenreTagBrowseProvider).tagPart;
 }
 
+String _$favoriteAnilistMediaHash() =>
+    r'8734ea0fcf597e35dbbfd70c040f8e6913b735ec';
+
+/// See also [FavoriteAnilistMedia].
+@ProviderFor(FavoriteAnilistMedia)
+final favoriteAnilistMediaProvider =
+    NotifierProvider<FavoriteAnilistMedia, List<Map<String, dynamic>>>.internal(
+      FavoriteAnilistMedia.new,
+      name: r'favoriteAnilistMediaProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$favoriteAnilistMediaHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$FavoriteAnilistMedia = Notifier<List<Map<String, dynamic>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -399,6 +399,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get summaryPopularGames => 'Juegos populares';
 
   @override
+  String get summaryTrendingBooks => 'Libros en tendencia';
+
+  @override
+  String get summaryNewBooks => 'Novedades';
+
+  @override
   String get summaryTopAnime => 'Anime mejor valorado';
 
   @override
@@ -448,6 +454,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get filterGames => 'Juegos';
+
+  @override
+  String get filterBooks => 'Libros';
 
   @override
   String get filterAll => 'Todo';
@@ -1356,6 +1365,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mediaKindGame => 'Juegos';
 
   @override
+  String get mediaKindBook => 'Libros';
+
+  @override
   String get reviewTitle => 'Reseña';
 
   @override
@@ -1412,10 +1424,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get statusCurrentGame => 'Jugando';
 
   @override
+  String get statusCurrentBook => 'Leyendo';
+
+  @override
   String get statusReplayingGame => 'Rejugando';
 
   @override
+  String get statusRereadingBook => 'Releyendo';
+
+  @override
   String get searchTrendingGames => 'Juegos en tendencia';
+
+  @override
+  String get searchTrendingBooks => 'Libros en tendencia';
 
   @override
   String get igdbWebNotSupported =>
@@ -1481,6 +1502,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addToListHoursPlayed => 'Horas jugadas';
+
+  @override
+  String get addToListPagesRead => 'Páginas leídas';
+
+  @override
+  String libraryPagesRemaining(Object count) {
+    return '$count pág. restantes';
+  }
 
   @override
   String get gameDetailLinksSection => 'Enlaces';
@@ -1715,11 +1744,116 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gameDetailExtCatOther => 'Tienda externa';
 
   @override
+  String get bookDetailSubjects => 'Temas';
+
+  @override
+  String get bookDetailAuthors => 'Autores';
+
+  @override
+  String get bookDetailPublishDate => 'Primera publicación';
+
+  @override
+  String bookDetailPages(Object count) {
+    return '$count páginas';
+  }
+
+  @override
+  String get bookDetailDescription => 'Descripción';
+
+  @override
+  String get bookDetailNoData => 'No se encontraron datos del libro';
+
+  @override
+  String get bookDetailOpenOnOpenLibrary => 'Abrir en Open Library';
+
+  @override
+  String get bookDetailEditions => 'Ediciones';
+
+  @override
+  String get booksHomePopularNow => 'Popular ahora';
+
+  @override
+  String get booksHomeNewReleases => 'Novedades';
+
+  @override
+  String get booksHomeTrending => 'Tendencias';
+
+  @override
+  String get booksHomeClassics => 'Clásicos';
+
+  @override
+  String get booksHomeMystery => 'Misterio';
+
+  @override
+  String get settingsOpenLibrary => 'Open Library';
+
+  @override
+  String get settingsOpenLibraryDesc =>
+      'Importa tu registro de lectura de Open Library';
+
+  @override
+  String get settingsOpenLibraryUsername => 'Usuario de Open Library';
+
+  @override
+  String get settingsOpenLibraryConnect => 'Conectar';
+
+  @override
+  String get settingsOpenLibraryDisconnect => 'Desconectar';
+
+  @override
+  String settingsOpenLibraryConnected(Object username) {
+    return 'Conectado como $username';
+  }
+
+  @override
+  String get settingsOpenLibrarySyncing => 'Sincronizando registro de lectura…';
+
+  @override
+  String get settingsOpenLibrarySynced => 'Registro de lectura sincronizado';
+
+  @override
+  String get settingsOpenLibraryError =>
+      'No se pudo conectar. Verifica el usuario e intenta de nuevo.';
+
+  @override
+  String get settingsOpenLibraryTitle => 'Open Library';
+
+  @override
+  String get settingsOpenLibrarySubtitle =>
+      'Conecta tu cuenta de Open Library para importar tu registro de lectura.';
+
+  @override
+  String settingsOpenLibraryConnectedAs(Object username) {
+    return 'Conectado como $username';
+  }
+
+  @override
+  String get settingsOpenLibrarySync => 'Importar registro de lectura';
+
+  @override
+  String settingsOpenLibrarySyncResult(Object count) {
+    return '$count libros importados';
+  }
+
+  @override
+  String get settingsOpenLibraryDisconnected => 'Open Library desconectada';
+
+  @override
+  String get settingsOpenLibraryUsernameHint => 'Usuario de Open Library';
+
+  @override
+  String get settingsOpenLibraryUsernameNotFound =>
+      'Usuario no encontrado en Open Library';
+
+  @override
+  String get settingsOpenLibraryConnectSuccess => 'Open Library conectada';
+
+  @override
   String get onboardingWelcomeTitle => 'Bienvenido a Cronicle';
 
   @override
   String get onboardingWelcomeBody =>
-      'Registra tu progreso en anime, manga, películas, series y juegos en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.';
+      'Registra tu progreso en anime, manga, películas, series, juegos y libros en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.';
 
   @override
   String get onboardingNext => 'Siguiente';
@@ -1750,6 +1884,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingInterestGames => 'Videojuegos';
 
   @override
+  String get onboardingInterestBooks => 'Libros';
+
+  @override
   String get onboardingAccountsTitle => 'Conecta tus cuentas';
 
   @override
@@ -1775,6 +1912,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get onboardingConnectGoogleDesc =>
       'Copia de seguridad en la nube de todos tus datos y cuentas';
+
+  @override
+  String get onboardingConnectOpenLibrary => 'Conectar Open Library';
+
+  @override
+  String get onboardingConnectOpenLibraryDesc =>
+      'Sincroniza tu registro de lectura';
 
   @override
   String get onboardingSkip => 'Usar sin cuentas';
@@ -1915,4 +2059,48 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get forumReleaseDiscussions => 'Discusiones de estrenos';
+
+  @override
+  String get bookTrackingModeLabel => 'Modo de seguimiento';
+
+  @override
+  String get bookTrackingModePages => 'Páginas';
+
+  @override
+  String get bookTrackingModePercent => '%';
+
+  @override
+  String get bookTrackingModeChapters => 'Capítulos';
+
+  @override
+  String get bookPercentageRead => 'Porcentaje leído';
+
+  @override
+  String get bookChapterProgress => 'Capítulo actual';
+
+  @override
+  String get bookOverrideTotalsLabel => 'Configura tus totales';
+
+  @override
+  String get bookOverrideTotalsHint =>
+      'Tu valor manual tiene prioridad sobre la API.';
+
+  @override
+  String get bookTotalPagesOverride => 'Total de páginas';
+
+  @override
+  String get bookTotalChaptersOverride => 'Total de capítulos';
+
+  @override
+  String get bookReadingProgress => 'Progreso de lectura';
+
+  @override
+  String get bookEditionLabel => 'Edición';
+
+  @override
+  String get bookEditionUnknownPages => 'Cantidad de páginas desconocida';
+
+  @override
+  String get bookEditionNoPageHint =>
+      'Si no hay páginas en la API, puedes definir tu total manualmente.';
 }

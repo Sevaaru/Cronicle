@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
@@ -172,6 +173,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       'title': {'english': entry.title, 'romaji': entry.title},
       'coverImage': {'large': entry.posterUrl},
       if (kind == MediaKind.manga) 'chapters': entry.totalEpisodes
+      else if (kind == MediaKind.book) 'pages': entry.totalEpisodes
       else 'episodes': entry.totalEpisodes,
     };
 
@@ -574,10 +576,17 @@ class _EntryCard extends StatelessWidget {
     final showProgressButton =
         (kind == MediaKind.anime ||
             kind == MediaKind.manga ||
+            kind == MediaKind.book ||
             (kind == MediaKind.tv &&
                 entry.totalEpisodes != null &&
                 entry.totalEpisodes! > 0)) &&
         entry.status == 'CURRENT';
+    final bookProgressLabel = kind == MediaKind.book
+      ? BookProgressCalculator.getShortProgressLabel(entry)
+      : null;
+    final bookRemaining = kind == MediaKind.book
+      ? BookProgressCalculator.getRemainingText(entry)
+      : null;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -643,13 +652,26 @@ class _EntryCard extends StatelessWidget {
                             },
                           ),
                         ],
-                        if (entry.progress != null) ...[
+                        if (kind == MediaKind.book && bookProgressLabel != null && bookProgressLabel.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            bookProgressLabel,
+                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                          ),
+                        ] else if (entry.progress != null) ...[
                           const SizedBox(width: 6),
                           Text(
                             entry.totalEpisodes != null
                                 ? '${entry.progress}/${entry.totalEpisodes}'
                                 : '${entry.progress}',
                             style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                          ),
+                        ],
+                        if (kind == MediaKind.book && bookRemaining != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            bookRemaining,
+                            style: TextStyle(fontSize: 10, color: cs.primary.withAlpha(180)),
                           ),
                         ],
                       ],
@@ -707,9 +729,13 @@ class _IncrementButtonState extends State<_IncrementButton> {
     setState(() => _busy = true);
     try {
       final db = widget.ref.read(databaseProvider);
-      await db.incrementProgress(widget.entry.id);
-      widget.onUpdated();
       final kind = MediaKind.fromCode(widget.entry.kind);
+      if (kind == MediaKind.book) {
+        await db.incrementBookProgress(widget.entry.id);
+      } else {
+        await db.incrementProgress(widget.entry.id);
+      }
+      widget.onUpdated();
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();
       } else if (kind == MediaKind.tv) {
@@ -730,11 +756,15 @@ class _IncrementButtonState extends State<_IncrementButton> {
       final mediaId = int.tryParse(widget.entry.externalId);
       if (mediaId == null) return;
       final newProgress = (widget.entry.progress ?? 0) + 1;
+      final total = widget.entry.totalEpisodes;
+      final completed =
+          total != null && total > 0 && newProgress >= total;
       final graphql = widget.ref.read(anilistGraphqlProvider);
       await graphql.saveMediaListEntry(
         mediaId: mediaId,
         token: token,
         progress: newProgress,
+        status: completed ? 'COMPLETED' : null,
       );
     } catch (_) {}
   }
@@ -743,7 +773,18 @@ class _IncrementButtonState extends State<_IncrementButton> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final atMax = widget.entry.totalEpisodes != null &&
+    final kind = MediaKind.fromCode(widget.entry.kind);
+    final atMax = kind == MediaKind.book
+      ? (() {
+        final mode = BookProgressCalculator.getTrackingMode(widget.entry);
+        final cap = BookProgressCalculator.getIncrementCap(widget.entry);
+        if (cap == null) return false;
+        final current = mode == BookTrackingMode.chapters
+          ? (widget.entry.currentChapter ?? 0)
+          : (widget.entry.progress ?? 0);
+        return current >= cap;
+        })()
+      : widget.entry.totalEpisodes != null &&
         (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
 
     return IconButton(
@@ -770,6 +811,7 @@ IconData _kindIcon(MediaKind kind) => switch (kind) {
       MediaKind.movie => Icons.movie_rounded,
       MediaKind.tv => Icons.tv_rounded,
       MediaKind.game => Icons.sports_esports_rounded,
+      MediaKind.book => Icons.auto_stories_rounded,
     };
 
 class _LibrarySearchPage extends StatefulWidget {

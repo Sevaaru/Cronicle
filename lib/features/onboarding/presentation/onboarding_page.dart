@@ -19,6 +19,8 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/books/data/openlibrary_sync_service.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
 // ─── Interest model ──────────────────────────────────────────────────────────
@@ -67,6 +69,12 @@ final _interests = [
     icon: Icons.sports_esports_rounded,
     label: (l) => l.onboardingInterestGames,
     color: const Color(0xFF42A5F5),
+  ),
+  _Interest(
+    id: 'book',
+    icon: Icons.auto_stories_rounded,
+    label: (l) => l.onboardingInterestBooks,
+    color: const Color(0xFFAB47BC),
   ),
 ];
 
@@ -483,8 +491,11 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
   bool _traktSyncing = false;
   bool _anilistSynced = false;
   bool _traktSynced = false;
+  bool _olConnected = false;
+  bool _olSyncing = false;
+  bool _olSynced = false;
 
-  bool get _isSyncing => _anilistSyncing || _traktSyncing;
+  bool get _isSyncing => _anilistSyncing || _traktSyncing || _olSyncing;
 
   Future<void> _connectGoogle() async {
     setState(() => _connectingGoogle = true);
@@ -525,6 +536,54 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
       await ref.read(traktSessionProvider.notifier).connectOAuth();
     } catch (_) {
       // User cancelled or error
+    }
+  }
+
+  Future<void> _connectOpenLibrary() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+    final username = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.onboardingConnectOpenLibrary),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: l10n.settingsOpenLibraryUsernameHint,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(l10n.settingsOpenLibraryConnect),
+          ),
+        ],
+      ),
+    );
+    if (username == null || username.isEmpty || !mounted) return;
+    try {
+      final exists =
+          await ref.read(openLibraryApiProvider).usernameExists(username);
+      if (!mounted) return;
+      if (!exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsOpenLibraryUsernameNotFound)),
+        );
+        return;
+      }
+      ref.read(openLibraryUsernameProvider.notifier).set(username);
+      setState(() => _olConnected = true);
+      // Trigger sync
+      setState(() => _olSyncing = true);
+      await syncOpenLibraryReadingLog(ref);
+      if (mounted) setState(() { _olSyncing = false; _olSynced = true; });
+    } catch (_) {
+      if (mounted) setState(() => _olSyncing = false);
     }
   }
 
@@ -594,7 +653,7 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
         traktSession.valueOrNull?.connected ?? false;
 
     final anyConnected =
-        anilistConnected || traktConnected || _googleConnected;
+        anilistConnected || traktConnected || _googleConnected || _olConnected;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -665,6 +724,21 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
             loading: _connectingGoogle,
             connectedLabel: l10n.onboardingConnected,
             onConnect: _connectGoogle,
+          ),
+          const SizedBox(height: 12),
+
+          // Open Library
+          _AccountTile(
+            icon: Icons.auto_stories_rounded,
+            color: const Color(0xFFAB47BC),
+            title: l10n.onboardingConnectOpenLibrary,
+            subtitle: l10n.onboardingConnectOpenLibraryDesc,
+            connected: _olConnected,
+            syncLoading: _olSyncing,
+            connectedLabel: _olSynced
+                ? l10n.onboardingAccountSynced
+                : l10n.onboardingConnected,
+            onConnect: _connectOpenLibrary,
           ),
 
           const Spacer(flex: 3),

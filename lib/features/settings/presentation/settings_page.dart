@@ -28,6 +28,8 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/books/data/openlibrary_sync_service.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
@@ -467,6 +469,8 @@ class _AccountsSection extends ConsumerWidget {
           const Divider(height: 24),
           const _TraktSection(),
           const Divider(height: 24),
+          const _OpenLibrarySection(),
+          const Divider(height: 24),
           _GoogleSection(googleSignIn: googleSignIn),
         ],
       ),
@@ -687,6 +691,164 @@ class _TraktSection extends ConsumerWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+class _OpenLibrarySection extends ConsumerStatefulWidget {
+  const _OpenLibrarySection();
+
+  @override
+  ConsumerState<_OpenLibrarySection> createState() => _OpenLibrarySectionState();
+}
+
+class _OpenLibrarySectionState extends ConsumerState<_OpenLibrarySection> {
+  final _controller = TextEditingController();
+  bool _syncing = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final username = ref.watch(openLibraryUsernameProvider);
+    final connected = username != null && username.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.auto_stories_rounded, size: 20, color: const Color(0xFFAB47BC)),
+            const SizedBox(width: 8),
+            Text(l10n.settingsOpenLibraryTitle,
+                style: Theme.of(context).textTheme.titleSmall),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.settingsOpenLibrarySubtitle,
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
+        if (connected) ...[
+          Row(
+            children: [
+              Icon(Icons.check_circle, size: 18, color: Colors.green.shade400),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.settingsOpenLibraryConnectedAs(username),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: _syncing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.cloud_download_outlined, size: 18),
+              label: Text(l10n.settingsOpenLibrarySync),
+              onPressed: _syncing
+                  ? null
+                  : () async {
+                      setState(() => _syncing = true);
+                      try {
+                        final count = await syncOpenLibraryReadingLog(ref);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(
+                                  l10n.settingsOpenLibrarySyncResult(count))),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
+                      } finally {
+                        if (mounted) setState(() => _syncing = false);
+                      }
+                    },
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.logout, size: 18),
+              label: Text(l10n.settingsOpenLibraryDisconnect),
+              onPressed: () {
+                ref.read(openLibraryUsernameProvider.notifier).set(null);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.settingsOpenLibraryDisconnected)),
+                );
+              },
+            ),
+          ),
+        ] else ...[
+          TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              labelText: l10n.settingsOpenLibraryUsernameHint,
+              isDense: true,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.login, size: 18),
+              label: Text(l10n.settingsOpenLibraryConnect),
+              onPressed: () async {
+                final input = _controller.text.trim();
+                if (input.isEmpty) return;
+                try {
+                  final exists =
+                      await ref.read(openLibraryApiProvider).usernameExists(input);
+                  if (!mounted) return;
+                  if (!exists) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text(l10n.settingsOpenLibraryUsernameNotFound)),
+                    );
+                    return;
+                  }
+                  ref.read(openLibraryUsernameProvider.notifier).set(input);
+                  _controller.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text(l10n.settingsOpenLibraryConnectSuccess)),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$e')),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ],
     );
   }

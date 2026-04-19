@@ -272,6 +272,7 @@ class _ThreadOriginalBlock extends ConsumerWidget {
         MediaKind.movie => Icons.movie_rounded,
         MediaKind.tv => Icons.tv_rounded,
         MediaKind.game => Icons.sports_esports_rounded,
+        MediaKind.book => Icons.auto_stories_rounded,
       };
 
   Color _sourceColor(MediaKind kind, ColorScheme cs) => switch (kind) {
@@ -280,6 +281,7 @@ class _ThreadOriginalBlock extends ConsumerWidget {
         MediaKind.movie => Colors.amber.shade700,
         MediaKind.tv => Colors.teal,
         MediaKind.game => Colors.redAccent,
+        MediaKind.book => const Color(0xFFAB47BC),
       };
 
   @override

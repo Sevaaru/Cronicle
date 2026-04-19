@@ -133,6 +133,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
             title: l10n.traktSectionTrending,
+            slug: 'trending',
             items: data.trending,
             kind: MediaKind.movie,
             cardWidth: 126,
@@ -143,6 +144,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.played.isNotEmpty)
           _HeroSection(
             title: l10n.traktSectionMostPlayed,
+            slug: 'played',
             items: data.played,
             kind: MediaKind.movie,
             accent: Colors.amber.shade600,
@@ -151,6 +153,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.anticipated.isNotEmpty)
           _RankedListSection(
             title: l10n.traktSectionAnticipatedMovies,
+            slug: 'anticipated',
             items: data.anticipated,
             kind: MediaKind.movie,
             icon: Icons.rocket_launch_rounded,
@@ -159,6 +162,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.watched.isNotEmpty)
           _ScoreCarouselSection(
             title: l10n.traktSectionMostWatched,
+            slug: 'watched',
             items: data.watched,
             kind: MediaKind.movie,
             cardWidth: 108,
@@ -169,6 +173,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.collected.isNotEmpty)
           _SpotlightRowsSection(
             title: l10n.traktSectionMostCollected,
+            slug: 'collected',
             items: data.collected,
             kind: MediaKind.movie,
             accent: const Color(0xFF7C3AED),
@@ -177,6 +182,7 @@ class _MoviesFeed extends StatelessWidget {
         if (data.popular.isNotEmpty)
           _MoodBandSection(
             title: l10n.traktSectionPopular,
+            slug: 'popular',
             items: data.popular,
             kind: MediaKind.movie,
             accent: const Color(0xFFF59E0B),
@@ -205,6 +211,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
             title: l10n.traktSectionTrending,
+            slug: 'trending',
             items: data.trending,
             kind: MediaKind.tv,
             cardWidth: 126,
@@ -215,6 +222,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.watching.isNotEmpty)
           _SpotlightRowsSection(
             title: l10n.traktSectionWatchingNow,
+            slug: 'watching',
             items: data.watching,
             kind: MediaKind.tv,
             accent: const Color(0xFF16A34A),
@@ -223,6 +231,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.anticipated.isNotEmpty)
           _RankedListSection(
             title: l10n.traktSectionAnticipatedShows,
+            slug: 'anticipated',
             items: data.anticipated,
             kind: MediaKind.tv,
             icon: Icons.rocket_launch_rounded,
@@ -231,6 +240,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.watched.isNotEmpty)
           _ScoreCarouselSection(
             title: l10n.traktSectionMostWatched,
+            slug: 'watched',
             items: data.watched,
             kind: MediaKind.tv,
             cardWidth: 108,
@@ -241,6 +251,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.collected.isNotEmpty)
           _MoodBandSection(
             title: l10n.traktSectionMostCollected,
+            slug: 'collected',
             items: data.collected,
             kind: MediaKind.tv,
             accent: const Color(0xFF14B8A6),
@@ -250,6 +261,7 @@ class _ShowsFeed extends StatelessWidget {
         if (data.popular.isNotEmpty)
           _HeroSection(
             title: l10n.traktSectionPopular,
+            slug: 'popular',
             items: data.popular,
             kind: MediaKind.tv,
             accent: Colors.amber.shade600,
@@ -292,12 +304,16 @@ String _formatVotes(int v) {
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
+    this.slug,
+    this.kind,
     this.accent,
     this.icon,
     this.onDark = false,
   });
 
   final String title;
+  final String? slug;
+  final MediaKind? kind;
   final Color? accent;
   final IconData? icon;
   final bool onDark;
@@ -307,24 +323,38 @@ class _SectionHeader extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final color = accent ?? cs.primary;
     final textColor = onDark ? Colors.white : cs.onSurface;
+    final chevronColor = onDark ? Colors.white60 : cs.onSurfaceVariant;
 
-    return Row(
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              color: textColor,
+    final canNavigate = slug != null && kind != null;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canNavigate
+          ? () {
+              final kindStr = kind == MediaKind.movie ? 'movie' : 'show';
+              context.push('/trakt-section/$kindStr/$slug');
+            }
+          : null,
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: textColor,
+              ),
             ),
           ),
-        ),
-      ],
+          if (canNavigate)
+            Icon(Icons.chevron_right_rounded, size: 20, color: chevronColor),
+        ],
+      ),
     );
   }
 }
@@ -425,6 +455,7 @@ class _ScoreBadge extends StatelessWidget {
 class _ScoreCarouselSection extends StatelessWidget {
   const _ScoreCarouselSection({
     required this.title,
+    required this.slug,
     required this.items,
     required this.kind,
     required this.cardWidth,
@@ -434,6 +465,7 @@ class _ScoreCarouselSection extends StatelessWidget {
   });
 
   final String title;
+  final String slug;
   final List<Map<String, dynamic>> items;
   final MediaKind kind;
   final double cardWidth;
@@ -451,7 +483,7 @@ class _ScoreCarouselSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _SectionHeader(title: title, icon: icon, accent: accent),
+            child: _SectionHeader(title: title, slug: slug, kind: kind, icon: icon, accent: accent),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -556,6 +588,7 @@ class _ScoreCarouselCard extends StatelessWidget {
 class _RankedListSection extends StatelessWidget {
   const _RankedListSection({
     required this.title,
+    required this.slug,
     required this.items,
     required this.kind,
     required this.icon,
@@ -563,6 +596,7 @@ class _RankedListSection extends StatelessWidget {
   });
 
   final String title;
+  final String slug;
   final List<Map<String, dynamic>> items;
   final MediaKind kind;
   final IconData icon;
@@ -576,7 +610,7 @@ class _RankedListSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: title, icon: icon, accent: accent),
+          _SectionHeader(title: title, slug: slug, kind: kind, icon: icon, accent: accent),
           const SizedBox(height: 10),
           ...List.generate(
             slice.length,
@@ -730,6 +764,7 @@ class _RankedRow extends StatelessWidget {
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
     required this.title,
+    required this.slug,
     required this.items,
     required this.kind,
     required this.accent,
@@ -737,6 +772,7 @@ class _HeroSection extends StatelessWidget {
   });
 
   final String title;
+  final String slug;
   final List<Map<String, dynamic>> items;
   final MediaKind kind;
   final Color accent;
@@ -752,7 +788,7 @@ class _HeroSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: title, icon: icon, accent: accent),
+          _SectionHeader(title: title, slug: slug, kind: kind, icon: icon, accent: accent),
           const SizedBox(height: 12),
           _HeroCard(item: hero, kind: kind, accent: accent),
           if (rest.isNotEmpty) ...[
@@ -945,6 +981,7 @@ class _HeroCard extends StatelessWidget {
 class _MoodBandSection extends StatelessWidget {
   const _MoodBandSection({
     required this.title,
+    required this.slug,
     required this.items,
     required this.kind,
     required this.accent,
@@ -953,6 +990,7 @@ class _MoodBandSection extends StatelessWidget {
   });
 
   final String title;
+  final String slug;
   final List<Map<String, dynamic>> items;
   final MediaKind kind;
   final Color accent;
@@ -976,6 +1014,8 @@ class _MoodBandSection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
               child: _SectionHeader(
                 title: title,
+                slug: slug,
+                kind: kind,
                 icon: icon,
                 accent: accent,
                 onDark: true,
@@ -1034,6 +1074,7 @@ class _MoodBandSection extends StatelessWidget {
 class _SpotlightRowsSection extends StatelessWidget {
   const _SpotlightRowsSection({
     required this.title,
+    required this.slug,
     required this.items,
     required this.kind,
     required this.accent,
@@ -1041,6 +1082,7 @@ class _SpotlightRowsSection extends StatelessWidget {
   });
 
   final String title;
+  final String slug;
   final List<Map<String, dynamic>> items;
   final MediaKind kind;
   final Color accent;
@@ -1054,7 +1096,7 @@ class _SpotlightRowsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: title, icon: icon, accent: accent),
+          _SectionHeader(title: title, slug: slug, kind: kind, icon: icon, accent: accent),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(

@@ -10,6 +10,11 @@ import 'package:cronicle/features/anime/presentation/forum_media_threads_page.da
 import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/books/presentation/book_detail_page.dart';
+import 'package:cronicle/features/books/presentation/book_subject_browse_page.dart';
+import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
+import 'package:cronicle/features/books/presentation/books_home_section_list_page.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_home_section_list_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
 import 'package:cronicle/features/feed/presentation/anilist_notifications_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
@@ -302,6 +307,43 @@ GoRouter appRouter(AppRouterRef ref) {
               return TraktShowDetailPage(traktId: id);
             },
           ),
+          GoRoute(
+            path: '/book/:workKey',
+            builder: (context, state) {
+              final workKey = state.pathParameters['workKey']!;
+              return BookDetailPage(workKey: workKey);
+            },
+          ),
+          GoRoute(
+            path: '/books/section/:slug',
+            builder: (context, state) {
+              final slug = state.pathParameters['slug']!;
+              return BooksHomeSectionListPage(slug: slug);
+            },
+          ),
+          GoRoute(
+            path: '/books/subject',
+            builder: (context, state) {
+              final q = state.uri.queryParameters;
+              final subject = q['subject'] ?? '';
+              final sort = q['sort'] ?? 'popularity';
+              if (subject.isEmpty) return const _InvalidBrowseParamsPage();
+              return BookSubjectBrowsePage(
+                subject: subject,
+                initialSortKey: sort,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/trakt-section/:kind/:slug',
+            builder: (context, state) {
+              final kind = state.pathParameters['kind']! == 'movie'
+                  ? MediaKind.movie
+                  : MediaKind.tv;
+              final slug = state.pathParameters['slug']!;
+              return TraktHomeSectionListPage(kind: kind, slug: slug);
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -315,6 +357,12 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/games',
         builder: (context, state) => const GamesPage(),
+      ),
+      GoRoute(
+        path: '/books',
+        builder: (context, state) => const Scaffold(
+          body: BooksHomeFeedView(),
+        ),
       ),
       GoRoute(
         path: '/auth',

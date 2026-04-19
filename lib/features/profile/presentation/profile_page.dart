@@ -149,6 +149,65 @@ class _NotLoggedIn extends ConsumerWidget {
             );
           },
         ),
+        Consumer(
+          builder: (context, ref, _) {
+            final local = ref.watch(favoriteAnilistMediaProvider);
+            final anime = local
+                .where((e) =>
+                    (e['type'] as String? ?? 'ANIME').toUpperCase() == 'ANIME')
+                .toList();
+            final manga = local
+                .where((e) =>
+                    (e['type'] as String? ?? 'ANIME').toUpperCase() == 'MANGA')
+                .toList();
+            if (anime.isEmpty && manga.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (anime.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(l10n.sectionFavAnime,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(right: 8),
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: anime.length,
+                      itemBuilder: (context, i) =>
+                          _FavoriteAnilistMediaCard(item: anime[i]),
+                    ),
+                  ),
+                ],
+                if (manga.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(l10n.sectionFavManga,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(right: 8),
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: manga.length,
+                      itemBuilder: (context, i) =>
+                          _FavoriteAnilistMediaCard(item: manga[i]),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
       ],
     );
   }
@@ -357,6 +416,17 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                 builder: (context, ref, _) {
                   final favGames = ref.watch(favoriteGamesProvider);
                   final favTraktAll = ref.watch(favoriteTraktTitlesProvider);
+                  final localAnilistFavs = ref.watch(favoriteAnilistMediaProvider);
+                  final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
+                    apiNodes: favAnime,
+                    localSnapshots: localAnilistFavs,
+                    mediaTypeUpper: 'ANIME',
+                  );
+                  final favMangaMerged = mergeAnilistFavoriteApiNodesWithLocal(
+                    apiNodes: favManga,
+                    localSnapshots: localAnilistFavs,
+                    mediaTypeUpper: 'MANGA',
+                  );
                   final favMovies = favTraktAll
                       .where((e) => (e['trakt_type'] as String?) != 'show')
                       .toList();
@@ -375,26 +445,26 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                   }
 
                   final previewRows = <Widget>[];
-                  if (favAnime.isNotEmpty) {
+                  if (favAnimeMerged.isNotEmpty) {
                     previewRows.add(
                       ProfileFavoritesPreviewRow(
                         icon: Icons.animation_rounded,
                         iconColor: Colors.red.shade400,
                         title: l10n.sectionFavAnime,
-                        count: favAnime.length,
-                        thumbs: thumbsFromNodes(favAnime, Icons.animation_rounded),
+                        count: favAnimeMerged.length,
+                        thumbs: thumbsFromNodes(favAnimeMerged, Icons.animation_rounded),
                         onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.anime.segment}'),
                       ),
                     );
                   }
-                  if (favManga.isNotEmpty) {
+                  if (favMangaMerged.isNotEmpty) {
                     previewRows.add(
                       ProfileFavoritesPreviewRow(
                         icon: Icons.menu_book_rounded,
                         iconColor: Colors.deepPurple,
                         title: l10n.sectionFavManga,
-                        count: favManga.length,
-                        thumbs: thumbsFromNodes(favManga, Icons.menu_book_rounded),
+                        count: favMangaMerged.length,
+                        thumbs: thumbsFromNodes(favMangaMerged, Icons.menu_book_rounded),
                         onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.manga.segment}'),
                       ),
                     );
@@ -649,6 +719,63 @@ class _StatRow extends StatelessWidget {
   }
 }
 
+class _FavoriteAnilistMediaCard extends StatelessWidget {
+  const _FavoriteAnilistMediaCard({required this.item});
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final title = item['title'] as Map<String, dynamic>? ?? {};
+    final name = (title['english'] as String?) ??
+        (title['romaji'] as String?) ??
+        '';
+    final cover = (item['coverImage'] as Map?)?['large'] as String?;
+    final id = (item['id'] as num?)?.toInt();
+    final isManga =
+        (item['type'] as String? ?? 'ANIME').toUpperCase() == 'MANGA';
+    final kindCode = isManga ? MediaKind.manga.code : MediaKind.anime.code;
+
+    return GestureDetector(
+      onTap: id != null
+          ? () => context.push('/media/$id?kind=$kindCode')
+          : null,
+      child: SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: cover != null
+                  ? CachedNetworkImage(
+                      imageUrl: cover,
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 100,
+                      height: 130,
+                      color: cs.surfaceContainerHighest,
+                      child: Icon(
+                        isManga ? Icons.menu_book_rounded : Icons.animation_rounded,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _FavoriteGameCard extends StatelessWidget {
   const _FavoriteGameCard({required this.game});
   final Map<String, dynamic> game;
@@ -705,6 +832,7 @@ IconData _kindIcon(MediaKind kind) => switch (kind) {
       MediaKind.movie => Icons.movie_rounded,
       MediaKind.tv => Icons.tv_rounded,
       MediaKind.game => Icons.sports_esports_rounded,
+      MediaKind.book => Icons.auto_stories_rounded,
     };
 
 Color _kindColor(MediaKind kind, ColorScheme cs) => switch (kind) {
@@ -713,4 +841,5 @@ Color _kindColor(MediaKind kind, ColorScheme cs) => switch (kind) {
       MediaKind.movie => Colors.amber.shade700,
       MediaKind.tv => Colors.teal,
       MediaKind.game => Colors.redAccent,
+      MediaKind.book => const Color(0xFFAB47BC),
     };

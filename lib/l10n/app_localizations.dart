@@ -800,6 +800,18 @@ abstract class AppLocalizations {
   /// **'Juegos populares'**
   String get summaryPopularGames;
 
+  /// No description provided for @summaryTrendingBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros en tendencia'**
+  String get summaryTrendingBooks;
+
+  /// No description provided for @summaryNewBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Novedades'**
+  String get summaryNewBooks;
+
   /// No description provided for @summaryTopAnime.
   ///
   /// In es, this message translates to:
@@ -901,6 +913,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Juegos'**
   String get filterGames;
+
+  /// No description provided for @filterBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get filterBooks;
 
   /// No description provided for @filterAll.
   ///
@@ -2576,6 +2594,12 @@ abstract class AppLocalizations {
   /// **'Juegos'**
   String get mediaKindGame;
 
+  /// No description provided for @mediaKindBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get mediaKindBook;
+
   /// No description provided for @reviewTitle.
   ///
   /// In es, this message translates to:
@@ -2678,17 +2702,35 @@ abstract class AppLocalizations {
   /// **'Jugando'**
   String get statusCurrentGame;
 
+  /// No description provided for @statusCurrentBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo'**
+  String get statusCurrentBook;
+
   /// No description provided for @statusReplayingGame.
   ///
   /// In es, this message translates to:
   /// **'Rejugando'**
   String get statusReplayingGame;
 
+  /// No description provided for @statusRereadingBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Releyendo'**
+  String get statusRereadingBook;
+
   /// No description provided for @searchTrendingGames.
   ///
   /// In es, this message translates to:
   /// **'Juegos en tendencia'**
   String get searchTrendingGames;
+
+  /// No description provided for @searchTrendingBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros en tendencia'**
+  String get searchTrendingBooks;
 
   /// No description provided for @igdbWebNotSupported.
   ///
@@ -2809,6 +2851,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Horas jugadas'**
   String get addToListHoursPlayed;
+
+  /// No description provided for @addToListPagesRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Páginas leídas'**
+  String get addToListPagesRead;
+
+  /// No description provided for @libraryPagesRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} pág. restantes'**
+  String libraryPagesRemaining(Object count);
 
   /// No description provided for @gameDetailLinksSection.
   ///
@@ -3248,6 +3302,192 @@ abstract class AppLocalizations {
   /// **'Tienda externa'**
   String get gameDetailExtCatOther;
 
+  /// No description provided for @bookDetailSubjects.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas'**
+  String get bookDetailSubjects;
+
+  /// No description provided for @bookDetailAuthors.
+  ///
+  /// In es, this message translates to:
+  /// **'Autores'**
+  String get bookDetailAuthors;
+
+  /// No description provided for @bookDetailPublishDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera publicación'**
+  String get bookDetailPublishDate;
+
+  /// No description provided for @bookDetailPages.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} páginas'**
+  String bookDetailPages(Object count);
+
+  /// No description provided for @bookDetailDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get bookDetailDescription;
+
+  /// No description provided for @bookDetailNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron datos del libro'**
+  String get bookDetailNoData;
+
+  /// No description provided for @bookDetailOpenOnOpenLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en Open Library'**
+  String get bookDetailOpenOnOpenLibrary;
+
+  /// No description provided for @bookDetailEditions.
+  ///
+  /// In es, this message translates to:
+  /// **'Ediciones'**
+  String get bookDetailEditions;
+
+  /// No description provided for @booksHomePopularNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Popular ahora'**
+  String get booksHomePopularNow;
+
+  /// No description provided for @booksHomeNewReleases.
+  ///
+  /// In es, this message translates to:
+  /// **'Novedades'**
+  String get booksHomeNewReleases;
+
+  /// No description provided for @booksHomeTrending.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencias'**
+  String get booksHomeTrending;
+
+  /// No description provided for @booksHomeClassics.
+  ///
+  /// In es, this message translates to:
+  /// **'Clásicos'**
+  String get booksHomeClassics;
+
+  /// No description provided for @booksHomeMystery.
+  ///
+  /// In es, this message translates to:
+  /// **'Misterio'**
+  String get booksHomeMystery;
+
+  /// No description provided for @settingsOpenLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Open Library'**
+  String get settingsOpenLibrary;
+
+  /// No description provided for @settingsOpenLibraryDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Importa tu registro de lectura de Open Library'**
+  String get settingsOpenLibraryDesc;
+
+  /// No description provided for @settingsOpenLibraryUsername.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario de Open Library'**
+  String get settingsOpenLibraryUsername;
+
+  /// No description provided for @settingsOpenLibraryConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar'**
+  String get settingsOpenLibraryConnect;
+
+  /// No description provided for @settingsOpenLibraryDisconnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconectar'**
+  String get settingsOpenLibraryDisconnect;
+
+  /// No description provided for @settingsOpenLibraryConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado como {username}'**
+  String settingsOpenLibraryConnected(Object username);
+
+  /// No description provided for @settingsOpenLibrarySyncing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando registro de lectura…'**
+  String get settingsOpenLibrarySyncing;
+
+  /// No description provided for @settingsOpenLibrarySynced.
+  ///
+  /// In es, this message translates to:
+  /// **'Registro de lectura sincronizado'**
+  String get settingsOpenLibrarySynced;
+
+  /// No description provided for @settingsOpenLibraryError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo conectar. Verifica el usuario e intenta de nuevo.'**
+  String get settingsOpenLibraryError;
+
+  /// No description provided for @settingsOpenLibraryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Open Library'**
+  String get settingsOpenLibraryTitle;
+
+  /// No description provided for @settingsOpenLibrarySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta tu cuenta de Open Library para importar tu registro de lectura.'**
+  String get settingsOpenLibrarySubtitle;
+
+  /// No description provided for @settingsOpenLibraryConnectedAs.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado como {username}'**
+  String settingsOpenLibraryConnectedAs(Object username);
+
+  /// No description provided for @settingsOpenLibrarySync.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar registro de lectura'**
+  String get settingsOpenLibrarySync;
+
+  /// No description provided for @settingsOpenLibrarySyncResult.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} libros importados'**
+  String settingsOpenLibrarySyncResult(Object count);
+
+  /// No description provided for @settingsOpenLibraryDisconnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Open Library desconectada'**
+  String get settingsOpenLibraryDisconnected;
+
+  /// No description provided for @settingsOpenLibraryUsernameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario de Open Library'**
+  String get settingsOpenLibraryUsernameHint;
+
+  /// No description provided for @settingsOpenLibraryUsernameNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario no encontrado en Open Library'**
+  String get settingsOpenLibraryUsernameNotFound;
+
+  /// No description provided for @settingsOpenLibraryConnectSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Open Library conectada'**
+  String get settingsOpenLibraryConnectSuccess;
+
   /// No description provided for @onboardingWelcomeTitle.
   ///
   /// In es, this message translates to:
@@ -3257,7 +3497,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeBody.
   ///
   /// In es, this message translates to:
-  /// **'Registra tu progreso en anime, manga, películas, series y juegos en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.'**
+  /// **'Registra tu progreso en anime, manga, películas, series, juegos y libros en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.'**
   String get onboardingWelcomeBody;
 
   /// No description provided for @onboardingNext.
@@ -3314,6 +3554,12 @@ abstract class AppLocalizations {
   /// **'Videojuegos'**
   String get onboardingInterestGames;
 
+  /// No description provided for @onboardingInterestBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get onboardingInterestBooks;
+
   /// No description provided for @onboardingAccountsTitle.
   ///
   /// In es, this message translates to:
@@ -3361,6 +3607,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copia de seguridad en la nube de todos tus datos y cuentas'**
   String get onboardingConnectGoogleDesc;
+
+  /// No description provided for @onboardingConnectOpenLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Open Library'**
+  String get onboardingConnectOpenLibrary;
+
+  /// No description provided for @onboardingConnectOpenLibraryDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincroniza tu registro de lectura'**
+  String get onboardingConnectOpenLibraryDesc;
 
   /// No description provided for @onboardingSkip.
   ///
@@ -3625,6 +3883,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Discusiones de estrenos'**
   String get forumReleaseDiscussions;
+
+  /// No description provided for @bookTrackingModeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo de seguimiento'**
+  String get bookTrackingModeLabel;
+
+  /// No description provided for @bookTrackingModePages.
+  ///
+  /// In es, this message translates to:
+  /// **'Páginas'**
+  String get bookTrackingModePages;
+
+  /// No description provided for @bookTrackingModePercent.
+  ///
+  /// In es, this message translates to:
+  /// **'%'**
+  String get bookTrackingModePercent;
+
+  /// No description provided for @bookTrackingModeChapters.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulos'**
+  String get bookTrackingModeChapters;
+
+  /// No description provided for @bookPercentageRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje leído'**
+  String get bookPercentageRead;
+
+  /// No description provided for @bookChapterProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo actual'**
+  String get bookChapterProgress;
+
+  /// No description provided for @bookOverrideTotalsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura tus totales'**
+  String get bookOverrideTotalsLabel;
+
+  /// No description provided for @bookOverrideTotalsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu valor manual tiene prioridad sobre la API.'**
+  String get bookOverrideTotalsHint;
+
+  /// No description provided for @bookTotalPagesOverride.
+  ///
+  /// In es, this message translates to:
+  /// **'Total de páginas'**
+  String get bookTotalPagesOverride;
+
+  /// No description provided for @bookTotalChaptersOverride.
+  ///
+  /// In es, this message translates to:
+  /// **'Total de capítulos'**
+  String get bookTotalChaptersOverride;
+
+  /// No description provided for @bookReadingProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso de lectura'**
+  String get bookReadingProgress;
+
+  /// No description provided for @bookEditionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Edición'**
+  String get bookEditionLabel;
+
+  /// No description provided for @bookEditionUnknownPages.
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad de páginas desconocida'**
+  String get bookEditionUnknownPages;
+
+  /// No description provided for @bookEditionNoPageHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Si no hay páginas en la API, puedes definir tu total manualmente.'**
+  String get bookEditionNoPageHint;
 }
 
 class _AppLocalizationsDelegate

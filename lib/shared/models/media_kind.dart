@@ -5,7 +5,8 @@ enum MediaKind {
   movie(1),
   tv(2),
   game(3),
-  manga(4);
+  manga(4),
+  book(5);
 
   const MediaKind(this.code);
   final int code;
@@ -20,4 +21,5 @@ String mediaKindLabel(MediaKind kind, AppLocalizations l10n) => switch (kind) {
       MediaKind.tv => l10n.mediaKindTv,
       MediaKind.game => l10n.mediaKindGame,
       MediaKind.manga => l10n.mediaKindManga,
+      MediaKind.book => l10n.mediaKindBook,
     };

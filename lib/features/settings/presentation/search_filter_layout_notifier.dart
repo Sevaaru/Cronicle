@@ -12,6 +12,7 @@ const searchFilterLayoutDefaultOrder = <String>[
   'movie',
   'tv',
   'game',
+  'book',
 ];
 
 Set<String> get _searchFilterValidIds => searchFilterLayoutDefaultOrder.toSet();

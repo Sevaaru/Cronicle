@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -41,11 +43,21 @@ const _gameStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
+const _bookStatusData = [
+  ('CURRENT', Icons.auto_stories_rounded),
+  ('PLANNING', Icons.bookmark_add_outlined),
+  ('COMPLETED', Icons.check_circle_outline),
+  ('DROPPED', Icons.cancel_outlined),
+  ('PAUSED', Icons.pause_circle_outline),
+  ('REPEATING', Icons.replay_rounded),
+];
+
 String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
   return switch (key) {
     'CURRENT' => switch (kind) {
         MediaKind.manga => l10n.statusCurrentManga,
         MediaKind.game => l10n.statusCurrentGame,
+        MediaKind.book => l10n.statusCurrentBook,
         _ => l10n.statusCurrentAnime,
       },
     'PLANNING' => l10n.statusPlanning,
@@ -54,6 +66,7 @@ String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {
         MediaKind.game => l10n.statusReplayingGame,
+        MediaKind.book => l10n.statusRereadingBook,
         _ => l10n.statusRepeating,
       },
     _ => key,
@@ -120,11 +133,14 @@ Future<bool> showAddToLibrarySheet({
   final title = item['title'] as Map<String, dynamic>? ?? {};
   final coverImage = item['coverImage'] as Map<String, dynamic>? ?? {};
   final mediaId = item['id'];
+  final bookExternalId = kind == MediaKind.book
+      ? (item['workKey'] as String? ?? mediaId.toString())
+      : mediaId.toString();
 
   await db.upsertLibraryEntry(
     LibraryEntriesCompanion(
       kind: drift.Value(kind.code),
-      externalId: drift.Value(mediaId.toString()),
+      externalId: drift.Value(bookExternalId),
       title: drift.Value(
         (title['english'] as String?) ??
             (title['romaji'] as String?) ??
@@ -143,11 +159,22 @@ Future<bool> showAddToLibrarySheet({
             ? null
             : kind == MediaKind.movie
                 ? 1
-                : kind == MediaKind.manga
-                    ? (item['chapters'] as num?)?.toInt()
-                    : (item['episodes'] as num?)?.toInt(),
+                : kind == MediaKind.book
+                    ? (item['pages'] as num?)?.toInt()
+                    : kind == MediaKind.manga
+                        ? (item['chapters'] as num?)?.toInt()
+                        : (item['episodes'] as num?)?.toInt(),
       ),
       notes: drift.Value(result.notes),
+      // Book-specific fields
+      editionKey: drift.Value(result.editionKey),
+      isbn: drift.Value(result.isbn),
+      totalPagesFromApi: drift.Value(result.totalPagesFromApi),
+      totalChaptersFromApi: drift.Value(result.totalChaptersFromApi),
+      userTotalPagesOverride: drift.Value(result.userTotalPagesOverride),
+      userTotalChaptersOverride: drift.Value(result.userTotalChaptersOverride),
+      currentChapter: drift.Value(result.currentChapter),
+      bookTrackingMode: drift.Value(result.bookTrackingMode),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     ),
   );
@@ -206,12 +233,30 @@ class _AddResult {
     this.progress,
     this.notes,
     this.deleted = false,
+    // Book-specific
+    this.editionKey,
+    this.isbn,
+    this.totalPagesFromApi,
+    this.totalChaptersFromApi,
+    this.userTotalPagesOverride,
+    this.userTotalChaptersOverride,
+    this.currentChapter,
+    this.bookTrackingMode,
   });
   final String status;
   final int? score;
   final int? progress;
   final String? notes;
   final bool deleted;
+  // Book-specific
+  final String? editionKey;
+  final String? isbn;
+  final int? totalPagesFromApi;
+  final int? totalChaptersFromApi;
+  final int? userTotalPagesOverride;
+  final int? userTotalChaptersOverride;
+  final int? currentChapter;
+  final String? bookTrackingMode;
 
   static const remove = _AddResult(status: '', deleted: true);
 }
@@ -263,6 +308,16 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   late final TextEditingController _notesCtrl;
   late final Map<String, double> _advScores;
 
+  // Book-specific state
+  late BookTrackingMode _bookTrackingMode;
+  late final TextEditingController _chapterCtrl;
+  late final TextEditingController _totalPagesOverrideCtrl;
+  late final TextEditingController _totalChaptersOverrideCtrl;
+  String? _selectedEditionKey;
+  String? _selectedIsbn;
+  int? _totalPagesFromApi;
+  int? _totalChaptersFromApi;
+
   bool get _isAnilist =>
       widget.kind == MediaKind.anime || widget.kind == MediaKind.manga;
 
@@ -276,15 +331,31 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     _progressCtrl = TextEditingController(text: '${e?.progress ?? 0}');
     _notesCtrl = TextEditingController(text: e?.notes ?? '');
     _advScores = {for (final c in kAnilistAdvancedScoringCategories) c: 0};
+
+    // Book-specific init
+    _bookTrackingMode = e != null
+        ? BookTrackingMode.fromString(e.bookTrackingMode)
+        : BookTrackingMode.pages;
+    _chapterCtrl = TextEditingController(text: '${e?.currentChapter ?? 0}');
+    _totalPagesOverrideCtrl = TextEditingController(
+        text: e?.userTotalPagesOverride?.toString() ?? '');
+    _totalChaptersOverrideCtrl = TextEditingController(
+        text: e?.userTotalChaptersOverride?.toString() ?? '');
+    _selectedEditionKey = e?.editionKey;
+    _selectedIsbn = e?.isbn;
+    _totalPagesFromApi = e?.totalPagesFromApi ?? (widget.item['pages'] as num?)?.toInt();
+    _totalChaptersFromApi = e?.totalChaptersFromApi;
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
   bool get _isGame => widget.kind == MediaKind.game;
   bool get _isMovie => widget.kind == MediaKind.movie;
+  bool get _isBook => widget.kind == MediaKind.book;
 
   List<(String, IconData)> get _statusData => switch (widget.kind) {
         MediaKind.manga => _mangaStatusData,
         MediaKind.game => _gameStatusData,
+        MediaKind.book => _bookStatusData,
         _ => _animeStatusData,
       };
 
@@ -292,14 +363,91 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       ? null
       : _isMovie
           ? 1
-          : _isManga
-              ? widget.item['chapters'] as int?
-              : widget.item['episodes'] as int?;
+          : _isBook
+              ? _bookEffectiveTotal
+              : _isManga
+                  ? widget.item['chapters'] as int?
+                  : widget.item['episodes'] as int?;
+
+  /// For books, the effective total depends on the tracking mode.
+  int? get _bookEffectiveTotal {
+    switch (_bookTrackingMode) {
+      case BookTrackingMode.pages:
+        final override = int.tryParse(_totalPagesOverrideCtrl.text);
+        return override ?? _totalPagesFromApi;
+      case BookTrackingMode.percentage:
+        return 100;
+      case BookTrackingMode.chapters:
+        final override = int.tryParse(_totalChaptersOverrideCtrl.text);
+        return override ?? _totalChaptersFromApi;
+    }
+  }
+
+  String _bookProgressLabel(AppLocalizations l10n) => switch (_bookTrackingMode) {
+        BookTrackingMode.pages => l10n.addToListPagesRead,
+        BookTrackingMode.percentage => l10n.bookPercentageRead,
+        BookTrackingMode.chapters => l10n.addToListChapters,
+      };
+
+  void _syncEditionSelection(List<Map<String, dynamic>> editions) {
+    if (editions.isEmpty) return;
+    Map<String, dynamic>? selected;
+
+    if (_selectedEditionKey != null && _selectedEditionKey!.isNotEmpty) {
+      for (final e in editions) {
+        if ((e['editionKey'] as String?) == _selectedEditionKey) {
+          selected = e;
+          break;
+        }
+      }
+    }
+
+    selected ??= editions.firstWhere(
+      (e) => (e['pages'] as num?)?.toInt() != null,
+      orElse: () => editions.first,
+    );
+
+    final key = selected['editionKey'] as String?;
+    final isbn = selected['isbn'] as String?;
+    final pages = (selected['pages'] as num?)?.toInt();
+    final chapters = (selected['chapters'] as num?)?.toInt();
+
+    final changed = _selectedEditionKey != key ||
+        _selectedIsbn != isbn ||
+        _totalPagesFromApi != pages ||
+        _totalChaptersFromApi != chapters;
+    if (!changed) return;
+
+    setState(() {
+      _selectedEditionKey = key;
+      _selectedIsbn = isbn;
+      _totalPagesFromApi = pages;
+      _totalChaptersFromApi = chapters;
+    });
+  }
+
+  String _editionLabel(Map<String, dynamic> e, AppLocalizations l10n) {
+    final title = (e['title'] as String?)?.trim();
+    final key = e['editionKey'] as String?;
+    final pages = (e['pages'] as num?)?.toInt();
+    final base = (title != null && title.isNotEmpty)
+        ? title
+        : (key != null && key.isNotEmpty)
+            ? key
+            : 'Edition';
+    final pagesLabel = pages != null
+        ? l10n.bookDetailPages(pages)
+        : l10n.bookEditionUnknownPages;
+    return '$base • $pagesLabel';
+  }
 
   @override
   void dispose() {
     _progressCtrl.dispose();
     _notesCtrl.dispose();
+    _chapterCtrl.dispose();
+    _totalPagesOverrideCtrl.dispose();
+    _totalChaptersOverrideCtrl.dispose();
     super.dispose();
   }
 
@@ -307,17 +455,23 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final workKey = widget.item['workKey'] as String?;
+    final editionsAsync = _isBook && workKey != null && workKey.isNotEmpty
+      ? ref.watch(bookWorkEditionsProvider(workKey))
+      : const AsyncData<List<Map<String, dynamic>>>([]);
     final title = widget.item['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
         '';
     final countLabel = _isGame
         ? l10n.addToListHoursPlayed
-        : _isManga
-            ? l10n.addToListChapters
-            : _isMovie
-                ? l10n.addToListMovieProgress
-                : l10n.addToListEpisodes;
+        : _isBook
+            ? _bookProgressLabel(l10n)
+            : _isManga
+                ? l10n.addToListChapters
+                : _isMovie
+                    ? l10n.addToListMovieProgress
+                    : l10n.addToListEpisodes;
 
     final isEdit = widget.existingEntry != null;
     final bottomPad = MediaQuery.of(context).padding.bottom;
@@ -360,6 +514,72 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (_isBook && workKey != null && workKey.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(l10n.bookEditionLabel, style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                )),
+                const SizedBox(height: 6),
+                editionsAsync.when(
+                  loading: () => const LinearProgressIndicator(minHeight: 2),
+                  error: (_, _) => Text(
+                    l10n.bookEditionUnknownPages,
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                  data: (editions) {
+                    if (editions.isEmpty) {
+                      return Text(
+                        l10n.bookEditionNoPageHint,
+                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      );
+                    }
+
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _syncEditionSelection(editions);
+                    });
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DropdownButtonFormField<String>(
+                          initialValue: editions.any((e) =>
+                            (e['editionKey'] as String?) == _selectedEditionKey)
+                              ? _selectedEditionKey
+                              : null,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true),
+                          hint: Text(l10n.bookEditionLabel),
+                          items: editions.map((e) {
+                            final key = e['editionKey'] as String? ?? '';
+                            return DropdownMenuItem<String>(
+                              value: key,
+                              child: Text(
+                                _editionLabel(e, l10n),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            final selected = editions.firstWhere(
+                              (e) => (e['editionKey'] as String?) == value,
+                            );
+                            _syncEditionSelection([selected]);
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.bookEditionNoPageHint,
+                          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 20),
 
               Text(l10n.addToListStatus, style: TextStyle(
@@ -479,6 +699,46 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
 
               const SizedBox(height: 12),
 
+              // Book tracking mode selector
+              if (_isBook) ...[
+                Text(l10n.bookTrackingModeLabel, style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                )),
+                const SizedBox(height: 8),
+                SegmentedButton<BookTrackingMode>(
+                  segments: [
+                    ButtonSegment(
+                      value: BookTrackingMode.pages,
+                      label: Text(l10n.bookTrackingModePages),
+                      icon: const Icon(Icons.menu_book, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: BookTrackingMode.percentage,
+                      label: Text(l10n.bookTrackingModePercent),
+                      icon: const Icon(Icons.percent, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: BookTrackingMode.chapters,
+                      label: Text(l10n.bookTrackingModeChapters),
+                      icon: const Icon(Icons.list, size: 16),
+                    ),
+                  ],
+                  selected: {_bookTrackingMode},
+                  onSelectionChanged: (v) =>
+                      setState(() => _bookTrackingMode = v.first),
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    textStyle: WidgetStatePropertyAll(
+                      const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               Row(
                 children: [
                   Text(countLabel, style: TextStyle(
@@ -540,6 +800,113 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                   ],
                 ],
               ),
+              if (_isBook && _bookTrackingMode == BookTrackingMode.pages && _totalCount != null)
+                Builder(builder: (_) {
+                  final current = int.tryParse(_progressCtrl.text) ?? 0;
+                  final remaining = _totalCount! - current;
+                  if (remaining > 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        l10n.libraryPagesRemaining(remaining),
+                        style: TextStyle(fontSize: 12, color: cs.primary.withAlpha(180)),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+
+              // Book chapter tracking (shown when mode == chapters)
+              if (_isBook && _bookTrackingMode == BookTrackingMode.chapters) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(l10n.bookChapterProgress, style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    )),
+                    const Spacer(),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: () {
+                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
+                        if (c > 0) _chapterCtrl.text = '${c - 1}';
+                      },
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: TextField(
+                        controller: _chapterCtrl,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: () {
+                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
+                        final max = int.tryParse(_totalChaptersOverrideCtrl.text);
+                        if (max == null || c < max) _chapterCtrl.text = '${c + 1}';
+                      },
+                    ),
+                  ],
+                ),
+              ],
+
+              // Book totals override section
+              if (_isBook) ...[
+                const SizedBox(height: 12),
+                Text(l10n.bookOverrideTotalsLabel, style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                )),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.bookOverrideTotalsHint,
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant.withAlpha(160)),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _totalPagesOverrideCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.bookTotalPagesOverride,
+                          hintText: _totalPagesFromApi?.toString() ?? '',
+                          isDense: true,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _totalChaptersOverrideCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: l10n.bookTotalChaptersOverride,
+                          isDense: true,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
               const SizedBox(height: 16),
 
               Text(l10n.addToListNotes, style: TextStyle(
@@ -571,6 +938,24 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                       score: _score > 0 ? ref.read(scoringSystemSettingProvider).toStoredScore(_score) : null,
                       progress: progress != null && progress > 0 ? progress : null,
                       notes: notes.isNotEmpty ? notes : null,
+                      // Book-specific
+                      editionKey: _isBook ? _selectedEditionKey : null,
+                      isbn: _isBook ? _selectedIsbn : null,
+                      totalPagesFromApi: _isBook ? _totalPagesFromApi : null,
+                      totalChaptersFromApi: _isBook ? _totalChaptersFromApi : null,
+                      userTotalPagesOverride: _isBook
+                          ? int.tryParse(_totalPagesOverrideCtrl.text)
+                          : null,
+                      userTotalChaptersOverride: _isBook
+                          ? int.tryParse(_totalChaptersOverrideCtrl.text)
+                          : null,
+                      currentChapter: _isBook
+                          ? (int.tryParse(_chapterCtrl.text) ?? 0) > 0
+                              ? int.tryParse(_chapterCtrl.text)
+                              : null
+                          : null,
+                      bookTrackingMode:
+                          _isBook ? _bookTrackingMode.name : null,
                     ));
                   },
                 ),

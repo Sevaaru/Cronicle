@@ -290,12 +290,7 @@ class _DetailContentState extends State<_DetailContent> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (media['id'] != null)
-                      _MediaFavoriteToggle(
-                        mediaId: media['id'] as int,
-                        mediaType: (media['type'] as String?) ?? 'ANIME',
-                        isFavourite: media['isFavourite'] as bool? ?? false,
-                      ),
+                    if (media['id'] != null) _MediaFavoriteToggle(media: media),
                     if (media['id'] != null) const SizedBox(width: 8),
                     Expanded(
                       child: _AddToLibraryButton(media: media, kind: kind),
@@ -988,15 +983,9 @@ class _InfoPill extends StatelessWidget {
 }
 
 class _MediaFavoriteToggle extends ConsumerStatefulWidget {
-  const _MediaFavoriteToggle({
-    required this.mediaId,
-    required this.mediaType,
-    required this.isFavourite,
-  });
+  const _MediaFavoriteToggle({required this.media});
 
-  final int mediaId;
-  final String mediaType;
-  final bool isFavourite;
+  final Map<String, dynamic> media;
 
   @override
   ConsumerState<_MediaFavoriteToggle> createState() =>
@@ -1006,40 +995,97 @@ class _MediaFavoriteToggle extends ConsumerStatefulWidget {
 class _MediaFavoriteToggleState extends ConsumerState<_MediaFavoriteToggle> {
   bool _busy = false;
 
+  int get _mediaId => (widget.media['id'] as num).toInt();
+
+  String get _mediaType =>
+      ((widget.media['type'] as String?) ?? 'ANIME').toUpperCase();
+
+  bool _apiFavourite() => widget.media['isFavourite'] as bool? ?? false;
+
+  bool _localFavourite(List<Map<String, dynamic>> local) {
+    return local.any((e) {
+      final id = (e['id'] as num?)?.toInt() ?? 0;
+      final t = (e['type'] as String? ?? 'ANIME').toUpperCase();
+      return id == _mediaId && t == _mediaType;
+    });
+  }
+
+  bool _combinedFavourite() {
+    ref.watch(favoriteAnilistMediaProvider);
+    final local = ref.read(favoriteAnilistMediaProvider);
+    return _apiFavourite() || _localFavourite(local);
+  }
+
   Future<void> _onPressed() async {
     final l10n = AppLocalizations.of(context)!;
     final token = ref.read(anilistTokenProvider).valueOrNull;
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loginRequiredFavorite)),
-      );
+    final favNotifier = ref.read(favoriteAnilistMediaProvider.notifier);
+    final local = ref.read(favoriteAnilistMediaProvider);
+    final serverFav = _apiFavourite();
+    final localHas = _localFavourite(local);
+    final combined = serverFav || localHas;
+
+    if (!combined) {
+      if (token == null) {
+        await favNotifier.toggleLocalFavorite(widget.media);
+        return;
+      }
+      setState(() => _busy = true);
+      try {
+        final gql = ref.read(anilistGraphqlProvider);
+        await gql.toggleFavouriteMedia(
+          mediaId: _mediaId,
+          mediaType: _mediaType,
+          token: token,
+        );
+        await favNotifier.removeFavorite(_mediaId, _mediaType);
+        ref.invalidate(anilistMediaDetailProvider(_mediaId));
+        ref.invalidate(anilistProfileProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
       return;
     }
-    setState(() => _busy = true);
-    try {
-      final gql = ref.read(anilistGraphqlProvider);
-      await gql.toggleFavouriteMedia(
-        mediaId: widget.mediaId,
-        mediaType: widget.mediaType,
-        token: token,
-      );
-      ref.invalidate(anilistMediaDetailProvider(widget.mediaId));
-      ref.invalidate(anilistProfileProvider);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+
+    if (serverFav && token != null) {
+      setState(() => _busy = true);
+      try {
+        final gql = ref.read(anilistGraphqlProvider);
+        await gql.toggleFavouriteMedia(
+          mediaId: _mediaId,
+          mediaType: _mediaType,
+          token: token,
         );
+        await favNotifier.removeFavorite(_mediaId, _mediaType);
+        ref.invalidate(anilistMediaDetailProvider(_mediaId));
+        ref.invalidate(anilistProfileProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
       }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      return;
+    }
+
+    if (localHas) {
+      await favNotifier.toggleLocalFavorite(widget.media);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isFav = widget.isFavourite;
+    final isFav = _combinedFavourite();
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),

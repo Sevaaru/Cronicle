@@ -22,6 +22,18 @@ class LibraryEntries extends Table {
   IntColumn get progress => integer().nullable()();
   IntColumn get totalEpisodes => integer().nullable()();
   TextColumn get notes => text().nullable()();
+
+  // Book-specific tracking fields (only used when kind == MediaKind.book)
+  TextColumn get editionKey => text().nullable()();
+  TextColumn get isbn => text().nullable()();
+  IntColumn get totalPagesFromApi => integer().nullable()();
+  IntColumn get totalChaptersFromApi => integer().nullable()();
+  IntColumn get userTotalPagesOverride => integer().nullable()();
+  IntColumn get userTotalChaptersOverride => integer().nullable()();
+  IntColumn get currentChapter => integer().nullable()();
+  /// "pages" | "percentage" | "chapters" — defaults to pages.
+  TextColumn get bookTrackingMode => text().nullable()();
+
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
 
@@ -37,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -53,6 +65,17 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'UPDATE library_entries SET score = score * 10 WHERE score IS NOT NULL AND score > 0',
             );
+          }
+          if (from < 4) {
+            // Book tracking columns.
+            await customStatement('ALTER TABLE library_entries ADD COLUMN edition_key TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN isbn TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN total_pages_from_api INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN total_chapters_from_api INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN user_total_pages_override INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN user_total_chapters_override INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN current_chapter INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN book_tracking_mode TEXT');
           }
         },
       );
@@ -184,9 +207,52 @@ class AppDatabase extends _$AppDatabase {
     if (entry == null) return;
     final current = entry.progress ?? 0;
     if (entry.totalEpisodes != null && current >= entry.totalEpisodes!) return;
+    final next = current + 1;
+    final total = entry.totalEpisodes;
+    final reachedTotal = total != null && total > 0 && next >= total;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
-        progress: Value(current + 1),
+        progress: Value(next),
+        status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> incrementBookProgress(int entryId) async {
+    final entry = await getLibraryEntryById(entryId);
+    if (entry == null) return;
+    if (entry.kind != 5) return;
+
+    final mode = (entry.bookTrackingMode ?? 'pages').toLowerCase();
+
+    if (mode == 'chapters') {
+      final current = entry.currentChapter ?? 0;
+      final total = entry.userTotalChaptersOverride ?? entry.totalChaptersFromApi;
+      if (total != null && current >= total) return;
+      final next = current + 1;
+      final reachedTotal = total != null && total > 0 && next >= total;
+      await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+        LibraryEntriesCompanion(
+          currentChapter: Value(next),
+          status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+          updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+      return;
+    }
+
+    final current = entry.progress ?? 0;
+    final total = mode == 'percentage'
+        ? 100
+        : entry.userTotalPagesOverride ?? entry.totalPagesFromApi ?? entry.totalEpisodes;
+    if (total != null && current >= total) return;
+    final next = current + 1;
+    final reachedTotal = total != null && total > 0 && next >= total;
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        progress: Value(next),
+        status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );

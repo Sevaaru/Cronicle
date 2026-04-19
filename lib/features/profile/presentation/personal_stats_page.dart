@@ -393,6 +393,88 @@ class _PersonalStatsBody extends ConsumerWidget {
             );
           },
         ),
+
+        const SizedBox(height: 20),
+        ProfileStatsSectionHeader(
+            l10n.filterBooks, Icons.auto_stories_rounded, const Color(0xFFAB47BC)),
+        const SizedBox(height: 8),
+        StreamBuilder<List<LibraryEntry>>(
+          stream: ref.watch(databaseProvider).watchAllLibrary(),
+          builder: (context, snap) {
+            final entries = snap.data ?? [];
+            final books = entries
+                .where((e) => MediaKind.fromCode(e.kind) == MediaKind.book)
+                .toList();
+            if (books.isEmpty) {
+              return GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    l10n.profileLibraryEmpty,
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                  ),
+                ),
+              );
+            }
+            var totalPages = 0;
+            final byStatus = <String, int>{};
+            for (final e in books) {
+              totalPages += e.progress ?? 0;
+              final st = (e.status).toUpperCase();
+              byStatus[st] = (byStatus[st] ?? 0) + 1;
+            }
+            final statusKeys = byStatus.keys.toList()..sort();
+
+            return GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: ProfileStatsBigStat(
+                              '${books.length}',
+                              l10n.statTitles,
+                              loose: true,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Center(
+                            child: ProfileStatsBigStat(
+                              '$totalPages',
+                              l10n.addToListPagesRead,
+                              loose: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (statusKeys.isNotEmpty) ...[
+                    const Divider(height: 24),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: statusKeys.map((k) {
+                        final label = libraryEntryStatusLabel(l10n, k, MediaKind.book);
+                        return Chip(
+                          label: Text('$label: ${byStatus[k]}',
+                              style: const TextStyle(fontSize: 11)),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
       ],
     );
   }

@@ -15,6 +15,7 @@ const feedFilterLayoutDefaultOrder = <String>[
   'movie',
   'tv',
   'game',
+  'book',
 ];
 
 class FeedFilterLayoutState {

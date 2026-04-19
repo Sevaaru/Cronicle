@@ -4,7 +4,8 @@ enum ProfileFavoritesKind {
   manga('manga'),
   games('games'),
   movies('movies'),
-  tv('tv');
+  tv('tv'),
+  books('books');
 
   const ProfileFavoritesKind(this.segment);
   final String segment;

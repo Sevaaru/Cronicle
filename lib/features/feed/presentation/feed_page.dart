@@ -5,6 +5,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
@@ -24,7 +26,8 @@ enum _FeedFilter {
   manga,
   movie,
   tv,
-  game;
+  game,
+  book;
 
   IconData get icon => switch (this) {
         _FeedFilter.summary => Icons.auto_awesome_rounded,
@@ -33,6 +36,7 @@ enum _FeedFilter {
         _FeedFilter.movie => Icons.movie_rounded,
         _FeedFilter.tv => Icons.tv_rounded,
         _FeedFilter.game => Icons.sports_esports_rounded,
+        _FeedFilter.book => Icons.auto_stories_rounded,
       };
 }
 
@@ -43,6 +47,7 @@ String _filterLabel(_FeedFilter f, AppLocalizations l10n) => switch (f) {
       _FeedFilter.movie => l10n.filterMovies,
       _FeedFilter.tv => l10n.filterTv,
       _FeedFilter.game => l10n.filterGames,
+      _FeedFilter.book => l10n.filterBooks,
     };
 
 enum _AnimeMangaBrowseTab {
@@ -140,6 +145,8 @@ class _FeedPageState extends ConsumerState<FeedPage>
         ref.invalidate(traktMoviesHomeProvider);
       case _FeedFilter.tv:
         ref.invalidate(traktShowsHomeProvider);
+      case _FeedFilter.book:
+        ref.invalidate(bookTrendingProvider);
     }
   }
 
@@ -182,8 +189,11 @@ class _FeedPageState extends ConsumerState<FeedPage>
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
     final db = ref.read(databaseProvider);
+    final externalId = kind == MediaKind.book
+        ? (item['workKey'] as String? ?? item['id'].toString())
+        : item['id'].toString();
     final existing = await db.getLibraryEntryByKindAndExternalId(
-      kind.code, item['id'].toString(),
+      kind.code, externalId,
     );
     if (!mounted) return;
     final added = await showAddToLibrarySheet(
@@ -396,7 +406,9 @@ class _FeedPageState extends ConsumerState<FeedPage>
                   )
                 : _filter == _FeedFilter.game
                 ? const GamesHomeFeedView()
-                : _filter == _FeedFilter.movie
+                : _filter == _FeedFilter.book
+                    ? const BooksHomeFeedView()
+                    : _filter == _FeedFilter.movie
                     ? const TraktHomeFeedView(kind: MediaKind.movie)
                     : _filter == _FeedFilter.tv
                         ? const TraktHomeFeedView(kind: MediaKind.tv)

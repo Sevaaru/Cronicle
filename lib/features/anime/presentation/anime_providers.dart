@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart'
@@ -8,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/network/dio_provider.dart';
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
@@ -51,6 +53,11 @@ class AnilistToken extends _$AnilistToken {
       }
     } catch (_) {}
     state = AsyncData(token);
+    unawaited(
+      ref
+          .read(favoriteAnilistMediaProvider.notifier)
+          .pushPendingFavoritesToAnilist(token),
+    );
   }
 
   Future<void> clearToken() async {
@@ -672,4 +679,147 @@ Future<List<Map<String, dynamic>>> anilistNotificationsList(
   );
   ref.invalidate(anilistUnreadNotificationCountProvider);
   return list;
+}
+
+// ---------------------------------------------------------------------------
+// Favoritos anime/manga (local sin sesión; al conectar Anilist se suben a la API)
+// ---------------------------------------------------------------------------
+
+const _favoriteAnilistPrefsKey = 'favorite_anilist_media_v1';
+
+List<Map<String, dynamic>> _decodeFavoriteAnilistJson(String? raw) {
+  if (raw == null || raw.isEmpty) return [];
+  try {
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Map<String, dynamic> _snapshotAnilistMediaForFavorites(Map<String, dynamic> media) {
+  final title = media['title'] as Map<String, dynamic>? ?? {};
+  final cover = media['coverImage'] as Map<String, dynamic>? ?? {};
+  final id = media['id'];
+  final type = ((media['type'] as String?) ?? 'ANIME').toUpperCase();
+  return {
+    'id': id is int ? id : (id as num?)?.toInt(),
+    'type': type,
+    'title': {
+      'english': title['english'],
+      'romaji': title['romaji'],
+    },
+    'coverImage': {
+      'large': cover['large'] ?? cover['extraLarge'],
+    },
+  };
+}
+
+/// Une los nodos del perfil Anilist con favoritos guardados solo en local.
+List<Map<String, dynamic>> mergeAnilistFavoriteApiNodesWithLocal({
+  required List<dynamic> apiNodes,
+  required List<Map<String, dynamic>> localSnapshots,
+  required String mediaTypeUpper,
+}) {
+  final want = mediaTypeUpper.toUpperCase();
+  final out = <Map<String, dynamic>>[
+    ...apiNodes.map((e) => Map<String, dynamic>.from(e as Map)),
+  ];
+  final seen = out.map((m) => m['id']).whereType<int>().toSet();
+  for (final loc in localSnapshots) {
+    final t = (loc['type'] as String? ?? 'ANIME').toUpperCase();
+    if (t != want) continue;
+    final id = (loc['id'] as num?)?.toInt();
+    if (id == null || id <= 0 || seen.contains(id)) continue;
+    out.add(Map<String, dynamic>.from(loc));
+    seen.add(id);
+  }
+  return out;
+}
+
+@Riverpod(keepAlive: true)
+class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
+  @override
+  List<Map<String, dynamic>> build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _decodeFavoriteAnilistJson(prefs.getString(_favoriteAnilistPrefsKey));
+  }
+
+  bool hasFavorite(int mediaId, String mediaType) {
+    final want = mediaType.toUpperCase();
+    return state.any((e) {
+      final id = (e['id'] as num?)?.toInt() ?? 0;
+      final t = (e['type'] as String? ?? 'ANIME').toUpperCase();
+      return id == mediaId && t == want;
+    });
+  }
+
+  Future<void> _persist(List<Map<String, dynamic>> next) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_favoriteAnilistPrefsKey, jsonEncode(next));
+    state = next;
+  }
+
+  /// Añade o quita favorito solo en dispositivo (sin token Anilist).
+  Future<void> toggleLocalFavorite(Map<String, dynamic> media) async {
+    final id = (media['id'] as num?)?.toInt();
+    if (id == null || id <= 0) return;
+    final type = ((media['type'] as String?) ?? 'ANIME').toUpperCase();
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere((e) {
+      final eid = (e['id'] as num?)?.toInt() ?? 0;
+      final et = (e['type'] as String? ?? 'ANIME').toUpperCase();
+      return eid == id && et == type;
+    });
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add(_snapshotAnilistMediaForFavorites(media));
+    }
+    await _persist(next);
+  }
+
+  Future<void> removeFavorite(int mediaId, String mediaType) async {
+    final want = mediaType.toUpperCase();
+    final next = state.where((e) {
+      final eid = (e['id'] as num?)?.toInt() ?? 0;
+      final et = (e['type'] as String? ?? 'ANIME').toUpperCase();
+      return !(eid == mediaId && et == want);
+    }).toList();
+    if (next.length == state.length) return;
+    await _persist(next);
+  }
+
+  /// Tras iniciar sesión: favoritos locales que no estén en Anilist se envían con [ToggleFavourite].
+  Future<void> pushPendingFavoritesToAnilist(String token) async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final pending = List<Map<String, dynamic>>.from(state);
+    if (pending.isEmpty) return;
+    final touchedIds = <int>{};
+    for (final item in pending) {
+      final id = (item['id'] as num?)?.toInt();
+      if (id == null || id <= 0) continue;
+      final type = (item['type'] as String? ?? 'ANIME').toUpperCase();
+      try {
+        final detail = await graphql.fetchMediaDetail(id, token: token);
+        if (detail == null) continue;
+        final onServer = detail['isFavourite'] as bool? ?? false;
+        if (!onServer) {
+          await graphql.toggleFavouriteMedia(
+            mediaId: id,
+            mediaType: type,
+            token: token,
+          );
+        }
+        await removeFavorite(id, type);
+        touchedIds.add(id);
+      } catch (_) {
+        // Mantener en local para reintentar más tarde.
+      }
+    }
+    for (final id in touchedIds) {
+      ref.invalidate(anilistMediaDetailProvider(id));
+    }
+    ref.invalidate(anilistProfileProvider);
+  }
 }

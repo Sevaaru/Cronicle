@@ -7,6 +7,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
@@ -26,7 +28,8 @@ enum _SearchFilter {
   manga,
   movie,
   tv,
-  game;
+  game,
+  book;
 
   IconData get icon => switch (this) {
         _SearchFilter.all => Icons.search_rounded,
@@ -35,6 +38,7 @@ enum _SearchFilter {
         _SearchFilter.movie => Icons.movie_rounded,
         _SearchFilter.tv => Icons.tv_rounded,
         _SearchFilter.game => Icons.sports_esports_rounded,
+        _SearchFilter.book => Icons.auto_stories_rounded,
       };
 }
 
@@ -45,6 +49,7 @@ String _searchFilterLabel(_SearchFilter f, AppLocalizations l10n) => switch (f) 
   _SearchFilter.movie => l10n.filterMovies,
   _SearchFilter.tv => l10n.filterTv,
   _SearchFilter.game => l10n.filterGames,
+  _SearchFilter.book => l10n.filterBooks,
 };
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -89,8 +94,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
     final db = ref.read(databaseProvider);
+    final externalId = kind == MediaKind.book
+        ? (item['workKey'] as String? ?? item['id'].toString())
+        : item['id'].toString();
     final existing = await db.getLibraryEntryByKindAndExternalId(
-      kind.code, item['id'].toString(),
+      kind.code, externalId,
     );
     if (!mounted) return;
     final added = await showAddToLibrarySheet(
@@ -260,9 +268,14 @@ class _PopularContent extends ConsumerWidget {
       );
     }
 
+    if (filter == _SearchFilter.book) {
+      return const BooksHomeFeedView();
+    }
+
     final showAnime = filter == _SearchFilter.all || filter == _SearchFilter.anime;
     final showManga = filter == _SearchFilter.all || filter == _SearchFilter.manga;
     final showGames = filter == _SearchFilter.all;
+    final showBooks = filter == _SearchFilter.all;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
@@ -304,6 +317,18 @@ class _PopularContent extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           _IgdbPopularGrid(onAdd: onAdd),
+        ],
+        if (showBooks) ...[
+          Row(
+            children: [
+              Icon(Icons.trending_up_rounded, size: 18, color: const Color(0xFFAB47BC)),
+              const SizedBox(width: 6),
+              Text(l10n.searchTrendingBooks,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFFAB47BC))),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _BookPopularGrid(),
         ],
       ],
     );
@@ -500,6 +525,96 @@ class _IgdbPopularGrid extends ConsumerWidget {
   }
 }
 
+class _BookPopularGrid extends ConsumerWidget {
+  const _BookPopularGrid();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trendingAsync = ref.watch(bookTrendingProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    return trendingAsync.when(
+      loading: () => const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text('$e', style: TextStyle(color: cs.error)),
+      ),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 195,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemCount: items.length,
+            itemBuilder: (context, i) {
+              final item = items[i];
+              final title = item['title'] as Map<String, dynamic>? ?? {};
+              final cover = (item['coverImage'] as Map?)?['large'] as String?;
+              final name = (title['english'] as String?) ?? '';
+              final score = item['averageScore'] as int?;
+              final workKey = item['workKey'] as String?;
+
+              return GestureDetector(
+                onTap: workKey != null
+                    ? () => context.push('/book/$workKey')
+                    : null,
+                child: SizedBox(
+                  width: 110,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: cover != null
+                            ? CachedNetworkImage(
+                                imageUrl: cover,
+                                width: 110,
+                                height: 150,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 110,
+                                height: 150,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.auto_stories),
+                              ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      if (score != null)
+                        Row(
+                          children: [
+                            Icon(Icons.star,
+                                size: 11, color: Colors.amber.shade600),
+                            const SizedBox(width: 2),
+                            Text('$score%',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: cs.onSurfaceVariant)),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SearchResultsList extends ConsumerWidget {
   const _SearchResultsList({
     required this.query,
@@ -532,6 +647,10 @@ class _SearchResultsList extends ConsumerWidget {
     if (filter == _SearchFilter.all || filter == _SearchFilter.game) {
       sections.add(_ResultSection(l10n.filterGames, MediaKind.game,
           ref.watch(igdbSearchProvider(query))));
+    }
+    if (filter == _SearchFilter.all || filter == _SearchFilter.book) {
+      sections.add(_ResultSection(l10n.filterBooks, MediaKind.book,
+          ref.watch(bookSearchProvider(query))));
     }
     if (filter == _SearchFilter.movie) {
       sections.add(_ResultSection(
