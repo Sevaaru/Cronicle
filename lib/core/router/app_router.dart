@@ -46,6 +46,7 @@ import 'package:cronicle/features/tv/presentation/tv_page.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
 part 'app_router.g.dart';
 
@@ -432,6 +433,27 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthPage(),
+      ),
+      /// Visor de imagen a pantalla completa (misma pila que GoRouter → atrás del sistema coherente).
+      GoRoute(
+        path: '/full-image',
+        parentNavigatorKey: cronicleRootNavigatorKey,
+        pageBuilder: (context, state) {
+          final url = state.extra as String? ?? '';
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            name: state.name,
+            fullscreenDialog: true,
+            opaque: false,
+            barrierDismissible: false,
+            barrierColor: null,
+            transitionDuration: const Duration(milliseconds: 280),
+            transitionsBuilder: (context, animation, _, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: FullscreenImagePage(imageUrl: url),
+          );
+        },
       ),
     ],
   );

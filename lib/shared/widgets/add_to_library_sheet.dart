@@ -54,6 +54,38 @@ const _bookStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
+/// Slider estilo Material 3 (pista redondeada, pulgar con elevación suave).
+SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  final base = SliderTheme.of(context);
+  return base.copyWith(
+    trackHeight: 4,
+    activeTrackColor: cs.primary,
+    inactiveTrackColor: cs.surfaceContainerHighest,
+    thumbColor: cs.primary,
+    overlayColor: WidgetStateColor.resolveWith((states) {
+      if (states.contains(WidgetState.dragged) ||
+          states.contains(WidgetState.pressed)) {
+        return cs.primary.withAlpha(51);
+      }
+      return cs.primary.withAlpha(31);
+    }),
+    thumbShape: const RoundSliderThumbShape(
+      enabledThumbRadius: 11,
+      elevation: 1,
+      pressedElevation: 3,
+    ),
+    trackShape: const RoundedRectSliderTrackShape(),
+    valueIndicatorColor: cs.inverseSurface,
+    valueIndicatorTextStyle: TextStyle(
+      color: cs.onInverseSurface,
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    ),
+    showValueIndicator: ShowValueIndicator.onlyForContinuous,
+  );
+}
+
 String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
   return switch (key) {
     'CURRENT' => switch (kind) {
@@ -113,6 +145,7 @@ Future<bool> showAddToLibrarySheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    showDragHandle: true,
     builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry),
   );
 
@@ -534,25 +567,20 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + bottomPad),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withAlpha(60),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.78,
+        minChildSize: 0.32,
+        maxChildSize: 0.96,
+        builder: (context, scrollController) {
+          return SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomPad),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Text(
                 isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
                 style: TextStyle(
@@ -683,13 +711,20 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                   ),
                 ],
               ),
-              Slider(
-                value: _score,
-                min: 0,
-                max: ref.watch(scoringSystemSettingProvider).max,
-                divisions: ref.watch(scoringSystemSettingProvider).divisions,
-                label: _score == 0 ? l10n.addToListNoScore : ref.watch(scoringSystemSettingProvider).formatScore(_score),
-                onChanged: (v) => setState(() => _score = v),
+              SliderTheme(
+                data: _m3ScoreSliderTheme(context),
+                child: Slider(
+                  value: _score,
+                  min: 0,
+                  max: ref.watch(scoringSystemSettingProvider).max,
+                  divisions: ref.watch(scoringSystemSettingProvider).divisions,
+                  label: _score == 0
+                      ? l10n.addToListNoScore
+                      : ref
+                          .watch(scoringSystemSettingProvider)
+                          .formatScore(_score),
+                  onChanged: (v) => setState(() => _score = v),
+                ),
               ),
 
               if (_isAnilist && ref.watch(anilistAdvancedScoringEnabledProvider)) ...[
@@ -717,10 +752,13 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                         ),
                         Expanded(
                           child: SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              trackHeight: 2,
+                            data: _m3ScoreSliderTheme(context).copyWith(
+                              trackHeight: 3,
                               thumbShape: const RoundSliderThumbShape(
-                                  enabledThumbRadius: 6),
+                                enabledThumbRadius: 9,
+                                elevation: 1,
+                                pressedElevation: 2,
+                              ),
                             ),
                             child: Slider(
                               value: val,
@@ -1038,8 +1076,10 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ],
             ],
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

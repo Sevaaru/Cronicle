@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
@@ -7,6 +9,18 @@ import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasou
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+
+/// AniList devuelve [updatedAt] de la entrada de lista en **segundos** Unix.
+int? _mediaListUpdatedAtMs(Map<String, dynamic> entry) {
+  final raw = entry['updatedAt'];
+  if (raw == null) return null;
+  if (raw is! num) return null;
+  final v = raw.toInt();
+  if (v <= 0) return null;
+  // Heurística: valores ~1e9–1e10 son segundos; ya en ms serían ~1e12+.
+  if (v < 20000000000) return v * 1000;
+  return v;
+}
 
 Future<int> importAnilistToLocal({
   required AnilistGraphqlDatasource graphql,
@@ -62,6 +76,18 @@ Future<int> importAnilistToLocal({
         }
       }
 
+      final existing = await db.getLibraryEntryByKindAndExternalId(
+        kind.code,
+        mediaId,
+      );
+      final apiMs = _mediaListUpdatedAtMs(entry);
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final resolvedUpdatedAt = existing == null
+          ? (apiMs ?? nowMs)
+          : (apiMs == null)
+              ? existing.updatedAt
+              : max(existing.updatedAt, apiMs);
+
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(kind.code),
         externalId: drift.Value(mediaId),
@@ -79,7 +105,7 @@ Future<int> importAnilistToLocal({
         releasedEpisodes: drift.Value(released),
         nextEpisodeAirsAt: drift.Value(nextAirAt),
         notes: drift.Value(entry['notes'] as String?),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: drift.Value(resolvedUpdatedAt),
       ));
       count++;
     } catch (_) {

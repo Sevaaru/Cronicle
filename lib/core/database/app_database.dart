@@ -137,7 +137,10 @@ class AppDatabase extends _$AppDatabase {
             }
             return expr;
           })
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.updatedAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
         .watch();
   }
 
@@ -149,7 +152,10 @@ class AppDatabase extends _$AppDatabase {
             }
             return const Constant(true);
           })
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.updatedAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
         .watch();
   }
 
@@ -193,6 +199,7 @@ class AppDatabase extends _$AppDatabase {
               'progress' => ascending ? OrderingTerm.asc(t.progress) : OrderingTerm.desc(t.progress),
               _ => ascending ? OrderingTerm.asc(t.updatedAt) : OrderingTerm.desc(t.updatedAt),
             },
+        (t) => ascending ? OrderingTerm.asc(t.id) : OrderingTerm.desc(t.id),
       ])
       ..limit(limit, offset: offset);
     return q.get();
@@ -349,7 +356,6 @@ class AppDatabase extends _$AppDatabase {
         releasedEpisodes: Value(releasedEpisodes),
         nextEpisodeAirsAt: Value(nextEpisodeAirsAt),
         progress: p != (entry.progress ?? 0) ? Value(p) : const Value.absent(),
-        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
   }

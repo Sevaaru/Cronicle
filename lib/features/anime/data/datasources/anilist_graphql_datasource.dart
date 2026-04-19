@@ -706,18 +706,19 @@ class AnilistGraphqlDatasource {
     required String token,
   }) async {
     final isAnime = mediaType == 'ANIME';
+    // La API devuelve [Favourites], no User: no existe `id` en ese tipo.
     const mutation = r'''
       mutation ($animeId: Int, $mangaId: Int) {
         ToggleFavourite(animeId: $animeId, mangaId: $mangaId) {
-          id
+          __typename
         }
       }
     ''';
     await _post(
       mutation,
       variables: {
-        'animeId': isAnime ? mediaId : null,
-        'mangaId': isAnime ? null : mediaId,
+        if (isAnime) 'animeId': mediaId,
+        if (!isAnime) 'mangaId': mediaId,
       },
       token: token,
     );
@@ -1229,6 +1230,7 @@ class AnilistGraphqlDatasource {
               progress
               progressVolumes
               notes
+              updatedAt
               media {
                 id
                 type
