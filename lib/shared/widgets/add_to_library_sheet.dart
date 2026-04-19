@@ -11,6 +11,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -128,6 +129,7 @@ Future<bool> showAddToLibrarySheet({
         unawaited(removeTraktRemoteForDeletedEntry(ref, kind, tid));
       }
     }
+    ref.invalidate(paginatedLibraryProvider);
     return true;
   }
 
@@ -208,6 +210,7 @@ Future<bool> showAddToLibrarySheet({
     }
   }
 
+  ref.invalidate(paginatedLibraryProvider);
   return true;
 }
 
