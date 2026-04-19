@@ -110,19 +110,34 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  Future<List<Map<String, dynamic>>> moviesPopular({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> moviesPopular({
+    int limit = 20,
+    /// Rango de años de estreno Trakt, p. ej. `2024-2024` o `2010-2015`.
+    String? years,
+  }) async {
     final res = await _dio.get<dynamic>(
       '$_base/movies/popular',
-      queryParameters: {'limit': limit, 'extended': _extended},
+      queryParameters: {
+        'limit': limit,
+        'extended': _extended,
+        if (years != null && years.isNotEmpty) 'years': years,
+      },
       options: await _options(),
     );
     return _fromTrendingMovies(_list(res.data));
   }
 
-  Future<List<Map<String, dynamic>>> showsPopular({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> showsPopular({
+    int limit = 20,
+    String? years,
+  }) async {
     final res = await _dio.get<dynamic>(
       '$_base/shows/popular',
-      queryParameters: {'limit': limit, 'extended': _extended},
+      queryParameters: {
+        'limit': limit,
+        'extended': _extended,
+        if (years != null && years.isNotEmpty) 'years': years,
+      },
       options: await _options(),
     );
     return _fromTrendingShows(_list(res.data));

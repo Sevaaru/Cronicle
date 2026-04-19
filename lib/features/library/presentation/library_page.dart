@@ -10,6 +10,8 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
+import 'package:cronicle/features/library/presentation/anime_library_airing_refresh.dart';
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
@@ -148,6 +150,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(refreshAnimeLibraryAiringMetadata(ref));
+    });
   }
 
   @override
@@ -180,6 +186,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       if (kind == MediaKind.manga) 'chapters': entry.totalEpisodes
       else if (kind == MediaKind.book) 'pages': entry.totalEpisodes
       else 'episodes': entry.totalEpisodes,
+      if (kind == MediaKind.anime) 'status': entry.animeMediaStatus,
     };
 
     final saved = await showAddToLibrarySheet(
@@ -666,10 +673,72 @@ class _EntryCard extends StatelessWidget {
                         ] else if (entry.progress != null) ...[
                           const SizedBox(width: 6),
                           Text(
-                            entry.totalEpisodes != null
-                                ? '${entry.progress}/${entry.totalEpisodes}'
-                                : '${entry.progress}',
+                            () {
+                              final epTotal = AnimeAiringProgress.displayEpisodeTotal(
+                                mediaKindCode: entry.kind,
+                                totalEpisodes: entry.totalEpisodes,
+                                releasedEpisodes: entry.releasedEpisodes,
+                              );
+                              if (epTotal != null) {
+                                return '${entry.progress}/$epTotal';
+                              }
+                              return entry.totalEpisodes != null
+                                  ? '${entry.progress}/${entry.totalEpisodes}'
+                                  : '${entry.progress}';
+                            }(),
                             style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                          ),
+                        ],
+                        if (kind == MediaKind.anime) ...[
+                          Builder(
+                            builder: (context) {
+                              final behind = AnimeAiringProgress.episodesBehind(
+                                mediaKindCode: entry.kind,
+                                animeMediaStatus: entry.animeMediaStatus,
+                                releasedEpisodes: entry.releasedEpisodes,
+                                progress: entry.progress,
+                              );
+                              if (behind != null) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Text(
+                                    l10n.libraryAnimeAiringBehind(behind),
+                                    style: TextStyle(fontSize: 10, color: cs.tertiary),
+                                  ),
+                                );
+                              }
+                              if (!AnimeAiringProgress.isAnimeCaughtUpWithAiring(
+                                mediaKindCode: entry.kind,
+                                animeMediaStatus: entry.animeMediaStatus,
+                                releasedEpisodes: entry.releasedEpisodes,
+                                progress: entry.progress,
+                              )) {
+                                return const SizedBox.shrink();
+                              }
+                              final secs = AnimeAiringProgress.secondsUntilNextEpisodeAiring(
+                                entry.nextEpisodeAirsAt,
+                              );
+                              if (secs == null) return const SizedBox.shrink();
+                              final days = secs ~/ 86400;
+                              final hours = days == 0
+                                  ? (secs + 3599) ~/ 3600
+                                  : (secs % 86400) ~/ 3600;
+                              final ep = AnimeAiringProgress.nextEpisodeLabelNumber(
+                                mediaKindCode: entry.kind,
+                                releasedEpisodes: entry.releasedEpisodes,
+                              );
+                              if (ep == null) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Text(
+                                  l10n.mediaNextEp(ep, days, hours),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: cs.primary.withAlpha(220),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                         if (kind == MediaKind.book && bookRemaining != null) ...[
@@ -789,8 +858,18 @@ class _IncrementButtonState extends State<_IncrementButton> {
           : (widget.entry.progress ?? 0);
         return current >= cap;
         })()
-      : widget.entry.totalEpisodes != null &&
-        (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
+      : () {
+        final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+          mediaKindCode: widget.entry.kind,
+          totalEpisodes: widget.entry.totalEpisodes,
+          releasedEpisodes: widget.entry.releasedEpisodes,
+        );
+        if (cap != null) {
+          return (widget.entry.progress ?? 0) >= cap;
+        }
+        return widget.entry.totalEpisodes != null &&
+            (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
+      }();
 
     return IconButton(
       icon: _busy

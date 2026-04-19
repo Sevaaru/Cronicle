@@ -31,6 +31,11 @@ import 'package:cronicle/features/profile/presentation/profile_favorites_kind.da
 import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
 import 'package:cronicle/features/profile/presentation/user_follow_list_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
+import 'package:cronicle/features/games/presentation/search_games_theme_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_anilist_browse_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_anilist_genre_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_book_subject_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_browse_by_release_date_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
@@ -94,6 +99,11 @@ GoRouter appRouter(AppRouterRef ref) {
         final done = ref.read(onboardingCompletedProvider);
         return done ? startPage : '/onboarding';
       }
+      // Rutas con barra final no coincidían con los paths registrados.
+      final path = state.uri.path;
+      if (path.length > 1 && path.endsWith('/')) {
+        return state.uri.replace(path: path.substring(0, path.length - 1)).toString();
+      }
       return null;
     },
     routes: [
@@ -151,6 +161,57 @@ GoRouter appRouter(AppRouterRef ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SearchPage(),
             ),
+            routes: [
+              GoRoute(
+                path: 'anilist/:mediaType/:category',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final mediaType =
+                      state.pathParameters['mediaType']!.toUpperCase();
+                  final category = state.pathParameters['category']!;
+                  if (mediaType != 'ANIME' && mediaType != 'MANGA') {
+                    return const _InvalidBrowseParamsPage();
+                  }
+                  if (!isValidAnilistBrowseCategory(category)) {
+                    return const _InvalidBrowseParamsPage();
+                  }
+                  return SearchAnilistBrowseListPage(
+                    mediaType: mediaType,
+                    category: category,
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'anilist-genres',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final t = (state.uri.queryParameters['type'] ?? 'ANIME')
+                      .toUpperCase();
+                  final mediaType = t == 'MANGA' ? 'MANGA' : 'ANIME';
+                  return SearchAnilistGenreListPage(mediaType: mediaType);
+                },
+              ),
+              GoRoute(
+                path: 'book-subjects',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) => const SearchBookSubjectListPage(),
+              ),
+              GoRoute(
+                path: 'games-themes',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) => const SearchGamesThemeListPage(),
+              ),
+              GoRoute(
+                path: 'browse-by-date',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final kindCode =
+                      int.tryParse(state.uri.queryParameters['kind'] ?? '') ?? 0;
+                  final kind = MediaKind.fromCode(kindCode);
+                  return SearchBrowseByReleaseDatePage(mediaKind: kind);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/social',

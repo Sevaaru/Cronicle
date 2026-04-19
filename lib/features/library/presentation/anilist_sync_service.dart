@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
@@ -40,6 +41,27 @@ Future<int> importAnilistToLocal({
           ? (media['chapters'] as num?)?.toInt()
           : (media['episodes'] as num?)?.toInt();
 
+      final animeSt =
+          kind == MediaKind.anime ? media['status'] as String? : null;
+      final released = kind == MediaKind.anime
+          ? AnimeAiringProgress.releasedEpisodesFromAnilistMedia(media)
+          : null;
+      final nextAirAt = kind == MediaKind.anime
+          ? AnimeAiringProgress.nextEpisodeAirsAtSecondsFromAnilistMedia(media)
+          : null;
+
+      var listProgress = (entry['progress'] as num?)?.toInt();
+      if (kind == MediaKind.anime) {
+        final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+          mediaKindCode: kind.code,
+          totalEpisodes: totalEp,
+          releasedEpisodes: released,
+        );
+        if (cap != null && listProgress != null && listProgress > cap) {
+          listProgress = cap;
+        }
+      }
+
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(kind.code),
         externalId: drift.Value(mediaId),
@@ -51,8 +73,11 @@ Future<int> importAnilistToLocal({
         posterUrl: drift.Value(coverImage['large'] as String?),
         status: drift.Value(entry['status'] as String? ?? 'PLANNING'),
         score: drift.Value((entry['score'] as num?)?.toInt()),
-        progress: drift.Value((entry['progress'] as num?)?.toInt()),
+        progress: drift.Value(listProgress),
         totalEpisodes: drift.Value(totalEp),
+        animeMediaStatus: drift.Value(animeSt),
+        releasedEpisodes: drift.Value(released),
+        nextEpisodeAirsAt: drift.Value(nextAirAt),
         notes: drift.Value(entry['notes'] as String?),
         updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
       ));

@@ -619,6 +619,67 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get searchBrowsePopularityAllTime => 'By popularity';
+
+  @override
+  String get searchBrowseByStartDate => 'By release date';
+
+  @override
+  String get searchBrowseByGenre => 'By genre';
+
+  @override
+  String get searchBrowseGenresAnime => 'Anime genres';
+
+  @override
+  String get searchBrowseGenresManga => 'Manga genres';
+
+  @override
+  String get searchBrowseGameThemes => 'By theme';
+
+  @override
+  String get searchBrowseBookSubjectsOpenLibrary => 'Topics (Open Library)';
+
+  @override
+  String get searchReleaseDateHint =>
+      'Pick a year, then optionally a month to narrow results.';
+
+  @override
+  String get searchReleaseDateYear => 'Year';
+
+  @override
+  String get searchReleaseDateMonth => 'Month';
+
+  @override
+  String get searchReleaseDateAllMonths => 'Whole year';
+
+  @override
+  String get searchReleaseDateEmpty => 'No results for this period.';
+
+  @override
+  String get searchOlSubjectFantasy => 'Fantasy';
+
+  @override
+  String get searchOlSubjectRomance => 'Romance';
+
+  @override
+  String get searchOlSubjectScienceFiction => 'Science fiction';
+
+  @override
+  String get searchOlSubjectHorror => 'Horror';
+
+  @override
+  String get searchOlSubjectMystery => 'Mystery';
+
+  @override
+  String get searchOlSubjectFiction => 'Fiction';
+
+  @override
+  String get searchOlSubjectHistory => 'History';
+
+  @override
+  String get searchOlSubjectBiography => 'Biography';
+
+  @override
   String get addToLibrary => 'Add to library';
 
   @override
@@ -1509,6 +1570,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String libraryChaptersRemaining(Object count) {
     return '$count chapters left';
+  }
+
+  @override
+  String libraryAnimeAiringBehind(Object count) {
+    return '$count behind';
   }
 
   @override

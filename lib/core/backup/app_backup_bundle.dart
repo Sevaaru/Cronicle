@@ -65,6 +65,9 @@ abstract final class AppBackupBundle {
                 'score': e.score,
                 'progress': e.progress,
                 'totalEpisodes': e.totalEpisodes,
+                'animeMediaStatus': e.animeMediaStatus,
+                'releasedEpisodes': e.releasedEpisodes,
+                'nextEpisodeAirsAt': e.nextEpisodeAirsAt,
                 'notes': e.notes,
                 'updatedAt': e.updatedAt,
               })
@@ -181,6 +184,9 @@ abstract final class AppBackupBundle {
             score: Value(score100),
             progress: Value(e['progress'] as int?),
             totalEpisodes: Value(e['totalEpisodes'] as int?),
+            animeMediaStatus: Value(e['animeMediaStatus'] as String?),
+            releasedEpisodes: Value(e['releasedEpisodes'] as int?),
+            nextEpisodeAirsAt: Value(e['nextEpisodeAirsAt'] as int?),
             notes: Value(e['notes'] as String?),
             updatedAt: Value(
               (e['updatedAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch,

@@ -25,6 +25,48 @@ class OpenLibraryApiDatasource {
   // ---------------------------------------------------------------------------
 
   /// Search books. Returns a list of normalized maps.
+  /// Libros cuyo año de primera publicación coincide; [month] filtra en cliente
+  /// si el doc incluye `publish_date` o `first_publish_year` + heurística.
+  Future<List<Map<String, dynamic>>> searchBooksByPublishYear({
+    required int year,
+    int? month,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '$_base/search.json',
+      queryParameters: {
+        'q': 'first_publish_year:$year',
+        'limit': limit,
+        'offset': offset,
+        'fields':
+            'key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,ratings_average,ratings_count,edition_count,publish_date',
+      },
+      options: _opts,
+    );
+    final docs = (res.data?['docs'] as List?) ?? [];
+    var list = docs
+        .cast<Map<String, dynamic>>()
+        .map(_normalizeSearch)
+        .toList();
+    if (month != null) {
+      list = list.where((m) {
+        final pd = m['publishDate'] as String?;
+        if (pd != null && pd.length >= 7) {
+          final parts = pd.split('-');
+          if (parts.length >= 2) {
+            final y = int.tryParse(parts[0]);
+            final mo = int.tryParse(parts[1]);
+            return y == year && mo == month;
+          }
+        }
+        final yOnly = m['year'] as int?;
+        return yOnly == year;
+      }).toList();
+    }
+    return list;
+  }
+
   Future<List<Map<String, dynamic>>> searchBooks(
     String query, {
     int limit = 20,
@@ -297,6 +339,7 @@ class OpenLibraryApiDatasource {
       'authors': authors,
       'year': doc['first_publish_year'] as int?,
       'editionCount': doc['edition_count'] as int?,
+      'publishDate': doc['publish_date'] as String?,
     };
   }
 

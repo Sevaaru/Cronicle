@@ -907,23 +907,27 @@ abstract class _$AnilistBrowseMedia
   FutureOr<List<Map<String, dynamic>>> build(String type, String category);
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
 ///
 /// Copied from [AnilistBrowseMedia].
 @ProviderFor(AnilistBrowseMedia)
 const anilistBrowseMediaProvider = AnilistBrowseMediaFamily();
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
 ///
 /// Copied from [AnilistBrowseMedia].
 class AnilistBrowseMediaFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
   ///
   /// Copied from [AnilistBrowseMedia].
   const AnilistBrowseMediaFamily();
 
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
   ///
   /// Copied from [AnilistBrowseMedia].
   AnilistBrowseMediaProvider call(String type, String category) {
@@ -952,7 +956,8 @@ class AnilistBrowseMediaFamily
   String? get name => r'anilistBrowseMediaProvider';
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
 ///
 /// Copied from [AnilistBrowseMedia].
 class AnilistBrowseMediaProvider
@@ -961,7 +966,8 @@ class AnilistBrowseMediaProvider
           AnilistBrowseMedia,
           List<Map<String, dynamic>>
         > {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category] `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`.
+  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
+  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
   ///
   /// Copied from [AnilistBrowseMedia].
   AnilistBrowseMediaProvider(String type, String category)

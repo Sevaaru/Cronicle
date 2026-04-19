@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
+
 part 'app_database.g.dart';
 
 @DataClassName('KeyValueEntry')
@@ -34,6 +36,15 @@ class LibraryEntries extends Table {
   /// "pages" | "percentage" | "chapters" — defaults to pages.
   TextColumn get bookTrackingMode => text().nullable()();
 
+  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
+  TextColumn get animeMediaStatus => text().nullable()();
+
+  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
+  IntColumn get releasedEpisodes => integer().nullable()();
+
+  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
+  IntColumn get nextEpisodeAirsAt => integer().nullable()();
+
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
 
@@ -49,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,6 +87,15 @@ class AppDatabase extends _$AppDatabase {
             await customStatement('ALTER TABLE library_entries ADD COLUMN user_total_chapters_override INTEGER');
             await customStatement('ALTER TABLE library_entries ADD COLUMN current_chapter INTEGER');
             await customStatement('ALTER TABLE library_entries ADD COLUMN book_tracking_mode TEXT');
+          }
+          if (from < 5) {
+            await customStatement('ALTER TABLE library_entries ADD COLUMN anime_media_status TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN released_episodes INTEGER');
+          }
+          if (from < 6) {
+            await customStatement(
+              'ALTER TABLE library_entries ADD COLUMN next_episode_airs_at INTEGER',
+            );
           }
         },
       );
@@ -206,10 +226,16 @@ class AppDatabase extends _$AppDatabase {
     final entry = await getLibraryEntryById(entryId);
     if (entry == null) return;
     final current = entry.progress ?? 0;
-    if (entry.totalEpisodes != null && current >= entry.totalEpisodes!) return;
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && current >= cap) return;
     final next = current + 1;
-    final total = entry.totalEpisodes;
-    final reachedTotal = total != null && total > 0 && next >= total;
+    final seriesTotal = entry.totalEpisodes;
+    final reachedTotal =
+        seriesTotal != null && seriesTotal > 0 && next >= seriesTotal;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
         progress: Value(next),
@@ -263,9 +289,12 @@ class AppDatabase extends _$AppDatabase {
     if (entry == null) return;
     var p = progress;
     if (p < 0) p = 0;
-    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
-      p = entry.totalEpisodes!;
-    }
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && p > cap) p = cap;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
         progress: Value(p),
@@ -283,13 +312,43 @@ class AppDatabase extends _$AppDatabase {
     if (entry == null) return;
     var p = progress;
     if (p < 0) p = 0;
-    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
-      p = entry.totalEpisodes!;
-    }
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && p > cap) p = cap;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
         progress: Value(p),
         status: Value(status.toUpperCase()),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  /// Actualiza metadatos de emisión Anilist y ajusta progreso si superaba el tope emitido.
+  Future<void> updateAnimeAiringMetadata({
+    required int id,
+    required String? animeMediaStatus,
+    required int? releasedEpisodes,
+    required int? nextEpisodeAirsAt,
+  }) async {
+    final entry = await getLibraryEntryById(id);
+    if (entry == null) return;
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: releasedEpisodes,
+    );
+    var p = entry.progress ?? 0;
+    if (cap != null && p > cap) p = cap;
+    await (update(libraryEntries)..where((t) => t.id.equals(id))).write(
+      LibraryEntriesCompanion(
+        animeMediaStatus: Value(animeMediaStatus),
+        releasedEpisodes: Value(releasedEpisodes),
+        nextEpisodeAirsAt: Value(nextEpisodeAirsAt),
+        progress: p != (entry.progress ?? 0) ? Value(p) : const Value.absent(),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );

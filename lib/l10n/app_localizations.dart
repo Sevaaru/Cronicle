@@ -1214,6 +1214,126 @@ abstract class AppLocalizations {
   /// **'Error en {section}: {error}'**
   String searchErrorIn(Object section, Object error);
 
+  /// No description provided for @searchBrowsePopularityAllTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Por popularidad'**
+  String get searchBrowsePopularityAllTime;
+
+  /// No description provided for @searchBrowseByStartDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Por fecha de estreno'**
+  String get searchBrowseByStartDate;
+
+  /// No description provided for @searchBrowseByGenre.
+  ///
+  /// In es, this message translates to:
+  /// **'Por género'**
+  String get searchBrowseByGenre;
+
+  /// No description provided for @searchBrowseGenresAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros de anime'**
+  String get searchBrowseGenresAnime;
+
+  /// No description provided for @searchBrowseGenresManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros de manga'**
+  String get searchBrowseGenresManga;
+
+  /// No description provided for @searchBrowseGameThemes.
+  ///
+  /// In es, this message translates to:
+  /// **'Por temática'**
+  String get searchBrowseGameThemes;
+
+  /// No description provided for @searchBrowseBookSubjectsOpenLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas (Open Library)'**
+  String get searchBrowseBookSubjectsOpenLibrary;
+
+  /// No description provided for @searchReleaseDateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el año y, si quieres, el mes para acotar.'**
+  String get searchReleaseDateHint;
+
+  /// No description provided for @searchReleaseDateYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año'**
+  String get searchReleaseDateYear;
+
+  /// No description provided for @searchReleaseDateMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes'**
+  String get searchReleaseDateMonth;
+
+  /// No description provided for @searchReleaseDateAllMonths.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo el año'**
+  String get searchReleaseDateAllMonths;
+
+  /// No description provided for @searchReleaseDateEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay resultados para este periodo.'**
+  String get searchReleaseDateEmpty;
+
+  /// No description provided for @searchOlSubjectFantasy.
+  ///
+  /// In es, this message translates to:
+  /// **'Fantasía'**
+  String get searchOlSubjectFantasy;
+
+  /// No description provided for @searchOlSubjectRomance.
+  ///
+  /// In es, this message translates to:
+  /// **'Romance'**
+  String get searchOlSubjectRomance;
+
+  /// No description provided for @searchOlSubjectScienceFiction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciencia ficción'**
+  String get searchOlSubjectScienceFiction;
+
+  /// No description provided for @searchOlSubjectHorror.
+  ///
+  /// In es, this message translates to:
+  /// **'Terror'**
+  String get searchOlSubjectHorror;
+
+  /// No description provided for @searchOlSubjectMystery.
+  ///
+  /// In es, this message translates to:
+  /// **'Misterio'**
+  String get searchOlSubjectMystery;
+
+  /// No description provided for @searchOlSubjectFiction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ficción'**
+  String get searchOlSubjectFiction;
+
+  /// No description provided for @searchOlSubjectHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get searchOlSubjectHistory;
+
+  /// No description provided for @searchOlSubjectBiography.
+  ///
+  /// In es, this message translates to:
+  /// **'Biografía'**
+  String get searchOlSubjectBiography;
+
   /// No description provided for @addToLibrary.
   ///
   /// In es, this message translates to:
@@ -2869,6 +2989,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count} capítulos restantes'**
   String libraryChaptersRemaining(Object count);
+
+  /// No description provided for @libraryAnimeAiringBehind.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} atrasados'**
+  String libraryAnimeAiringBehind(Object count);
 
   /// No description provided for @bookProgressPageOf.
   ///

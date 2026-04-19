@@ -179,6 +179,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
           }
         }
       }
@@ -202,7 +203,8 @@ class AnilistGraphqlDatasource {
   }
 
   /// Home browse rails for Anilist: [category] is
-  /// `seasonal`, `trending`, `top_rated`, `upcoming`, `recently_released`.
+  /// `seasonal`, `trending`, `top_rated`, `upcoming`, `recently_released`,
+  /// `popularity` (POPULARITY_DESC), `start_date` (START_DATE_DESC).
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})> fetchBrowseMedia({
     required String type,
     required String category,
@@ -221,6 +223,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
     ''';
 
     final s = currentMediaSeason();
@@ -347,7 +350,110 @@ class AnilistGraphqlDatasource {
       return (items: list, hasNextPage: hasNext);
     }
 
+    if (category == 'popularity') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: POPULARITY_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
+    if (category == 'start_date') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: START_DATE_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
     return (items: <Map<String, dynamic>>[], hasNextPage: false);
+  }
+
+  /// Rango de fechas de estreno (FuzzyDateInt: YYYYMMDD). Inclusive en ambos extremos.
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
+      fetchMediaByReleaseDateRange({
+    required String type,
+    required int startDateGreaterOrEqual,
+    required int startDateLesserOrEqual,
+    int page = 1,
+    int perPage = 24,
+  }) async {
+    const mediaFields = '''
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            episodes
+            chapters
+            volumes
+            averageScore
+            status
+            format
+            genres
+            startDate { year month day }
+            nextAiringEpisode { episode }
+    ''';
+
+    // Fechas como literales en el documento: en web, JSON numérico en variables
+    // a veces se tipa como Int y Anilist exige FuzzyDateInt en esas posiciones.
+    final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(
+            type: \$type
+            startDate_greater: $startDateGreaterOrEqual
+            startDate_lesser: $startDateLesserOrEqual
+            sort: POPULARITY_DESC
+          ) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      'type': type,
+      'page': page,
+      'perPage': perPage,
+    });
+    final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+    final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+    final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+        [];
+    return (items: list, hasNextPage: hasNext);
   }
 
   /// Listado paginado por género y/o etiqueta Anilist ([genre] / [tag] son listas de un elemento).
@@ -380,6 +486,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
     ''';
 
     final useGenre = genre != null && genre.isNotEmpty;
@@ -458,6 +565,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode airingAt timeUntilAiring }
           }
         }
       }
@@ -469,6 +577,46 @@ class AnilistGraphqlDatasource {
     return (data['data']?['Page']?['media'] as List?)
             ?.cast<Map<String, dynamic>>() ??
         [];
+  }
+
+  /// Metadatos de emisión para varios anime (API pública; no requiere token).
+  Future<Map<int, Map<String, dynamic>>> fetchMediaAiringSnapshots(
+    List<int> ids,
+  ) async {
+    if (ids.isEmpty) return {};
+    const chunkSize = 50;
+    final out = <int, Map<String, dynamic>>{};
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final end = i + chunkSize > ids.length ? ids.length : i + chunkSize;
+      final slice = ids.sublist(i, end);
+      const query = r'''
+        query ($ids: [Int], $page: Int, $perPage: Int) {
+          Page(page: $page, perPage: $perPage) {
+            media(id_in: $ids) {
+              id
+              status
+              episodes
+              nextAiringEpisode { episode airingAt timeUntilAiring }
+            }
+          }
+        }
+      ''';
+      final data = await _post(query, variables: {
+        'ids': slice,
+        'page': 1,
+        'perPage': chunkSize,
+      });
+      final list = (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+      for (final m in list) {
+        final id = jsonInt(m['id']);
+        if (id > 0) {
+          out[id] = m;
+        }
+      }
+    }
+    return out;
   }
 
   /// Fetch full media details by Anilist ID.
@@ -1090,6 +1238,8 @@ class AnilistGraphqlDatasource {
                 chapters
                 volumes
                 format
+                status
+                nextAiringEpisode { episode }
               }
             }
           }

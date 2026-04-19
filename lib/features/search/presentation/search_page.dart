@@ -8,12 +8,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
-import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
-import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
+import 'package:cronicle/features/search/presentation/search_category_browse_hub.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -243,33 +242,17 @@ class _PopularContent extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    if (filter == _SearchFilter.movie) {
-      return const TraktHomeFeedView(kind: MediaKind.movie);
-    }
-    if (filter == _SearchFilter.tv) {
-      return const TraktHomeFeedView(kind: MediaKind.tv);
-    }
-
-    if (filter == _SearchFilter.game) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: Colors.teal),
-              const SizedBox(width: 6),
-              Text(l10n.searchTrendingGames,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.teal)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _IgdbPopularGrid(onAdd: onAdd),
-        ],
-      );
-    }
-
-    if (filter == _SearchFilter.book) {
-      return const BooksHomeFeedView();
+    final hubMode = switch (filter) {
+      _SearchFilter.anime => SearchBrowseCategoryMode.anime,
+      _SearchFilter.manga => SearchBrowseCategoryMode.manga,
+      _SearchFilter.movie => SearchBrowseCategoryMode.movie,
+      _SearchFilter.tv => SearchBrowseCategoryMode.tv,
+      _SearchFilter.game => SearchBrowseCategoryMode.game,
+      _SearchFilter.book => SearchBrowseCategoryMode.book,
+      _SearchFilter.all => null,
+    };
+    if (hubMode != null) {
+      return SearchCategoryBrowseHub(mode: hubMode);
     }
 
     final showAnime = filter == _SearchFilter.all || filter == _SearchFilter.anime;

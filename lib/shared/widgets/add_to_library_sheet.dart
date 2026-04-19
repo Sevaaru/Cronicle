@@ -10,6 +10,7 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -165,6 +166,19 @@ Future<bool> showAddToLibrarySheet({
                         ? (item['chapters'] as num?)?.toInt()
                         : (item['episodes'] as num?)?.toInt(),
       ),
+      animeMediaStatus: drift.Value(
+        kind == MediaKind.anime ? item['status'] as String? : null,
+      ),
+      releasedEpisodes: drift.Value(
+        kind == MediaKind.anime
+            ? AnimeAiringProgress.releasedEpisodesFromAnilistMedia(item)
+            : null,
+      ),
+      nextEpisodeAirsAt: drift.Value(
+        kind == MediaKind.anime
+            ? AnimeAiringProgress.nextEpisodeAirsAtSecondsFromAnilistMedia(item)
+            : null,
+      ),
       notes: drift.Value(result.notes),
       // Book-specific fields
       editionKey: drift.Value(result.editionKey),
@@ -183,6 +197,10 @@ Future<bool> showAddToLibrarySheet({
     _syncEntryToAnilist(ref, mediaId as int, result);
   }
 
+  if (kind == MediaKind.anime && mediaId != null) {
+    unawaited(_enrichAnimeAiringAfterSave(ref, mediaId as int));
+  }
+
   if ((kind == MediaKind.movie || kind == MediaKind.tv) && mediaId != null) {
     final tid = int.tryParse(mediaId.toString());
     if (tid != null) {
@@ -191,6 +209,30 @@ Future<bool> showAddToLibrarySheet({
   }
 
   return true;
+}
+
+Future<void> _enrichAnimeAiringAfterSave(WidgetRef ref, int mediaId) async {
+  try {
+    final db = ref.read(databaseProvider);
+    final g = ref.read(anilistGraphqlProvider);
+    final detail = await g.fetchMediaDetail(mediaId);
+    if (detail == null) return;
+    final entry = await db.getLibraryEntryByKindAndExternalId(
+      MediaKind.anime.code,
+      '$mediaId',
+    );
+    if (entry == null) return;
+    final rel = AnimeAiringProgress.releasedEpisodesFromAnilistMedia(detail);
+    final st = detail['status'] as String?;
+    final airAt =
+        AnimeAiringProgress.nextEpisodeAirsAtSecondsFromAnilistMedia(detail);
+    await db.updateAnimeAiringMetadata(
+      id: entry.id,
+      animeMediaStatus: st,
+      releasedEpisodes: rel,
+      nextEpisodeAirsAt: airAt,
+    );
+  } catch (_) {}
 }
 
 void _deleteEntryFromAnilist(WidgetRef ref, int? mediaId) async {
@@ -367,7 +409,16 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
               ? _bookEffectiveTotal
               : _isManga
                   ? widget.item['chapters'] as int?
-                  : widget.item['episodes'] as int?;
+                  : widget.kind == MediaKind.anime
+                      ? (AnimeAiringProgress.maxProgressForStoredAnime(
+                            totalEpisodes: widget.existingEntry?.totalEpisodes ??
+                                (widget.item['episodes'] as num?)?.toInt(),
+                            releasedEpisodes: widget.existingEntry?.releasedEpisodes ??
+                                AnimeAiringProgress.releasedEpisodesFromAnilistMedia(
+                                    widget.item),
+                          ) ??
+                          AnimeAiringProgress.maxProgressForAnimeItem(widget.item))
+                      : widget.item['episodes'] as int?;
 
   /// For books, the effective total depends on the tracking mode.
   int? get _bookEffectiveTotal {
@@ -931,7 +982,18 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                   icon: const Icon(Icons.check),
                   label: Text(l10n.addToListSave),
                   onPressed: () {
-                    final progress = int.tryParse(_progressCtrl.text);
+                    var progress = int.tryParse(_progressCtrl.text);
+                    if (widget.kind == MediaKind.anime && progress != null) {
+                      final max = AnimeAiringProgress.maxProgressForStoredAnime(
+                            totalEpisodes: widget.existingEntry?.totalEpisodes ??
+                                (widget.item['episodes'] as num?)?.toInt(),
+                            releasedEpisodes: widget.existingEntry?.releasedEpisodes ??
+                                AnimeAiringProgress.releasedEpisodesFromAnilistMedia(
+                                    widget.item),
+                          ) ??
+                          AnimeAiringProgress.maxProgressForAnimeItem(widget.item);
+                      if (max != null && progress > max) progress = max;
+                    }
                     final notes = _notesCtrl.text.trim();
                     Navigator.of(context).pop(_AddResult(
                       status: _status,

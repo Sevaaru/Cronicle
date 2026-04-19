@@ -144,6 +144,29 @@ limit $limit;
     return [];
   }
 
+  /// Primera salida comercial en ventana Unix `[startSec, endSec]` (inclusive).
+  Future<List<Map<String, dynamic>>> fetchGamesByFirstReleaseBetween({
+    required int startSec,
+    required int endSec,
+    int limit = 100,
+  }) async {
+    if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
+    try {
+      return await _postList(
+        '/games',
+        '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & first_release_date >= $startSec & first_release_date <= $endSec & version_parent = null;
+sort first_release_date desc;
+limit $limit;
+''',
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<int> _resolveVisitPopularityTypeId() async {
     if (_cachedVisitPopularityTypeId != null) {
       return _cachedVisitPopularityTypeId!;
