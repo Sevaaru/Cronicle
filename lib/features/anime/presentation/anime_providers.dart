@@ -482,6 +482,9 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     String? activityType,
     bool isFollowing,
   ) async {
+    if (isFollowing) {
+      ref.watch(anilistTokenProvider);
+    }
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;

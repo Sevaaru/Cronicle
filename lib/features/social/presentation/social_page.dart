@@ -90,6 +90,9 @@ class _SocialPageState extends ConsumerState<SocialPage>
     final feedProvider =
         anilistSocialFeedProvider(_activityType.apiValue, _isFollowing);
 
+    // No hacer `watch(feedProvider)` en «siguiendo» en el padre: FollowingFeedGuard
+    // se suscribe tras el token para evitar carreras (lista vacía hasta cambiar de pestaña).
+
     final scopeBar = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -162,14 +165,7 @@ class _SocialPageState extends ConsumerState<SocialPage>
                   feedScopeBar: scopeBar,
                   onRefresh: _invalidate,
                   onLoadMore: _loadMore,
-                  feedAsync: ref.watch(feedProvider),
-                  hasMore: () {
-                    try {
-                      return ref.read(feedProvider.notifier).hasMore;
-                    } catch (_) {
-                      return false;
-                    }
-                  },
+                  activityTypeApi: _activityType.apiValue,
                   l10n: l10n,
                 )
               : ActivityFeedList(

@@ -100,15 +100,15 @@ class FollowingFeedGuard extends ConsumerWidget {
     required this.onRefresh,
     required this.onLoadMore,
     required this.l10n,
-    this.feedAsync,
-    this.hasMore,
+    required this.activityTypeApi,
   });
   final Widget feedScopeBar;
   final VoidCallback onRefresh;
   final VoidCallback onLoadMore;
   final AppLocalizations l10n;
-  final AsyncValue<List<FeedActivity>>? feedAsync;
-  final bool Function()? hasMore;
+
+  /// Mismo valor que `AnilistSocialFeed` (`null` = todas las actividades).
+  final String? activityTypeApi;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -159,20 +159,20 @@ class FollowingFeedGuard extends ConsumerWidget {
             ],
           );
         }
+        // Suscripción al feed solo con sesión resuelta: evita que el primer fetch
+        // de «siguiendo» corra con token aún null y quede en lista vacía.
+        final feed = anilistSocialFeedProvider(activityTypeApi, true);
         return ActivityFeedList(
-          feedAsync: feedAsync ?? ref.watch(anilistFeedFollowingProvider),
+          feedAsync: ref.watch(feed),
           onRefresh: onRefresh,
           onLoadMore: onLoadMore,
-          hasMore: hasMore ??
-              () {
-                try {
-                  return ref
-                      .read(anilistFeedFollowingProvider.notifier)
-                      .hasMore;
-                } catch (_) {
-                  return false;
-                }
-              },
+          hasMore: () {
+            try {
+              return ref.read(feed.notifier).hasMore;
+            } catch (_) {
+              return false;
+            }
+          },
           feedIsFollowing: true,
           feedScopeHeader: feedScopeBar,
           l10n: l10n,
