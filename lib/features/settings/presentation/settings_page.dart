@@ -91,11 +91,69 @@ class SettingsPage extends ConsumerWidget {
           const SizedBox(height: 12),
 
           _BackupSection(googleSignIn: googleSignIn),
+          const SizedBox(height: 28),
+          const _SettingsAboutFooter(),
         ],
       ),
     );
   }
 
+}
+
+class _SettingsAboutFooter extends StatelessWidget {
+  const _SettingsAboutFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final year = DateTime.now().year;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 20,
+                color: cs.outline,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.settingsAboutApp,
+                textAlign: TextAlign.center,
+                style: textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.settingsAboutCopyright(year),
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.settingsAboutCreator,
+                textAlign: TextAlign.center,
+                style: textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _DeviceNotificationsSection extends ConsumerStatefulWidget {
@@ -815,7 +873,7 @@ class _OpenLibrarySectionState extends ConsumerState<_OpenLibrarySection> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              icon: const Icon(Icons.login, size: 18),
+              icon: const Icon(Icons.link_rounded, size: 18),
               label: Text(l10n.settingsOpenLibraryConnect),
               onPressed: () async {
                 final input = _controller.text.trim();

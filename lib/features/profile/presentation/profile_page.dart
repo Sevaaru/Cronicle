@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/utils/json_int.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/profile/presentation/anilist_profile_follow_row.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
@@ -415,6 +416,7 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
               Consumer(
                 builder: (context, ref, _) {
                   final favGames = ref.watch(favoriteGamesProvider);
+                  final favBooks = ref.watch(favoriteBooksProvider);
                   final favTraktAll = ref.watch(favoriteTraktTitlesProvider);
                   final localAnilistFavs = ref.watch(favoriteAnilistMediaProvider);
                   final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
@@ -440,6 +442,21 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                           final m = raw as Map<String, dynamic>;
                           final u = (m['coverImage'] as Map?)?['large'] as String?;
                           return ProfileFavPreviewThumb(imageUrl: u, fallbackIcon: fb);
+                        })
+                        .toList();
+                  }
+
+                  List<ProfileFavPreviewThumb> thumbsFromBookFavorites(
+                    List<Map<String, dynamic>> books,
+                  ) {
+                    return books
+                        .take(80)
+                        .map((m) {
+                          final u = (m['coverImage'] as Map?)?['large'] as String?;
+                          return ProfileFavPreviewThumb(
+                            imageUrl: u,
+                            fallbackIcon: Icons.auto_stories_rounded,
+                          );
                         })
                         .toList();
                   }
@@ -502,6 +519,18 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                         count: favGames.length,
                         thumbs: thumbsFromNodes(favGames, Icons.sports_esports_rounded),
                         onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.games.segment}'),
+                      ),
+                    );
+                  }
+                  if (favBooks.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.auto_stories_rounded,
+                        iconColor: Colors.brown.shade500,
+                        title: l10n.sectionFavBooks,
+                        count: favBooks.length,
+                        thumbs: thumbsFromBookFavorites(favBooks),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.books.segment}'),
                       ),
                     );
                   }

@@ -133,6 +133,10 @@ GoRouter appRouter(AppRouterRef ref) {
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
+              // Cierra PopupMenu / overlays del tab anterior (p. ej. filtro biblioteca).
+              _shellKey.currentState?.popUntil(
+                (route) => route is! PopupRoute,
+              );
               const routes = ['/feed', '/library', '/search', '/social', '/settings'];
               context.go(routes[i]);
             },

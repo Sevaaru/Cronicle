@@ -387,7 +387,7 @@ class _DetailContent extends StatelessWidget {
 
                   // Favorite toggle + Add-to-library row
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _BookFavoriteButton(book: book),
                       const SizedBox(width: 8),
@@ -724,14 +724,13 @@ class _BookFavoriteButton extends ConsumerWidget {
     final isFav =
         workKey.isNotEmpty && list.any((e) => e['workKey'] == workKey);
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Tooltip(
+    return Tooltip(
         message:
             isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
         child: IconButton.filledTonal(
           style: IconButton.styleFrom(
             fixedSize: const Size(48, 48),
+            minimumSize: const Size(48, 48),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           onPressed: workKey.isEmpty
@@ -744,7 +743,6 @@ class _BookFavoriteButton extends ConsumerWidget {
             color: isFav ? Colors.redAccent : null,
           ),
         ),
-      ),
     );
   }
 }
@@ -796,10 +794,14 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
     final l10n = AppLocalizations.of(context)!;
     final isEdit = _existing != null;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: _loaded
-          ? FilledButton.icon(
+    return _loaded
+          ? SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
               icon: Icon(isEdit ? Icons.edit : Icons.add),
               label:
                   Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
@@ -820,8 +822,8 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
                 );
                 _checkExisting();
               },
+            ),
             )
-          : const SizedBox.shrink(),
-    );
+          : const SizedBox.shrink();
   }
 }

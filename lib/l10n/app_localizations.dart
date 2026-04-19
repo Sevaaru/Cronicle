@@ -188,6 +188,24 @@ abstract class AppLocalizations {
   /// **'Ajustes'**
   String get settingsTitle;
 
+  /// No description provided for @settingsAboutApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de esta aplicación'**
+  String get settingsAboutApp;
+
+  /// No description provided for @settingsAboutCopyright.
+  ///
+  /// In es, this message translates to:
+  /// **'© {year} Todos los derechos reservados.'**
+  String settingsAboutCopyright(Object year);
+
+  /// No description provided for @settingsAboutCreator.
+  ///
+  /// In es, this message translates to:
+  /// **'Cronicle está creada por Sevaaru.'**
+  String get settingsAboutCreator;
+
   /// No description provided for @themeMode.
   ///
   /// In es, this message translates to:
@@ -962,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Juegos favoritos'**
   String get sectionFavGames;
 
+  /// No description provided for @sectionFavBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros favoritos'**
+  String get sectionFavBooks;
+
   /// No description provided for @tooltipAddFavorite.
   ///
   /// In es, this message translates to:
@@ -1214,6 +1238,24 @@ abstract class AppLocalizations {
   /// **'Error en {section}: {error}'**
   String searchErrorIn(Object section, Object error);
 
+  /// No description provided for @searchShowMoreInCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más — {category}'**
+  String searchShowMoreInCategory(Object category);
+
+  /// No description provided for @searchIdleAllTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en todo'**
+  String get searchIdleAllTitle;
+
+  /// No description provided for @searchIdleAllBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe para buscar en todas las categorías a la vez, o elige una categoría arriba para explorar tendencias y acotar la búsqueda.'**
+  String get searchIdleAllBody;
+
   /// No description provided for @searchBrowsePopularityAllTime.
   ///
   /// In es, this message translates to:
@@ -1253,7 +1295,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchBrowseBookSubjectsOpenLibrary.
   ///
   /// In es, this message translates to:
-  /// **'Temas (Open Library)'**
+  /// **'Temas'**
   String get searchBrowseBookSubjectsOpenLibrary;
 
   /// No description provided for @searchReleaseDateHint.
@@ -1807,6 +1849,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Anónimo'**
   String get mediaAnonymous;
+
+  /// No description provided for @mediaDetailChipsShowMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar más'**
+  String get mediaDetailChipsShowMore;
+
+  /// No description provided for @mediaDetailChipsShowLess.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar menos'**
+  String get mediaDetailChipsShowLess;
 
   /// No description provided for @mediaGenresSection.
   ///
@@ -3575,19 +3629,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsOpenLibraryConnect.
   ///
   /// In es, this message translates to:
-  /// **'Conectar'**
+  /// **'Guardar usuario'**
   String get settingsOpenLibraryConnect;
 
   /// No description provided for @settingsOpenLibraryDisconnect.
   ///
   /// In es, this message translates to:
-  /// **'Desconectar'**
+  /// **'Quitar enlace'**
   String get settingsOpenLibraryDisconnect;
 
   /// No description provided for @settingsOpenLibraryConnected.
   ///
   /// In es, this message translates to:
-  /// **'Conectado como {username}'**
+  /// **'Perfil enlazado: {username}'**
   String settingsOpenLibraryConnected(Object username);
 
   /// No description provided for @settingsOpenLibrarySyncing.
@@ -3605,7 +3659,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsOpenLibraryError.
   ///
   /// In es, this message translates to:
-  /// **'No se pudo conectar. Verifica el usuario e intenta de nuevo.'**
+  /// **'No se pudo validar el usuario. Comprueba el nombre e inténtalo de nuevo.'**
   String get settingsOpenLibraryError;
 
   /// No description provided for @settingsOpenLibraryTitle.
@@ -3617,13 +3671,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsOpenLibrarySubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Conecta tu cuenta de Open Library para importar tu registro de lectura.'**
+  /// **'Open Library no ofrece inicio de sesión con contraseña en apps de terceros (no hay OAuth). Solo hace falta tu nombre de usuario público, el mismo que aparece en openlibrary.org/people/tu-usuario, para leer por la API el mismo registro de lectura que es visible en la web.'**
   String get settingsOpenLibrarySubtitle;
 
   /// No description provided for @settingsOpenLibraryConnectedAs.
   ///
   /// In es, this message translates to:
-  /// **'Conectado como {username}'**
+  /// **'Registro de lectura de: {username}'**
   String settingsOpenLibraryConnectedAs(Object username);
 
   /// No description provided for @settingsOpenLibrarySync.
@@ -3641,26 +3695,32 @@ abstract class AppLocalizations {
   /// No description provided for @settingsOpenLibraryDisconnected.
   ///
   /// In es, this message translates to:
-  /// **'Open Library desconectada'**
+  /// **'Enlace de Open Library quitado'**
   String get settingsOpenLibraryDisconnected;
 
   /// No description provided for @settingsOpenLibraryUsernameHint.
   ///
   /// In es, this message translates to:
-  /// **'Usuario de Open Library'**
+  /// **'Usuario público (perfil en openlibrary.org)'**
   String get settingsOpenLibraryUsernameHint;
 
   /// No description provided for @settingsOpenLibraryUsernameNotFound.
   ///
   /// In es, this message translates to:
-  /// **'Usuario no encontrado en Open Library'**
+  /// **'No existe ese perfil o no tiene registro público'**
   String get settingsOpenLibraryUsernameNotFound;
 
   /// No description provided for @settingsOpenLibraryConnectSuccess.
   ///
   /// In es, this message translates to:
-  /// **'Open Library conectada'**
+  /// **'Usuario guardado'**
   String get settingsOpenLibraryConnectSuccess;
+
+  /// No description provided for @openLibraryConnectDialogIntro.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pide contraseña: solo guardamos tu usuario público para importar el registro de lectura accesible por la API.'**
+  String get openLibraryConnectDialogIntro;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
@@ -3785,13 +3845,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingConnectOpenLibrary.
   ///
   /// In es, this message translates to:
-  /// **'Conectar Open Library'**
+  /// **'Open Library (usuario público)'**
   String get onboardingConnectOpenLibrary;
 
   /// No description provided for @onboardingConnectOpenLibraryDesc.
   ///
   /// In es, this message translates to:
-  /// **'Sincroniza tu registro de lectura'**
+  /// **'Importa el registro de lectura con tu usuario de perfil (sin contraseña en Cronicle)'**
   String get onboardingConnectOpenLibraryDesc;
 
   /// No description provided for @onboardingSkip.

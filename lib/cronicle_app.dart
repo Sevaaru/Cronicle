@@ -1,3 +1,6 @@
+import 'dart:math' show max;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -9,6 +12,35 @@ import 'package:cronicle/core/theme/app_theme.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+
+/// En web, el motor a veces calcula [MediaQuery.viewInsets] negativos al redimensionar
+/// o al cerrar el teclado; eso dispara un assert en el engine. Si el frame llega a
+/// construirse con insets inválidos, los limitamos a ≥ 0 para widgets que lean
+/// `viewInsets` (p. ej. bottom sheets).
+Widget _webClampViewInsets(Widget child) {
+  if (!kIsWeb) return child;
+  return Builder(
+    builder: (context) {
+      final mq = MediaQuery.maybeOf(context);
+      if (mq == null) return child;
+      final vi = mq.viewInsets;
+      if (vi.left >= 0 && vi.top >= 0 && vi.right >= 0 && vi.bottom >= 0) {
+        return child;
+      }
+      return MediaQuery(
+        data: mq.copyWith(
+          viewInsets: EdgeInsets.only(
+            left: max(0.0, vi.left),
+            top: max(0.0, vi.top),
+            right: max(0.0, vi.right),
+            bottom: max(0.0, vi.bottom),
+          ),
+        ),
+        child: child,
+      );
+    },
+  );
+}
 
 class CronicleApp extends ConsumerStatefulWidget {
   const CronicleApp({super.key});
@@ -45,11 +77,14 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
-      builder: (context, child) => NotificationPermissionBootstrap(
-        child: NotificationLifecycleSync(
-          child: child ?? const SizedBox.shrink(),
-        ),
-      ),
+      builder: (context, child) {
+        final content = NotificationPermissionBootstrap(
+          child: NotificationLifecycleSync(
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+        return _webClampViewInsets(content);
+      },
     );
   }
 }

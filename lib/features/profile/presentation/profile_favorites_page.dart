@@ -26,7 +26,7 @@ class ProfileFavoritesPage extends ConsumerWidget {
       ProfileFavoritesKind.games => l10n.sectionFavGames,
       ProfileFavoritesKind.movies => l10n.sectionFavTraktMovies,
       ProfileFavoritesKind.tv => l10n.sectionFavTraktShows,
-      ProfileFavoritesKind.books => l10n.filterBooks,
+      ProfileFavoritesKind.books => l10n.sectionFavBooks,
     };
 
     final body = switch (kind) {

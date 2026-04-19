@@ -56,6 +56,12 @@ class _DetailContent extends StatefulWidget {
 }
 
 class _DetailContentState extends State<_DetailContent> {
+  /// Primera fila aprox.; si hay más chips, se ofrece «Mostrar más».
+  static const int _kCollapsedChipCount = 6;
+
+  bool _genresExpanded = false;
+  bool _tagsExpanded = false;
+
   Map<String, dynamic> get media => widget.media;
   MediaKind get kind => widget.kind;
 
@@ -360,17 +366,33 @@ class _DetailContentState extends State<_DetailContent> {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: genres
-                        .map(
-                          (g) => ActionChip(
-                            label: Text(g, style: const TextStyle(fontSize: 12)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _openBrowseByGenre(g),
-                          ),
-                        )
-                        .toList(),
+                    children: [
+                      for (final g in (_genresExpanded ||
+                              genres.length <= _kCollapsedChipCount)
+                          ? genres
+                          : genres.take(_kCollapsedChipCount))
+                        ActionChip(
+                          label: Text(g, style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _openBrowseByGenre(g),
+                        ),
+                    ],
                   ),
+                  if (genres.length > _kCollapsedChipCount)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () => setState(
+                          () => _genresExpanded = !_genresExpanded,
+                        ),
+                        child: Text(
+                          _genresExpanded
+                              ? l10n.mediaDetailChipsShowLess
+                              : l10n.mediaDetailChipsShowMore,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                 ],
 
@@ -380,23 +402,58 @@ class _DetailContentState extends State<_DetailContent> {
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final t in browseTags)
-                        if ((t['name'] as String?)?.isNotEmpty ?? false)
-                          ActionChip(
-                            label: Text(
-                              t['name'] as String,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            onPressed: () =>
-                                _openBrowseByTag(t['name'] as String),
+                  Builder(
+                    builder: (context) {
+                      final namedTags = browseTags
+                          .where(
+                            (t) =>
+                                (t['name'] as String?)?.isNotEmpty ?? false,
+                          )
+                          .toList();
+                      final visible =
+                          (_tagsExpanded ||
+                                  namedTags.length <= _kCollapsedChipCount)
+                              ? namedTags
+                              : namedTags
+                                  .take(_kCollapsedChipCount)
+                                  .toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final t in visible)
+                                ActionChip(
+                                  label: Text(
+                                    t['name'] as String,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () =>
+                                      _openBrowseByTag(t['name'] as String),
+                                ),
+                            ],
                           ),
-                    ],
+                          if (namedTags.length > _kCollapsedChipCount)
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: TextButton(
+                                onPressed: () => setState(
+                                  () => _tagsExpanded = !_tagsExpanded,
+                                ),
+                                child: Text(
+                                  _tagsExpanded
+                                      ? l10n.mediaDetailChipsShowLess
+                                      : l10n.mediaDetailChipsShowMore,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -503,7 +560,10 @@ class _DetailContentState extends State<_DetailContent> {
             Color labelColor;
             if (siteColor != null) {
               final luminance = siteColor.computeLuminance();
-              if (!isDark && luminance > 0.6) {
+              if (isDark && luminance < 0.4) {
+                // API a veces devuelve negro u oscuro (p. ej. Twitter) → ilegible en fondo oscuro.
+                labelColor = cs.primary;
+              } else if (!isDark && luminance > 0.6) {
                 labelColor = HSLColor.fromColor(siteColor)
                     .withLightness(0.3)
                     .toColor();

@@ -145,26 +145,149 @@ limit $limit;
   }
 
   /// Primera salida comercial en ventana Unix `[startSec, endSec]` (inclusive).
+  ///
+  /// Muchos juegos tienen fechas en [release_dates] pero `first_release_date` vacío;
+  /// filtrar solo por `first_release_date` suele devolver [] aunque haya lanzamientos.
   Future<List<Map<String, dynamic>>> fetchGamesByFirstReleaseBetween({
     required int startSec,
     required int endSec,
     int limit = 100,
   }) async {
     if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
-    try {
-      return await _postList(
+
+    final fields = '''
+fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
+       total_rating, first_release_date, release_dates.date;
+''';
+
+    Future<List<Map<String, dynamic>>> run(String where, String sort) async {
+      return _postList(
         '/games',
         '''
-fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
-       total_rating, first_release_date;
-where category = 0 & first_release_date >= $startSec & first_release_date <= $endSec & version_parent = null;
-sort first_release_date desc;
+$fields
+where $where;
+$sort
 limit $limit;
 ''',
       );
+    }
+
+    try {
+      // 1) Cualquier fecha regional en la ventana (lo más completo).
+      try {
+        final list = await run(
+          'category = 0 & version_parent = null & release_dates.date >= $startSec & release_dates.date <= $endSec',
+          'sort first_release_date desc;',
+        );
+        final d = _dedupeIgdbGamesById(list);
+        if (d.isNotEmpty) return d;
+      } catch (_) {}
+
+      try {
+        final list = await run(
+          'category = 0 & release_dates.date >= $startSec & release_dates.date <= $endSec',
+          'sort first_release_date desc;',
+        );
+        final d = _dedupeIgdbGamesById(list);
+        if (d.isNotEmpty) return d;
+      } catch (_) {}
+
+      // 3) Agregado único first_release_date (comportamiento anterior).
+      final byFirst = await run(
+        'category = 0 & version_parent = null & first_release_date >= $startSec & first_release_date <= $endSec',
+        'sort first_release_date desc;',
+      );
+      final deduped = _dedupeIgdbGamesById(byFirst);
+      if (deduped.isNotEmpty) return deduped;
+
+      // 4) Tabla /release_dates: mismos rangos; a veces /games no devuelve filas aunque aquí sí.
+      try {
+        final rd = await _postList(
+          '/release_dates',
+          '''
+fields date,
+      game.id, game.name, game.cover.image_id, game.genres.name,
+      game.platforms.name, game.platforms.abbreviation, game.total_rating,
+      game.first_release_date;
+where game.category = 0 & game.version_parent = null & date >= $startSec & date <= $endSec;
+sort date desc;
+limit $limit;
+''',
+        );
+        final out = <Map<String, dynamic>>[];
+        final seen = <int>{};
+        for (final row in rd) {
+          final g = row['game'];
+          if (g is! Map) continue;
+          final m = Map<String, dynamic>.from(g);
+          final idRaw = m['id'];
+          final id = idRaw is int
+              ? idRaw
+              : idRaw is num
+                  ? idRaw.toInt()
+                  : null;
+          if (id == null || seen.contains(id)) continue;
+          seen.add(id);
+          out.add(m);
+        }
+        if (out.isNotEmpty) return out;
+      } catch (_) {}
+
+      try {
+        final rd = await _postList(
+          '/release_dates',
+          '''
+fields date,
+      game.id, game.name, game.cover.image_id, game.genres.name,
+      game.platforms.name, game.platforms.abbreviation, game.total_rating,
+      game.first_release_date;
+where game.category = 0 & date >= $startSec & date <= $endSec;
+sort date desc;
+limit $limit;
+''',
+        );
+        final loose = <Map<String, dynamic>>[];
+        final seenLoose = <int>{};
+        for (final row in rd) {
+          final g = row['game'];
+          if (g is! Map) continue;
+          final m = Map<String, dynamic>.from(g);
+          final idRaw = m['id'];
+          final id = idRaw is int
+              ? idRaw
+              : idRaw is num
+                  ? idRaw.toInt()
+                  : null;
+          if (id == null || seenLoose.contains(id)) continue;
+          seenLoose.add(id);
+          loose.add(m);
+        }
+        if (loose.isNotEmpty) return loose;
+      } catch (_) {}
+
+      return [];
     } catch (_) {
       return [];
     }
+  }
+
+  static List<Map<String, dynamic>> _dedupeIgdbGamesById(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final seen = <int>{};
+    final out = <Map<String, dynamic>>[];
+    for (final r in rows) {
+      final idRaw = r['id'];
+      final id = idRaw is int
+          ? idRaw
+          : idRaw is num
+              ? idRaw.toInt()
+              : null;
+      if (id == null || seen.contains(id)) continue;
+      seen.add(id);
+      out.add(r);
+    }
+    return out;
   }
 
   Future<int> _resolveVisitPopularityTypeId() async {

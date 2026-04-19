@@ -20,6 +20,21 @@ class OpenLibraryApiDatasource {
         if (!kIsWeb) 'User-Agent': 'Cronicle/1.0 (https://github.com/cronicle)',
       });
 
+  /// Open Library subject tags that indicate Japanese comics (already covered by Anilist manga).
+  static bool subjectsIndicateManga(Iterable<String> subjects) {
+    for (final s in subjects) {
+      final t = s.toLowerCase().trim();
+      if (t.isEmpty) continue;
+      if (t.contains('manga')) return true;
+      if (t.contains('japanese comic')) return true;
+    }
+    return false;
+  }
+
+  static bool _searchDocLooksLikeManga(Map<String, dynamic> doc) {
+    return subjectsIndicateManga(_olStringList(doc['subject']));
+  }
+
   // ---------------------------------------------------------------------------
   // Search
   // ---------------------------------------------------------------------------
@@ -47,6 +62,7 @@ class OpenLibraryApiDatasource {
     final docs = (res.data?['docs'] as List?) ?? [];
     var list = docs
         .cast<Map<String, dynamic>>()
+        .where((d) => !_searchDocLooksLikeManga(d))
         .map(_normalizeSearch)
         .toList();
     if (month != null) {
@@ -82,7 +98,11 @@ class OpenLibraryApiDatasource {
       options: _opts,
     );
     final docs = (res.data?['docs'] as List?) ?? [];
-    return docs.cast<Map<String, dynamic>>().map(_normalizeSearch).toList();
+    return docs
+        .cast<Map<String, dynamic>>()
+        .where((d) => !_searchDocLooksLikeManga(d))
+        .map(_normalizeSearch)
+        .toList();
   }
 
   /// Search books by subject using the search API (richer data: score, pages).
@@ -101,7 +121,11 @@ class OpenLibraryApiDatasource {
       options: _opts,
     );
     final docs = (res.data?['docs'] as List?) ?? [];
-    return docs.cast<Map<String, dynamic>>().map(_normalizeSearch).toList();
+    return docs
+        .cast<Map<String, dynamic>>()
+        .where((d) => !_searchDocLooksLikeManga(d))
+        .map(_normalizeSearch)
+        .toList();
   }
 
   // ---------------------------------------------------------------------------
@@ -119,7 +143,15 @@ class OpenLibraryApiDatasource {
       options: _opts,
     );
     final works = (res.data?['works'] as List?) ?? [];
-    return works.cast<Map<String, dynamic>>().map(_normalizeSubjectWork).toList();
+    return works
+        .cast<Map<String, dynamic>>()
+        .map(_normalizeSubjectWork)
+        .where(
+          (m) => !subjectsIndicateManga(
+            (m['genres'] as List?)?.cast<String>() ?? const [],
+          ),
+        )
+        .toList();
   }
 
   /// Fetch the trending list from Open Library.
@@ -132,7 +164,15 @@ class OpenLibraryApiDatasource {
       options: _opts,
     );
     final works = (res.data?['works'] as List?) ?? [];
-    return works.cast<Map<String, dynamic>>().map(_normalizeTrending).toList();
+    return works
+        .cast<Map<String, dynamic>>()
+        .map(_normalizeTrending)
+        .where(
+          (m) => !subjectsIndicateManga(
+            (m['genres'] as List?)?.cast<String>() ?? const [],
+          ),
+        )
+        .toList();
   }
 
   // ---------------------------------------------------------------------------
@@ -224,11 +264,11 @@ class OpenLibraryApiDatasource {
     return {
       'editionKey': key,
       'isbn': isbns.isNotEmpty ? isbns.first : null,
-      'title': data['title'] as String? ?? '',
+      'title': _olTitle(data['title']),
       'pages': (data['number_of_pages'] as num?)?.toInt(),
       'chapters': (data['table_of_contents'] as List?)?.length,
       'publishers': publishers,
-      'publishDate': data['publish_date'] as String?,
+      'publishDate': _olStringOrStringList(data['publish_date']),
       'coverUrl': coverUrl(coverId, size: 'M'),
     };
   }
@@ -309,6 +349,31 @@ class OpenLibraryApiDatasource {
     return key.replaceFirst('/works/', '');
   }
 
+  /// Same field is sometimes a single string or a list of strings (e.g. `publish_date` in search.json on web).
+  static String? _olStringOrStringList(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List) {
+      for (final e in value) {
+        if (e is String && e.isNotEmpty) return e;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  static String _olTitle(dynamic value) => _olStringOrStringList(value) ?? '';
+
+  /// `subject` may be a list of strings or, in edge cases, a single string.
+  static List<String> _olStringList(dynamic value) {
+    if (value == null) return [];
+    if (value is String) return value.isEmpty ? [] : [value];
+    if (value is List) {
+      return value.map((e) => e is String ? e : null).whereType<String>().toList();
+    }
+    return [];
+  }
+
   // ---------------------------------------------------------------------------
   // Normalization (to BrowseResultCard-compatible shape)
   // ---------------------------------------------------------------------------
@@ -320,26 +385,27 @@ class OpenLibraryApiDatasource {
     final coverLarge = coverUrl(coverId, size: 'L');
     final authors = (doc['author_name'] as List?)?.cast<String>() ?? [];
     final rating = (doc['ratings_average'] as num?)?.toDouble();
+    final titleStr = _olTitle(doc['title']);
 
     return {
       'id': key.hashCode,
       'workKey': key,
       'title': {
-        'english': doc['title'] as String? ?? '',
-        'romaji': doc['title'] as String? ?? '',
+        'english': titleStr,
+        'romaji': titleStr,
       },
       'coverImage': {
         'large': cover,
         'extraLarge': coverLarge,
       },
       'averageScore': rating != null ? (rating * 20).round().clamp(0, 100) : null,
-      'genres': ((doc['subject'] as List?) ?? []).cast<String>().take(5).toList(),
+      'genres': _olStringList(doc['subject']).take(5).toList(),
       'format': 'Book',
       'pages': (doc['number_of_pages_median'] as num?)?.toInt(),
       'authors': authors,
       'year': doc['first_publish_year'] as int?,
       'editionCount': doc['edition_count'] as int?,
-      'publishDate': doc['publish_date'] as String?,
+      'publishDate': _olStringOrStringList(doc['publish_date']),
     };
   }
 
@@ -353,20 +419,21 @@ class OpenLibraryApiDatasource {
             .whereType<String>()
             .toList() ??
         [];
+    final titleStr = _olTitle(work['title']);
 
     return {
       'id': key.hashCode,
       'workKey': key,
       'title': {
-        'english': work['title'] as String? ?? '',
-        'romaji': work['title'] as String? ?? '',
+        'english': titleStr,
+        'romaji': titleStr,
       },
       'coverImage': {
         'large': cover,
         'extraLarge': coverLarge,
       },
       'averageScore': null,
-      'genres': ((work['subject'] as List?) ?? []).cast<String>().take(5).toList(),
+      'genres': _olStringList(work['subject']).take(5).toList(),
       'format': 'Book',
       'authors': authors,
       'year': work['first_publish_year'] as int?,
@@ -378,20 +445,22 @@ class OpenLibraryApiDatasource {
     final coverId = work['cover_i'] as int? ?? work['cover_id'] as int?;
     final cover = coverUrl(coverId, size: 'M');
     final coverLarge = coverUrl(coverId, size: 'L');
+    final subjects = _olStringList(work['subject']);
+    final titleStr = _olTitle(work['title']);
 
     return {
       'id': key.hashCode,
       'workKey': key,
       'title': {
-        'english': work['title'] as String? ?? '',
-        'romaji': work['title'] as String? ?? '',
+        'english': titleStr,
+        'romaji': titleStr,
       },
       'coverImage': {
         'large': cover,
         'extraLarge': coverLarge,
       },
       'averageScore': null,
-      'genres': <String>[],
+      'genres': subjects.take(8).toList(),
       'format': 'Book',
       'year': work['first_publish_year'] as int?,
     };
@@ -420,14 +489,15 @@ class OpenLibraryApiDatasource {
       description = desc['value'] as String?;
     }
 
-    final subjects = (data['subjects'] as List?)?.cast<String>() ?? [];
+    final subjects = _olStringList(data['subjects']);
+    final titleStr = _olTitle(data['title']);
 
     return {
       'id': key.hashCode,
       'workKey': key,
       'title': {
-        'english': data['title'] as String? ?? '',
-        'romaji': data['title'] as String? ?? '',
+        'english': titleStr,
+        'romaji': titleStr,
       },
       'coverImage': {
         'large': cover,
@@ -440,7 +510,7 @@ class OpenLibraryApiDatasource {
       'description': description,
       'editionCount': editionCount,
       'pages': pages,
-      'firstPublishDate': data['first_publish_date'] as String?,
+      'firstPublishDate': _olStringOrStringList(data['first_publish_date']),
       'ratingsCount': (ratingsData['summary']?['count'] as num?)?.toInt(),
       'links': (data['links'] as List?)?.cast<Map<String, dynamic>>(),
     };
@@ -452,13 +522,14 @@ class OpenLibraryApiDatasource {
     final cover = coverUrl(coverId, size: 'M');
     final coverLarge = coverUrl(coverId, size: 'L');
     final authors = (work['author_names'] as List?)?.cast<String>() ?? [];
+    final titleStr = _olTitle(work['title']);
 
     return {
       'id': key.hashCode,
       'workKey': key,
       'title': {
-        'english': work['title'] as String? ?? '',
-        'romaji': work['title'] as String? ?? '',
+        'english': titleStr,
+        'romaji': titleStr,
       },
       'coverImage': {
         'large': cover,

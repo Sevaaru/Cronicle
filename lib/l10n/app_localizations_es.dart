@@ -54,6 +54,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Ajustes';
 
   @override
+  String get settingsAboutApp => 'Acerca de esta aplicación';
+
+  @override
+  String settingsAboutCopyright(Object year) {
+    return '© $year Todos los derechos reservados.';
+  }
+
+  @override
+  String get settingsAboutCreator => 'Cronicle está creada por Sevaaru.';
+
+  @override
   String get themeMode => 'Tema';
 
   @override
@@ -482,6 +493,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionFavGames => 'Juegos favoritos';
 
   @override
+  String get sectionFavBooks => 'Libros favoritos';
+
+  @override
   String get tooltipAddFavorite => 'Añadir a favoritos';
 
   @override
@@ -621,6 +635,18 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String searchShowMoreInCategory(Object category) {
+    return 'Ver más — $category';
+  }
+
+  @override
+  String get searchIdleAllTitle => 'Buscar en todo';
+
+  @override
+  String get searchIdleAllBody =>
+      'Escribe para buscar en todas las categorías a la vez, o elige una categoría arriba para explorar tendencias y acotar la búsqueda.';
+
+  @override
   String get searchBrowsePopularityAllTime => 'Por popularidad';
 
   @override
@@ -639,7 +665,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchBrowseGameThemes => 'Por temática';
 
   @override
-  String get searchBrowseBookSubjectsOpenLibrary => 'Temas (Open Library)';
+  String get searchBrowseBookSubjectsOpenLibrary => 'Temas';
 
   @override
   String get searchReleaseDateHint =>
@@ -920,6 +946,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mediaAnonymous => 'Anónimo';
+
+  @override
+  String get mediaDetailChipsShowMore => 'Mostrar más';
+
+  @override
+  String get mediaDetailChipsShowLess => 'Mostrar menos';
 
   @override
   String get mediaGenresSection => 'Géneros';
@@ -1901,14 +1933,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsOpenLibraryUsername => 'Usuario de Open Library';
 
   @override
-  String get settingsOpenLibraryConnect => 'Conectar';
+  String get settingsOpenLibraryConnect => 'Guardar usuario';
 
   @override
-  String get settingsOpenLibraryDisconnect => 'Desconectar';
+  String get settingsOpenLibraryDisconnect => 'Quitar enlace';
 
   @override
   String settingsOpenLibraryConnected(Object username) {
-    return 'Conectado como $username';
+    return 'Perfil enlazado: $username';
   }
 
   @override
@@ -1919,18 +1951,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsOpenLibraryError =>
-      'No se pudo conectar. Verifica el usuario e intenta de nuevo.';
+      'No se pudo validar el usuario. Comprueba el nombre e inténtalo de nuevo.';
 
   @override
   String get settingsOpenLibraryTitle => 'Open Library';
 
   @override
   String get settingsOpenLibrarySubtitle =>
-      'Conecta tu cuenta de Open Library para importar tu registro de lectura.';
+      'Open Library no ofrece inicio de sesión con contraseña en apps de terceros (no hay OAuth). Solo hace falta tu nombre de usuario público, el mismo que aparece en openlibrary.org/people/tu-usuario, para leer por la API el mismo registro de lectura que es visible en la web.';
 
   @override
   String settingsOpenLibraryConnectedAs(Object username) {
-    return 'Conectado como $username';
+    return 'Registro de lectura de: $username';
   }
 
   @override
@@ -1942,17 +1974,23 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get settingsOpenLibraryDisconnected => 'Open Library desconectada';
+  String get settingsOpenLibraryDisconnected =>
+      'Enlace de Open Library quitado';
 
   @override
-  String get settingsOpenLibraryUsernameHint => 'Usuario de Open Library';
+  String get settingsOpenLibraryUsernameHint =>
+      'Usuario público (perfil en openlibrary.org)';
 
   @override
   String get settingsOpenLibraryUsernameNotFound =>
-      'Usuario no encontrado en Open Library';
+      'No existe ese perfil o no tiene registro público';
 
   @override
-  String get settingsOpenLibraryConnectSuccess => 'Open Library conectada';
+  String get settingsOpenLibraryConnectSuccess => 'Usuario guardado';
+
+  @override
+  String get openLibraryConnectDialogIntro =>
+      'No se pide contraseña: solo guardamos tu usuario público para importar el registro de lectura accesible por la API.';
 
   @override
   String get onboardingWelcomeTitle => 'Bienvenido a Cronicle';
@@ -2020,11 +2058,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Copia de seguridad en la nube de todos tus datos y cuentas';
 
   @override
-  String get onboardingConnectOpenLibrary => 'Conectar Open Library';
+  String get onboardingConnectOpenLibrary => 'Open Library (usuario público)';
 
   @override
   String get onboardingConnectOpenLibraryDesc =>
-      'Sincroniza tu registro de lectura';
+      'Importa el registro de lectura con tu usuario de perfil (sin contraseña en Cronicle)';
 
   @override
   String get onboardingSkip => 'Usar sin cuentas';
