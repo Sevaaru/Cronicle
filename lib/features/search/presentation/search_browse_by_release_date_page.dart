@@ -191,15 +191,18 @@ class _SearchBrowseByReleaseDatePageState
         if (_month == null) return raw;
         return _filterTraktByMonth(raw, _year, _month!);
       case MediaKind.game:
-        final start = DateTime(_year, _month ?? 1, 1);
-        final end = DateTime(
-          _year,
-          _month ?? 12,
-          _month == null ? 31 : DateTime(_year, _month! + 1, 0).day,
-          23,
-          59,
-          59,
-        );
+        // IGDB usa Unix en segundos alineado al calendario UTC; DateTime local desplazaba la ventana.
+        final start = DateTime.utc(_year, _month ?? 1, 1);
+        final end = _month == null
+            ? DateTime.utc(_year, 12, 31, 23, 59, 59)
+            : DateTime.utc(
+                _year,
+                _month!,
+                DateTime.utc(_year, _month! + 1, 0).day,
+                23,
+                59,
+                59,
+              );
         final startSec = start.millisecondsSinceEpoch ~/ 1000;
         final endSec = end.millisecondsSinceEpoch ~/ 1000;
         try {
