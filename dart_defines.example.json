@@ -10,5 +10,6 @@
   "GOOGLE_IOS_CLIENT_ID": "",
   "TRAKT_CLIENT_ID": "",
   "TRAKT_CLIENT_SECRET": "",
-  "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html"
+  "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html",
+  "GOOGLE_BOOKS_API_KEY": ""
 }

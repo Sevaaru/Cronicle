@@ -5,7 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/features/books/domain/models/book_edition.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
-import 'package:cronicle/features/books/data/datasources/openlibrary_api_datasource.dart';
+import 'package:cronicle/features/books/data/datasources/google_books_api_datasource.dart';
 
 part 'book_providers.g.dart';
 
@@ -14,8 +14,8 @@ part 'book_providers.g.dart';
 // ---------------------------------------------------------------------------
 
 @Riverpod(keepAlive: true)
-OpenLibraryApiDatasource openLibraryApi(OpenLibraryApiRef ref) {
-  return OpenLibraryApiDatasource(ref.watch(dioProvider));
+GoogleBooksApiDatasource googleBooksApi(GoogleBooksApiRef ref) {
+  return GoogleBooksApiDatasource(ref.watch(dioProvider));
 }
 
 // ---------------------------------------------------------------------------
@@ -28,27 +28,92 @@ Future<List<Map<String, dynamic>>> bookSearch(
   String query,
 ) async {
   if (query.isEmpty) return [];
-  final api = ref.watch(openLibraryApiProvider);
-  return api.searchBooks(query, limit: 25);
+  final api = ref.watch(googleBooksApiProvider);
+  return api.searchBooks(query);
 }
 
 // ---------------------------------------------------------------------------
 // Trending / Discover
 // ---------------------------------------------------------------------------
 
-@riverpod
-Future<List<Map<String, dynamic>>> bookTrending(BookTrendingRef ref) async {
-  final api = ref.watch(openLibraryApiProvider);
-  return api.fetchTrending(limit: 20);
+/// All home feed sections, fetched sequentially to avoid rate-limit 503.
+class BooksHomeFeedData {
+  const BooksHomeFeedData({
+    required this.trending,
+    required this.love,
+    required this.fantasy,
+    required this.scienceFiction,
+    required this.classics,
+    required this.mystery,
+  });
+
+  final List<Map<String, dynamic>> trending;
+  final List<Map<String, dynamic>> love;
+  final List<Map<String, dynamic>> fantasy;
+  final List<Map<String, dynamic>> scienceFiction;
+  final List<Map<String, dynamic>> classics;
+  final List<Map<String, dynamic>> mystery;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
+Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
+  final api = ref.watch(googleBooksApiProvider);
+  const delay = Duration(milliseconds: 350);
+
+  Future<List<Map<String, dynamic>>> safe(
+    Future<List<Map<String, dynamic>>> Function() fn,
+  ) async {
+    try {
+      return await fn();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Fetch sequentially with delays to avoid 503 rate-limit
+  final trending = await safe(() => api.fetchTrending(limit: 20));
+  await Future<void>.delayed(delay);
+  final love = await safe(() => api.fetchSubject('love', limit: 20));
+  await Future<void>.delayed(delay);
+  final fantasy = await safe(() => api.fetchSubject('fantasy', limit: 20));
+  await Future<void>.delayed(delay);
+  final sciFi = await safe(() => api.fetchSubject('science_fiction', limit: 20));
+  await Future<void>.delayed(delay);
+  final classics = await safe(() => api.fetchSubject('classics', limit: 20));
+  await Future<void>.delayed(delay);
+  final mystery = await safe(() => api.fetchSubject('mystery', limit: 20));
+
+  return BooksHomeFeedData(
+    trending: trending,
+    love: love,
+    fantasy: fantasy,
+    scienceFiction: sciFi,
+    classics: classics,
+    mystery: mystery,
+  );
+}
+
+@Riverpod(keepAlive: true)
+Future<List<Map<String, dynamic>>> bookTrending(BookTrendingRef ref) async {
+  try {
+    final api = ref.watch(googleBooksApiProvider);
+    return await api.fetchTrending(limit: 20);
+  } catch (_) {
+    return [];
+  }
+}
+
+@Riverpod(keepAlive: true)
 Future<List<Map<String, dynamic>>> bookSubject(
   BookSubjectRef ref,
   String subject,
 ) async {
-  final api = ref.watch(openLibraryApiProvider);
-  return api.fetchSubject(subject, limit: 20);
+  try {
+    final api = ref.watch(googleBooksApiProvider);
+    return await api.fetchSubject(subject, limit: 20);
+  } catch (_) {
+    return [];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -57,34 +122,8 @@ Future<List<Map<String, dynamic>>> bookSubject(
 
 @Riverpod(keepAlive: true)
 Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
-  final api = ref.watch(openLibraryApiProvider);
+  final api = ref.watch(googleBooksApiProvider);
   return api.fetchWork(workKey);
-}
-
-// ---------------------------------------------------------------------------
-// User reading log
-// ---------------------------------------------------------------------------
-
-@riverpod
-Future<List<Map<String, dynamic>>> bookUserReadingLog(
-  BookUserReadingLogRef ref,
-  String username,
-  String shelf,
-) async {
-  final api = ref.watch(openLibraryApiProvider);
-  return api.fetchUserReadingLog(username, shelf, limit: 100);
-}
-
-// ---------------------------------------------------------------------------
-// OpenLibrary username (stored locally)
-// ---------------------------------------------------------------------------
-
-@Riverpod(keepAlive: true)
-class OpenLibraryUsername extends _$OpenLibraryUsername {
-  @override
-  String? build() => null;
-
-  void set(String? username) => state = username;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,8 +192,8 @@ Future<List<Map<String, dynamic>>> bookSubjectBrowse(
   String subject, {
   int limit = 50,
 }) async {
-  final api = ref.watch(openLibraryApiProvider);
-  return api.searchBooksBySubject(subject, limit: limit);
+  final api = ref.watch(googleBooksApiProvider);
+  return api.searchBooksBySubject(subject, maxResults: limit);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,8 +205,8 @@ Future<List<Map<String, dynamic>>> bookWorkEditions(
   BookWorkEditionsRef ref,
   String workKey,
 ) async {
-  final api = ref.watch(openLibraryApiProvider);
-  return api.fetchWorkEditions(workKey, limit: 50);
+  final api = ref.watch(googleBooksApiProvider);
+  return api.fetchWorkEditions(workKey, limit: 20);
 }
 
 @riverpod
@@ -175,7 +214,7 @@ Future<Map<String, dynamic>> bookEdition(
   BookEditionRef ref,
   String editionKey,
 ) async {
-  final api = ref.watch(openLibraryApiProvider);
+  final api = ref.watch(googleBooksApiProvider);
   return api.fetchEdition(editionKey);
 }
 

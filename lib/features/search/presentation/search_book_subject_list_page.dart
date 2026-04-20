@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Temas Open Library (`/books/subject`) mostrados desde búsqueda.
-const kOpenLibraryBrowseSubjects = <String>[
+/// Book subjects shown from search browse.
+const kBookBrowseSubjects = <String>[
   'fantasy',
   'romance',
   'science_fiction',
@@ -15,7 +15,7 @@ const kOpenLibraryBrowseSubjects = <String>[
   'biography',
 ];
 
-String openLibrarySubjectLabel(AppLocalizations l10n, String slug) =>
+String bookSubjectLabel(AppLocalizations l10n, String slug) =>
     switch (slug) {
       'fantasy' => l10n.searchOlSubjectFantasy,
       'romance' => l10n.searchOlSubjectRomance,
@@ -41,15 +41,15 @@ class SearchBookSubjectListPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: Text(l10n.searchBrowseBookSubjectsOpenLibrary),
+        title: Text(l10n.searchBrowseBookSubjects),
       ),
       body: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: kOpenLibraryBrowseSubjects.length,
+        itemCount: kBookBrowseSubjects.length,
         separatorBuilder: (_, _) => const SizedBox(height: 4),
         itemBuilder: (context, i) {
-          final slug = kOpenLibraryBrowseSubjects[i];
-          final label = openLibrarySubjectLabel(l10n, slug);
+          final slug = kBookBrowseSubjects[i];
+          final label = bookSubjectLabel(l10n, slug);
           return Card(
             margin: EdgeInsets.zero,
             child: ListTile(

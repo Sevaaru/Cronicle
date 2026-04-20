@@ -1292,11 +1292,11 @@ abstract class AppLocalizations {
   /// **'Por temática'**
   String get searchBrowseGameThemes;
 
-  /// No description provided for @searchBrowseBookSubjectsOpenLibrary.
+  /// No description provided for @searchBrowseBookSubjects.
   ///
   /// In es, this message translates to:
   /// **'Temas'**
-  String get searchBrowseBookSubjectsOpenLibrary;
+  String get searchBrowseBookSubjects;
 
   /// No description provided for @searchReleaseDateHint.
   ///
@@ -3566,17 +3566,89 @@ abstract class AppLocalizations {
   /// **'No se encontraron datos del libro'**
   String get bookDetailNoData;
 
-  /// No description provided for @bookDetailOpenOnOpenLibrary.
+  /// No description provided for @bookDetailOpenOnGoogleBooks.
   ///
   /// In es, this message translates to:
-  /// **'Abrir en Open Library'**
-  String get bookDetailOpenOnOpenLibrary;
+  /// **'Abrir en Google Books'**
+  String get bookDetailOpenOnGoogleBooks;
 
   /// No description provided for @bookDetailEditions.
   ///
   /// In es, this message translates to:
   /// **'Ediciones'**
   String get bookDetailEditions;
+
+  /// No description provided for @bookDetailPublisher.
+  ///
+  /// In es, this message translates to:
+  /// **'Editorial'**
+  String get bookDetailPublisher;
+
+  /// No description provided for @bookDetailLanguage.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get bookDetailLanguage;
+
+  /// No description provided for @bookDetailPrintType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get bookDetailPrintType;
+
+  /// No description provided for @bookDetailMaturity.
+  ///
+  /// In es, this message translates to:
+  /// **'Clasificación'**
+  String get bookDetailMaturity;
+
+  /// No description provided for @bookDetailPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get bookDetailPreview;
+
+  /// No description provided for @bookDetailFormats.
+  ///
+  /// In es, this message translates to:
+  /// **'Formatos'**
+  String get bookDetailFormats;
+
+  /// No description provided for @bookDetailAvailability.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad'**
+  String get bookDetailAvailability;
+
+  /// No description provided for @bookDetailIdentifiers.
+  ///
+  /// In es, this message translates to:
+  /// **'Identificadores'**
+  String get bookDetailIdentifiers;
+
+  /// No description provided for @bookActionPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get bookActionPreview;
+
+  /// No description provided for @bookActionReadOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer online'**
+  String get bookActionReadOnline;
+
+  /// No description provided for @bookActionBuy.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprar'**
+  String get bookActionBuy;
+
+  /// No description provided for @bookActionReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas'**
+  String get bookActionReviews;
 
   /// No description provided for @booksHomePopularNow.
   ///
@@ -3607,120 +3679,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Misterio'**
   String get booksHomeMystery;
-
-  /// No description provided for @settingsOpenLibrary.
-  ///
-  /// In es, this message translates to:
-  /// **'Open Library'**
-  String get settingsOpenLibrary;
-
-  /// No description provided for @settingsOpenLibraryDesc.
-  ///
-  /// In es, this message translates to:
-  /// **'Importa tu registro de lectura de Open Library'**
-  String get settingsOpenLibraryDesc;
-
-  /// No description provided for @settingsOpenLibraryUsername.
-  ///
-  /// In es, this message translates to:
-  /// **'Usuario de Open Library'**
-  String get settingsOpenLibraryUsername;
-
-  /// No description provided for @settingsOpenLibraryConnect.
-  ///
-  /// In es, this message translates to:
-  /// **'Guardar usuario'**
-  String get settingsOpenLibraryConnect;
-
-  /// No description provided for @settingsOpenLibraryDisconnect.
-  ///
-  /// In es, this message translates to:
-  /// **'Quitar enlace'**
-  String get settingsOpenLibraryDisconnect;
-
-  /// No description provided for @settingsOpenLibraryConnected.
-  ///
-  /// In es, this message translates to:
-  /// **'Perfil enlazado: {username}'**
-  String settingsOpenLibraryConnected(Object username);
-
-  /// No description provided for @settingsOpenLibrarySyncing.
-  ///
-  /// In es, this message translates to:
-  /// **'Sincronizando registro de lectura…'**
-  String get settingsOpenLibrarySyncing;
-
-  /// No description provided for @settingsOpenLibrarySynced.
-  ///
-  /// In es, this message translates to:
-  /// **'Registro de lectura sincronizado'**
-  String get settingsOpenLibrarySynced;
-
-  /// No description provided for @settingsOpenLibraryError.
-  ///
-  /// In es, this message translates to:
-  /// **'No se pudo validar el usuario. Comprueba el nombre e inténtalo de nuevo.'**
-  String get settingsOpenLibraryError;
-
-  /// No description provided for @settingsOpenLibraryTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Open Library'**
-  String get settingsOpenLibraryTitle;
-
-  /// No description provided for @settingsOpenLibrarySubtitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Open Library no ofrece inicio de sesión con contraseña en apps de terceros (no hay OAuth). Solo hace falta tu nombre de usuario público, el mismo que aparece en openlibrary.org/people/tu-usuario, para leer por la API el mismo registro de lectura que es visible en la web.'**
-  String get settingsOpenLibrarySubtitle;
-
-  /// No description provided for @settingsOpenLibraryConnectedAs.
-  ///
-  /// In es, this message translates to:
-  /// **'Registro de lectura de: {username}'**
-  String settingsOpenLibraryConnectedAs(Object username);
-
-  /// No description provided for @settingsOpenLibrarySync.
-  ///
-  /// In es, this message translates to:
-  /// **'Importar registro de lectura'**
-  String get settingsOpenLibrarySync;
-
-  /// No description provided for @settingsOpenLibrarySyncResult.
-  ///
-  /// In es, this message translates to:
-  /// **'{count} libros importados'**
-  String settingsOpenLibrarySyncResult(Object count);
-
-  /// No description provided for @settingsOpenLibraryDisconnected.
-  ///
-  /// In es, this message translates to:
-  /// **'Enlace de Open Library quitado'**
-  String get settingsOpenLibraryDisconnected;
-
-  /// No description provided for @settingsOpenLibraryUsernameHint.
-  ///
-  /// In es, this message translates to:
-  /// **'Usuario público (perfil en openlibrary.org)'**
-  String get settingsOpenLibraryUsernameHint;
-
-  /// No description provided for @settingsOpenLibraryUsernameNotFound.
-  ///
-  /// In es, this message translates to:
-  /// **'No existe ese perfil o no tiene registro público'**
-  String get settingsOpenLibraryUsernameNotFound;
-
-  /// No description provided for @settingsOpenLibraryConnectSuccess.
-  ///
-  /// In es, this message translates to:
-  /// **'Usuario guardado'**
-  String get settingsOpenLibraryConnectSuccess;
-
-  /// No description provided for @openLibraryConnectDialogIntro.
-  ///
-  /// In es, this message translates to:
-  /// **'No se pide contraseña: solo guardamos tu usuario público para importar el registro de lectura accesible por la API.'**
-  String get openLibraryConnectDialogIntro;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
@@ -3841,18 +3799,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Copia de seguridad en la nube de todos tus datos y cuentas'**
   String get onboardingConnectGoogleDesc;
-
-  /// No description provided for @onboardingConnectOpenLibrary.
-  ///
-  /// In es, this message translates to:
-  /// **'Open Library (usuario público)'**
-  String get onboardingConnectOpenLibrary;
-
-  /// No description provided for @onboardingConnectOpenLibraryDesc.
-  ///
-  /// In es, this message translates to:
-  /// **'Importa el registro de lectura con tu usuario de perfil (sin contraseña en Cronicle)'**
-  String get onboardingConnectOpenLibraryDesc;
 
   /// No description provided for @onboardingSkip.
   ///

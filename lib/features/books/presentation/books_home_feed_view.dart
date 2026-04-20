@@ -59,139 +59,142 @@ class BooksHomeFeedView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-
-    final trendingAsync = ref.watch(bookTrendingProvider);
-    final loveAsync = ref.watch(bookSubjectProvider('love'));
-    final fantasyAsync = ref.watch(bookSubjectProvider('fantasy'));
-    final sciFiAsync = ref.watch(bookSubjectProvider('science_fiction'));
-    final classicsAsync = ref.watch(bookSubjectProvider('classics'));
-    final mysteryAsync = ref.watch(bookSubjectProvider('mystery'));
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(bookTrendingProvider);
-        ref.invalidate(bookSubjectProvider('love'));
-        ref.invalidate(bookSubjectProvider('fantasy'));
-        ref.invalidate(bookSubjectProvider('science_fiction'));
-        ref.invalidate(bookSubjectProvider('classics'));
-        ref.invalidate(bookSubjectProvider('mystery'));
+        ref.invalidate(bookSubjectProvider(BookFeedSection.love));
+        ref.invalidate(bookSubjectProvider(BookFeedSection.fantasy));
+        ref.invalidate(bookSubjectProvider(BookFeedSection.scienceFiction));
+        ref.invalidate(bookSubjectProvider(BookFeedSection.classics));
+        ref.invalidate(bookSubjectProvider(BookFeedSection.mystery));
       },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           // 1. Trending → Score Carousel
-          trendingAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const _ScoreCarouselSkeleton(cardWidth: 126, cardHeight: 172),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _ScoreCarouselSection(
-                    title: l10n.booksHomeTrending,
-                    slug: BookFeedSection.trending,
-                    items: items,
-                    cardWidth: 126,
-                    cardHeight: 172,
-                    icon: Icons.local_fire_department_rounded,
-                    accent: cs.primary,
-                  ),
+          _AsyncSection(
+            asyncValue: ref.watch(bookTrendingProvider),
+            skeleton: const _ScoreCarouselSkeleton(
+              cardWidth: 126,
+              cardHeight: 172,
+            ),
+            builder: (items) => _ScoreCarouselSection(
+              title: l10n.booksHomeTrending,
+              slug: BookFeedSection.trending,
+              items: items,
+              cardWidth: 126,
+              cardHeight: 172,
+              icon: Icons.local_fire_department_rounded,
+              accent: Theme.of(context).colorScheme.primary,
+            ),
           ),
 
           // 2. Popular (Love) → Hero
-          loveAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const _HeroSkeleton(),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _HeroSection(
-                    title: l10n.booksHomePopularNow,
-                    slug: BookFeedSection.love,
-                    items: items,
-                    accent: Colors.redAccent,
-                    icon: Icons.favorite_rounded,
-                  ),
+          _AsyncSection(
+            asyncValue: ref.watch(bookSubjectProvider(BookFeedSection.love)),
+            skeleton: const _HeroSkeleton(),
+            builder: (items) => _HeroSection(
+              title: l10n.booksHomePopularNow,
+              slug: BookFeedSection.love,
+              items: items,
+              accent: Colors.redAccent,
+              icon: Icons.favorite_rounded,
+            ),
           ),
 
           // 3. Fantasy → Mood Band
-          fantasyAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => _MoodBandSkeleton(
+          _AsyncSection(
+            asyncValue: ref.watch(bookSubjectProvider(BookFeedSection.fantasy)),
+            skeleton: _MoodBandSkeleton(
               accent: Colors.indigo,
               darkBg: const Color(0xFF0C0A1D),
             ),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _MoodBandSection(
-                    title: 'Fantasy',
-                    slug: BookFeedSection.fantasy,
-                    items: items,
-                    accent: Colors.indigo,
-                    darkBg: const Color(0xFF0C0A1D),
-                    icon: Icons.auto_fix_high_rounded,
-                  ),
+            builder: (items) => _MoodBandSection(
+              title: 'Fantasy',
+              slug: BookFeedSection.fantasy,
+              items: items,
+              accent: Colors.indigo,
+              darkBg: const Color(0xFF0C0A1D),
+              icon: Icons.auto_fix_high_rounded,
+            ),
           ),
 
           // 4. Sci-Fi → Score Carousel
-          sciFiAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const _ScoreCarouselSkeleton(cardWidth: 108, cardHeight: 148),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _ScoreCarouselSection(
-                    title: 'Sci-Fi',
-                    slug: BookFeedSection.scienceFiction,
-                    items: items,
-                    cardWidth: 108,
-                    cardHeight: 148,
-                    icon: Icons.rocket_launch_rounded,
-                    accent: Colors.teal,
-                  ),
+          _AsyncSection(
+            asyncValue:
+                ref.watch(bookSubjectProvider(BookFeedSection.scienceFiction)),
+            skeleton: const _ScoreCarouselSkeleton(
+              cardWidth: 108,
+              cardHeight: 148,
+            ),
+            builder: (items) => _ScoreCarouselSection(
+              title: 'Sci-Fi',
+              slug: BookFeedSection.scienceFiction,
+              items: items,
+              cardWidth: 108,
+              cardHeight: 148,
+              icon: Icons.rocket_launch_rounded,
+              accent: Colors.teal,
+            ),
           ),
 
           // 5. Classics → Spotlight Rows
-          classicsAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const _SpotlightRowsSkeleton(),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _SpotlightRowsSection(
-                    title: l10n.booksHomeClassics,
-                    slug: BookFeedSection.classics,
-                    items: items,
-                    accent: Colors.amber.shade700,
-                    icon: Icons.menu_book_rounded,
-                  ),
+          _AsyncSection(
+            asyncValue:
+                ref.watch(bookSubjectProvider(BookFeedSection.classics)),
+            skeleton: const _SpotlightRowsSkeleton(),
+            builder: (items) => _SpotlightRowsSection(
+              title: l10n.booksHomeClassics,
+              slug: BookFeedSection.classics,
+              items: items,
+              accent: Colors.amber.shade700,
+              icon: Icons.menu_book_rounded,
+            ),
           ),
 
           // 6. Mystery → Ranked List
-          mysteryAsync.when(
-            skipLoadingOnRefresh: true,
-            loading: () => const _RankedListSkeleton(),
-            error: (e, _) => _errorText(e, cs),
-            data: (items) => items.isEmpty
-                ? const SizedBox.shrink()
-                : _RankedListSection(
-                    title: 'Mystery',
-                    slug: BookFeedSection.mystery,
-                    items: items,
-                    icon: Icons.search_rounded,
-                    accent: const Color(0xFF7C3AED),
-                  ),
+          _AsyncSection(
+            asyncValue:
+                ref.watch(bookSubjectProvider(BookFeedSection.mystery)),
+            skeleton: const _RankedListSkeleton(),
+            builder: (items) => _RankedListSection(
+              title: 'Mystery',
+              slug: BookFeedSection.mystery,
+              items: items,
+              icon: Icons.search_rounded,
+              accent: const Color(0xFF7C3AED),
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  static Widget _errorText(Object e, ColorScheme cs) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Text('$e', style: TextStyle(color: cs.error, fontSize: 12)),
-      );
+/// Renders a skeleton while [asyncValue] is loading, the built widget when it
+/// has data, and nothing (`SizedBox.shrink`) on error or empty results.
+class _AsyncSection extends StatelessWidget {
+  const _AsyncSection({
+    required this.asyncValue,
+    required this.skeleton,
+    required this.builder,
+  });
+
+  final AsyncValue<List<Map<String, dynamic>>> asyncValue;
+  final Widget skeleton;
+  final Widget Function(List<Map<String, dynamic>> items) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return asyncValue.when(
+      skipLoadingOnRefresh: true,
+      loading: () => skeleton,
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) =>
+          items.isEmpty ? const SizedBox.shrink() : builder(items),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1259,7 +1259,7 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AutoDisposeAsyncNotifier<List<FeedActivity>>;
-String _$anilistSocialFeedHash() => r'c15cf912b6a31afa296af12e8545dde84de7637b';
+String _$anilistSocialFeedHash() => r'2dcf2d6b32cc775e801a49f44c1361b92f8a26aa';
 
 abstract class _$AnilistSocialFeed
     extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {

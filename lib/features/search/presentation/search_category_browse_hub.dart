@@ -311,7 +311,7 @@ class SearchCategoryBrowseHub extends StatelessWidget {
       ),
       (
         icon: Icons.public_rounded,
-        title: l10n.searchBrowseBookSubjectsOpenLibrary,
+        title: l10n.searchBrowseBookSubjects,
         onTap: () => context.push('/search/book-subjects'),
       ),
     ];

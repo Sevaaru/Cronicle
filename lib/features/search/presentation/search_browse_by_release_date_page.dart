@@ -217,11 +217,11 @@ class _SearchBrowseByReleaseDatePageState
           return [];
         }
       case MediaKind.book:
-        final api = ref.read(openLibraryApiProvider);
+        final api = ref.read(googleBooksApiProvider);
         return api.searchBooksByPublishYear(
           year: _year,
           month: _month,
-          limit: 50,
+          limit: 40,
           offset: 0,
         );
     }

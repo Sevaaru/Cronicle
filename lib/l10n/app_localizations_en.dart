@@ -663,7 +663,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchBrowseGameThemes => 'By theme';
 
   @override
-  String get searchBrowseBookSubjectsOpenLibrary => 'Topics';
+  String get searchBrowseBookSubjects => 'Topics';
 
   @override
   String get searchReleaseDateHint =>
@@ -1897,10 +1897,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bookDetailNoData => 'No book data found';
 
   @override
-  String get bookDetailOpenOnOpenLibrary => 'Open on Open Library';
+  String get bookDetailOpenOnGoogleBooks => 'Open on Google Books';
 
   @override
   String get bookDetailEditions => 'Editions';
+
+  @override
+  String get bookDetailPublisher => 'Publisher';
+
+  @override
+  String get bookDetailLanguage => 'Language';
+
+  @override
+  String get bookDetailPrintType => 'Type';
+
+  @override
+  String get bookDetailMaturity => 'Maturity';
+
+  @override
+  String get bookDetailPreview => 'Preview';
+
+  @override
+  String get bookDetailFormats => 'Formats';
+
+  @override
+  String get bookDetailAvailability => 'Availability';
+
+  @override
+  String get bookDetailIdentifiers => 'Identifiers';
+
+  @override
+  String get bookActionPreview => 'Preview';
+
+  @override
+  String get bookActionReadOnline => 'Read online';
+
+  @override
+  String get bookActionBuy => 'Buy';
+
+  @override
+  String get bookActionReviews => 'Reviews';
 
   @override
   String get booksHomePopularNow => 'Popular now';
@@ -1916,75 +1952,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get booksHomeMystery => 'Mystery';
-
-  @override
-  String get settingsOpenLibrary => 'Open Library';
-
-  @override
-  String get settingsOpenLibraryDesc =>
-      'Import your reading log from Open Library';
-
-  @override
-  String get settingsOpenLibraryUsername => 'Open Library username';
-
-  @override
-  String get settingsOpenLibraryConnect => 'Save username';
-
-  @override
-  String get settingsOpenLibraryDisconnect => 'Unlink';
-
-  @override
-  String settingsOpenLibraryConnected(Object username) {
-    return 'Linked profile: $username';
-  }
-
-  @override
-  String get settingsOpenLibrarySyncing => 'Syncing reading log…';
-
-  @override
-  String get settingsOpenLibrarySynced => 'Reading log synced';
-
-  @override
-  String get settingsOpenLibraryError =>
-      'Could not validate the username. Check the name and try again.';
-
-  @override
-  String get settingsOpenLibraryTitle => 'Open Library';
-
-  @override
-  String get settingsOpenLibrarySubtitle =>
-      'Open Library does not offer password login or OAuth for third-party apps. You only need your public profile username—the same one in openlibrary.org/people/yourname—so the app can read via the API the same public reading log you see on the website.';
-
-  @override
-  String settingsOpenLibraryConnectedAs(Object username) {
-    return 'Reading log from: $username';
-  }
-
-  @override
-  String get settingsOpenLibrarySync => 'Import reading log';
-
-  @override
-  String settingsOpenLibrarySyncResult(Object count) {
-    return '$count books imported';
-  }
-
-  @override
-  String get settingsOpenLibraryDisconnected => 'Open Library link removed';
-
-  @override
-  String get settingsOpenLibraryUsernameHint =>
-      'Public username (openlibrary.org profile)';
-
-  @override
-  String get settingsOpenLibraryUsernameNotFound =>
-      'That profile was not found or has no public log';
-
-  @override
-  String get settingsOpenLibraryConnectSuccess => 'Username saved';
-
-  @override
-  String get openLibraryConnectDialogIntro =>
-      'No password: we only store your public username to import the reading log available from the API.';
 
   @override
   String get onboardingWelcomeTitle => 'Welcome to Cronicle';
@@ -2049,13 +2016,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingConnectGoogleDesc =>
       'Cloud backup of all your data and accounts';
-
-  @override
-  String get onboardingConnectOpenLibrary => 'Open Library (public username)';
-
-  @override
-  String get onboardingConnectOpenLibraryDesc =>
-      'Import your reading log with your profile username (no password in Cronicle)';
 
   @override
   String get onboardingSkip => 'Use without accounts';

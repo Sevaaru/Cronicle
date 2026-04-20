@@ -6,24 +6,24 @@ part of 'book_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$openLibraryApiHash() => r'2a35033b35e7ab3a48161457a03c3667b8a1aca8';
+String _$googleBooksApiHash() => r'c99804a445c1068bd4afec2c44c874fbbe7647b1';
 
-/// See also [openLibraryApi].
-@ProviderFor(openLibraryApi)
-final openLibraryApiProvider = Provider<OpenLibraryApiDatasource>.internal(
-  openLibraryApi,
-  name: r'openLibraryApiProvider',
+/// See also [googleBooksApi].
+@ProviderFor(googleBooksApi)
+final googleBooksApiProvider = Provider<GoogleBooksApiDatasource>.internal(
+  googleBooksApi,
+  name: r'googleBooksApiProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$openLibraryApiHash,
+      : _$googleBooksApiHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef OpenLibraryApiRef = ProviderRef<OpenLibraryApiDatasource>;
-String _$bookSearchHash() => r'750a7a13e70969330c8fcdae6338fe3b9543713e';
+typedef GoogleBooksApiRef = ProviderRef<GoogleBooksApiDatasource>;
+String _$bookSearchHash() => r'16592cee32cdf608296f375035d17e025f3b9907';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -166,12 +166,29 @@ class _BookSearchProviderElement
   String get query => (origin as BookSearchProvider).query;
 }
 
-String _$bookTrendingHash() => r'8e1c2bc9ecd5016fd0eed3b8d7cc584fbd4197c3';
+String _$booksHomeFeedHash() => r'6ff6ae879f67a6e1f544f7e69623483c2633061f';
+
+/// See also [booksHomeFeed].
+@ProviderFor(booksHomeFeed)
+final booksHomeFeedProvider = FutureProvider<BooksHomeFeedData>.internal(
+  booksHomeFeed,
+  name: r'booksHomeFeedProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$booksHomeFeedHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef BooksHomeFeedRef = FutureProviderRef<BooksHomeFeedData>;
+String _$bookTrendingHash() => r'53630f8d632c1324aeff4aa9e7cb8972c2f8e58c';
 
 /// See also [bookTrending].
 @ProviderFor(bookTrending)
 final bookTrendingProvider =
-    AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
+    FutureProvider<List<Map<String, dynamic>>>.internal(
       bookTrending,
       name: r'bookTrendingProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -183,9 +200,8 @@ final bookTrendingProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef BookTrendingRef =
-    AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$bookSubjectHash() => r'545f437e5e6b1f9eb0f877f43c7143ef986a17d6';
+typedef BookTrendingRef = FutureProviderRef<List<Map<String, dynamic>>>;
+String _$bookSubjectHash() => r'367bf95d8e79048c067c65cd1c8d83bfa4e46cdd';
 
 /// See also [bookSubject].
 @ProviderFor(bookSubject)
@@ -224,8 +240,7 @@ class BookSubjectFamily extends Family<AsyncValue<List<Map<String, dynamic>>>> {
 }
 
 /// See also [bookSubject].
-class BookSubjectProvider
-    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
+class BookSubjectProvider extends FutureProvider<List<Map<String, dynamic>>> {
   /// See also [bookSubject].
   BookSubjectProvider(String subject)
     : this._internal(
@@ -272,7 +287,7 @@ class BookSubjectProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
+  FutureProviderElement<List<Map<String, dynamic>>> createElement() {
     return _BookSubjectProviderElement(this);
   }
 
@@ -292,14 +307,13 @@ class BookSubjectProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin BookSubjectRef
-    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
+mixin BookSubjectRef on FutureProviderRef<List<Map<String, dynamic>>> {
   /// The parameter `subject` of this provider.
   String get subject;
 }
 
 class _BookSubjectProviderElement
-    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
+    extends FutureProviderElement<List<Map<String, dynamic>>>
     with BookSubjectRef {
   _BookSubjectProviderElement(super.provider);
 
@@ -307,7 +321,7 @@ class _BookSubjectProviderElement
   String get subject => (origin as BookSubjectProvider).subject;
 }
 
-String _$bookWorkHash() => r'a9ae6a20e85a3fd4f025b115e0fbb9fcb1567d12';
+String _$bookWorkHash() => r'1ca009f8cc64ef545a5bcd680053eaedde1d2e39';
 
 /// See also [bookWork].
 @ProviderFor(bookWork)
@@ -424,147 +438,7 @@ class _BookWorkProviderElement
   String get workKey => (origin as BookWorkProvider).workKey;
 }
 
-String _$bookUserReadingLogHash() =>
-    r'33da5d3c118bff983ce9db24d1de9d99866f6054';
-
-/// See also [bookUserReadingLog].
-@ProviderFor(bookUserReadingLog)
-const bookUserReadingLogProvider = BookUserReadingLogFamily();
-
-/// See also [bookUserReadingLog].
-class BookUserReadingLogFamily
-    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// See also [bookUserReadingLog].
-  const BookUserReadingLogFamily();
-
-  /// See also [bookUserReadingLog].
-  BookUserReadingLogProvider call(String username, String shelf) {
-    return BookUserReadingLogProvider(username, shelf);
-  }
-
-  @override
-  BookUserReadingLogProvider getProviderOverride(
-    covariant BookUserReadingLogProvider provider,
-  ) {
-    return call(provider.username, provider.shelf);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'bookUserReadingLogProvider';
-}
-
-/// See also [bookUserReadingLog].
-class BookUserReadingLogProvider
-    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
-  /// See also [bookUserReadingLog].
-  BookUserReadingLogProvider(String username, String shelf)
-    : this._internal(
-        (ref) =>
-            bookUserReadingLog(ref as BookUserReadingLogRef, username, shelf),
-        from: bookUserReadingLogProvider,
-        name: r'bookUserReadingLogProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$bookUserReadingLogHash,
-        dependencies: BookUserReadingLogFamily._dependencies,
-        allTransitiveDependencies:
-            BookUserReadingLogFamily._allTransitiveDependencies,
-        username: username,
-        shelf: shelf,
-      );
-
-  BookUserReadingLogProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.username,
-    required this.shelf,
-  }) : super.internal();
-
-  final String username;
-  final String shelf;
-
-  @override
-  Override overrideWith(
-    FutureOr<List<Map<String, dynamic>>> Function(
-      BookUserReadingLogRef provider,
-    )
-    create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: BookUserReadingLogProvider._internal(
-        (ref) => create(ref as BookUserReadingLogRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        username: username,
-        shelf: shelf,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
-    return _BookUserReadingLogProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is BookUserReadingLogProvider &&
-        other.username == username &&
-        other.shelf == shelf;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, username.hashCode);
-    hash = _SystemHash.combine(hash, shelf.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin BookUserReadingLogRef
-    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
-  /// The parameter `username` of this provider.
-  String get username;
-
-  /// The parameter `shelf` of this provider.
-  String get shelf;
-}
-
-class _BookUserReadingLogProviderElement
-    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
-    with BookUserReadingLogRef {
-  _BookUserReadingLogProviderElement(super.provider);
-
-  @override
-  String get username => (origin as BookUserReadingLogProvider).username;
-  @override
-  String get shelf => (origin as BookUserReadingLogProvider).shelf;
-}
-
-String _$bookSubjectBrowseHash() => r'a4f200ab599be1ea8cc298c7d5faaeb853d4d081';
+String _$bookSubjectBrowseHash() => r'da917285b7878289eadc2ce7a0e4f8cb2ae26cdf';
 
 /// See also [bookSubjectBrowse].
 @ProviderFor(bookSubjectBrowse)
@@ -704,7 +578,7 @@ class _BookSubjectBrowseProviderElement
   int get limit => (origin as BookSubjectBrowseProvider).limit;
 }
 
-String _$bookWorkEditionsHash() => r'd251d282759443848d56d169816c42a8c9ce99bb';
+String _$bookWorkEditionsHash() => r'3911363667adbd32cafd96e069ce8bf1b2f037f0';
 
 /// See also [bookWorkEditions].
 @ProviderFor(bookWorkEditions)
@@ -828,7 +702,7 @@ class _BookWorkEditionsProviderElement
   String get workKey => (origin as BookWorkEditionsProvider).workKey;
 }
 
-String _$bookEditionHash() => r'3a0b92fe9f2bbcfdcf7a2a6ff47aee7fc286a391';
+String _$bookEditionHash() => r'281800e9f317556149b5c3cbceb0af6b00b912af';
 
 /// See also [bookEdition].
 @ProviderFor(bookEdition)
@@ -1074,23 +948,6 @@ class _BookWorkEditionModelsProviderElement
   String get workKey => (origin as BookWorkEditionModelsProvider).workKey;
 }
 
-String _$openLibraryUsernameHash() =>
-    r'68077f36ef3a6ed3b5325ffd1b072f471637e109';
-
-/// See also [OpenLibraryUsername].
-@ProviderFor(OpenLibraryUsername)
-final openLibraryUsernameProvider =
-    NotifierProvider<OpenLibraryUsername, String?>.internal(
-      OpenLibraryUsername.new,
-      name: r'openLibraryUsernameProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$openLibraryUsernameHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-typedef _$OpenLibraryUsername = Notifier<String?>;
 String _$favoriteBooksHash() => r'812d75a957f75b2b5701c83e9a5fbb6ac17f02b2';
 
 /// See also [FavoriteBooks].

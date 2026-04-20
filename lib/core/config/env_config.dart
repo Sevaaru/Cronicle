@@ -92,6 +92,13 @@ abstract final class EnvConfig {
     defaultValue: '',
   );
 
+  /// API key de Google Books (Google Cloud Console → APIs & Services → Credentials).
+  /// Se añade como query param `key=` a las peticiones públicas de la Books API v1.
+  static const String googleBooksApiKey = String.fromEnvironment(
+    'GOOGLE_BOOKS_API_KEY',
+    defaultValue: '',
+  );
+
   /// Debe coincidir con el redirect registrado en trakt.tv/oauth/applications (p. ej.
   /// `cronicle://trakt-oauth` o una URL https puente).
   static const String traktRedirectUri = String.fromEnvironment(

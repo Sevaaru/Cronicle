@@ -191,17 +191,38 @@ class _DetailContent extends StatelessWidget {
 
     final title = book['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ?? '';
+    final subtitle = book['subtitle'] as String?;
     final coverImage = book['coverImage'] as Map<String, dynamic>? ?? {};
     final poster = (coverImage['extraLarge'] as String?) ??
         (coverImage['large'] as String?);
     final score = book['averageScore'] as int?;
+    final rawRating = (book['rawRating'] as num?)?.toDouble();
     final ratingsCount = book['ratingsCount'] as int?;
     final genres = (book['genres'] as List?)?.cast<String>() ?? [];
     final authors = (book['authors'] as List?)?.cast<String>() ?? [];
     final description = book['description'] as String?;
     final editionCount = book['editionCount'] as int?;
     final pages = (book['pages'] as num?)?.toInt();
-    final firstPublishDate = book['firstPublishDate'] as String?;
+    final firstPublishDate = book['firstPublishDate'] as String? ??
+        book['publishDate'] as String?;
+    final publisher = book['publisher'] as String?;
+    final language = book['language'] as String?;
+    final printType = book['printType'] as String?;
+    final maturityRating = book['maturityRating'] as String?;
+    final isbn10 = book['isbn10'] as String?;
+    final isbn13 = book['isbn13'] as String?;
+    final isEbook = book['isEbook'] as bool? ?? false;
+    final saleability = book['saleability'] as String?;
+    final buyLink = book['buyLink'] as String?;
+    final priceAmount = (book['priceAmount'] as num?)?.toDouble();
+    final priceCurrency = book['priceCurrency'] as String?;
+    final viewability = book['viewability'] as String?;
+    final publicDomain = book['publicDomain'] as bool? ?? false;
+    final epubAvailable = book['epubAvailable'] as bool? ?? false;
+    final pdfAvailable = book['pdfAvailable'] as bool? ?? false;
+    final webReaderLink = book['webReaderLink'] as String?;
+    final previewLink = book['previewLink'] as String?;
+    final infoLink = book['infoLink'] as String?;
 
     const bannerHeight = 170.0;
     const posterHeight = 130.0;
@@ -360,15 +381,25 @@ class _DetailContent extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // Format tag
+                // Format / metadata chips
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _Tag('Book', cs.tertiaryContainer,
-                          cs.onTertiaryContainer),
+                      _Tag(_prettyPrintType(printType),
+                          cs.tertiaryContainer, cs.onTertiaryContainer),
+                      if (isEbook)
+                        _Tag('eBook', cs.primaryContainer, cs.onPrimaryContainer),
+                      if (publicDomain)
+                        _Tag('Public domain',
+                            Colors.green.shade100, Colors.green.shade900),
+                      if (maturityRating == 'MATURE')
+                        _Tag('Mature', Colors.red.shade100, Colors.red.shade900),
+                      if (language != null && language.isNotEmpty)
+                        _Tag(language.toUpperCase(),
+                            cs.secondaryContainer, cs.onSecondaryContainer),
                     ],
                   ),
                 ),
@@ -402,23 +433,103 @@ class _DetailContent extends StatelessWidget {
                   // Reading progress card (only shown when entry exists)
                   _BookProgressCard(workKey: workKey),
 
-                  // Stats card
-                  if (score != null || ratingsCount != null)
+                  // Subtitle
+                  if (subtitle != null && subtitle.isNotEmpty) ...[
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // Stats card (rating + count + pages + year)
+                  if (score != null ||
+                      ratingsCount != null ||
+                      (pages != null && pages > 0) ||
+                      book['year'] != null)
                     GlassCard(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      child: Column(
                         children: [
-                          if (score != null)
-                            _StatColumn(Icons.star,
-                                Colors.amber.shade600, '$score%',
-                                l10n.statMeanScore),
-                          if (ratingsCount != null)
-                            _StatColumn(Icons.people, Colors.teal,
-                                _formatNumber(ratingsCount),
-                                l10n.statPopularity),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              if (score != null)
+                                _StatColumn(Icons.star,
+                                    Colors.amber.shade600, '$score%',
+                                    l10n.statMeanScore),
+                              if (ratingsCount != null && ratingsCount > 0)
+                                _StatColumn(Icons.people, Colors.teal,
+                                    _formatNumber(ratingsCount),
+                                    l10n.statPopularity),
+                              if (pages != null && pages > 0)
+                                _StatColumn(
+                                    Icons.menu_book_rounded,
+                                    Colors.indigoAccent,
+                                    '$pages',
+                                    l10n.bookDetailPages(pages)),
+                              if (book['year'] != null)
+                                _StatColumn(
+                                    Icons.calendar_today_rounded,
+                                    Colors.deepOrangeAccent,
+                                    '${book['year']}',
+                                    l10n.bookDetailPublishDate),
+                            ],
+                          ),
+                          if (rawRating != null) ...[
+                            const SizedBox(height: 10),
+                            _StarRow(rating: rawRating),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                  // Action buttons: preview, web reader, buy, reviews
+                  if (previewLink != null ||
+                      webReaderLink != null ||
+                      buyLink != null ||
+                      infoLink != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (previewLink != null)
+                            _ActionChip(
+                              icon: Icons.preview_rounded,
+                              label: l10n.bookActionPreview,
+                              color: cs.primary,
+                              onTap: () => _open(previewLink),
+                            ),
+                          if (webReaderLink != null && webReaderLink != previewLink)
+                            _ActionChip(
+                              icon: Icons.menu_book_rounded,
+                              label: l10n.bookActionReadOnline,
+                              color: Colors.deepPurple,
+                              onTap: () => _open(webReaderLink),
+                            ),
+                          if (buyLink != null)
+                            _ActionChip(
+                              icon: Icons.shopping_cart_rounded,
+                              label: priceAmount != null
+                                  ? '${l10n.bookActionBuy} · ${priceAmount.toStringAsFixed(2)} ${priceCurrency ?? ''}'.trim()
+                                  : l10n.bookActionBuy,
+                              color: Colors.green.shade700,
+                              onTap: () => _open(buyLink),
+                            ),
+                          _ActionChip(
+                            icon: Icons.reviews_rounded,
+                            label: l10n.bookActionReviews,
+                            color: Colors.orange.shade700,
+                            onTap: () => _open(
+                                'https://books.google.com/books?id=$workKey&dq=reviews'),
+                          ),
                         ],
                       ),
                     ),
@@ -447,6 +558,31 @@ class _DetailContent extends StatelessWidget {
                                 _InfoPill(l10n.bookDetailEditions, '$editionCount'),
                               if (firstPublishDate != null)
                                 _InfoPill(l10n.bookDetailPublishDate, firstPublishDate),
+                              if (publisher != null && publisher.isNotEmpty)
+                                _InfoPill(l10n.bookDetailPublisher, publisher),
+                              if (language != null && language.isNotEmpty)
+                                _InfoPill(l10n.bookDetailLanguage,
+                                    language.toUpperCase()),
+                              if (printType != null && printType.isNotEmpty)
+                                _InfoPill(l10n.bookDetailPrintType,
+                                    _prettyPrintType(printType)),
+                              if (maturityRating != null && maturityRating.isNotEmpty)
+                                _InfoPill(l10n.bookDetailMaturity,
+                                    _prettyMaturity(maturityRating)),
+                              if (viewability != null && viewability != 'NO_PAGES')
+                                _InfoPill(l10n.bookDetailPreview,
+                                    _prettyViewability(viewability)),
+                              if (epubAvailable || pdfAvailable)
+                                _InfoPill(
+                                    l10n.bookDetailFormats,
+                                    [
+                                      if (epubAvailable) 'EPUB',
+                                      if (pdfAvailable) 'PDF',
+                                    ].join(' · ')),
+                              if (saleability != null &&
+                                  saleability != 'NOT_FOR_SALE')
+                                _InfoPill(l10n.bookDetailAvailability,
+                                    _prettySaleability(saleability)),
                               if (authors.isNotEmpty)
                                 _InfoPill(l10n.bookDetailAuthors, authors.join(', ')),
                             ],
@@ -455,6 +591,30 @@ class _DetailContent extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  // Identifiers card (ISBN-10, ISBN-13)
+                  if (isbn10 != null || isbn13 != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.bookDetailIdentifiers,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15)),
+                            const SizedBox(height: 8),
+                            if (isbn13 != null)
+                              _CopyableRow(label: 'ISBN-13', value: isbn13),
+                            if (isbn10 != null)
+                              _CopyableRow(label: 'ISBN-10', value: isbn10),
+                          ],
+                        ),
+                      ),
+                    ),
 
                   // Subjects / genres
                   if (genres.isNotEmpty) ...[
@@ -468,7 +628,6 @@ class _DetailContent extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: genres
-                          .take(12)
                           .map((g) => ActionChip(
                                 label: Text(g,
                                     style: const TextStyle(fontSize: 12)),
@@ -502,14 +661,14 @@ class _DetailContent extends StatelessWidget {
                     const SizedBox(height: 16),
                   ],
 
-                  // Open in OpenLibrary link
+                  // Open in Google Books link
                   Center(
                     child: TextButton.icon(
                       icon: const Icon(Icons.open_in_new, size: 16),
-                      label: Text(l10n.bookDetailOpenOnOpenLibrary),
+                      label: Text(l10n.bookDetailOpenOnGoogleBooks),
                       onPressed: () => launchUrl(
                         Uri.parse(
-                            'https://openlibrary.org/works/$workKey'),
+                            'https://books.google.com/books?id=$workKey'),
                         mode: LaunchMode.externalApplication,
                       ),
                     ),
@@ -529,6 +688,195 @@ class _DetailContent extends StatelessWidget {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
+  }
+
+  Future<void> _open(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  static String _prettyPrintType(String? value) {
+    switch (value) {
+      case 'BOOK':
+        return 'Book';
+      case 'MAGAZINE':
+        return 'Magazine';
+      default:
+        return 'Book';
+    }
+  }
+
+  static String _prettyMaturity(String value) {
+    switch (value) {
+      case 'NOT_MATURE':
+        return 'All ages';
+      case 'MATURE':
+        return 'Mature';
+      default:
+        return value;
+    }
+  }
+
+  static String _prettyViewability(String value) {
+    switch (value) {
+      case 'PARTIAL':
+        return 'Partial';
+      case 'ALL_PAGES':
+        return 'Full preview';
+      case 'NO_PAGES':
+        return 'No preview';
+      default:
+        return value;
+    }
+  }
+
+  static String _prettySaleability(String value) {
+    switch (value) {
+      case 'FOR_SALE':
+        return 'For sale';
+      case 'FREE':
+        return 'Free';
+      case 'FOR_PREORDER':
+        return 'Pre-order';
+      case 'FOR_SALE_AND_RENTAL':
+        return 'Sale / Rent';
+      default:
+        return value;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Star rating row (0..5 with halves)
+// ---------------------------------------------------------------------------
+
+class _StarRow extends StatelessWidget {
+  const _StarRow({required this.rating});
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final stars = <Widget>[];
+    for (var i = 1; i <= 5; i++) {
+      final IconData icon;
+      if (rating >= i) {
+        icon = Icons.star_rounded;
+      } else if (rating >= i - 0.5) {
+        icon = Icons.star_half_rounded;
+      } else {
+        icon = Icons.star_outline_rounded;
+      }
+      stars.add(Icon(icon, color: Colors.amber.shade600, size: 18));
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ...stars,
+        const SizedBox(width: 8),
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Action chip used in the row of detail-page actions
+// ---------------------------------------------------------------------------
+
+class _ActionChip extends StatelessWidget {
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withAlpha(30),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Copyable identifier row (ISBN-10/13)
+// ---------------------------------------------------------------------------
+
+class _CopyableRow extends StatelessWidget {
+  const _CopyableRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(label,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+          ),
+          Expanded(
+            child: SelectableText(
+              value,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'monospace'),
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            iconSize: 16,
+            icon: const Icon(Icons.copy_rounded),
+            tooltip: 'Copy',
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: value));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('$label copied'),
+                      duration: const Duration(seconds: 1)),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 
