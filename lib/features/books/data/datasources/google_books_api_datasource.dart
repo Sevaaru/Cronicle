@@ -333,17 +333,57 @@ class GoogleBooksApiDatasource {
   // Helpers – image URL
   // ---------------------------------------------------------------------------
 
-  /// Upgrade thumbnail URL: force HTTPS and request a better resolution.
-  static String? _imageUrl(String? raw, {bool large = false}) {
-    if (raw == null || raw.isEmpty) return null;
-    var url = raw.replaceFirst('http://', 'https://');
-    // Remove default zoom=1 and set a larger one for better quality.
-    url = url.replaceAll(RegExp(r'&?zoom=\d'), '');
-    url = url.replaceAll(RegExp(r'&?edge=curl'), '');
-    if (large) {
-      url += '&zoom=2';
+  /// Pick the best cover URL for a volume.
+  ///
+  /// Google Books returns `imageLinks` with multiple sizes (smallThumbnail,
+  /// thumbnail, small, medium, large, extraLarge) but only some are populated
+  /// per volume — and `thumbnail`/`smallThumbnail` are very low resolution
+  /// (~128 px) which looks blurry/pixelated when upscaled.
+  ///
+  /// Strategy:
+  /// 1. Pick the largest size available from `imageLinks`.
+  /// 2. Force HTTPS, drop `edge=curl`.
+  /// 3. Replace `zoom=` with `fife=w<width>` to get a sharp,
+  ///    server-rendered cover at the requested size (Google's CDN supports
+  ///    arbitrary widths via `fife`).
+  /// 4. If `imageLinks` is missing entirely, fall back to the public
+  ///    cover endpoint built from the volume id, which works for most
+  ///    volumes even when the API doesn't expose images.
+  static String? _bestCoverUrl(
+    Map<String, dynamic> imageLinks,
+    String volumeId, {
+    int width = 512,
+  }) {
+    // 1. Pick the largest direct link.
+    final raw = (imageLinks['extraLarge'] ??
+            imageLinks['large'] ??
+            imageLinks['medium'] ??
+            imageLinks['small'] ??
+            imageLinks['thumbnail'] ??
+            imageLinks['smallThumbnail'])
+        as String?;
+
+    if (raw != null && raw.isNotEmpty) {
+      var url = raw.replaceFirst('http://', 'https://');
+      url = url.replaceAll(RegExp(r'&?edge=curl'), '');
+      // Drop existing zoom param – we'll request a specific width with fife.
+      url = url.replaceAll(RegExp(r'&?zoom=\d+'), '');
+      // Append fife=w<width> for a sharp, properly sized image.
+      final sep = url.contains('?') ? '&' : '?';
+      url = '$url${sep}fife=w$width';
+      return url;
     }
-    return url;
+
+    // 2. Fallback: build the public Google Books content URL from the volume
+    //    id. This works for the majority of volumes even when imageLinks is
+    //    absent (e.g. older / lesser-known editions).
+    if (volumeId.isEmpty) return null;
+    return 'https://books.google.com/books/content'
+        '?id=$volumeId'
+        '&printsec=frontcover'
+        '&img=1'
+        '&zoom=1'
+        '&fife=w$width';
   }
 
   // ---------------------------------------------------------------------------
@@ -387,11 +427,8 @@ class GoogleBooksApiDatasource {
         (info['categories'] as List?)?.cast<String>() ?? const [];
     final images =
         (info['imageLinks'] as Map<String, dynamic>?) ?? const {};
-    final thumbnail = images['thumbnail'] as String? ??
-        images['smallThumbnail'] as String?;
-    final largeImg = images['large'] as String? ??
-        images['medium'] as String? ??
-        thumbnail;
+    final coverSmall = _bestCoverUrl(images, id, width: 256);
+    final coverLarge = _bestCoverUrl(images, id, width: 768);
     final rating = (info['averageRating'] as num?)?.toDouble();
     final ratingsCount = (info['ratingsCount'] as num?)?.toInt();
 
@@ -453,8 +490,8 @@ class GoogleBooksApiDatasource {
       },
       'subtitle': subtitle,
       'coverImage': {
-        'large': _imageUrl(thumbnail),
-        'extraLarge': _imageUrl(largeImg, large: true),
+        'large': coverSmall,
+        'extraLarge': coverLarge,
       },
       'averageScore':
           rating != null ? (rating * 20).round().clamp(0, 100) : null,
@@ -504,7 +541,7 @@ class GoogleBooksApiDatasource {
         (volume['volumeInfo'] as Map<String, dynamic>?) ?? const {};
     final images =
         (info['imageLinks'] as Map<String, dynamic>?) ?? const {};
-    final thumbnail = images['thumbnail'] as String?;
+    final coverUrl = _bestCoverUrl(images, id, width: 256);
     final isbns = (info['industryIdentifiers'] as List?)
             ?.cast<Map<String, dynamic>>()
             .map((i) => i['identifier'] as String?)
@@ -523,7 +560,7 @@ class GoogleBooksApiDatasource {
       'chapters': null,
       'publishers': publishers,
       'publishDate': info['publishedDate'] as String?,
-      'coverUrl': _imageUrl(thumbnail),
+      'coverUrl': coverUrl,
     };
   }
 }

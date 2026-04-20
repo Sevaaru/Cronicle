@@ -217,59 +217,107 @@ class _RandomPickCard extends ConsumerWidget {
   }
 
   void _pickRandom(BuildContext context, WidgetRef ref) {
-    final pool = <_RandomEntry>[];
+    // Build a pool **per kind**. Each kind aggregates multiple source rails
+    // (popular + trending + anticipated + genre-specific) so the random pick
+    // isn't biased toward "newest" or any single category.
+    final perKind = <MediaKind, List<Map<String, dynamic>>>{};
 
+    void addAll(MediaKind kind, Iterable<Map<String, dynamic>>? items) {
+      if (items == null) return;
+      perKind.putIfAbsent(kind, () => []).addAll(items);
+    }
+
+    void addAsync(
+      MediaKind kind,
+      AsyncValue<List<Map<String, dynamic>>> async,
+    ) =>
+        addAll(kind, async.valueOrNull);
+
+    // ── Anime ────────────────────────────────────────────────
     if (visible.contains('anime')) {
-      _addFromAsync(pool, ref.read(anilistPopularProvider('ANIME')), MediaKind.anime);
+      addAsync(MediaKind.anime, ref.read(anilistPopularProvider('ANIME')));
     }
+
+    // ── Manga ────────────────────────────────────────────────
     if (visible.contains('manga')) {
-      _addFromAsync(pool, ref.read(anilistPopularProvider('MANGA')), MediaKind.manga);
+      addAsync(MediaKind.manga, ref.read(anilistPopularProvider('MANGA')));
     }
+
+    // ── Movies (trending + anticipated + popular) ────────────
     if (visible.contains('movie')) {
       final data = ref.read(traktMoviesHomeProvider).valueOrNull;
       if (data != null) {
-        for (final m in data.trending) {
-          final id = m['id'] as int?;
-          if (id != null) pool.add(_RandomEntry(id, MediaKind.movie));
-        }
+        addAll(MediaKind.movie, data.trending);
+        addAll(MediaKind.movie, data.popular);
+        addAll(MediaKind.movie, data.anticipated);
       }
     }
+
+    // ── TV Shows (trending + anticipated + popular) ──────────
     if (visible.contains('tv')) {
       final data = ref.read(traktShowsHomeProvider).valueOrNull;
       if (data != null) {
-        for (final m in data.trending) {
-          final id = m['id'] as int?;
-          if (id != null) pool.add(_RandomEntry(id, MediaKind.tv));
-        }
+        addAll(MediaKind.tv, data.trending);
+        addAll(MediaKind.tv, data.popular);
+        addAll(MediaKind.tv, data.anticipated);
       }
     }
+
+    // ── Games (popular + every genre rail from the home feed) ─
     if (visible.contains('game')) {
-      _addFromAsync(pool, ref.read(igdbPopularProvider), MediaKind.game);
+      addAsync(MediaKind.game, ref.read(igdbPopularProvider));
+      final feed = ref.read(igdbGamesHomeFeedProvider).valueOrNull;
+      if (feed != null) {
+        addAll(MediaKind.game, feed.anticipated);
+        addAll(MediaKind.game, feed.recentlyReleased);
+        addAll(MediaKind.game, feed.bestRated);
+        addAll(MediaKind.game, feed.indie);
+        addAll(MediaKind.game, feed.horror);
+        addAll(MediaKind.game, feed.multiplayer);
+        addAll(MediaKind.game, feed.rpg);
+        addAll(MediaKind.game, feed.sports);
+      }
     }
 
-    if (pool.isEmpty) return;
-    final pick = pool[Random().nextInt(pool.length)];
-    context.push(_routeFor(pick.kind, pick.id));
-  }
-
-  void _addFromAsync(
-    List<_RandomEntry> pool,
-    AsyncValue<List<Map<String, dynamic>>> async,
-    MediaKind kind,
-  ) {
-    final items = async.valueOrNull;
-    if (items == null) return;
-    for (final m in items) {
-      final id = m['id'] as int?;
-      if (id != null) pool.add(_RandomEntry(id, kind));
+    // ── Books (trending + every subject rail) ────────────────
+    if (visible.contains('book')) {
+      addAsync(MediaKind.book, ref.read(bookTrendingProvider));
+      for (final subject in const [
+        'love',
+        'fantasy',
+        'science_fiction',
+        'classics',
+        'mystery',
+      ]) {
+        addAsync(MediaKind.book, ref.read(bookSubjectProvider(subject)));
+      }
     }
-  }
-}
 
-class _RandomEntry {
-  const _RandomEntry(this.id, this.kind);
-  final int id;
-  final MediaKind kind;
+    // Drop kinds with empty pools.
+    perKind.removeWhere((_, list) => list.isEmpty);
+    if (perKind.isEmpty) return;
+
+    final rng = Random();
+
+    // 1. Pick a kind uniformly so every configured interest has equal odds.
+    final kinds = perKind.keys.toList();
+    final kind = kinds[rng.nextInt(kinds.length)];
+
+    // 2. Deduplicate items within that kind by their identifier so the same
+    //    title appearing in multiple rails doesn't get extra weight.
+    final seen = <String>{};
+    final unique = <Map<String, dynamic>>[];
+    for (final item in perKind[kind]!) {
+      final key = (item['workKey'] as String?) ??
+          (item['id']?.toString());
+      if (key == null) continue;
+      if (seen.add(key)) unique.add(item);
+    }
+    if (unique.isEmpty) return;
+
+    final pick = unique[rng.nextInt(unique.length)];
+    _navigateToItem(context, kind, pick);
+  }
 }
 
 // ╔═══════════════════════════════════════════════════════════════════════════╗
