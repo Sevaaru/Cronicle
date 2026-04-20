@@ -138,6 +138,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   bool _sortAsc = false;
   bool _statusInitialized = false;
   bool _syncChecked = false;
+  bool _remoteSyncing = false;
 
   final _scrollController = ScrollController();
 
@@ -254,6 +255,33 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.libraryTitle, style: pageTitleStyle()),
+        actions: [
+          if (_remoteSyncing)
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.syncLoading,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.primary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 12),
@@ -428,6 +456,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   /// Descarga en segundo plano las listas de AniList y Trakt para reflejar
   /// cambios hechos fuera de la app (p. ej. desde la web).
   Future<void> _silentRemoteMerge() async {
+    if (mounted) setState(() => _remoteSyncing = true);
     final db = ref.read(databaseProvider);
     var changed = false;
     // AniList
@@ -452,6 +481,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       );
       changed = true;
     } catch (_) {}
+    if (mounted) setState(() => _remoteSyncing = false);
     if (changed && mounted) {
       ref.invalidate(paginatedLibraryProvider);
     }

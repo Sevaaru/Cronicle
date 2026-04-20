@@ -55,8 +55,14 @@ class AnilistNotificationsPage extends ConsumerWidget {
       return l10n.notificationTypeAiring;
     }
 
+    // Para notificaciones sociales: si hay un actor (usuario, staff, etc.)
+    // usarlo como título para que se lea "Username" (título) +
+    // "liked your activity" (subtítulo).
+    final actor = _actorName(n);
+    if (actor != null && actor.isNotEmpty) return actor;
+
     final ctx = n['context'] as String?;
-    if (ctx != null && ctx.isNotEmpty) return ctx;
+    if (ctx != null && ctx.isNotEmpty) return ctx.trim();
     final ctxs = n['contexts'];
     if (ctxs is List && ctxs.isNotEmpty) {
       final flat = anilistFlattenContexts(ctxs).trim();
@@ -95,6 +101,27 @@ class AnilistNotificationsPage extends ConsumerWidget {
     };
   }
 
+  /// Nombre del actor (usuario, staff, personaje) para mostrar como título.
+  String? _actorName(Map<String, dynamic> n) {
+    final user = n['user'] as Map<String, dynamic>?;
+    if (user != null) return user['name'] as String?;
+    final staff = n['staff'] as Map<String, dynamic>?;
+    if (staff != null) {
+      final nm = staff['name'] as Map<String, dynamic>?;
+      final full = nm?['full'] as String?;
+      if (full != null && full.isNotEmpty) return full;
+    }
+    final character = n['character'] as Map<String, dynamic>?;
+    if (character != null) {
+      final nm = character['name'] as Map<String, dynamic>?;
+      final full = nm?['full'] as String?;
+      if (full != null && full.isNotEmpty) return full;
+    }
+    final submitted = n['submittedTitle'] as String?;
+    if (submitted != null && submitted.isNotEmpty) return submitted;
+    return null;
+  }
+
   String? _subtitle(Map<String, dynamic> n, AppLocalizations l10n) {
     final t = n['__typename'] as String? ?? '';
     if (t == 'AiringNotification') {
@@ -114,22 +141,28 @@ class AnilistNotificationsPage extends ConsumerWidget {
       return mediaTitle != 'Media' ? mediaTitle : null;
     }
 
-    final user = n['user'] as Map<String, dynamic>?;
-    if (user != null) return user['name'] as String?;
-    final staff = n['staff'] as Map<String, dynamic>?;
-    if (staff != null) {
-      final nm = staff['name'] as Map<String, dynamic>?;
-      final full = nm?['full'] as String?;
-      if (full != null && full.isNotEmpty) return full;
+    // Para notificaciones sociales: si hay actor (mostrado como título),
+    // el subtítulo es la acción de contexto ("liked your activity", etc.).
+    final actor = _actorName(n);
+    if (actor != null && actor.isNotEmpty) {
+      final ctx = n['context'] as String?;
+      if (ctx != null && ctx.isNotEmpty) return ctx.trim();
+      final ctxs = n['contexts'];
+      if (ctxs is List && ctxs.isNotEmpty) {
+        final flat = anilistFlattenContexts(ctxs).trim();
+        if (flat.isNotEmpty) return flat;
+      }
+      // Fallback: media title, thread title, etc.
+      final media = n['media'] as Map<String, dynamic>?;
+      if (media != null) {
+        final resolved = anilistMediaDisplayTitle(media);
+        if (resolved != 'Media') return resolved;
+      }
+      final thread = n['thread'] as Map<String, dynamic>?;
+      if (thread != null) return thread['title'] as String?;
+      return null;
     }
-    final character = n['character'] as Map<String, dynamic>?;
-    if (character != null) {
-      final nm = character['name'] as Map<String, dynamic>?;
-      final full = nm?['full'] as String?;
-      if (full != null && full.isNotEmpty) return full;
-    }
-    final submitted = n['submittedTitle'] as String?;
-    if (submitted != null && submitted.isNotEmpty) return submitted;
+
     final media = n['media'] as Map<String, dynamic>?;
     if (media != null) {
       final resolved = anilistMediaDisplayTitle(media);
@@ -161,6 +194,12 @@ class AnilistNotificationsPage extends ConsumerWidget {
       return cover?['large'] as String?;
     }
     return null;
+  }
+
+  /// ID del usuario cuyo avatar se muestra, para navegar a su perfil.
+  int? _avatarUserId(Map<String, dynamic> n) {
+    final user = n['user'] as Map<String, dynamic>?;
+    return (user?['id'] as num?)?.toInt();
   }
 
   Future<void> _openNotification(
@@ -328,13 +367,23 @@ class AnilistNotificationsPage extends ConsumerWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: avatar != null
-                                      ? CachedNetworkImage(
-                                          imageUrl: avatar,
-                                          width: 44,
-                                          height: 44,
+                                GestureDetector(
+                                  onTap: () {
+                                    final uid = _avatarUserId(n);
+                                    if (uid != null) {
+                                      _navigateShellRoute(
+                                          context, '/user/$uid');
+                                    } else {
+                                      _openNotification(context, n);
+                                    }
+                                  },
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: avatar != null
+                                        ? CachedNetworkImage(
+                                            imageUrl: avatar,
+                                            width: 44,
+                                            height: 44,
                                           fit: BoxFit.cover,
                                         )
                                       : Container(
@@ -347,6 +396,7 @@ class AnilistNotificationsPage extends ConsumerWidget {
                                             size: 22,
                                           ),
                                         ),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

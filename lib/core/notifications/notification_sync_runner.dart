@@ -11,6 +11,53 @@ import 'package:cronicle/core/utils/anilist_media_title.dart';
 import 'package:cronicle/core/utils/anilist_notification_contexts.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 
+/// Descarga una imagen y devuelve los bytes, o null si falla.
+Future<Uint8List?> _downloadImageBytes(String? url) async {
+  if (url == null || url.isEmpty) return null;
+  try {
+    final res = await Dio().get<List<int>>(
+      url,
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(seconds: 8),
+      ),
+    );
+    final data = res.data;
+    if (data == null || data.isEmpty) return null;
+    return Uint8List.fromList(data);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Elige la imagen más representativa para una notificación de Anilist:
+/// avatar del usuario para interacciones sociales, portada del media para
+/// notificaciones de airing / cambios de media.
+Future<Uint8List?> _resolveNotificationImage(Map<String, dynamic> n) async {
+  // Para AiringNotification y notificaciones relativas a un media concreto,
+  // usamos la portada.
+  final media = n['media'] as Map<String, dynamic>?;
+  if (media != null) {
+    final cover = media['coverImage'] as Map<String, dynamic>?;
+    final coverUrl = cover?['large'] as String?;
+    if (coverUrl != null && coverUrl.isNotEmpty) {
+      return _downloadImageBytes(coverUrl);
+    }
+  }
+
+  // Para interacciones sociales (likes, replies, follows…), avatar del usuario.
+  final user = n['user'] as Map<String, dynamic>?;
+  if (user != null) {
+    final avatar = user['avatar'] as Map<String, dynamic>?;
+    final avatarUrl = avatar?['medium'] as String?;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return _downloadImageBytes(avatarUrl);
+    }
+  }
+
+  return null;
+}
+
 bool _shouldMirrorAnilistNotif(String? typename, bool includeSocial) {
   if (typename == 'AiringNotification') return true;
   if (!includeSocial) return false;
@@ -270,11 +317,16 @@ Future<void> _syncAiringReleases(
 
     final notifId = _stableNotifId('air', mediaId * 100000 + episode);
 
+    final cover = media['coverImage'] as Map<String, dynamic>?;
+    final coverUrl = cover?['large'] as String?;
+    final imageBytes = await _downloadImageBytes(coverUrl);
+
     await CronicleLocalNotifications.showAiringNewEpisode(
       notificationId: notifId,
       title: notifTitle,
       body: body,
       expandedBody: expandedBody,
+      largeIconBytes: imageBytes,
     );
 
     await prefs.setBool(dedupe, true);
@@ -336,10 +388,14 @@ Future<void> _syncAnilistInbox(
       continue;
     }
 
+    // Imagen: avatar del usuario para social, portada del media para airing/media.
+    final imageBytes = await _resolveNotificationImage(n);
+
     await CronicleLocalNotifications.showAnilistMirror(
       notificationId: _stableNotifId('anl', id),
       title: title,
       body: body,
+      largeIconBytes: imageBytes,
     );
     seen = {...seen, id};
   }

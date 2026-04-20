@@ -1282,6 +1282,7 @@ class AnilistGraphqlDatasource {
                 type
                 status
                 title { romaji english native }
+                coverImage { large }
                 nextAiringEpisode { airingAt episode }
               }
             }

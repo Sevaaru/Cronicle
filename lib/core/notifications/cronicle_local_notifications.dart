@@ -140,9 +140,13 @@ class CronicleLocalNotifications {
     required String title,
     required String body,
     String? expandedBody,
+    Uint8List? largeIconBytes,
   }) async {
     if (!_cronicleNotifInited) await init();
     if (kIsWeb || !_isAndroidOrIos) return;
+
+    final AndroidBitmap<Object>? largeIcon =
+        largeIconBytes != null ? ByteArrayAndroidBitmap(largeIconBytes) : null;
 
     await _fln.show(
       notificationId,
@@ -157,6 +161,7 @@ class CronicleLocalNotifications {
           importance: Importance.high,
           priority: Priority.high,
           groupKey: kAndroidNotificationGroupCronicle,
+          largeIcon: largeIcon,
           styleInformation: BigTextStyleInformation(expandedBody ?? body),
         ),
         iOS: const DarwinNotificationDetails(
@@ -173,9 +178,13 @@ class CronicleLocalNotifications {
     required int notificationId,
     required String title,
     required String body,
+    Uint8List? largeIconBytes,
   }) async {
     if (!_cronicleNotifInited) await init();
     if (kIsWeb || !_isAndroidOrIos) return;
+
+    final AndroidBitmap<Object>? largeIcon =
+        largeIconBytes != null ? ByteArrayAndroidBitmap(largeIconBytes) : null;
 
     await _fln.show(
       notificationId,
@@ -189,6 +198,7 @@ class CronicleLocalNotifications {
           importance: Importance.high,
           priority: Priority.high,
           groupKey: kAndroidNotificationGroupCronicle,
+          largeIcon: largeIcon,
           styleInformation: BigTextStyleInformation(body),
         ),
         iOS: const DarwinNotificationDetails(
