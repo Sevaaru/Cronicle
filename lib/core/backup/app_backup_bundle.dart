@@ -174,7 +174,7 @@ abstract final class AppBackupBundle {
         final score100 = (backupVersion < 3 && rawScore != null && rawScore > 0)
             ? rawScore * 10
             : rawScore;
-        await db.upsertLibraryEntry(
+        await db.upsertLibraryEntryIfNewer(
           LibraryEntriesCompanion(
             kind: Value(e['kind'] as int),
             externalId: Value(e['externalId'] as String),

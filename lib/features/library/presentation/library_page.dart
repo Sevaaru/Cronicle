@@ -13,7 +13,9 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/anime_library_airing_refresh.dart';
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -153,6 +155,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(refreshAnimeLibraryAiringMetadata(ref));
+      unawaited(_silentRemoteMerge());
     });
   }
 
@@ -420,6 +423,38 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       ),
       ),
     );
+  }
+
+  /// Descarga en segundo plano las listas de AniList y Trakt para reflejar
+  /// cambios hechos fuera de la app (p. ej. desde la web).
+  Future<void> _silentRemoteMerge() async {
+    final db = ref.read(databaseProvider);
+    var changed = false;
+    // AniList
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final auth = ref.read(anilistAuthProvider);
+      await mergeAnilistLibraryIntoLocalIfSignedIn(
+        graphql: graphql,
+        db: db,
+        auth: auth,
+      );
+      changed = true;
+    } catch (_) {}
+    // Trakt
+    try {
+      final traktAuth = ref.read(traktAuthProvider);
+      final traktApi = ref.read(traktApiProvider);
+      await mergeTraktLibraryIntoLocalIfSignedIn(
+        api: traktApi,
+        db: db,
+        getValidAccessToken: () => traktAuth.getValidAccessToken(),
+      );
+      changed = true;
+    } catch (_) {}
+    if (changed && mounted) {
+      ref.invalidate(paginatedLibraryProvider);
+    }
   }
 
   void _checkAnilistSync() {

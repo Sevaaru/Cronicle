@@ -169,6 +169,28 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Igual que [upsertLibraryEntry] pero solo sobrescribe si [entry.updatedAt]
+  /// es más reciente que el registro existente.  Si no existe, inserta siempre.
+  Future<int> upsertLibraryEntryIfNewer(LibraryEntriesCompanion entry) async {
+    final kindVal = entry.kind.value;
+    final extId = entry.externalId.value;
+    final existing = await getLibraryEntryByKindAndExternalId(kindVal, extId);
+    if (existing == null) {
+      return into(libraryEntries).insert(entry, mode: InsertMode.insertOrReplace);
+    }
+    final incomingMs = entry.updatedAt.value;
+    if (incomingMs > existing.updatedAt) {
+      return into(libraryEntries).insert(
+        entry,
+        onConflict: DoUpdate(
+          (old) => entry,
+          target: [libraryEntries.kind, libraryEntries.externalId],
+        ),
+      );
+    }
+    return existing.id;
+  }
+
   Future<void> deleteLibraryEntry(int id) {
     return (delete(libraryEntries)..where((t) => t.id.equals(id))).go();
   }

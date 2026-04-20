@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,14 @@ import 'package:cronicle/features/trakt/data/datasources/trakt_api_datasource.da
 import 'package:cronicle/features/trakt/data/trakt_normalize.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+
+/// Convierte un string ISO-8601 de Trakt a millisecondsSinceEpoch, o null.
+int? _traktDateToMs(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is! String || raw.isEmpty) return null;
+  final dt = DateTime.tryParse(raw);
+  return dt?.millisecondsSinceEpoch;
+}
 
 /// Importa historial visto de Trakt (películas y series, sin anime) a la biblioteca local.
 Future<int> importTraktWatchedToLocal({
@@ -38,6 +48,18 @@ Future<int> importTraktWatchedToLocal({
           ((raw['rating'] as num?) ?? 0).round().clamp(0, 10);
       final score100 = rating10 * 10;
 
+      final existing = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.movie.code,
+        id.toString(),
+      );
+      final apiMs = _traktDateToMs(row['last_watched_at']);
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final resolvedUpdatedAt = existing == null
+          ? (apiMs ?? nowMs)
+          : (apiMs == null)
+              ? existing.updatedAt
+              : max(existing.updatedAt, apiMs);
+
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(MediaKind.movie.code),
         externalId: drift.Value(id.toString()),
@@ -52,7 +74,7 @@ Future<int> importTraktWatchedToLocal({
         progress: drift.Value(plays > 0 ? 1 : 0),
         totalEpisodes: drift.Value(1),
         notes: drift.Value(null),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: drift.Value(resolvedUpdatedAt),
       ));
       count++;
     } catch (_) {
@@ -86,6 +108,18 @@ Future<int> importTraktWatchedToLocal({
           ((raw['rating'] as num?) ?? 0).round().clamp(0, 10);
       final score100 = rating10 * 10;
 
+      final existing = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.tv.code,
+        id.toString(),
+      );
+      final apiMs = _traktDateToMs(row['last_watched_at']);
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final resolvedUpdatedAt = existing == null
+          ? (apiMs ?? nowMs)
+          : (apiMs == null)
+              ? existing.updatedAt
+              : max(existing.updatedAt, apiMs);
+
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(MediaKind.tv.code),
         externalId: drift.Value(id.toString()),
@@ -100,7 +134,7 @@ Future<int> importTraktWatchedToLocal({
         progress: drift.Value(watchedEps),
         totalEpisodes: drift.Value(total > 0 ? total : null),
         notes: drift.Value(null),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: drift.Value(resolvedUpdatedAt),
       ));
       count++;
     } catch (_) {
@@ -109,6 +143,17 @@ Future<int> importTraktWatchedToLocal({
   }
 
   return count;
+}
+
+/// Si hay sesión Trakt activa, descarga historial y hace upsert en [db] (merge silencioso).
+Future<void> mergeTraktLibraryIntoLocalIfSignedIn({
+  required TraktApiDatasource api,
+  required AppDatabase db,
+  required Future<String?> Function() getValidAccessToken,
+}) async {
+  final token = await getValidAccessToken();
+  if (token == null || token.isEmpty) return;
+  await importTraktWatchedToLocal(api: api, db: db, accessToken: token);
 }
 
 Future<bool> showTraktImportDialog({
