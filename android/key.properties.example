@@ -1,0 +1,54 @@
+# ===========================================================================
+# android/key.properties  —  Credenciales de firma release (Upload Key)
+# ===========================================================================
+#
+# 1. Copia este archivo:
+#      cp key.properties.example key.properties    (Linux/macOS)
+#      Copy-Item key.properties.example key.properties   (PowerShell)
+#
+# 2. Rellena los valores con los de tu keystore (Upload Key).
+#
+# 3. key.properties está en .gitignore; NUNCA lo subas al repositorio.
+#
+# ---------------------------------------------------------------------------
+# Generar el keystore (si no lo tienes):
+#
+#   keytool -genkeypair -v \
+#     -keystore upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 \
+#     -alias upload
+#
+#   Coloca el archivo .jks en android/ (por ejemplo android/upload-keystore.jks).
+#   Respalda el archivo y las contraseñas fuera del repositorio.
+#
+# ---------------------------------------------------------------------------
+# Google Sign-In — SHA-1 necesarios en Google Cloud Console:
+#
+#   Para que Google Login funcione en AMBOS escenarios (APK local y AAB en
+#   Play Store), debes registrar DOS huellas SHA-1 como clientes OAuth
+#   de tipo Android en Google Cloud Console → APIs & Services → Credentials:
+#
+#   A) SHA-1 de tu UPLOAD KEY (firma local):
+#      Desde la carpeta android/:
+#        .\gradlew.bat signingReport          (Windows)
+#        ./gradlew signingReport              (Linux/macOS)
+#      Busca la sección "Variant: release" → SHA1.
+#
+#      O directamente con keytool:
+#        keytool -list -v -keystore upload-keystore.jks -alias upload
+#
+#   B) SHA-1 de la APP SIGNING KEY de Google Play:
+#      Play Console → Tu app → Configuración → Integridad de la app
+#        → pestaña "Firma de la app"
+#      Copia el "Certificado de firma de la app" → SHA-1.
+#
+#   Ambos clientes OAuth Android deben usar:
+#     - Package name: com.cronicle.app.cronicle
+#     - Su respectivo SHA-1
+#
+# ===========================================================================
+
+storePassword=TU_STORE_PASSWORD
+keyPassword=TU_KEY_PASSWORD
+keyAlias=upload
+storeFile=upload-keystore.jks

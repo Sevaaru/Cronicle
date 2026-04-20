@@ -7,6 +7,19 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// ---------------------------------------------------------------------------
+// Firma release: carga las credenciales desde android/key.properties.
+// Copia android/key.properties.example → android/key.properties y rellena
+// con los datos de tu Upload Key (keystore local).
+//
+// IMPORTANTE — Google Sign-In:
+//   Tanto el APK release (firma local con Upload Key) como el AAB en Play
+//   (re-firmado por Google con su App Signing Key) deben funcionar.
+//   Para ello, registra AMBOS SHA-1 en Google Cloud Console:
+//     1. SHA-1 de tu Upload Key   → keytool o .\gradlew.bat signingReport
+//     2. SHA-1 de la App Signing  → Play Console > Configuración > Integridad
+//   Ver key.properties.example para más detalle.
+// ---------------------------------------------------------------------------
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -33,16 +46,18 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.cronicle.app.cronicle"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    // -----------------------------------------------------------------------
+    // Signing config: usa la Upload Key para firmar TANTO el APK como el AAB.
+    // El AAB será re-firmado por Google Play con la App Signing Key al
+    // publicar, pero la subida siempre se hace con la Upload Key.
+    // -----------------------------------------------------------------------
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
@@ -56,6 +71,9 @@ android {
 
     buildTypes {
         release {
+            // Si key.properties existe → firma con la Upload Key (release).
+            // Si no existe (CI sin keystore, máquina nueva) → usa debug para
+            // que el build no falle; el artefacto NO será válido para Play.
             signingConfig =
                 if (keystorePropertiesFile.exists()) {
                     signingConfigs.getByName("release")
