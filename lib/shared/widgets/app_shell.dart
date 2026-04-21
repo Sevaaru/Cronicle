@@ -4,9 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'package:cronicle/features/anime/presentation/anime_providers.dart';
-import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
@@ -116,13 +115,10 @@ class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final resolvedAvatar = ref.watch(resolvedProfileAvatarProvider);
 
-    String? avatarUrl;
-    final anilistProfile = ref.watch(anilistProfileProvider).valueOrNull;
-    if (anilistProfile != null) {
-      avatarUrl = (anilistProfile['avatar'] as Map?)?['large'] as String?;
-    }
-    avatarUrl ??= ref.watch(traktSessionProvider).valueOrNull?.userAvatarUrl;
+    final avatarUrl = resolvedAvatar.networkUrl;
+    final avatarBytes = resolvedAvatar.memoryBytes;
 
     final avatarCore = SizedBox(
       key: _avatarBoundsKey,
@@ -131,7 +127,14 @@ class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
       child: ClipOval(
         child: ColoredBox(
           color: cs.surfaceContainerHighest,
-          child: avatarUrl != null
+          child: avatarBytes != null
+              ? Image.memory(
+                  avatarBytes,
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  fit: BoxFit.cover,
+                )
+              : (avatarUrl != null && avatarUrl.isNotEmpty)
               ? CachedNetworkImage(
                   imageUrl: avatarUrl,
                   width: kProfileLeadingCircleSize,

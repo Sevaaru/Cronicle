@@ -28,15 +28,17 @@ Future<int> importAnilistToLocal({
   required String token,
   required String userName,
 }) async {
-  final results = await Future.wait([
-    graphql.fetchUserMediaList(token, userName, type: 'ANIME'),
-    graphql.fetchUserMediaList(token, userName, type: 'MANGA'),
-  ]);
+  final anime = await graphql
+      .fetchUserMediaList(token, userName, type: 'ANIME')
+      .catchError((Object _) => <Map<String, dynamic>>[]);
+  final manga = await graphql
+      .fetchUserMediaList(token, userName, type: 'MANGA')
+      .catchError((Object _) => <Map<String, dynamic>>[]);
 
   final seen = <String>{};
   int count = 0;
 
-  for (final entry in [...results[0], ...results[1]]) {
+  for (final entry in [...anime, ...manga]) {
     try {
       final media = entry['media'] as Map<String, dynamic>? ?? {};
       final mediaId = media['id']?.toString();

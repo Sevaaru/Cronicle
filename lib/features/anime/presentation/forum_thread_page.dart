@@ -1,4 +1,6 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+﻿import 'dart:convert';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -21,6 +23,29 @@ String _timeAgoForum(int? createdAt) {
 }
 
 enum _CommentSort { oldest, newest, mostLiked }
+
+List<Map<String, dynamic>> _parseChildComments(dynamic raw) {
+  if (raw is List) {
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+  if (raw is String && raw.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    } catch (_) {
+      return const [];
+    }
+  }
+  return const [];
+}
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class ForumThreadPage extends ConsumerStatefulWidget {
@@ -77,7 +102,9 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final token = await ref.read(anilistTokenProvider.future);
-      final data = await graphql.fetchForumThread(widget.threadId, token: token);
+        final data = await graphql
+          .fetchForumThread(widget.threadId, token: token)
+          .timeout(const Duration(seconds: 30));
       if (!mounted) return;
       final comments =
           (data?['comments'] as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -92,11 +119,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
             _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
             _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
           }
-          final children = (c['childComments'] as List?)
-                  ?.whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e))
-                  .toList() ??
-              [];
+          final children = _parseChildComments(c['childComments']);
           for (final child in children) {
             final childId = child['id'] as int?;
             if (childId != null) {
@@ -541,11 +564,7 @@ class _CommentTileState extends State<_CommentTile> {
     final createdAt = widget.comment['createdAt'] as int?;
     final commentId = widget.comment['id'] as int?;
     final isLocked = widget.comment['isLocked'] as bool? ?? false;
-    final children = (widget.comment['childComments'] as List?)
-            ?.whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList() ??
-        [];
+    final children = _parseChildComments(widget.comment['childComments']);
     final hasChildren = children.isNotEmpty;
 
     return GlassCard(

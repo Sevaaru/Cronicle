@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -230,5 +233,68 @@ class HideTextActivities extends _$HideTextActivities {
     final next = !state;
     await prefs.setBool(_key, next);
     state = next;
+  }
+}
+
+enum ProfileAvatarSource {
+  local('local'),
+  anilist('anilist'),
+  trakt('trakt');
+
+  const ProfileAvatarSource(this.id);
+  final String id;
+
+  static ProfileAvatarSource fromId(String? id) {
+    return switch (id) {
+      'local' => ProfileAvatarSource.local,
+      'trakt' => ProfileAvatarSource.trakt,
+      _ => ProfileAvatarSource.anilist,
+    };
+  }
+}
+
+@riverpod
+class ProfileAvatarSourceSetting extends _$ProfileAvatarSourceSetting {
+  static const _key = 'profile_avatar_source';
+
+  @override
+  ProfileAvatarSource build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return ProfileAvatarSource.fromId(prefs.getString(_key));
+  }
+
+  Future<void> set(ProfileAvatarSource source) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, source.id);
+    state = source;
+  }
+}
+
+@riverpod
+class LocalProfileAvatar extends _$LocalProfileAvatar {
+  static const _key = 'profile_avatar_local_b64';
+
+  @override
+  Uint8List? build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final raw = prefs.getString(_key);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return base64Decode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setBytes(Uint8List bytes) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_key, base64Encode(bytes));
+    state = bytes;
+  }
+
+  Future<void> clear() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.remove(_key);
+    state = null;
   }
 }

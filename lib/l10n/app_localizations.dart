@@ -206,6 +206,48 @@ abstract class AppLocalizations {
   /// **'Cronicle está creada por Sevaaru.'**
   String get settingsAboutCreator;
 
+  /// No description provided for @settingsWearTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj (Wear OS)'**
+  String get settingsWearTitle;
+
+  /// No description provided for @settingsWearConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj conectado'**
+  String get settingsWearConnected;
+
+  /// No description provided for @settingsWearCompanionInstalled.
+  ///
+  /// In es, this message translates to:
+  /// **'App companion instalada'**
+  String get settingsWearCompanionInstalled;
+
+  /// No description provided for @settingsWearNoCompanion.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay un reloj emparejado pero la app companion no está instalada.'**
+  String get settingsWearNoCompanion;
+
+  /// No description provided for @settingsWearNoWatch.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Tienes un reloj Wear OS? Instala la app companion de Cronicle para ver y actualizar tu progreso desde la muñeca.'**
+  String get settingsWearNoWatch;
+
+  /// No description provided for @settingsWearOpenPlayStore.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir Google Play'**
+  String get settingsWearOpenPlayStore;
+
+  /// No description provided for @settingsWearRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprobar de nuevo'**
+  String get settingsWearRefresh;
+
   /// No description provided for @themeMode.
   ///
   /// In es, this message translates to:

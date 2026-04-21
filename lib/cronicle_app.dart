@@ -9,6 +9,7 @@ import 'package:cronicle/core/notifications/notification_lifecycle_sync.dart';
 import 'package:cronicle/core/notifications/notification_permission_bootstrap.dart';
 import 'package:cronicle/core/router/app_router.dart';
 import 'package:cronicle/core/theme/app_theme.dart';
+import 'package:cronicle/core/wear/wear_event_listener.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -53,6 +54,9 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
   @override
   void initState() {
     super.initState();
+    // Eagerly initialise the wear-event listener so the foreground app
+    // refetches the library when the watch mutates the database.
+    ref.read(wearEventListenerProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       CronicleLocalNotifications.consumePendingLaunchRoute(

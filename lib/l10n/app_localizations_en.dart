@@ -65,6 +65,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAboutCreator => 'Cronicle is created by Sevaaru.';
 
   @override
+  String get settingsWearTitle => 'Watch (Wear OS)';
+
+  @override
+  String get settingsWearConnected => 'Watch connected';
+
+  @override
+  String get settingsWearCompanionInstalled => 'Companion app installed';
+
+  @override
+  String get settingsWearNoCompanion =>
+      'A watch is paired but the Cronicle companion app isn\'t installed on it.';
+
+  @override
+  String get settingsWearNoWatch =>
+      'Got a Wear OS watch? Install the Cronicle companion app to view and update your progress from your wrist.';
+
+  @override
+  String get settingsWearOpenPlayStore => 'Open Google Play';
+
+  @override
+  String get settingsWearRefresh => 'Check again';
+
+  @override
   String get themeMode => 'Theme';
 
   @override

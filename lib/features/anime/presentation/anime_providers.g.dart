@@ -859,7 +859,7 @@ final anilistUnreadNotificationCountProvider =
 // ignore: unused_element
 typedef AnilistUnreadNotificationCountRef = AutoDisposeFutureProviderRef<int>;
 String _$anilistNotificationsListHash() =>
-    r'6b1ba8f56841a07785f91c44bacf28011bd215b2';
+    r'3a11f7d4b7fb503f5447a2447f0474e065ef3d84';
 
 /// First page of Anilist notifications; [resetNotificationCount] clears unread on Anilist.
 ///
@@ -880,7 +880,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'a4a92ca102a7771ce6377956d87e00c299a0d856';
+String _$anilistTokenHash() => r'126b7eaa4ef994eb596983dfcbea9e6377d39593';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)
@@ -897,7 +897,7 @@ final anilistTokenProvider =
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
 String _$anilistBrowseMediaHash() =>
-    r'106e55779cd632b571dd364038ab5f7ca604caad';
+    r'a9eaa53a209dc6798351219a108da239f1efb41f';
 
 abstract class _$AnilistBrowseMedia
     extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {
@@ -1079,7 +1079,7 @@ class _AnilistBrowseMediaProviderElement
   String get category => (origin as AnilistBrowseMediaProvider).category;
 }
 
-String _$anilistFeedHash() => r'a8c3e289db092b15bb49b8116d5135ff3695b381';
+String _$anilistFeedHash() => r'b7d0d6ae41d8235c4b5b63750c8127077cec6f3a';
 
 /// See also [AnilistFeed].
 @ProviderFor(AnilistFeed)
@@ -1095,7 +1095,7 @@ final anilistFeedProvider =
     );
 
 typedef _$AnilistFeed = AutoDisposeAsyncNotifier<List<FeedActivity>>;
-String _$anilistFeedByTypeHash() => r'7e5640fd3b35f3c38f878c76331b629c158c907f';
+String _$anilistFeedByTypeHash() => r'0e642abd67655c47e5e2b27257c25fcdd4371bcd';
 
 abstract class _$AnilistFeedByType
     extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
@@ -1240,7 +1240,7 @@ class _AnilistFeedByTypeProviderElement
 }
 
 String _$anilistFeedFollowingHash() =>
-    r'a28c31d1d06ba0414b12ec5998b40a958b101657';
+    r'1c5b4764f0ef70d9773d2329d1b9b3416a6e0126';
 
 /// See also [AnilistFeedFollowing].
 @ProviderFor(AnilistFeedFollowing)
@@ -1259,7 +1259,7 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AutoDisposeAsyncNotifier<List<FeedActivity>>;
-String _$anilistSocialFeedHash() => r'2dcf2d6b32cc775e801a49f44c1361b92f8a26aa';
+String _$anilistSocialFeedHash() => r'00144d85d0980cf283b8e2d8b8f4df339a89d0ac';
 
 abstract class _$AnilistSocialFeed
     extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
@@ -1421,7 +1421,7 @@ class _AnilistSocialFeedProviderElement
 }
 
 String _$anilistGenreTagBrowseHash() =>
-    r'852d6d158b5f3fa26afeba8af4ca8474cd730902';
+    r'c6669feb9fc5fa9154fd62b7dda0281580788269';
 
 abstract class _$AnilistGenreTagBrowse
     extends BuildlessAutoDisposeAsyncNotifier<List<Map<String, dynamic>>> {
@@ -1650,7 +1650,7 @@ class _AnilistGenreTagBrowseProviderElement
 }
 
 String _$favoriteAnilistMediaHash() =>
-    r'8734ea0fcf597e35dbbfd70c040f8e6913b735ec';
+    r'cf7a2beb54344775fa98163f39a9c759c1cc6d8f';
 
 /// See also [FavoriteAnilistMedia].
 @ProviderFor(FavoriteAnilistMedia)

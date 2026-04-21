@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -11,6 +11,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/backup/app_backup_bundle.dart';
@@ -22,6 +23,7 @@ import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
+import 'package:cronicle/core/wear/wear_connection_status_provider.dart';
 import 'package:cronicle/features/anime/presentation/anilist_connect_flow.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
@@ -84,6 +86,11 @@ class SettingsPage extends ConsumerWidget {
           else
             const _DeviceNotificationsSection(),
           const SizedBox(height: 12),
+
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+            const _WearOsSection(),
+            const SizedBox(height: 12),
+          ],
 
           _AccountsSection(googleSignIn: googleSignIn),
           const SizedBox(height: 12),
@@ -1783,6 +1790,130 @@ class _InterestsQuickEditor extends ConsumerWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+class _WearOsSection extends ConsumerWidget {
+  const _WearOsSection();
+
+  static const _packageId = 'com.cronicle.app.cronicle';
+
+  Future<void> _openPlayStore() async {
+    final marketUri = Uri.parse('market://details?id=$_packageId');
+    if (await canLaunchUrl(marketUri)) {
+      await launchUrl(marketUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    final webUri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=$_packageId',
+    );
+    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final statusAsync = ref.watch(wearConnectionStatusProvider);
+
+    final status = statusAsync.maybeWhen(
+      data: (s) => s,
+      orElse: () => WearConnectionStatus.unknown,
+    );
+    final loading = statusAsync.isLoading;
+
+    final IconData leadingIcon;
+    final Color leadingColor;
+    final String headline;
+    final String body;
+    final bool showInstallCta;
+    if (status.companionInstalled) {
+      leadingIcon = Icons.watch_rounded;
+      leadingColor = cs.primary;
+      headline = l10n.settingsWearConnected;
+      body = l10n.settingsWearCompanionInstalled;
+      showInstallCta = false;
+    } else if (status.anyNodeConnected) {
+      leadingIcon = Icons.watch_outlined;
+      leadingColor = cs.tertiary;
+      headline = l10n.settingsWearTitle;
+      body = l10n.settingsWearNoCompanion;
+      showInstallCta = true;
+    } else {
+      leadingIcon = Icons.watch_off_outlined;
+      leadingColor = cs.onSurfaceVariant;
+      headline = l10n.settingsWearTitle;
+      body = l10n.settingsWearNoWatch;
+      showInstallCta = true;
+    }
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: leadingColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(leadingIcon, size: 20, color: leadingColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      headline,
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      body,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.settingsWearRefresh,
+                onPressed: loading
+                    ? null
+                    : () => ref.invalidate(wearConnectionStatusProvider),
+                icon: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 20),
+              ),
+            ],
+          ),
+          if (showInstallCta) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _openPlayStore,
+                icon: const Icon(Icons.shop_rounded, size: 18),
+                label: Text(l10n.settingsWearOpenPlayStore),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

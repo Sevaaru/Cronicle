@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
+import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
@@ -166,6 +167,21 @@ class _RandomPickCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
+    // Warm up all-time / cross-era pools so the random pick isn't biased
+    // toward "newest only". These providers aren't keepAlive on their own,
+    // so watching them here keeps them loaded while Discover is on screen.
+    if (visible.contains('anime')) {
+      ref.watch(anilistBrowseMediaProvider('ANIME', 'top_rated'));
+      ref.watch(anilistBrowseMediaProvider('ANIME', 'popularity'));
+    }
+    if (visible.contains('manga')) {
+      ref.watch(anilistBrowseMediaProvider('MANGA', 'top_rated'));
+      ref.watch(anilistBrowseMediaProvider('MANGA', 'popularity'));
+    }
+    if (visible.contains('game')) {
+      ref.watch(igdbGamesSectionListProvider(GamesFeedSection.bestRated));
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Card(
@@ -236,11 +252,19 @@ class _RandomPickCard extends ConsumerWidget {
     // ── Anime ────────────────────────────────────────────────
     if (visible.contains('anime')) {
       addAsync(MediaKind.anime, ref.read(anilistPopularProvider('ANIME')));
+      addAsync(MediaKind.anime,
+          ref.read(anilistBrowseMediaProvider('ANIME', 'top_rated')));
+      addAsync(MediaKind.anime,
+          ref.read(anilistBrowseMediaProvider('ANIME', 'popularity')));
     }
 
     // ── Manga ────────────────────────────────────────────────
     if (visible.contains('manga')) {
       addAsync(MediaKind.manga, ref.read(anilistPopularProvider('MANGA')));
+      addAsync(MediaKind.manga,
+          ref.read(anilistBrowseMediaProvider('MANGA', 'top_rated')));
+      addAsync(MediaKind.manga,
+          ref.read(anilistBrowseMediaProvider('MANGA', 'popularity')));
     }
 
     // ── Movies (trending + anticipated + popular) ────────────
@@ -266,6 +290,10 @@ class _RandomPickCard extends ConsumerWidget {
     // ── Games (popular + every genre rail from the home feed) ─
     if (visible.contains('game')) {
       addAsync(MediaKind.game, ref.read(igdbPopularProvider));
+      // Best rated all-time (80 items, broader than the home rail)
+      addAsync(
+          MediaKind.game,
+          ref.read(igdbGamesSectionListProvider(GamesFeedSection.bestRated)));
       final feed = ref.read(igdbGamesHomeFeedProvider).valueOrNull;
       if (feed != null) {
         addAll(MediaKind.game, feed.anticipated);

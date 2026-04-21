@@ -26,6 +26,13 @@
     }
   },
   "settingsAboutCreator": "Cronicle está creada por Sevaaru.",
+  "settingsWearTitle": "Reloj (Wear OS)",
+  "settingsWearConnected": "Reloj conectado",
+  "settingsWearCompanionInstalled": "App companion instalada",
+  "settingsWearNoCompanion": "Hay un reloj emparejado pero la app companion no está instalada.",
+  "settingsWearNoWatch": "¿Tienes un reloj Wear OS? Instala la app companion de Cronicle para ver y actualizar tu progreso desde la muñeca.",
+  "settingsWearOpenPlayStore": "Abrir Google Play",
+  "settingsWearRefresh": "Comprobar de nuevo",
   "themeMode": "Tema",
   "themeSystem": "Sistema",
   "themeLight": "Claro",

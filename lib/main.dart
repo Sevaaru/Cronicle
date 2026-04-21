@@ -17,6 +17,11 @@ import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/cronicle_app.dart';
+// Imported solely so that `wearSyncMain` (the Wear OS background entrypoint)
+// is included in the Dart kernel bundle. Otherwise the `@pragma('vm:entry-point')`
+// has nothing to protect — the file would never be compiled.
+// ignore: unused_import
+import 'package:cronicle/wear_sync_entry.dart';
 
 String? _trimOrNull(String value) {
   final t = value.trim();

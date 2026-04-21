@@ -28,6 +28,8 @@ if (keystorePropertiesFile.exists()) {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Wearable Data Layer — used by `WearLibraryListenerService` to talk to the watch app.
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
 }
 
 android {
@@ -80,6 +82,14 @@ android {
                 } else {
                     signingConfigs.getByName("debug")
                 }
+        }
+        debug {
+            // Firmar también debug con la Upload Key cuando esté disponible,
+            // para que el módulo Wear OS (que se firma siempre con release)
+            // pueda hablar con la app del móvil sin "Mismatched certificate".
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

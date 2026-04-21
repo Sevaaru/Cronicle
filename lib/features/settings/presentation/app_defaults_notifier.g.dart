@@ -126,5 +126,42 @@ final hideTextActivitiesProvider =
     );
 
 typedef _$HideTextActivities = AutoDisposeNotifier<bool>;
+String _$profileAvatarSourceSettingHash() =>
+    r'38c5c4125d81c14f2d197ccff4d75c86cecf1a52';
+
+/// See also [ProfileAvatarSourceSetting].
+@ProviderFor(ProfileAvatarSourceSetting)
+final profileAvatarSourceSettingProvider =
+    AutoDisposeNotifierProvider<
+      ProfileAvatarSourceSetting,
+      ProfileAvatarSource
+    >.internal(
+      ProfileAvatarSourceSetting.new,
+      name: r'profileAvatarSourceSettingProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$profileAvatarSourceSettingHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$ProfileAvatarSourceSetting = AutoDisposeNotifier<ProfileAvatarSource>;
+String _$localProfileAvatarHash() =>
+    r'8b98163a401b18fd0b92a7d8e5a398373b5dd11a';
+
+/// See also [LocalProfileAvatar].
+@ProviderFor(LocalProfileAvatar)
+final localProfileAvatarProvider =
+    AutoDisposeNotifierProvider<LocalProfileAvatar, Uint8List?>.internal(
+      LocalProfileAvatar.new,
+      name: r'localProfileAvatarProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$localProfileAvatarHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$LocalProfileAvatar = AutoDisposeNotifier<Uint8List?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

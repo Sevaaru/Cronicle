@@ -912,8 +912,9 @@ limit 15;
   Future<Map<String, List<Map<String, dynamic>>>> _postMultiquery(
       String body) async {
     if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
-    final options = await _headers();
+    var options = await _headers();
 
+    // attempt 0 = normal, attempt 1 = retry tras 401/429
     for (var attempt = 0; attempt < 2; attempt++) {
       final res = await _dio.post<dynamic>(
         '$_baseUrl/multiquery',
@@ -926,6 +927,12 @@ limit 15;
       );
 
       final code = res.statusCode ?? 0;
+
+      if (code == 401 && attempt == 0) {
+        await _auth.refreshTokenAfterUnauthorized();
+        options = await _headers();
+        continue;
+      }
 
       if (code == 429 && attempt == 0) {
         await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -1050,9 +1057,9 @@ query games "sports" {
     if (_blockWebWithoutProxy) {
       throw const IgdbWebUnsupportedException();
     }
-    final options = await _headers();
+    var options = await _headers();
 
-    // Up to 2 attempts: retry once on 429 with backoff.
+    // Up to 2 attempts: retry once on 401/429.
     for (var attempt = 0; attempt < 2; attempt++) {
       final res = await _dio.post<dynamic>(
         '$_baseUrl$endpoint',
@@ -1065,6 +1072,12 @@ query games "sports" {
       );
 
       final code = res.statusCode ?? 0;
+
+      if (code == 401 && attempt == 0) {
+        await _auth.refreshTokenAfterUnauthorized();
+        options = await _headers();
+        continue;
+      }
 
       // Rate-limited: wait and retry once.
       if (code == 429 && attempt == 0) {

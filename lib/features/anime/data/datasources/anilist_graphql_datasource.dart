@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 
 import 'package:cronicle/core/utils/json_int.dart';
@@ -42,6 +45,39 @@ class AnilistGraphqlDatasource {
     return lines.isNotEmpty ? lines.join('\n') : 'GraphQL error';
   }
 
+  int _retryDelaySeconds(Response<dynamic>? response, int attempt) {
+    final retryAfter = int.tryParse(response?.headers.value('retry-after') ?? '');
+    if (retryAfter != null && retryAfter > 0) {
+      return retryAfter.clamp(1, 60);
+    }
+    final exponential = 1 << attempt;
+    final jitter = Random().nextInt(2);
+    return (exponential + jitter).clamp(1, 60);
+  }
+
+  List<Map<String, dynamic>> _normalizeThreadChildComments(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      } catch (_) {
+        return const [];
+      }
+    }
+    return const [];
+  }
+
   Future<Map<String, dynamic>> _post(
     String query, {
     Map<String, dynamic>? variables,
@@ -68,9 +104,7 @@ class AnilistGraphqlDatasource {
         );
         // Retry on 429 Too Many Requests
         if (res.statusCode == 429 && attempt < maxAttempts) {
-          final retryAfter = int.tryParse(
-                  res.headers.value('retry-after') ?? '') ??
-              (attempt * 2);
+          final retryAfter = _retryDelaySeconds(res, attempt);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -83,9 +117,7 @@ class AnilistGraphqlDatasource {
       } on DioException catch (e) {
         // Retry on 429 from DioException too
         if (e.response?.statusCode == 429 && attempt < maxAttempts) {
-          final retryAfter = int.tryParse(
-                  e.response?.headers.value('retry-after') ?? '') ??
-              (attempt * 2);
+          final retryAfter = _retryDelaySeconds(e.response, attempt);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -1754,9 +1786,16 @@ class AnilistGraphqlDatasource {
     final data = await _post(query, variables: {'id': threadId, 'perPage': 25}, token: token);
     final thread = data['data']?['Thread'] as Map<String, dynamic>?;
     if (thread == null) return null;
-    final comments = (data['data']?['Page']?['threadComments'] as List?)
-            ?.cast<Map<String, dynamic>>() ??
-        [];
+    final commentsRaw = (data['data']?['Page']?['threadComments'] as List?)
+        ?.cast<Map<String, dynamic>>() ??
+      [];
+    final comments = commentsRaw
+      .map((c) {
+        final mapped = Map<String, dynamic>.from(c);
+        mapped['childComments'] = _normalizeThreadChildComments(c['childComments']);
+        return mapped;
+      })
+      .toList();
     return {...thread, 'comments': comments};
   }
 
@@ -1827,11 +1866,27 @@ class AnilistGraphqlDatasource {
   Future<Map<String, List<Map<String, dynamic>>>> fetchForumFeed({
     int? categoryId,
   }) async {
+    Future<List<Map<String, dynamic>>> safeFetch({
+      int? cat,
+      required String sort,
+      required int perPage,
+    }) async {
+      try {
+        return await fetchForumThreads(
+          categoryId: cat,
+          sort: sort,
+          perPage: perPage,
+        );
+      } catch (_) {
+        return [];
+      }
+    }
+
     final results = await Future.wait([
-      fetchForumThreads(categoryId: categoryId, sort: 'IS_STICKY', perPage: 10),
-      fetchForumThreads(categoryId: categoryId, sort: 'REPLIED_AT_DESC', perPage: 8),
-      fetchForumThreads(categoryId: categoryId, sort: 'CREATED_AT_DESC', perPage: 8),
-      fetchForumThreads(categoryId: 5, sort: 'REPLIED_AT_DESC', perPage: 8),
+      safeFetch(cat: categoryId, sort: 'IS_STICKY', perPage: 10),
+      safeFetch(cat: categoryId, sort: 'REPLIED_AT_DESC', perPage: 8),
+      safeFetch(cat: categoryId, sort: 'CREATED_AT_DESC', perPage: 8),
+      safeFetch(cat: 5, sort: 'REPLIED_AT_DESC', perPage: 8),
     ]);
     return {
       'sticky': results[0].where((t) => t['isSticky'] == true).toList(),

@@ -67,6 +67,32 @@ class IgdbAuthDatasource {
     return token;
   }
 
+  /// Fuerza rotación de token tras un 401 de IGDB.
+  ///
+  /// Estrategia:
+  /// 1) si hay sesión de usuario, intenta refresh OAuth aunque el token no haya
+  ///    expirado localmente (puede estar revocado en servidor);
+  /// 2) si falla, elimina sesión de usuario y cae a token de app;
+  /// 3) en último caso renueva client_credentials.
+  Future<String> refreshTokenAfterUnauthorized() async {
+    _clearTokenMemory();
+    _tokenInFlight = null;
+
+    if (await hasUserSession()) {
+      final refreshedUser = await _tryRefreshUserToken();
+      if (refreshedUser != null && refreshedUser.isNotEmpty) {
+        _memToken = refreshedUser;
+        _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
+        return refreshedUser;
+      }
+    }
+
+    final freshApp = await _refreshAppToken();
+    _memToken = freshApp;
+    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
+    return freshApp;
+  }
+
   Future<String> _resolveTokenUncached() async {
     final user = await _getValidUserAccessToken();
     if (user != null) return user;

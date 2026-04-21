@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+  show kIsWeb, defaultTargetPlatform, TargetPlatform, debugPrint;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -53,6 +53,7 @@ class AnilistToken extends _$AnilistToken {
       }
     } catch (_) {}
     state = AsyncData(token);
+    _invalidateSessionScopedProviders();
     unawaited(
       ref
           .read(favoriteAnilistMediaProvider.notifier)
@@ -63,6 +64,19 @@ class AnilistToken extends _$AnilistToken {
   Future<void> clearToken() async {
     await ref.read(anilistAuthProvider).deleteToken();
     state = const AsyncData(null);
+    _invalidateSessionScopedProviders();
+  }
+
+  void _invalidateSessionScopedProviders() {
+    ref.invalidate(anilistProfileProvider);
+    ref.invalidate(anilistMediaDetailProvider);
+    ref.invalidate(anilistForumThreadProvider);
+    ref.invalidate(anilistFeedProvider);
+    ref.invalidate(anilistFeedFollowingProvider);
+    ref.invalidate(anilistFeedByTypeProvider);
+    ref.invalidate(anilistSocialFeedProvider);
+    ref.invalidate(anilistUnreadNotificationCountProvider);
+    ref.invalidate(anilistNotificationsListProvider);
   }
 
   /// OAuth implícito vía HTTPS puente + `cronicle://anilist-oauth` (Android/iOS, navegador externo).
@@ -164,11 +178,13 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   bool get hasMore => _hasMore;
 
   @override
   Future<List<Map<String, dynamic>>> build(String type, String category) async {
+    _generation++;
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
@@ -186,6 +202,7 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     final graphql = ref.read(anilistGraphqlProvider);
@@ -196,6 +213,7 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
         page: _page,
         perPage: _perPage,
       );
+      if (generation != _generation) return;
       _hasMore = page.hasNextPage;
       final seen = prev.map((m) => (m['id'] as num).toInt()).toSet();
       final appended = [
@@ -203,8 +221,11 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
         ...page.items.where((m) => !seen.contains((m['id'] as num).toInt())),
       ];
       state = AsyncData(appended);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] Browse loadMore failed ($type/$category): $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -279,11 +300,13 @@ class AnilistFeed extends _$AnilistFeed {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   bool get hasMore => _hasMore;
 
   @override
   Future<List<FeedActivity>> build() async {
+    _generation++;
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
@@ -311,10 +334,12 @@ class AnilistFeed extends _$AnilistFeed {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
+      if (generation != _generation) return;
       final byId = <String, FeedActivity>{
         for (final a in prev) a.id: a,
         for (final a in next) a.id: a,
@@ -322,8 +347,11 @@ class AnilistFeed extends _$AnilistFeed {
       final merged = byId.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = AsyncData(merged);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] Feed loadMore failed: $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -345,11 +373,13 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   bool get hasMore => _hasMore;
 
   @override
   Future<List<FeedActivity>> build(String activityType) async {
+    _generation++;
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
@@ -375,13 +405,18 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
+      if (generation != _generation) return;
       state = AsyncData([...prev, ...next]);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] FeedByType loadMore failed ($activityType): $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -403,11 +438,13 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   bool get hasMore => _hasMore;
 
   @override
   Future<List<FeedActivity>> build() async {
+    _generation++;
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
@@ -440,10 +477,12 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
+      if (generation != _generation) return;
       final byId = <String, FeedActivity>{
         for (final a in prev) a.id: a,
         for (final a in next) a.id: a,
@@ -451,8 +490,11 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
       final merged = byId.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = AsyncData(merged);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] Following feed loadMore failed: $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -474,6 +516,7 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   bool get hasMore => _hasMore;
 
@@ -482,9 +525,7 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     String? activityType,
     bool isFollowing,
   ) async {
-    if (isFollowing) {
-      ref.watch(anilistTokenProvider);
-    }
+    _generation++;
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
@@ -517,10 +558,12 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     try {
       final next = await _fetchPage();
+      if (generation != _generation) return;
       final byId = <String, FeedActivity>{
         for (final a in prev) a.id: a,
         for (final a in next) a.id: a,
@@ -528,8 +571,11 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
       final merged = byId.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = AsyncData(merged);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] Social feed loadMore failed: $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -552,6 +598,7 @@ class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  int _generation = 0;
 
   late String _mediaType;
   late String _sortKey;
@@ -567,6 +614,7 @@ class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
     String genrePart,
     String tagPart,
   ) async {
+    _generation++;
     _mediaType = mediaType;
     _sortKey = sortKey;
     _genre = genrePart.isEmpty ? null : genrePart;
@@ -590,6 +638,7 @@ class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];
     final graphql = ref.read(anilistGraphqlProvider);
@@ -602,6 +651,7 @@ class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
         page: _page,
         perPage: _perPage,
       );
+      if (generation != _generation) return;
       if (!page.hasNextPage) _hasMore = false;
       if (page.items.isEmpty) _hasMore = false;
       final seen = prev.map((m) => m['id'] as int).toSet();
@@ -610,8 +660,11 @@ class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
         ...page.items.where((m) => !seen.contains(m['id'] as int)),
       ];
       state = AsyncData(appended);
-    } catch (_) {
+    } catch (e) {
       _page--;
+      _hasMore = false;
+      state = AsyncData(prev);
+      debugPrint('[AniList] Genre/Tag browse loadMore failed: $e');
     } finally {
       _isLoadingMore = false;
     }
@@ -681,6 +734,7 @@ Future<List<Map<String, dynamic>>> anilistNotificationsList(
     perPage: 30,
     resetNotificationCount: true,
   );
+  await Future<void>.delayed(const Duration(milliseconds: 250));
   ref.invalidate(anilistUnreadNotificationCountProvider);
   return list;
 }
@@ -725,15 +779,25 @@ List<Map<String, dynamic>> mergeAnilistFavoriteApiNodesWithLocal({
   required List<Map<String, dynamic>> localSnapshots,
   required String mediaTypeUpper,
 }) {
+  int? parseId(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
   final want = mediaTypeUpper.toUpperCase();
   final out = <Map<String, dynamic>>[
     ...apiNodes.map((e) => Map<String, dynamic>.from(e as Map)),
   ];
-  final seen = out.map((m) => m['id']).whereType<int>().toSet();
+  final seen = out
+      .map((m) => parseId(m['id']))
+      .whereType<int>()
+      .toSet();
   for (final loc in localSnapshots) {
     final t = (loc['type'] as String? ?? 'ANIME').toUpperCase();
     if (t != want) continue;
-    final id = (loc['id'] as num?)?.toInt();
+    final id = parseId(loc['id']);
     if (id == null || id <= 0 || seen.contains(id)) continue;
     out.add(Map<String, dynamic>.from(loc));
     seen.add(id);
@@ -743,6 +807,8 @@ List<Map<String, dynamic>> mergeAnilistFavoriteApiNodesWithLocal({
 
 @Riverpod(keepAlive: true)
 class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
+  Future<void>? _pushInFlight;
+
   @override
   List<Map<String, dynamic>> build() {
     final prefs = ref.watch(sharedPreferencesProvider);
@@ -796,6 +862,20 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
 
   /// Tras iniciar sesión: favoritos locales que no estén en Anilist se envían con [ToggleFavourite].
   Future<void> pushPendingFavoritesToAnilist(String token) async {
+    if (_pushInFlight != null) {
+      await _pushInFlight;
+      return;
+    }
+
+    _pushInFlight = _pushPendingFavoritesToAnilist(token);
+    try {
+      await _pushInFlight;
+    } finally {
+      _pushInFlight = null;
+    }
+  }
+
+  Future<void> _pushPendingFavoritesToAnilist(String token) async {
     final graphql = ref.read(anilistGraphqlProvider);
     final pending = List<Map<String, dynamic>>.from(state);
     if (pending.isEmpty) return;
@@ -817,7 +897,8 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
         }
         await removeFavorite(id, type);
         touchedIds.add(id);
-      } catch (_) {
+      } catch (e) {
+        debugPrint('[AniList] Favorite sync failed for $id/$type: $e');
         // Mantener en local para reintentar más tarde.
       }
     }
