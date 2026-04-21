@@ -15,6 +15,9 @@ import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
+import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
+import 'package:cronicle/features/trakt/data/datasources/trakt_api_datasource.dart';
+import 'package:cronicle/features/trakt/data/datasources/trakt_auth_datasource.dart';
 
 String? _trimOrNull(String value) {
   final t = value.trim();
@@ -66,19 +69,27 @@ Future<bool> runGoogleDriveAutoBackupTask() async {
 
     final db = AppDatabase();
     const secure = FlutterSecureStorage();
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+      ),
+    );
     try {
-      final graphql = AnilistGraphqlDatasource(
-        Dio(
-          BaseOptions(
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 15),
-          ),
-        ),
-      );
+      final graphql = AnilistGraphqlDatasource(dio);
       await mergeAnilistLibraryIntoLocalIfSignedIn(
         graphql: graphql,
         db: db,
         auth: AnilistAuthDatasource(secure),
+      );
+    } catch (_) {}
+    try {
+      final traktAuth = TraktAuthDatasource(secure, dio);
+      final traktApi = TraktApiDatasource(dio);
+      await mergeTraktLibraryIntoLocalIfSignedIn(
+        api: traktApi,
+        db: db,
+        getValidAccessToken: () => traktAuth.getValidAccessToken(),
       );
     } catch (_) {}
     final payload = await AppBackupBundle.build(

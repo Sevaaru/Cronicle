@@ -3,6 +3,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 
+String _twitchTokenUrl() => EnvConfig.twitchOAuthTokenUrl;
+
+String _twitchHelixUsersUrl() => EnvConfig.twitchHelixUsersUrl;
+
 /// Tokens para IGDB vía Twitch.
 ///
 /// - **App (client_credentials)**: token de aplicación guardado en `igdb_access_token` (comportamiento previo).
@@ -32,8 +36,6 @@ class IgdbAuthDatasource {
   static const _userExpiresKey = 'twitch_user_token_expires_ms';
   static const _userLoginKey = 'twitch_user_login';
 
-  static const _tokenUrl = 'https://id.twitch.tv/oauth2/token';
-  static const _helixUsersUrl = 'https://api.twitch.tv/helix/users';
 
   String get clientId => EnvConfig.twitchClientId;
 
@@ -61,8 +63,34 @@ class IgdbAuthDatasource {
     final token = await _tokenInFlight!;
     _memToken = token;
     // TTL conservador en memoria; el token real suele durar mucho más.
-    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 120_000;
+    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
     return token;
+  }
+
+  /// Fuerza rotación de token tras un 401 de IGDB.
+  ///
+  /// Estrategia:
+  /// 1) si hay sesión de usuario, intenta refresh OAuth aunque el token no haya
+  ///    expirado localmente (puede estar revocado en servidor);
+  /// 2) si falla, elimina sesión de usuario y cae a token de app;
+  /// 3) en último caso renueva client_credentials.
+  Future<String> refreshTokenAfterUnauthorized() async {
+    _clearTokenMemory();
+    _tokenInFlight = null;
+
+    if (await hasUserSession()) {
+      final refreshedUser = await _tryRefreshUserToken();
+      if (refreshedUser != null && refreshedUser.isNotEmpty) {
+        _memToken = refreshedUser;
+        _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
+        return refreshedUser;
+      }
+    }
+
+    final freshApp = await _refreshAppToken();
+    _memToken = freshApp;
+    _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
+    return freshApp;
   }
 
   Future<String> _resolveTokenUncached() async {
@@ -101,7 +129,7 @@ class IgdbAuthDatasource {
     }
     try {
       final res = await _dio.post<Map<String, dynamic>>(
-        _tokenUrl,
+        _twitchTokenUrl(),
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
           validateStatus: (_) => true,
@@ -141,7 +169,7 @@ class IgdbAuthDatasource {
       throw StateError('TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET no configurados');
     }
     final res = await _dio.post<Map<String, dynamic>>(
-      _tokenUrl,
+      _twitchTokenUrl(),
       queryParameters: {
         'client_id': EnvConfig.twitchClientId,
         'client_secret': EnvConfig.twitchClientSecret,
@@ -169,7 +197,7 @@ class IgdbAuthDatasource {
     }
     final redirect = EnvConfig.twitchRedirectUri;
     final res = await _dio.post<Map<String, dynamic>>(
-      _tokenUrl,
+      _twitchTokenUrl(),
       options: Options(
         contentType: Headers.formUrlEncodedContentType,
         validateStatus: (_) => true,
@@ -212,7 +240,7 @@ class IgdbAuthDatasource {
   Future<String?> _fetchHelixLogin(String userAccess) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
-        _helixUsersUrl,
+        _twitchHelixUsersUrl(),
         options: Options(
           headers: {
             'Client-ID': EnvConfig.twitchClientId,

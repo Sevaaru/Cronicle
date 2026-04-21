@@ -360,6 +360,123 @@ class $LibraryEntriesTable extends LibraryEntries
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _editionKeyMeta = const VerificationMeta(
+    'editionKey',
+  );
+  @override
+  late final GeneratedColumn<String> editionKey = GeneratedColumn<String>(
+    'edition_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isbnMeta = const VerificationMeta('isbn');
+  @override
+  late final GeneratedColumn<String> isbn = GeneratedColumn<String>(
+    'isbn',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalPagesFromApiMeta = const VerificationMeta(
+    'totalPagesFromApi',
+  );
+  @override
+  late final GeneratedColumn<int> totalPagesFromApi = GeneratedColumn<int>(
+    'total_pages_from_api',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalChaptersFromApiMeta =
+      const VerificationMeta('totalChaptersFromApi');
+  @override
+  late final GeneratedColumn<int> totalChaptersFromApi = GeneratedColumn<int>(
+    'total_chapters_from_api',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _userTotalPagesOverrideMeta =
+      const VerificationMeta('userTotalPagesOverride');
+  @override
+  late final GeneratedColumn<int> userTotalPagesOverride = GeneratedColumn<int>(
+    'user_total_pages_override',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _userTotalChaptersOverrideMeta =
+      const VerificationMeta('userTotalChaptersOverride');
+  @override
+  late final GeneratedColumn<int> userTotalChaptersOverride =
+      GeneratedColumn<int>(
+        'user_total_chapters_override',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _currentChapterMeta = const VerificationMeta(
+    'currentChapter',
+  );
+  @override
+  late final GeneratedColumn<int> currentChapter = GeneratedColumn<int>(
+    'current_chapter',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bookTrackingModeMeta = const VerificationMeta(
+    'bookTrackingMode',
+  );
+  @override
+  late final GeneratedColumn<String> bookTrackingMode = GeneratedColumn<String>(
+    'book_tracking_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _animeMediaStatusMeta = const VerificationMeta(
+    'animeMediaStatus',
+  );
+  @override
+  late final GeneratedColumn<String> animeMediaStatus = GeneratedColumn<String>(
+    'anime_media_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _releasedEpisodesMeta = const VerificationMeta(
+    'releasedEpisodes',
+  );
+  @override
+  late final GeneratedColumn<int> releasedEpisodes = GeneratedColumn<int>(
+    'released_episodes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextEpisodeAirsAtMeta = const VerificationMeta(
+    'nextEpisodeAirsAt',
+  );
+  @override
+  late final GeneratedColumn<int> nextEpisodeAirsAt = GeneratedColumn<int>(
+    'next_episode_airs_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -384,6 +501,17 @@ class $LibraryEntriesTable extends LibraryEntries
     progress,
     totalEpisodes,
     notes,
+    editionKey,
+    isbn,
+    totalPagesFromApi,
+    totalChaptersFromApi,
+    userTotalPagesOverride,
+    userTotalChaptersOverride,
+    currentChapter,
+    bookTrackingMode,
+    animeMediaStatus,
+    releasedEpisodes,
+    nextEpisodeAirsAt,
     updatedAt,
   ];
   @override
@@ -464,6 +592,99 @@ class $LibraryEntriesTable extends LibraryEntries
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('edition_key')) {
+      context.handle(
+        _editionKeyMeta,
+        editionKey.isAcceptableOrUnknown(data['edition_key']!, _editionKeyMeta),
+      );
+    }
+    if (data.containsKey('isbn')) {
+      context.handle(
+        _isbnMeta,
+        isbn.isAcceptableOrUnknown(data['isbn']!, _isbnMeta),
+      );
+    }
+    if (data.containsKey('total_pages_from_api')) {
+      context.handle(
+        _totalPagesFromApiMeta,
+        totalPagesFromApi.isAcceptableOrUnknown(
+          data['total_pages_from_api']!,
+          _totalPagesFromApiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_chapters_from_api')) {
+      context.handle(
+        _totalChaptersFromApiMeta,
+        totalChaptersFromApi.isAcceptableOrUnknown(
+          data['total_chapters_from_api']!,
+          _totalChaptersFromApiMeta,
+        ),
+      );
+    }
+    if (data.containsKey('user_total_pages_override')) {
+      context.handle(
+        _userTotalPagesOverrideMeta,
+        userTotalPagesOverride.isAcceptableOrUnknown(
+          data['user_total_pages_override']!,
+          _userTotalPagesOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('user_total_chapters_override')) {
+      context.handle(
+        _userTotalChaptersOverrideMeta,
+        userTotalChaptersOverride.isAcceptableOrUnknown(
+          data['user_total_chapters_override']!,
+          _userTotalChaptersOverrideMeta,
+        ),
+      );
+    }
+    if (data.containsKey('current_chapter')) {
+      context.handle(
+        _currentChapterMeta,
+        currentChapter.isAcceptableOrUnknown(
+          data['current_chapter']!,
+          _currentChapterMeta,
+        ),
+      );
+    }
+    if (data.containsKey('book_tracking_mode')) {
+      context.handle(
+        _bookTrackingModeMeta,
+        bookTrackingMode.isAcceptableOrUnknown(
+          data['book_tracking_mode']!,
+          _bookTrackingModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('anime_media_status')) {
+      context.handle(
+        _animeMediaStatusMeta,
+        animeMediaStatus.isAcceptableOrUnknown(
+          data['anime_media_status']!,
+          _animeMediaStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('released_episodes')) {
+      context.handle(
+        _releasedEpisodesMeta,
+        releasedEpisodes.isAcceptableOrUnknown(
+          data['released_episodes']!,
+          _releasedEpisodesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_episode_airs_at')) {
+      context.handle(
+        _nextEpisodeAirsAtMeta,
+        nextEpisodeAirsAt.isAcceptableOrUnknown(
+          data['next_episode_airs_at']!,
+          _nextEpisodeAirsAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -523,6 +744,50 @@ class $LibraryEntriesTable extends LibraryEntries
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      editionKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}edition_key'],
+      ),
+      isbn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}isbn'],
+      ),
+      totalPagesFromApi: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_pages_from_api'],
+      ),
+      totalChaptersFromApi: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_chapters_from_api'],
+      ),
+      userTotalPagesOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_total_pages_override'],
+      ),
+      userTotalChaptersOverride: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_total_chapters_override'],
+      ),
+      currentChapter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}current_chapter'],
+      ),
+      bookTrackingMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_tracking_mode'],
+      ),
+      animeMediaStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}anime_media_status'],
+      ),
+      releasedEpisodes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}released_episodes'],
+      ),
+      nextEpisodeAirsAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_episode_airs_at'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -547,6 +812,25 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
   final int? progress;
   final int? totalEpisodes;
   final String? notes;
+  final String? editionKey;
+  final String? isbn;
+  final int? totalPagesFromApi;
+  final int? totalChaptersFromApi;
+  final int? userTotalPagesOverride;
+  final int? userTotalChaptersOverride;
+  final int? currentChapter;
+
+  /// "pages" | "percentage" | "chapters" — defaults to pages.
+  final String? bookTrackingMode;
+
+  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
+  final String? animeMediaStatus;
+
+  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
+  final int? releasedEpisodes;
+
+  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
+  final int? nextEpisodeAirsAt;
   final int updatedAt;
   const LibraryEntry({
     required this.id,
@@ -559,6 +843,17 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     this.progress,
     this.totalEpisodes,
     this.notes,
+    this.editionKey,
+    this.isbn,
+    this.totalPagesFromApi,
+    this.totalChaptersFromApi,
+    this.userTotalPagesOverride,
+    this.userTotalChaptersOverride,
+    this.currentChapter,
+    this.bookTrackingMode,
+    this.animeMediaStatus,
+    this.releasedEpisodes,
+    this.nextEpisodeAirsAt,
     required this.updatedAt,
   });
   @override
@@ -583,6 +878,41 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || editionKey != null) {
+      map['edition_key'] = Variable<String>(editionKey);
+    }
+    if (!nullToAbsent || isbn != null) {
+      map['isbn'] = Variable<String>(isbn);
+    }
+    if (!nullToAbsent || totalPagesFromApi != null) {
+      map['total_pages_from_api'] = Variable<int>(totalPagesFromApi);
+    }
+    if (!nullToAbsent || totalChaptersFromApi != null) {
+      map['total_chapters_from_api'] = Variable<int>(totalChaptersFromApi);
+    }
+    if (!nullToAbsent || userTotalPagesOverride != null) {
+      map['user_total_pages_override'] = Variable<int>(userTotalPagesOverride);
+    }
+    if (!nullToAbsent || userTotalChaptersOverride != null) {
+      map['user_total_chapters_override'] = Variable<int>(
+        userTotalChaptersOverride,
+      );
+    }
+    if (!nullToAbsent || currentChapter != null) {
+      map['current_chapter'] = Variable<int>(currentChapter);
+    }
+    if (!nullToAbsent || bookTrackingMode != null) {
+      map['book_tracking_mode'] = Variable<String>(bookTrackingMode);
+    }
+    if (!nullToAbsent || animeMediaStatus != null) {
+      map['anime_media_status'] = Variable<String>(animeMediaStatus);
+    }
+    if (!nullToAbsent || releasedEpisodes != null) {
+      map['released_episodes'] = Variable<int>(releasedEpisodes);
+    }
+    if (!nullToAbsent || nextEpisodeAirsAt != null) {
+      map['next_episode_airs_at'] = Variable<int>(nextEpisodeAirsAt);
     }
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
@@ -610,6 +940,38 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      editionKey: editionKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(editionKey),
+      isbn: isbn == null && nullToAbsent ? const Value.absent() : Value(isbn),
+      totalPagesFromApi: totalPagesFromApi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalPagesFromApi),
+      totalChaptersFromApi: totalChaptersFromApi == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalChaptersFromApi),
+      userTotalPagesOverride: userTotalPagesOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userTotalPagesOverride),
+      userTotalChaptersOverride:
+          userTotalChaptersOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userTotalChaptersOverride),
+      currentChapter: currentChapter == null && nullToAbsent
+          ? const Value.absent()
+          : Value(currentChapter),
+      bookTrackingMode: bookTrackingMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bookTrackingMode),
+      animeMediaStatus: animeMediaStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(animeMediaStatus),
+      releasedEpisodes: releasedEpisodes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(releasedEpisodes),
+      nextEpisodeAirsAt: nextEpisodeAirsAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextEpisodeAirsAt),
       updatedAt: Value(updatedAt),
     );
   }
@@ -630,6 +992,23 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       progress: serializer.fromJson<int?>(json['progress']),
       totalEpisodes: serializer.fromJson<int?>(json['totalEpisodes']),
       notes: serializer.fromJson<String?>(json['notes']),
+      editionKey: serializer.fromJson<String?>(json['editionKey']),
+      isbn: serializer.fromJson<String?>(json['isbn']),
+      totalPagesFromApi: serializer.fromJson<int?>(json['totalPagesFromApi']),
+      totalChaptersFromApi: serializer.fromJson<int?>(
+        json['totalChaptersFromApi'],
+      ),
+      userTotalPagesOverride: serializer.fromJson<int?>(
+        json['userTotalPagesOverride'],
+      ),
+      userTotalChaptersOverride: serializer.fromJson<int?>(
+        json['userTotalChaptersOverride'],
+      ),
+      currentChapter: serializer.fromJson<int?>(json['currentChapter']),
+      bookTrackingMode: serializer.fromJson<String?>(json['bookTrackingMode']),
+      animeMediaStatus: serializer.fromJson<String?>(json['animeMediaStatus']),
+      releasedEpisodes: serializer.fromJson<int?>(json['releasedEpisodes']),
+      nextEpisodeAirsAt: serializer.fromJson<int?>(json['nextEpisodeAirsAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
   }
@@ -647,6 +1026,19 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       'progress': serializer.toJson<int?>(progress),
       'totalEpisodes': serializer.toJson<int?>(totalEpisodes),
       'notes': serializer.toJson<String?>(notes),
+      'editionKey': serializer.toJson<String?>(editionKey),
+      'isbn': serializer.toJson<String?>(isbn),
+      'totalPagesFromApi': serializer.toJson<int?>(totalPagesFromApi),
+      'totalChaptersFromApi': serializer.toJson<int?>(totalChaptersFromApi),
+      'userTotalPagesOverride': serializer.toJson<int?>(userTotalPagesOverride),
+      'userTotalChaptersOverride': serializer.toJson<int?>(
+        userTotalChaptersOverride,
+      ),
+      'currentChapter': serializer.toJson<int?>(currentChapter),
+      'bookTrackingMode': serializer.toJson<String?>(bookTrackingMode),
+      'animeMediaStatus': serializer.toJson<String?>(animeMediaStatus),
+      'releasedEpisodes': serializer.toJson<int?>(releasedEpisodes),
+      'nextEpisodeAirsAt': serializer.toJson<int?>(nextEpisodeAirsAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
   }
@@ -662,6 +1054,17 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     Value<int?> progress = const Value.absent(),
     Value<int?> totalEpisodes = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> editionKey = const Value.absent(),
+    Value<String?> isbn = const Value.absent(),
+    Value<int?> totalPagesFromApi = const Value.absent(),
+    Value<int?> totalChaptersFromApi = const Value.absent(),
+    Value<int?> userTotalPagesOverride = const Value.absent(),
+    Value<int?> userTotalChaptersOverride = const Value.absent(),
+    Value<int?> currentChapter = const Value.absent(),
+    Value<String?> bookTrackingMode = const Value.absent(),
+    Value<String?> animeMediaStatus = const Value.absent(),
+    Value<int?> releasedEpisodes = const Value.absent(),
+    Value<int?> nextEpisodeAirsAt = const Value.absent(),
     int? updatedAt,
   }) => LibraryEntry(
     id: id ?? this.id,
@@ -676,6 +1079,35 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
         ? totalEpisodes.value
         : this.totalEpisodes,
     notes: notes.present ? notes.value : this.notes,
+    editionKey: editionKey.present ? editionKey.value : this.editionKey,
+    isbn: isbn.present ? isbn.value : this.isbn,
+    totalPagesFromApi: totalPagesFromApi.present
+        ? totalPagesFromApi.value
+        : this.totalPagesFromApi,
+    totalChaptersFromApi: totalChaptersFromApi.present
+        ? totalChaptersFromApi.value
+        : this.totalChaptersFromApi,
+    userTotalPagesOverride: userTotalPagesOverride.present
+        ? userTotalPagesOverride.value
+        : this.userTotalPagesOverride,
+    userTotalChaptersOverride: userTotalChaptersOverride.present
+        ? userTotalChaptersOverride.value
+        : this.userTotalChaptersOverride,
+    currentChapter: currentChapter.present
+        ? currentChapter.value
+        : this.currentChapter,
+    bookTrackingMode: bookTrackingMode.present
+        ? bookTrackingMode.value
+        : this.bookTrackingMode,
+    animeMediaStatus: animeMediaStatus.present
+        ? animeMediaStatus.value
+        : this.animeMediaStatus,
+    releasedEpisodes: releasedEpisodes.present
+        ? releasedEpisodes.value
+        : this.releasedEpisodes,
+    nextEpisodeAirsAt: nextEpisodeAirsAt.present
+        ? nextEpisodeAirsAt.value
+        : this.nextEpisodeAirsAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   LibraryEntry copyWithCompanion(LibraryEntriesCompanion data) {
@@ -694,6 +1126,37 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           ? data.totalEpisodes.value
           : this.totalEpisodes,
       notes: data.notes.present ? data.notes.value : this.notes,
+      editionKey: data.editionKey.present
+          ? data.editionKey.value
+          : this.editionKey,
+      isbn: data.isbn.present ? data.isbn.value : this.isbn,
+      totalPagesFromApi: data.totalPagesFromApi.present
+          ? data.totalPagesFromApi.value
+          : this.totalPagesFromApi,
+      totalChaptersFromApi: data.totalChaptersFromApi.present
+          ? data.totalChaptersFromApi.value
+          : this.totalChaptersFromApi,
+      userTotalPagesOverride: data.userTotalPagesOverride.present
+          ? data.userTotalPagesOverride.value
+          : this.userTotalPagesOverride,
+      userTotalChaptersOverride: data.userTotalChaptersOverride.present
+          ? data.userTotalChaptersOverride.value
+          : this.userTotalChaptersOverride,
+      currentChapter: data.currentChapter.present
+          ? data.currentChapter.value
+          : this.currentChapter,
+      bookTrackingMode: data.bookTrackingMode.present
+          ? data.bookTrackingMode.value
+          : this.bookTrackingMode,
+      animeMediaStatus: data.animeMediaStatus.present
+          ? data.animeMediaStatus.value
+          : this.animeMediaStatus,
+      releasedEpisodes: data.releasedEpisodes.present
+          ? data.releasedEpisodes.value
+          : this.releasedEpisodes,
+      nextEpisodeAirsAt: data.nextEpisodeAirsAt.present
+          ? data.nextEpisodeAirsAt.value
+          : this.nextEpisodeAirsAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -711,13 +1174,24 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           ..write('progress: $progress, ')
           ..write('totalEpisodes: $totalEpisodes, ')
           ..write('notes: $notes, ')
+          ..write('editionKey: $editionKey, ')
+          ..write('isbn: $isbn, ')
+          ..write('totalPagesFromApi: $totalPagesFromApi, ')
+          ..write('totalChaptersFromApi: $totalChaptersFromApi, ')
+          ..write('userTotalPagesOverride: $userTotalPagesOverride, ')
+          ..write('userTotalChaptersOverride: $userTotalChaptersOverride, ')
+          ..write('currentChapter: $currentChapter, ')
+          ..write('bookTrackingMode: $bookTrackingMode, ')
+          ..write('animeMediaStatus: $animeMediaStatus, ')
+          ..write('releasedEpisodes: $releasedEpisodes, ')
+          ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     kind,
     externalId,
@@ -728,8 +1202,19 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     progress,
     totalEpisodes,
     notes,
+    editionKey,
+    isbn,
+    totalPagesFromApi,
+    totalChaptersFromApi,
+    userTotalPagesOverride,
+    userTotalChaptersOverride,
+    currentChapter,
+    bookTrackingMode,
+    animeMediaStatus,
+    releasedEpisodes,
+    nextEpisodeAirsAt,
     updatedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -744,6 +1229,17 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           other.progress == this.progress &&
           other.totalEpisodes == this.totalEpisodes &&
           other.notes == this.notes &&
+          other.editionKey == this.editionKey &&
+          other.isbn == this.isbn &&
+          other.totalPagesFromApi == this.totalPagesFromApi &&
+          other.totalChaptersFromApi == this.totalChaptersFromApi &&
+          other.userTotalPagesOverride == this.userTotalPagesOverride &&
+          other.userTotalChaptersOverride == this.userTotalChaptersOverride &&
+          other.currentChapter == this.currentChapter &&
+          other.bookTrackingMode == this.bookTrackingMode &&
+          other.animeMediaStatus == this.animeMediaStatus &&
+          other.releasedEpisodes == this.releasedEpisodes &&
+          other.nextEpisodeAirsAt == this.nextEpisodeAirsAt &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -758,6 +1254,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
   final Value<int?> progress;
   final Value<int?> totalEpisodes;
   final Value<String?> notes;
+  final Value<String?> editionKey;
+  final Value<String?> isbn;
+  final Value<int?> totalPagesFromApi;
+  final Value<int?> totalChaptersFromApi;
+  final Value<int?> userTotalPagesOverride;
+  final Value<int?> userTotalChaptersOverride;
+  final Value<int?> currentChapter;
+  final Value<String?> bookTrackingMode;
+  final Value<String?> animeMediaStatus;
+  final Value<int?> releasedEpisodes;
+  final Value<int?> nextEpisodeAirsAt;
   final Value<int> updatedAt;
   const LibraryEntriesCompanion({
     this.id = const Value.absent(),
@@ -770,6 +1277,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.progress = const Value.absent(),
     this.totalEpisodes = const Value.absent(),
     this.notes = const Value.absent(),
+    this.editionKey = const Value.absent(),
+    this.isbn = const Value.absent(),
+    this.totalPagesFromApi = const Value.absent(),
+    this.totalChaptersFromApi = const Value.absent(),
+    this.userTotalPagesOverride = const Value.absent(),
+    this.userTotalChaptersOverride = const Value.absent(),
+    this.currentChapter = const Value.absent(),
+    this.bookTrackingMode = const Value.absent(),
+    this.animeMediaStatus = const Value.absent(),
+    this.releasedEpisodes = const Value.absent(),
+    this.nextEpisodeAirsAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   LibraryEntriesCompanion.insert({
@@ -783,6 +1301,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.progress = const Value.absent(),
     this.totalEpisodes = const Value.absent(),
     this.notes = const Value.absent(),
+    this.editionKey = const Value.absent(),
+    this.isbn = const Value.absent(),
+    this.totalPagesFromApi = const Value.absent(),
+    this.totalChaptersFromApi = const Value.absent(),
+    this.userTotalPagesOverride = const Value.absent(),
+    this.userTotalChaptersOverride = const Value.absent(),
+    this.currentChapter = const Value.absent(),
+    this.bookTrackingMode = const Value.absent(),
+    this.animeMediaStatus = const Value.absent(),
+    this.releasedEpisodes = const Value.absent(),
+    this.nextEpisodeAirsAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : kind = Value(kind),
        externalId = Value(externalId),
@@ -798,6 +1327,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Expression<int>? progress,
     Expression<int>? totalEpisodes,
     Expression<String>? notes,
+    Expression<String>? editionKey,
+    Expression<String>? isbn,
+    Expression<int>? totalPagesFromApi,
+    Expression<int>? totalChaptersFromApi,
+    Expression<int>? userTotalPagesOverride,
+    Expression<int>? userTotalChaptersOverride,
+    Expression<int>? currentChapter,
+    Expression<String>? bookTrackingMode,
+    Expression<String>? animeMediaStatus,
+    Expression<int>? releasedEpisodes,
+    Expression<int>? nextEpisodeAirsAt,
     Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -811,6 +1351,20 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       if (progress != null) 'progress': progress,
       if (totalEpisodes != null) 'total_episodes': totalEpisodes,
       if (notes != null) 'notes': notes,
+      if (editionKey != null) 'edition_key': editionKey,
+      if (isbn != null) 'isbn': isbn,
+      if (totalPagesFromApi != null) 'total_pages_from_api': totalPagesFromApi,
+      if (totalChaptersFromApi != null)
+        'total_chapters_from_api': totalChaptersFromApi,
+      if (userTotalPagesOverride != null)
+        'user_total_pages_override': userTotalPagesOverride,
+      if (userTotalChaptersOverride != null)
+        'user_total_chapters_override': userTotalChaptersOverride,
+      if (currentChapter != null) 'current_chapter': currentChapter,
+      if (bookTrackingMode != null) 'book_tracking_mode': bookTrackingMode,
+      if (animeMediaStatus != null) 'anime_media_status': animeMediaStatus,
+      if (releasedEpisodes != null) 'released_episodes': releasedEpisodes,
+      if (nextEpisodeAirsAt != null) 'next_episode_airs_at': nextEpisodeAirsAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -826,6 +1380,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Value<int?>? progress,
     Value<int?>? totalEpisodes,
     Value<String?>? notes,
+    Value<String?>? editionKey,
+    Value<String?>? isbn,
+    Value<int?>? totalPagesFromApi,
+    Value<int?>? totalChaptersFromApi,
+    Value<int?>? userTotalPagesOverride,
+    Value<int?>? userTotalChaptersOverride,
+    Value<int?>? currentChapter,
+    Value<String?>? bookTrackingMode,
+    Value<String?>? animeMediaStatus,
+    Value<int?>? releasedEpisodes,
+    Value<int?>? nextEpisodeAirsAt,
     Value<int>? updatedAt,
   }) {
     return LibraryEntriesCompanion(
@@ -839,6 +1404,19 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       progress: progress ?? this.progress,
       totalEpisodes: totalEpisodes ?? this.totalEpisodes,
       notes: notes ?? this.notes,
+      editionKey: editionKey ?? this.editionKey,
+      isbn: isbn ?? this.isbn,
+      totalPagesFromApi: totalPagesFromApi ?? this.totalPagesFromApi,
+      totalChaptersFromApi: totalChaptersFromApi ?? this.totalChaptersFromApi,
+      userTotalPagesOverride:
+          userTotalPagesOverride ?? this.userTotalPagesOverride,
+      userTotalChaptersOverride:
+          userTotalChaptersOverride ?? this.userTotalChaptersOverride,
+      currentChapter: currentChapter ?? this.currentChapter,
+      bookTrackingMode: bookTrackingMode ?? this.bookTrackingMode,
+      animeMediaStatus: animeMediaStatus ?? this.animeMediaStatus,
+      releasedEpisodes: releasedEpisodes ?? this.releasedEpisodes,
+      nextEpisodeAirsAt: nextEpisodeAirsAt ?? this.nextEpisodeAirsAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -876,6 +1454,45 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (editionKey.present) {
+      map['edition_key'] = Variable<String>(editionKey.value);
+    }
+    if (isbn.present) {
+      map['isbn'] = Variable<String>(isbn.value);
+    }
+    if (totalPagesFromApi.present) {
+      map['total_pages_from_api'] = Variable<int>(totalPagesFromApi.value);
+    }
+    if (totalChaptersFromApi.present) {
+      map['total_chapters_from_api'] = Variable<int>(
+        totalChaptersFromApi.value,
+      );
+    }
+    if (userTotalPagesOverride.present) {
+      map['user_total_pages_override'] = Variable<int>(
+        userTotalPagesOverride.value,
+      );
+    }
+    if (userTotalChaptersOverride.present) {
+      map['user_total_chapters_override'] = Variable<int>(
+        userTotalChaptersOverride.value,
+      );
+    }
+    if (currentChapter.present) {
+      map['current_chapter'] = Variable<int>(currentChapter.value);
+    }
+    if (bookTrackingMode.present) {
+      map['book_tracking_mode'] = Variable<String>(bookTrackingMode.value);
+    }
+    if (animeMediaStatus.present) {
+      map['anime_media_status'] = Variable<String>(animeMediaStatus.value);
+    }
+    if (releasedEpisodes.present) {
+      map['released_episodes'] = Variable<int>(releasedEpisodes.value);
+    }
+    if (nextEpisodeAirsAt.present) {
+      map['next_episode_airs_at'] = Variable<int>(nextEpisodeAirsAt.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
@@ -895,6 +1512,17 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
           ..write('progress: $progress, ')
           ..write('totalEpisodes: $totalEpisodes, ')
           ..write('notes: $notes, ')
+          ..write('editionKey: $editionKey, ')
+          ..write('isbn: $isbn, ')
+          ..write('totalPagesFromApi: $totalPagesFromApi, ')
+          ..write('totalChaptersFromApi: $totalChaptersFromApi, ')
+          ..write('userTotalPagesOverride: $userTotalPagesOverride, ')
+          ..write('userTotalChaptersOverride: $userTotalChaptersOverride, ')
+          ..write('currentChapter: $currentChapter, ')
+          ..write('bookTrackingMode: $bookTrackingMode, ')
+          ..write('animeMediaStatus: $animeMediaStatus, ')
+          ..write('releasedEpisodes: $releasedEpisodes, ')
+          ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1084,6 +1712,17 @@ typedef $$LibraryEntriesTableCreateCompanionBuilder =
       Value<int?> progress,
       Value<int?> totalEpisodes,
       Value<String?> notes,
+      Value<String?> editionKey,
+      Value<String?> isbn,
+      Value<int?> totalPagesFromApi,
+      Value<int?> totalChaptersFromApi,
+      Value<int?> userTotalPagesOverride,
+      Value<int?> userTotalChaptersOverride,
+      Value<int?> currentChapter,
+      Value<String?> bookTrackingMode,
+      Value<String?> animeMediaStatus,
+      Value<int?> releasedEpisodes,
+      Value<int?> nextEpisodeAirsAt,
       Value<int> updatedAt,
     });
 typedef $$LibraryEntriesTableUpdateCompanionBuilder =
@@ -1098,6 +1737,17 @@ typedef $$LibraryEntriesTableUpdateCompanionBuilder =
       Value<int?> progress,
       Value<int?> totalEpisodes,
       Value<String?> notes,
+      Value<String?> editionKey,
+      Value<String?> isbn,
+      Value<int?> totalPagesFromApi,
+      Value<int?> totalChaptersFromApi,
+      Value<int?> userTotalPagesOverride,
+      Value<int?> userTotalChaptersOverride,
+      Value<int?> currentChapter,
+      Value<String?> bookTrackingMode,
+      Value<String?> animeMediaStatus,
+      Value<int?> releasedEpisodes,
+      Value<int?> nextEpisodeAirsAt,
       Value<int> updatedAt,
     });
 
@@ -1157,6 +1807,61 @@ class $$LibraryEntriesTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get editionKey => $composableBuilder(
+    column: $table.editionKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get isbn => $composableBuilder(
+    column: $table.isbn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalPagesFromApi => $composableBuilder(
+    column: $table.totalPagesFromApi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalChaptersFromApi => $composableBuilder(
+    column: $table.totalChaptersFromApi,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userTotalPagesOverride => $composableBuilder(
+    column: $table.userTotalPagesOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userTotalChaptersOverride => $composableBuilder(
+    column: $table.userTotalChaptersOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get currentChapter => $composableBuilder(
+    column: $table.currentChapter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookTrackingMode => $composableBuilder(
+    column: $table.bookTrackingMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get animeMediaStatus => $composableBuilder(
+    column: $table.animeMediaStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get releasedEpisodes => $composableBuilder(
+    column: $table.releasedEpisodes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get nextEpisodeAirsAt => $composableBuilder(
+    column: $table.nextEpisodeAirsAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1225,6 +1930,61 @@ class $$LibraryEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get editionKey => $composableBuilder(
+    column: $table.editionKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get isbn => $composableBuilder(
+    column: $table.isbn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalPagesFromApi => $composableBuilder(
+    column: $table.totalPagesFromApi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalChaptersFromApi => $composableBuilder(
+    column: $table.totalChaptersFromApi,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userTotalPagesOverride => $composableBuilder(
+    column: $table.userTotalPagesOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userTotalChaptersOverride => $composableBuilder(
+    column: $table.userTotalChaptersOverride,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get currentChapter => $composableBuilder(
+    column: $table.currentChapter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookTrackingMode => $composableBuilder(
+    column: $table.bookTrackingMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get animeMediaStatus => $composableBuilder(
+    column: $table.animeMediaStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get releasedEpisodes => $composableBuilder(
+    column: $table.releasedEpisodes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get nextEpisodeAirsAt => $composableBuilder(
+    column: $table.nextEpisodeAirsAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -1274,6 +2034,59 @@ class $$LibraryEntriesTableAnnotationComposer
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
+  GeneratedColumn<String> get editionKey => $composableBuilder(
+    column: $table.editionKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get isbn =>
+      $composableBuilder(column: $table.isbn, builder: (column) => column);
+
+  GeneratedColumn<int> get totalPagesFromApi => $composableBuilder(
+    column: $table.totalPagesFromApi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalChaptersFromApi => $composableBuilder(
+    column: $table.totalChaptersFromApi,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get userTotalPagesOverride => $composableBuilder(
+    column: $table.userTotalPagesOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get userTotalChaptersOverride => $composableBuilder(
+    column: $table.userTotalChaptersOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get currentChapter => $composableBuilder(
+    column: $table.currentChapter,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bookTrackingMode => $composableBuilder(
+    column: $table.bookTrackingMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get animeMediaStatus => $composableBuilder(
+    column: $table.animeMediaStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get releasedEpisodes => $composableBuilder(
+    column: $table.releasedEpisodes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get nextEpisodeAirsAt => $composableBuilder(
+    column: $table.nextEpisodeAirsAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
@@ -1321,6 +2134,17 @@ class $$LibraryEntriesTableTableManager
                 Value<int?> progress = const Value.absent(),
                 Value<int?> totalEpisodes = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> editionKey = const Value.absent(),
+                Value<String?> isbn = const Value.absent(),
+                Value<int?> totalPagesFromApi = const Value.absent(),
+                Value<int?> totalChaptersFromApi = const Value.absent(),
+                Value<int?> userTotalPagesOverride = const Value.absent(),
+                Value<int?> userTotalChaptersOverride = const Value.absent(),
+                Value<int?> currentChapter = const Value.absent(),
+                Value<String?> bookTrackingMode = const Value.absent(),
+                Value<String?> animeMediaStatus = const Value.absent(),
+                Value<int?> releasedEpisodes = const Value.absent(),
+                Value<int?> nextEpisodeAirsAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion(
                 id: id,
@@ -1333,6 +2157,17 @@ class $$LibraryEntriesTableTableManager
                 progress: progress,
                 totalEpisodes: totalEpisodes,
                 notes: notes,
+                editionKey: editionKey,
+                isbn: isbn,
+                totalPagesFromApi: totalPagesFromApi,
+                totalChaptersFromApi: totalChaptersFromApi,
+                userTotalPagesOverride: userTotalPagesOverride,
+                userTotalChaptersOverride: userTotalChaptersOverride,
+                currentChapter: currentChapter,
+                bookTrackingMode: bookTrackingMode,
+                animeMediaStatus: animeMediaStatus,
+                releasedEpisodes: releasedEpisodes,
+                nextEpisodeAirsAt: nextEpisodeAirsAt,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -1347,6 +2182,17 @@ class $$LibraryEntriesTableTableManager
                 Value<int?> progress = const Value.absent(),
                 Value<int?> totalEpisodes = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> editionKey = const Value.absent(),
+                Value<String?> isbn = const Value.absent(),
+                Value<int?> totalPagesFromApi = const Value.absent(),
+                Value<int?> totalChaptersFromApi = const Value.absent(),
+                Value<int?> userTotalPagesOverride = const Value.absent(),
+                Value<int?> userTotalChaptersOverride = const Value.absent(),
+                Value<int?> currentChapter = const Value.absent(),
+                Value<String?> bookTrackingMode = const Value.absent(),
+                Value<String?> animeMediaStatus = const Value.absent(),
+                Value<int?> releasedEpisodes = const Value.absent(),
+                Value<int?> nextEpisodeAirsAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion.insert(
                 id: id,
@@ -1359,6 +2205,17 @@ class $$LibraryEntriesTableTableManager
                 progress: progress,
                 totalEpisodes: totalEpisodes,
                 notes: notes,
+                editionKey: editionKey,
+                isbn: isbn,
+                totalPagesFromApi: totalPagesFromApi,
+                totalChaptersFromApi: totalChaptersFromApi,
+                userTotalPagesOverride: userTotalPagesOverride,
+                userTotalChaptersOverride: userTotalChaptersOverride,
+                currentChapter: currentChapter,
+                bookTrackingMode: bookTrackingMode,
+                animeMediaStatus: animeMediaStatus,
+                releasedEpisodes: releasedEpisodes,
+                nextEpisodeAirsAt: nextEpisodeAirsAt,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

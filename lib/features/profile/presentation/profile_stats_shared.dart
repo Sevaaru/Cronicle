@@ -26,6 +26,7 @@ String libraryEntryStatusLabel(
     'CURRENT' => switch (kind) {
         MediaKind.manga => l10n.statusCurrentManga,
         MediaKind.game => l10n.statusCurrentGame,
+        MediaKind.book => l10n.statusCurrentBook,
         _ => l10n.statusCurrentAnime,
       },
     'PLANNING' => l10n.statusPlanning,
@@ -34,6 +35,7 @@ String libraryEntryStatusLabel(
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {
         MediaKind.game => l10n.statusReplayingGame,
+        MediaKind.book => l10n.statusRereadingBook,
         _ => l10n.statusRepeating,
       },
     _ => key,

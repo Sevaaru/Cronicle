@@ -1,14 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anilist_connect_flow.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:drift/drift.dart' as drift;
 
 class AnimePage extends ConsumerStatefulWidget {
   const AnimePage({super.key});
@@ -33,27 +33,21 @@ class _AnimePageState extends ConsumerState<AnimePage> {
 
   Future<void> _addToLibrary(Map<String, dynamic> anime) async {
     final db = ref.read(databaseProvider);
-    final title = anime['title'] as Map<String, dynamic>? ?? {};
-    final coverImage = anime['coverImage'] as Map<String, dynamic>? ?? {};
-
-    await db.upsertLibraryEntry(
-      LibraryEntriesCompanion(
-        kind: drift.Value(MediaKind.anime.code),
-        externalId: drift.Value(anime['id'].toString()),
-        title: drift.Value(
-          (title['english'] as String?) ??
-              (title['romaji'] as String?) ??
-              'Unknown',
-        ),
-        posterUrl: drift.Value(coverImage['large'] as String?),
-        status: const drift.Value('planning'),
-        totalEpisodes: drift.Value(anime['episodes'] as int?),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
-      ),
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      MediaKind.anime.code, anime['id'].toString(),
     );
     if (!mounted) return;
+    final added = await showAddToLibrarySheet(
+      context: context,
+      ref: ref,
+      item: anime,
+      kind: MediaKind.anime,
+      existingEntry: existing,
+    );
+    if (!mounted || !added) return;
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Añadido a la biblioteca')),
+      SnackBar(content: Text(l10n.addedToLibrary)),
     );
   }
 
@@ -133,6 +127,11 @@ class _SearchResults extends ConsumerWidget {
     final results = ref.watch(animeSearchProvider(query));
     final colorScheme = Theme.of(context).colorScheme;
 
+    final libraryEntries = ref.watch(libraryByKindProvider(MediaKind.anime)).valueOrNull ?? [];
+    final libraryIds = {
+      for (final e in libraryEntries) e.externalId: true,
+    };
+
     return results.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
@@ -145,6 +144,8 @@ class _SearchResults extends ConsumerWidget {
           itemCount: list.length,
           itemBuilder: (context, i) {
             final anime = list[i];
+            final animeId = anime['id']?.toString() ?? '';
+            final inLib = libraryIds.containsKey(animeId);
             final title = anime['title'] as Map<String, dynamic>? ?? {};
             final coverImage =
                 anime['coverImage'] as Map<String, dynamic>? ?? {};
@@ -234,8 +235,10 @@ class _SearchResults extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: IconButton(
-                        icon: Icon(Icons.add_circle_outline,
-                            color: colorScheme.primary),
+                        icon: Icon(
+                          inLib ? Icons.edit : Icons.add_circle_outline,
+                          color: colorScheme.primary,
+                        ),
                         onPressed: () => onAdd(anime),
                       ),
                     ),

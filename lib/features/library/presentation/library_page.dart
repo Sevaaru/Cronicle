@@ -8,13 +8,21 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
+import 'package:cronicle/features/library/presentation/anime_library_airing_refresh.dart';
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
@@ -66,6 +74,7 @@ bool _libraryEntryHasDetailPage(LibraryEntry entry) {
   if (entry.externalId.isEmpty) return false;
   final kind = MediaKind.fromCode(entry.kind);
   if (kind == MediaKind.anime || kind == MediaKind.manga) return true;
+  if (kind == MediaKind.book) return true;
   if (kind == MediaKind.game) return int.tryParse(entry.externalId) != null;
   if (kind == MediaKind.movie || kind == MediaKind.tv) {
     return int.tryParse(entry.externalId) != null;
@@ -88,6 +97,10 @@ void _openLibraryEntryDetail(BuildContext context, LibraryEntry entry) {
   if (kind == MediaKind.tv) {
     final id = int.tryParse(entry.externalId);
     if (id != null) context.push('/trakt-show/$id');
+    return;
+  }
+  if (kind == MediaKind.book) {
+    context.push('/book/${entry.externalId}');
     return;
   }
   context.push('/media/${entry.externalId}?kind=${entry.kind}');
@@ -125,6 +138,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   bool _sortAsc = false;
   bool _statusInitialized = false;
   bool _syncChecked = false;
+  bool _remoteSyncing = false;
 
   final _scrollController = ScrollController();
 
@@ -139,6 +153,11 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(refreshAnimeLibraryAiringMetadata(ref));
+      unawaited(_silentRemoteMerge());
+    });
   }
 
   @override
@@ -169,7 +188,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       'title': {'english': entry.title, 'romaji': entry.title},
       'coverImage': {'large': entry.posterUrl},
       if (kind == MediaKind.manga) 'chapters': entry.totalEpisodes
+      else if (kind == MediaKind.book) 'pages': entry.totalEpisodes
       else 'episodes': entry.totalEpisodes,
+      if (kind == MediaKind.anime) 'status': entry.animeMediaStatus,
     };
 
     final saved = await showAddToLibrarySheet(
@@ -228,7 +249,40 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.libraryTitle)),
+      appBar: AppBar(
+        clipBehavior: Clip.none,
+        leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
+        titleSpacing: 0,
+        title: Text(l10n.libraryTitle, style: pageTitleStyle()),
+        actions: [
+          if (_remoteSyncing)
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.syncLoading,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.primary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _LibrarySearchFab(
@@ -399,6 +453,40 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
+  /// Descarga en segundo plano las listas de AniList y Trakt para reflejar
+  /// cambios hechos fuera de la app (p. ej. desde la web).
+  Future<void> _silentRemoteMerge() async {
+    if (mounted) setState(() => _remoteSyncing = true);
+    final db = ref.read(databaseProvider);
+    var changed = false;
+    // AniList
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final auth = ref.read(anilistAuthProvider);
+      await mergeAnilistLibraryIntoLocalIfSignedIn(
+        graphql: graphql,
+        db: db,
+        auth: auth,
+      );
+      changed = true;
+    } catch (_) {}
+    // Trakt
+    try {
+      final traktAuth = ref.read(traktAuthProvider);
+      final traktApi = ref.read(traktApiProvider);
+      await mergeTraktLibraryIntoLocalIfSignedIn(
+        api: traktApi,
+        db: db,
+        getValidAccessToken: () => traktAuth.getValidAccessToken(),
+      );
+      changed = true;
+    } catch (_) {}
+    if (mounted) setState(() => _remoteSyncing = false);
+    if (changed && mounted) {
+      ref.invalidate(paginatedLibraryProvider);
+    }
+  }
+
   void _checkAnilistSync() {
     if (_syncChecked) return;
     _syncChecked = true;
@@ -565,10 +653,17 @@ class _EntryCard extends StatelessWidget {
     final showProgressButton =
         (kind == MediaKind.anime ||
             kind == MediaKind.manga ||
+            kind == MediaKind.book ||
             (kind == MediaKind.tv &&
                 entry.totalEpisodes != null &&
                 entry.totalEpisodes! > 0)) &&
         entry.status == 'CURRENT';
+    final bookProgressLabel = kind == MediaKind.book
+        ? BookProgressCalculator.getShortProgressLabel(entry, l10n)
+        : null;
+    final bookRemaining = kind == MediaKind.book
+        ? BookProgressCalculator.getRemainingText(entry, l10n)
+        : null;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -608,6 +703,7 @@ class _EntryCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     const SizedBox(height: 4),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -620,24 +716,126 @@ class _EntryCard extends StatelessWidget {
                             style: TextStyle(fontSize: 10, color: cs.onPrimaryContainer),
                           ),
                         ),
-                        if (entry.score != null && entry.score! > 0) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.star, size: 12, color: Colors.amber.shade600),
-                          const SizedBox(width: 2),
-                          Text('${entry.score}',
-                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                        ],
-                        if (entry.progress != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            entry.totalEpisodes != null
-                                ? '${entry.progress}/${entry.totalEpisodes}'
-                                : '${entry.progress}',
-                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                          ),
-                        ],
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: () {
+                            if (kind == MediaKind.book &&
+                                bookProgressLabel != null &&
+                                bookProgressLabel.isNotEmpty) {
+                              return Text(
+                                bookProgressLabel,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                              );
+                            }
+                            if (entry.progress != null) {
+                              final epTotal = AnimeAiringProgress.displayEpisodeTotal(
+                                mediaKindCode: entry.kind,
+                                totalEpisodes: entry.totalEpisodes,
+                                releasedEpisodes: entry.releasedEpisodes,
+                              );
+                              final s = epTotal != null
+                                  ? '${entry.progress}/$epTotal'
+                                  : entry.totalEpisodes != null
+                                      ? '${entry.progress}/${entry.totalEpisodes}'
+                                      : '${entry.progress}';
+                              return Text(
+                                s,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }(),
+                        ),
                       ],
                     ),
+                    if (kind == MediaKind.anime)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Builder(
+                          builder: (context) {
+                            final behind = AnimeAiringProgress.episodesBehind(
+                              mediaKindCode: entry.kind,
+                              animeMediaStatus: entry.animeMediaStatus,
+                              releasedEpisodes: entry.releasedEpisodes,
+                              progress: entry.progress,
+                            );
+                            if (behind != null) {
+                              return Text(
+                                l10n.libraryAnimeAiringBehind(behind),
+                                style: TextStyle(fontSize: 10, color: cs.tertiary),
+                                maxLines: 2,
+                                softWrap: true,
+                              );
+                            }
+                            if (!AnimeAiringProgress.isAnimeCaughtUpWithAiring(
+                              mediaKindCode: entry.kind,
+                              animeMediaStatus: entry.animeMediaStatus,
+                              releasedEpisodes: entry.releasedEpisodes,
+                              progress: entry.progress,
+                            )) {
+                              return const SizedBox.shrink();
+                            }
+                            final secs = AnimeAiringProgress.secondsUntilNextEpisodeAiring(
+                              entry.nextEpisodeAirsAt,
+                            );
+                            if (secs == null) return const SizedBox.shrink();
+                            final days = secs ~/ 86400;
+                            final hours = days == 0
+                                ? (secs + 3599) ~/ 3600
+                                : (secs % 86400) ~/ 3600;
+                            final ep = AnimeAiringProgress.nextEpisodeLabelNumber(
+                              mediaKindCode: entry.kind,
+                              releasedEpisodes: entry.releasedEpisodes,
+                            );
+                            if (ep == null) return const SizedBox.shrink();
+                            return Text(
+                              l10n.mediaNextEp(ep, days, hours),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: cs.primary.withAlpha(220),
+                              ),
+                              maxLines: 2,
+                              softWrap: true,
+                            );
+                          },
+                        ),
+                      ),
+                    if (kind == MediaKind.book && bookRemaining != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          bookRemaining,
+                          style: TextStyle(fontSize: 10, color: cs.primary.withAlpha(180)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    if (entry.score != null && entry.score! > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade600),
+                          const SizedBox(width: 4),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final scoring = ref.watch(scoringSystemSettingProvider);
+                              return Text(
+                                scoring.formatScore(scoring.fromStoredScore(entry.score)),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                     if (selectedKind == null) ...[
                       const SizedBox(height: 3),
                       Text(mediaKindLabel(kind, l10n),
@@ -691,9 +889,13 @@ class _IncrementButtonState extends State<_IncrementButton> {
     setState(() => _busy = true);
     try {
       final db = widget.ref.read(databaseProvider);
-      await db.incrementProgress(widget.entry.id);
-      widget.onUpdated();
       final kind = MediaKind.fromCode(widget.entry.kind);
+      if (kind == MediaKind.book) {
+        await db.incrementBookProgress(widget.entry.id);
+      } else {
+        await db.incrementProgress(widget.entry.id);
+      }
+      widget.onUpdated();
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();
       } else if (kind == MediaKind.tv) {
@@ -714,11 +916,15 @@ class _IncrementButtonState extends State<_IncrementButton> {
       final mediaId = int.tryParse(widget.entry.externalId);
       if (mediaId == null) return;
       final newProgress = (widget.entry.progress ?? 0) + 1;
+      final total = widget.entry.totalEpisodes;
+      final completed =
+          total != null && total > 0 && newProgress >= total;
       final graphql = widget.ref.read(anilistGraphqlProvider);
       await graphql.saveMediaListEntry(
         mediaId: mediaId,
         token: token,
         progress: newProgress,
+        status: completed ? 'COMPLETED' : null,
       );
     } catch (_) {}
   }
@@ -727,8 +933,29 @@ class _IncrementButtonState extends State<_IncrementButton> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final atMax = widget.entry.totalEpisodes != null &&
-        (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
+    final kind = MediaKind.fromCode(widget.entry.kind);
+    final atMax = kind == MediaKind.book
+      ? (() {
+        final mode = BookProgressCalculator.getTrackingMode(widget.entry);
+        final cap = BookProgressCalculator.getIncrementCap(widget.entry);
+        if (cap == null) return false;
+        final current = mode == BookTrackingMode.chapters
+          ? (widget.entry.currentChapter ?? 0)
+          : (widget.entry.progress ?? 0);
+        return current >= cap;
+        })()
+      : () {
+        final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+          mediaKindCode: widget.entry.kind,
+          totalEpisodes: widget.entry.totalEpisodes,
+          releasedEpisodes: widget.entry.releasedEpisodes,
+        );
+        if (cap != null) {
+          return (widget.entry.progress ?? 0) >= cap;
+        }
+        return widget.entry.totalEpisodes != null &&
+            (widget.entry.progress ?? 0) >= widget.entry.totalEpisodes!;
+      }();
 
     return IconButton(
       icon: _busy
@@ -754,6 +981,7 @@ IconData _kindIcon(MediaKind kind) => switch (kind) {
       MediaKind.movie => Icons.movie_rounded,
       MediaKind.tv => Icons.tv_rounded,
       MediaKind.game => Icons.sports_esports_rounded,
+      MediaKind.book => Icons.auto_stories_rounded,
     };
 
 class _LibrarySearchPage extends StatefulWidget {

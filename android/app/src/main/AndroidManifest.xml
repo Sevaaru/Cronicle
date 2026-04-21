@@ -10,6 +10,8 @@
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <application
         android:label="cronicle"
         android:name="${applicationName}"
@@ -63,6 +65,27 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Wear OS companion bridge.
+             Listens for messages from the watch app (`/library/request_sync` and
+             `/library/action`) and reads / writes the local Drift SQLite directly,
+             so it works even when the Flutter UI is not running.
+             See android/app/src/main/kotlin/.../wear/ for implementation. -->
+        <service
+            android:name="com.cronicle.app.cronicle.wear.WearLibraryListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/library" />
+            </intent-filter>
+        </service>
+
+        <!-- Foreground service that briefly boots a headless FlutterEngine to push
+             watch-originated changes to AniList / Trakt. -->
+        <service
+            android:name="com.cronicle.app.cronicle.wear.WearRemoteSyncService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

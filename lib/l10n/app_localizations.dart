@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'Perfil'**
   String get navProfile;
 
+  /// No description provided for @navSocial.
+  ///
+  /// In es, this message translates to:
+  /// **'Social'**
+  String get navSocial;
+
   /// No description provided for @navSettings.
   ///
   /// In es, this message translates to:
@@ -182,6 +188,66 @@ abstract class AppLocalizations {
   /// **'Ajustes'**
   String get settingsTitle;
 
+  /// No description provided for @settingsAboutApp.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de esta aplicación'**
+  String get settingsAboutApp;
+
+  /// No description provided for @settingsAboutCopyright.
+  ///
+  /// In es, this message translates to:
+  /// **'© {year} Todos los derechos reservados.'**
+  String settingsAboutCopyright(Object year);
+
+  /// No description provided for @settingsAboutCreator.
+  ///
+  /// In es, this message translates to:
+  /// **'Cronicle está creada por Sevaaru.'**
+  String get settingsAboutCreator;
+
+  /// No description provided for @settingsWearTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj (Wear OS)'**
+  String get settingsWearTitle;
+
+  /// No description provided for @settingsWearConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Reloj conectado'**
+  String get settingsWearConnected;
+
+  /// No description provided for @settingsWearCompanionInstalled.
+  ///
+  /// In es, this message translates to:
+  /// **'App companion instalada'**
+  String get settingsWearCompanionInstalled;
+
+  /// No description provided for @settingsWearNoCompanion.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay un reloj emparejado pero la app companion no está instalada.'**
+  String get settingsWearNoCompanion;
+
+  /// No description provided for @settingsWearNoWatch.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Tienes un reloj Wear OS? Instala la app companion de Cronicle para ver y actualizar tu progreso desde la muñeca.'**
+  String get settingsWearNoWatch;
+
+  /// No description provided for @settingsWearOpenPlayStore.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir Google Play'**
+  String get settingsWearOpenPlayStore;
+
+  /// No description provided for @settingsWearRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprobar de nuevo'**
+  String get settingsWearRefresh;
+
   /// No description provided for @themeMode.
   ///
   /// In es, this message translates to:
@@ -229,6 +295,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin conexión o error de red.'**
   String get errorNetwork;
+
+  /// No description provided for @errorAnilistRateLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'AniList ha limitado las peticiones. Reintenta en unos segundos.'**
+  String get errorAnilistRateLimit;
+
+  /// No description provided for @errorAnilistRateLimitWithSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'AniList ha limitado las peticiones. Reintenta en {seconds} s.'**
+  String errorAnilistRateLimitWithSeconds(int seconds);
 
   /// No description provided for @errorWithMessage.
   ///
@@ -470,29 +548,11 @@ abstract class AppLocalizations {
   /// **'Inicia sesión en Anilist en Ajustes para ver notificaciones.'**
   String get notificationsLoginRequired;
 
-  /// No description provided for @notifPermissionTitle.
+  /// No description provided for @notifPermissionDeniedHint.
   ///
   /// In es, this message translates to:
-  /// **'¿Activar notificaciones?'**
-  String get notifPermissionTitle;
-
-  /// No description provided for @notifPermissionBody.
-  ///
-  /// In es, this message translates to:
-  /// **'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.'**
-  String get notifPermissionBody;
-
-  /// No description provided for @notifPermissionNotNow.
-  ///
-  /// In es, this message translates to:
-  /// **'Ahora no'**
-  String get notifPermissionNotNow;
-
-  /// No description provided for @notifPermissionAllow.
-  ///
-  /// In es, this message translates to:
-  /// **'Permitir'**
-  String get notifPermissionAllow;
+  /// **'Puedes activar las notificaciones en cualquier momento desde Ajustes.'**
+  String get notifPermissionDeniedHint;
 
   /// No description provided for @gallerySaveUnavailableWeb.
   ///
@@ -746,6 +806,12 @@ abstract class AppLocalizations {
   /// **'De temporada'**
   String get feedBrowseSeasonal;
 
+  /// No description provided for @feedBrowseTrending.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencias'**
+  String get feedBrowseTrending;
+
   /// No description provided for @feedBrowseTopRated.
   ///
   /// In es, this message translates to:
@@ -769,6 +835,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hay títulos en esta lista.'**
   String get feedBrowseEmpty;
+
+  /// No description provided for @feedSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Descubrir'**
+  String get feedSummary;
+
+  /// No description provided for @summaryTrendingAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime en tendencia'**
+  String get summaryTrendingAnime;
+
+  /// No description provided for @summaryTrendingManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga en tendencia'**
+  String get summaryTrendingManga;
+
+  /// No description provided for @summaryTrendingMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas en tendencia'**
+  String get summaryTrendingMovies;
+
+  /// No description provided for @summaryTrendingShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series en tendencia'**
+  String get summaryTrendingShows;
+
+  /// No description provided for @summaryPopularGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos populares'**
+  String get summaryPopularGames;
+
+  /// No description provided for @summaryTrendingBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros en tendencia'**
+  String get summaryTrendingBooks;
+
+  /// No description provided for @summaryNewBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Novedades'**
+  String get summaryNewBooks;
+
+  /// No description provided for @summaryTopAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime mejor valorado'**
+  String get summaryTopAnime;
+
+  /// No description provided for @summaryTopManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga mejor valorado'**
+  String get summaryTopManga;
+
+  /// No description provided for @summaryAnticipatedMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas más esperadas'**
+  String get summaryAnticipatedMovies;
+
+  /// No description provided for @summaryAnticipatedShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series más esperadas'**
+  String get summaryAnticipatedShows;
+
+  /// No description provided for @summaryAnticipatedGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos más esperados'**
+  String get summaryAnticipatedGames;
+
+  /// No description provided for @summaryRandom.
+  ///
+  /// In es, this message translates to:
+  /// **'Descubre algo nuevo'**
+  String get summaryRandom;
+
+  /// No description provided for @summaryRandomButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Título al azar'**
+  String get summaryRandomButton;
+
+  /// No description provided for @summaryRandomSub.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba algo de tus intereses'**
+  String get summaryRandomSub;
+
+  /// No description provided for @summarySeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get summarySeeAll;
 
   /// No description provided for @filterFollowing.
   ///
@@ -818,11 +986,23 @@ abstract class AppLocalizations {
   /// **'Juegos'**
   String get filterGames;
 
+  /// No description provided for @filterBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get filterBooks;
+
   /// No description provided for @filterAll.
   ///
   /// In es, this message translates to:
   /// **'Todo'**
   String get filterAll;
+
+  /// No description provided for @filterStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'Estado'**
+  String get filterStatus;
 
   /// No description provided for @loginRequiredFollowing.
   ///
@@ -836,6 +1016,12 @@ abstract class AppLocalizations {
   /// **'Inicia sesión en Anilist para dar like'**
   String get loginRequiredLike;
 
+  /// No description provided for @loginRequiredComment.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión en Anilist para comentar'**
+  String get loginRequiredComment;
+
   /// No description provided for @loginRequiredFavorite.
   ///
   /// In es, this message translates to:
@@ -847,6 +1033,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Juegos favoritos'**
   String get sectionFavGames;
+
+  /// No description provided for @sectionFavBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros favoritos'**
+  String get sectionFavBooks;
+
+  /// No description provided for @sectionFavCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes favoritos'**
+  String get sectionFavCharacters;
+
+  /// No description provided for @sectionFavStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff favorito'**
+  String get sectionFavStaff;
+
+  /// No description provided for @loginRequiredFavoriteCharacter.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con Anilist en Ajustes para marcar personajes favoritos'**
+  String get loginRequiredFavoriteCharacter;
+
+  /// No description provided for @loginRequiredFavoriteStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con Anilist en Ajustes para marcar staff favorito'**
+  String get loginRequiredFavoriteStaff;
 
   /// No description provided for @tooltipAddFavorite.
   ///
@@ -1100,6 +1316,144 @@ abstract class AppLocalizations {
   /// **'Error en {section}: {error}'**
   String searchErrorIn(Object section, Object error);
 
+  /// No description provided for @searchShowMoreInCategory.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más — {category}'**
+  String searchShowMoreInCategory(Object category);
+
+  /// No description provided for @searchIdleAllTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar en todo'**
+  String get searchIdleAllTitle;
+
+  /// No description provided for @searchIdleAllBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe para buscar en todas las categorías a la vez, o elige una categoría arriba para explorar tendencias y acotar la búsqueda.'**
+  String get searchIdleAllBody;
+
+  /// No description provided for @searchBrowsePopularityAllTime.
+  ///
+  /// In es, this message translates to:
+  /// **'Por popularidad'**
+  String get searchBrowsePopularityAllTime;
+
+  /// No description provided for @searchBrowseByStartDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Por fecha de estreno'**
+  String get searchBrowseByStartDate;
+
+  /// No description provided for @searchBrowseByGenre.
+  ///
+  /// In es, this message translates to:
+  /// **'Por género'**
+  String get searchBrowseByGenre;
+
+  /// No description provided for @searchBrowseGenresAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros de anime'**
+  String get searchBrowseGenresAnime;
+
+  /// No description provided for @searchBrowseGenresManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Géneros de manga'**
+  String get searchBrowseGenresManga;
+
+  /// No description provided for @searchBrowseGameThemes.
+  ///
+  /// In es, this message translates to:
+  /// **'Por temática'**
+  String get searchBrowseGameThemes;
+
+  /// No description provided for @searchBrowseBookSubjects.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas'**
+  String get searchBrowseBookSubjects;
+
+  /// No description provided for @searchReleaseDateHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el año y, si quieres, el mes para acotar.'**
+  String get searchReleaseDateHint;
+
+  /// No description provided for @searchReleaseDateYear.
+  ///
+  /// In es, this message translates to:
+  /// **'Año'**
+  String get searchReleaseDateYear;
+
+  /// No description provided for @searchReleaseDateMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes'**
+  String get searchReleaseDateMonth;
+
+  /// No description provided for @searchReleaseDateAllMonths.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo el año'**
+  String get searchReleaseDateAllMonths;
+
+  /// No description provided for @searchReleaseDateEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay resultados para este periodo.'**
+  String get searchReleaseDateEmpty;
+
+  /// No description provided for @searchOlSubjectFantasy.
+  ///
+  /// In es, this message translates to:
+  /// **'Fantasía'**
+  String get searchOlSubjectFantasy;
+
+  /// No description provided for @searchOlSubjectRomance.
+  ///
+  /// In es, this message translates to:
+  /// **'Romance'**
+  String get searchOlSubjectRomance;
+
+  /// No description provided for @searchOlSubjectScienceFiction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciencia ficción'**
+  String get searchOlSubjectScienceFiction;
+
+  /// No description provided for @searchOlSubjectHorror.
+  ///
+  /// In es, this message translates to:
+  /// **'Terror'**
+  String get searchOlSubjectHorror;
+
+  /// No description provided for @searchOlSubjectMystery.
+  ///
+  /// In es, this message translates to:
+  /// **'Misterio'**
+  String get searchOlSubjectMystery;
+
+  /// No description provided for @searchOlSubjectFiction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ficción'**
+  String get searchOlSubjectFiction;
+
+  /// No description provided for @searchOlSubjectHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get searchOlSubjectHistory;
+
+  /// No description provided for @searchOlSubjectBiography.
+  ///
+  /// In es, this message translates to:
+  /// **'Biografía'**
+  String get searchOlSubjectBiography;
+
   /// No description provided for @addToLibrary.
   ///
   /// In es, this message translates to:
@@ -1207,6 +1561,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se encontró el usuario'**
   String get profileNotFound;
+
+  /// No description provided for @anilistProfileFollowers.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguidores'**
+  String get anilistProfileFollowers;
+
+  /// No description provided for @anilistProfileFollowing.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiendo'**
+  String get anilistProfileFollowing;
+
+  /// No description provided for @anilistFollowListEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie aquí todavía.'**
+  String get anilistFollowListEmpty;
 
   /// No description provided for @sectionAnime.
   ///
@@ -1532,6 +1904,156 @@ abstract class AppLocalizations {
   /// **'Recomendaciones'**
   String get mediaRecommendations;
 
+  /// No description provided for @mediaCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes'**
+  String get mediaCharacters;
+
+  /// No description provided for @mediaStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff'**
+  String get mediaStaff;
+
+  /// No description provided for @mediaViewAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get mediaViewAll;
+
+  /// No description provided for @characterRoleMain.
+  ///
+  /// In es, this message translates to:
+  /// **'Principal'**
+  String get characterRoleMain;
+
+  /// No description provided for @characterRoleSupporting.
+  ///
+  /// In es, this message translates to:
+  /// **'Secundario'**
+  String get characterRoleSupporting;
+
+  /// No description provided for @characterRoleBackground.
+  ///
+  /// In es, this message translates to:
+  /// **'Fondo'**
+  String get characterRoleBackground;
+
+  /// No description provided for @characterVoiceActors.
+  ///
+  /// In es, this message translates to:
+  /// **'Actores de voz'**
+  String get characterVoiceActors;
+
+  /// No description provided for @characterAppearances.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariciones'**
+  String get characterAppearances;
+
+  /// No description provided for @characterDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get characterDescription;
+
+  /// No description provided for @staffRoles.
+  ///
+  /// In es, this message translates to:
+  /// **'Roles de staff'**
+  String get staffRoles;
+
+  /// No description provided for @staffCharacterRoles.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes interpretados'**
+  String get staffCharacterRoles;
+
+  /// No description provided for @staffOccupations.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupaciones'**
+  String get staffOccupations;
+
+  /// No description provided for @staffYearsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Años activos'**
+  String get staffYearsActive;
+
+  /// No description provided for @staffHomeTown.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciudad natal'**
+  String get staffHomeTown;
+
+  /// No description provided for @staffBloodType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de sangre'**
+  String get staffBloodType;
+
+  /// No description provided for @staffDateOfBirth.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get staffDateOfBirth;
+
+  /// No description provided for @staffDateOfDeath.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de fallecimiento'**
+  String get staffDateOfDeath;
+
+  /// No description provided for @staffAge.
+  ///
+  /// In es, this message translates to:
+  /// **'Edad'**
+  String get staffAge;
+
+  /// No description provided for @staffGender.
+  ///
+  /// In es, this message translates to:
+  /// **'Género'**
+  String get staffGender;
+
+  /// No description provided for @characterAge.
+  ///
+  /// In es, this message translates to:
+  /// **'Edad'**
+  String get characterAge;
+
+  /// No description provided for @characterGender.
+  ///
+  /// In es, this message translates to:
+  /// **'Género'**
+  String get characterGender;
+
+  /// No description provided for @characterDateOfBirth.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get characterDateOfBirth;
+
+  /// No description provided for @characterBloodType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de sangre'**
+  String get characterBloodType;
+
+  /// No description provided for @characterAlternativeNames.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombres alternativos'**
+  String get characterAlternativeNames;
+
+  /// No description provided for @characterAlternativeSpoiler.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombres con spoiler'**
+  String get characterAlternativeSpoiler;
+
   /// No description provided for @mediaScoreDistribution.
   ///
   /// In es, this message translates to:
@@ -1555,6 +2077,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Anónimo'**
   String get mediaAnonymous;
+
+  /// No description provided for @mediaDetailChipsShowMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar más'**
+  String get mediaDetailChipsShowMore;
+
+  /// No description provided for @mediaDetailChipsShowLess.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar menos'**
+  String get mediaDetailChipsShowLess;
 
   /// No description provided for @mediaGenresSection.
   ///
@@ -1699,6 +2233,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Popular'**
   String get traktSectionPopular;
+
+  /// No description provided for @traktSectionMostPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'Más reproducidas'**
+  String get traktSectionMostPlayed;
+
+  /// No description provided for @traktSectionMostWatched.
+  ///
+  /// In es, this message translates to:
+  /// **'Más vistas'**
+  String get traktSectionMostWatched;
+
+  /// No description provided for @traktSectionMostCollected.
+  ///
+  /// In es, this message translates to:
+  /// **'Más coleccionadas'**
+  String get traktSectionMostCollected;
+
+  /// No description provided for @traktSectionAnticipatedShows.
+  ///
+  /// In es, this message translates to:
+  /// **'Series más esperadas'**
+  String get traktSectionAnticipatedShows;
 
   /// No description provided for @traktTitle.
   ///
@@ -2438,6 +2996,12 @@ abstract class AppLocalizations {
   /// **'Juegos'**
   String get mediaKindGame;
 
+  /// No description provided for @mediaKindBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get mediaKindBook;
+
   /// No description provided for @reviewTitle.
   ///
   /// In es, this message translates to:
@@ -2540,11 +3104,23 @@ abstract class AppLocalizations {
   /// **'Jugando'**
   String get statusCurrentGame;
 
+  /// No description provided for @statusCurrentBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo'**
+  String get statusCurrentBook;
+
   /// No description provided for @statusReplayingGame.
   ///
   /// In es, this message translates to:
   /// **'Rejugando'**
   String get statusReplayingGame;
+
+  /// No description provided for @statusRereadingBook.
+  ///
+  /// In es, this message translates to:
+  /// **'Releyendo'**
+  String get statusRereadingBook;
 
   /// No description provided for @searchTrendingGames.
   ///
@@ -2552,29 +3128,17 @@ abstract class AppLocalizations {
   /// **'Juegos en tendencia'**
   String get searchTrendingGames;
 
+  /// No description provided for @searchTrendingBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros en tendencia'**
+  String get searchTrendingBooks;
+
   /// No description provided for @igdbWebNotSupported.
   ///
   /// In es, this message translates to:
-  /// **'IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.'**
+  /// **'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).'**
   String get igdbWebNotSupported;
-
-  /// No description provided for @twitchSyncPromptTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Conecta con Twitch'**
-  String get twitchSyncPromptTitle;
-
-  /// No description provided for @twitchSyncPromptBody.
-  ///
-  /// In es, this message translates to:
-  /// **'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.'**
-  String get twitchSyncPromptBody;
-
-  /// No description provided for @twitchSyncPromptNoThanks.
-  ///
-  /// In es, this message translates to:
-  /// **'No, gracias'**
-  String get twitchSyncPromptNoThanks;
 
   /// No description provided for @twitchConnect.
   ///
@@ -2642,6 +3206,30 @@ abstract class AppLocalizations {
   /// **'Puntuación'**
   String get gameDetailRating;
 
+  /// No description provided for @gameDetailStatUserScore.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuarios'**
+  String get gameDetailStatUserScore;
+
+  /// No description provided for @gameDetailStatCriticScore.
+  ///
+  /// In es, this message translates to:
+  /// **'Críticos (IGDB)'**
+  String get gameDetailStatCriticScore;
+
+  /// No description provided for @gameDetailStatRatingsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} valoraciones'**
+  String gameDetailStatRatingsCount(Object count);
+
+  /// No description provided for @gameDetailStatCriticReviewsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} reseñas'**
+  String gameDetailStatCriticReviewsCount(Object count);
+
   /// No description provided for @gameDetailSimilarGames.
   ///
   /// In es, this message translates to:
@@ -2665,6 +3253,72 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Horas jugadas'**
   String get addToListHoursPlayed;
+
+  /// No description provided for @addToListPagesRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Páginas leídas'**
+  String get addToListPagesRead;
+
+  /// No description provided for @libraryPagesRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} pág. restantes'**
+  String libraryPagesRemaining(Object count);
+
+  /// No description provided for @libraryChaptersRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} capítulos restantes'**
+  String libraryChaptersRemaining(Object count);
+
+  /// No description provided for @libraryAnimeAiringBehind.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} atrasados'**
+  String libraryAnimeAiringBehind(Object count);
+
+  /// No description provided for @bookProgressPageOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Página {current} de {total} ({pct}%)'**
+  String bookProgressPageOf(Object current, Object total, Object pct);
+
+  /// No description provided for @bookProgressPageSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Página {current}'**
+  String bookProgressPageSimple(Object current);
+
+  /// No description provided for @bookProgressChapterOf.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo {current} de {total} ({pct}%)'**
+  String bookProgressChapterOf(Object current, Object total, Object pct);
+
+  /// No description provided for @bookProgressChapterSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo {current}'**
+  String bookProgressChapterSimple(Object current);
+
+  /// No description provided for @bookPercentRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'{count}% restantes'**
+  String bookPercentRemaining(Object count);
+
+  /// No description provided for @bookLibraryProgressChaptersShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{current}/{total} cap.'**
+  String bookLibraryProgressChaptersShort(Object current, Object total);
+
+  /// No description provided for @bookLibraryProgressChapterOnly.
+  ///
+  /// In es, this message translates to:
+  /// **'{current} cap.'**
+  String bookLibraryProgressChapterOnly(Object current);
 
   /// No description provided for @gameDetailLinksSection.
   ///
@@ -2810,6 +3464,42 @@ abstract class AppLocalizations {
   /// **'Próximamente'**
   String get gamesHomeComingSoon;
 
+  /// No description provided for @gamesHomeBestRated.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejor valorados'**
+  String get gamesHomeBestRated;
+
+  /// No description provided for @gamesHomeIndiePicks.
+  ///
+  /// In es, this message translates to:
+  /// **'Indie destacados'**
+  String get gamesHomeIndiePicks;
+
+  /// No description provided for @gamesHomeHorrorPicks.
+  ///
+  /// In es, this message translates to:
+  /// **'Terror'**
+  String get gamesHomeHorrorPicks;
+
+  /// No description provided for @gamesHomeMultiplayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Multijugador'**
+  String get gamesHomeMultiplayer;
+
+  /// No description provided for @gamesHomeRpgSpotlight.
+  ///
+  /// In es, this message translates to:
+  /// **'RPG destacados'**
+  String get gamesHomeRpgSpotlight;
+
+  /// No description provided for @gamesHomeSportsSpotlight.
+  ///
+  /// In es, this message translates to:
+  /// **'Deportes'**
+  String get gamesHomeSportsSpotlight;
+
   /// No description provided for @gamesHomeSectionExpand.
   ///
   /// In es, this message translates to:
@@ -2899,6 +3589,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Por {name}'**
   String gameDetailReviewBy(Object name);
+
+  /// No description provided for @gameDetailOpenCriticSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Críticas (OpenCritic)'**
+  String get gameDetailOpenCriticSection;
+
+  /// No description provided for @gameDetailOpenCriticMeta.
+  ///
+  /// In es, this message translates to:
+  /// **'Nota destacada: {score} · {count} reseñas'**
+  String gameDetailOpenCriticMeta(Object score, Object count);
+
+  /// No description provided for @gameDetailOpenCriticNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay coincidencia en OpenCritic para este título.'**
+  String get gameDetailOpenCriticNoMatch;
+
+  /// No description provided for @gameDetailOpenCriticReadReview.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer reseña'**
+  String get gameDetailOpenCriticReadReview;
+
+  /// No description provided for @gameDetailOpenCriticOpenSite.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en OpenCritic'**
+  String get gameDetailOpenCriticOpenSite;
 
   /// No description provided for @gameDetailPlaytimeHoursMinutes.
   ///
@@ -3037,6 +3757,624 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Tienda externa'**
   String get gameDetailExtCatOther;
+
+  /// No description provided for @bookDetailSubjects.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas'**
+  String get bookDetailSubjects;
+
+  /// No description provided for @bookDetailAuthors.
+  ///
+  /// In es, this message translates to:
+  /// **'Autores'**
+  String get bookDetailAuthors;
+
+  /// No description provided for @bookDetailPublishDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera publicación'**
+  String get bookDetailPublishDate;
+
+  /// No description provided for @bookDetailPages.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} páginas'**
+  String bookDetailPages(Object count);
+
+  /// No description provided for @bookDetailDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get bookDetailDescription;
+
+  /// No description provided for @bookDetailNoData.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontraron datos del libro'**
+  String get bookDetailNoData;
+
+  /// No description provided for @bookDetailOpenOnGoogleBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en Google Books'**
+  String get bookDetailOpenOnGoogleBooks;
+
+  /// No description provided for @bookDetailEditions.
+  ///
+  /// In es, this message translates to:
+  /// **'Ediciones'**
+  String get bookDetailEditions;
+
+  /// No description provided for @bookDetailPublisher.
+  ///
+  /// In es, this message translates to:
+  /// **'Editorial'**
+  String get bookDetailPublisher;
+
+  /// No description provided for @bookDetailLanguage.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get bookDetailLanguage;
+
+  /// No description provided for @bookDetailPrintType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get bookDetailPrintType;
+
+  /// No description provided for @bookDetailMaturity.
+  ///
+  /// In es, this message translates to:
+  /// **'Clasificación'**
+  String get bookDetailMaturity;
+
+  /// No description provided for @bookDetailPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get bookDetailPreview;
+
+  /// No description provided for @bookDetailFormats.
+  ///
+  /// In es, this message translates to:
+  /// **'Formatos'**
+  String get bookDetailFormats;
+
+  /// No description provided for @bookDetailAvailability.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponibilidad'**
+  String get bookDetailAvailability;
+
+  /// No description provided for @bookDetailIdentifiers.
+  ///
+  /// In es, this message translates to:
+  /// **'Identificadores'**
+  String get bookDetailIdentifiers;
+
+  /// No description provided for @bookActionPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get bookActionPreview;
+
+  /// No description provided for @bookActionReadOnline.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer online'**
+  String get bookActionReadOnline;
+
+  /// No description provided for @bookActionBuy.
+  ///
+  /// In es, this message translates to:
+  /// **'Comprar'**
+  String get bookActionBuy;
+
+  /// No description provided for @bookActionReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas'**
+  String get bookActionReviews;
+
+  /// No description provided for @booksHomePopularNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Popular ahora'**
+  String get booksHomePopularNow;
+
+  /// No description provided for @booksHomeNewReleases.
+  ///
+  /// In es, this message translates to:
+  /// **'Novedades'**
+  String get booksHomeNewReleases;
+
+  /// No description provided for @booksHomeTrending.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencias'**
+  String get booksHomeTrending;
+
+  /// No description provided for @booksHomeClassics.
+  ///
+  /// In es, this message translates to:
+  /// **'Clásicos'**
+  String get booksHomeClassics;
+
+  /// No description provided for @booksHomeMystery.
+  ///
+  /// In es, this message translates to:
+  /// **'Misterio'**
+  String get booksHomeMystery;
+
+  /// No description provided for @onboardingWelcomeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenido a Cronicle'**
+  String get onboardingWelcomeTitle;
+
+  /// No description provided for @onboardingWelcomeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra tu progreso en anime, manga, películas, series, juegos y libros en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.'**
+  String get onboardingWelcomeBody;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué te interesa?'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Selecciona al menos una categoría para personalizar tu experiencia'**
+  String get onboardingSubtitle;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingInterestAnime.
+  ///
+  /// In es, this message translates to:
+  /// **'Anime'**
+  String get onboardingInterestAnime;
+
+  /// No description provided for @onboardingInterestManga.
+  ///
+  /// In es, this message translates to:
+  /// **'Manga'**
+  String get onboardingInterestManga;
+
+  /// No description provided for @onboardingInterestMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas'**
+  String get onboardingInterestMovies;
+
+  /// No description provided for @onboardingInterestTv.
+  ///
+  /// In es, this message translates to:
+  /// **'Series de TV'**
+  String get onboardingInterestTv;
+
+  /// No description provided for @onboardingInterestGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Videojuegos'**
+  String get onboardingInterestGames;
+
+  /// No description provided for @onboardingInterestBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get onboardingInterestBooks;
+
+  /// No description provided for @onboardingAccountsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta tus cuentas'**
+  String get onboardingAccountsTitle;
+
+  /// No description provided for @onboardingAccountsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Es recomendable iniciar sesión para tener tus datos sincronizados en la nube. Google sincroniza todos los datos y cuentas conectadas.'**
+  String get onboardingAccountsSubtitle;
+
+  /// No description provided for @onboardingConnectAnilist.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Anilist'**
+  String get onboardingConnectAnilist;
+
+  /// No description provided for @onboardingConnectAnilistDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincroniza tus listas de anime y manga'**
+  String get onboardingConnectAnilistDesc;
+
+  /// No description provided for @onboardingConnectTrakt.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Trakt'**
+  String get onboardingConnectTrakt;
+
+  /// No description provided for @onboardingConnectTraktDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincroniza tus películas y series'**
+  String get onboardingConnectTraktDesc;
+
+  /// No description provided for @onboardingConnectGoogle.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión con Google'**
+  String get onboardingConnectGoogle;
+
+  /// No description provided for @onboardingConnectGoogleDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia de seguridad en la nube de todos tus datos y cuentas'**
+  String get onboardingConnectGoogleDesc;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar sin cuentas'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingFinish.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizar configuración'**
+  String get onboardingFinish;
+
+  /// No description provided for @onboardingConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado'**
+  String get onboardingConnected;
+
+  /// No description provided for @onboardingAccountSynced.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizado'**
+  String get onboardingAccountSynced;
+
+  /// No description provided for @onboardingSyncing.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando tus datos…'**
+  String get onboardingSyncing;
+
+  /// No description provided for @settingsCustomizeSearchFilters.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtros de búsqueda'**
+  String get settingsCustomizeSearchFilters;
+
+  /// No description provided for @settingsCustomizeSearchFiltersDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Reordena u oculta los filtros en la pestaña de búsqueda'**
+  String get settingsCustomizeSearchFiltersDesc;
+
+  /// No description provided for @settingsInterests.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus intereses'**
+  String get settingsInterests;
+
+  /// No description provided for @settingsInterestsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambia los contenidos que ves en inicio, biblioteca y búsqueda'**
+  String get settingsInterestsDesc;
+
+  /// No description provided for @settingsInterestsChanged.
+  ///
+  /// In es, this message translates to:
+  /// **'Intereses actualizados'**
+  String get settingsInterestsChanged;
+
+  /// No description provided for @socialTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Social'**
+  String get socialTitle;
+
+  /// No description provided for @settingsScoringTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sistema de puntuación'**
+  String get settingsScoringTitle;
+
+  /// No description provided for @settingsScoringDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambia cómo se muestran e ingresan las puntuaciones en toda la app. Se sincroniza automáticamente con tu cuenta de AniList'**
+  String get settingsScoringDesc;
+
+  /// No description provided for @scoringPoint100.
+  ///
+  /// In es, this message translates to:
+  /// **'100 puntos'**
+  String get scoringPoint100;
+
+  /// No description provided for @scoringPoint10Decimal.
+  ///
+  /// In es, this message translates to:
+  /// **'10 puntos decimal'**
+  String get scoringPoint10Decimal;
+
+  /// No description provided for @scoringPoint10.
+  ///
+  /// In es, this message translates to:
+  /// **'10 puntos'**
+  String get scoringPoint10;
+
+  /// No description provided for @scoringPoint5.
+  ///
+  /// In es, this message translates to:
+  /// **'5 estrellas'**
+  String get scoringPoint5;
+
+  /// No description provided for @scoringPoint3.
+  ///
+  /// In es, this message translates to:
+  /// **'3 caritas'**
+  String get scoringPoint3;
+
+  /// No description provided for @settingsAdvancedScoring.
+  ///
+  /// In es, this message translates to:
+  /// **'Puntuación avanzada (Anilist)'**
+  String get settingsAdvancedScoring;
+
+  /// No description provided for @settingsAdvancedScoringDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Puntúa por categorías: historia, personajes, visual, audio y disfrute'**
+  String get settingsAdvancedScoringDesc;
+
+  /// No description provided for @advScoringStory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get advScoringStory;
+
+  /// No description provided for @advScoringCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes'**
+  String get advScoringCharacters;
+
+  /// No description provided for @advScoringVisuals.
+  ///
+  /// In es, this message translates to:
+  /// **'Visual'**
+  String get advScoringVisuals;
+
+  /// No description provided for @advScoringAudio.
+  ///
+  /// In es, this message translates to:
+  /// **'Audio'**
+  String get advScoringAudio;
+
+  /// No description provided for @advScoringEnjoyment.
+  ///
+  /// In es, this message translates to:
+  /// **'Disfrute'**
+  String get advScoringEnjoyment;
+
+  /// No description provided for @advScoringReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer'**
+  String get advScoringReset;
+
+  /// No description provided for @mediaStatusFinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Finalizado'**
+  String get mediaStatusFinished;
+
+  /// No description provided for @mediaStatusReleasing.
+  ///
+  /// In es, this message translates to:
+  /// **'En emisión'**
+  String get mediaStatusReleasing;
+
+  /// No description provided for @mediaStatusNotYetReleased.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin estrenar'**
+  String get mediaStatusNotYetReleased;
+
+  /// No description provided for @mediaStatusCancelled.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelado'**
+  String get mediaStatusCancelled;
+
+  /// No description provided for @mediaStatusHiatus.
+  ///
+  /// In es, this message translates to:
+  /// **'En hiato'**
+  String get mediaStatusHiatus;
+
+  /// No description provided for @forumDiscussions.
+  ///
+  /// In es, this message translates to:
+  /// **'Discusiones en el foro'**
+  String get forumDiscussions;
+
+  /// No description provided for @forumViewAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más'**
+  String get forumViewAll;
+
+  /// No description provided for @forumThread.
+  ///
+  /// In es, this message translates to:
+  /// **'Hilo del foro'**
+  String get forumThread;
+
+  /// No description provided for @forumReplies.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} respuestas'**
+  String forumReplies(int count);
+
+  /// No description provided for @forumNoReplies.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay respuestas'**
+  String get forumNoReplies;
+
+  /// No description provided for @forumReplyButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Responder'**
+  String get forumReplyButton;
+
+  /// No description provided for @forumReplyingTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Respondiendo a @{name}'**
+  String forumReplyingTo(String name);
+
+  /// No description provided for @socialFeedTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Feed'**
+  String get socialFeedTab;
+
+  /// No description provided for @socialForumTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Foro'**
+  String get socialForumTab;
+
+  /// No description provided for @forumPinnedThreads.
+  ///
+  /// In es, this message translates to:
+  /// **'Hilos fijados'**
+  String get forumPinnedThreads;
+
+  /// No description provided for @forumRecentlyReplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Con actividad reciente'**
+  String get forumRecentlyReplied;
+
+  /// No description provided for @forumNewlyCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Recién creados'**
+  String get forumNewlyCreated;
+
+  /// No description provided for @forumReleaseDiscussions.
+  ///
+  /// In es, this message translates to:
+  /// **'Discusiones de estrenos'**
+  String get forumReleaseDiscussions;
+
+  /// No description provided for @bookTrackingModeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo de seguimiento'**
+  String get bookTrackingModeLabel;
+
+  /// No description provided for @bookTrackingModePages.
+  ///
+  /// In es, this message translates to:
+  /// **'Páginas'**
+  String get bookTrackingModePages;
+
+  /// No description provided for @bookTrackingModePercent.
+  ///
+  /// In es, this message translates to:
+  /// **'%'**
+  String get bookTrackingModePercent;
+
+  /// No description provided for @bookTrackingModeChapters.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulos'**
+  String get bookTrackingModeChapters;
+
+  /// No description provided for @bookPercentageRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Porcentaje leído'**
+  String get bookPercentageRead;
+
+  /// No description provided for @bookChapterProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Capítulo actual'**
+  String get bookChapterProgress;
+
+  /// No description provided for @bookOverrideTotalsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura tus totales'**
+  String get bookOverrideTotalsLabel;
+
+  /// No description provided for @bookOverrideTotalsHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu valor manual tiene prioridad sobre la API.'**
+  String get bookOverrideTotalsHint;
+
+  /// No description provided for @bookTotalPagesOverride.
+  ///
+  /// In es, this message translates to:
+  /// **'Total de páginas'**
+  String get bookTotalPagesOverride;
+
+  /// No description provided for @bookTotalChaptersOverride.
+  ///
+  /// In es, this message translates to:
+  /// **'Total de capítulos'**
+  String get bookTotalChaptersOverride;
+
+  /// No description provided for @bookReadingProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso de lectura'**
+  String get bookReadingProgress;
+
+  /// No description provided for @bookEditionLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Edición'**
+  String get bookEditionLabel;
+
+  /// No description provided for @bookEditionUnknownPages.
+  ///
+  /// In es, this message translates to:
+  /// **'Cantidad de páginas desconocida'**
+  String get bookEditionUnknownPages;
+
+  /// No description provided for @bookEditionNoPageHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Si no hay páginas en la API, puedes definir tu total manualmente.'**
+  String get bookEditionNoPageHint;
 }
 
 class _AppLocalizationsDelegate

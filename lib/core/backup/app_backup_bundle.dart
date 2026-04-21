@@ -34,7 +34,7 @@ const _secureKeysForBackup = <String>[
 
 /// JSON de copia: biblioteca Drift, key-value Drift, SharedPreferences y tokens seguros.
 abstract final class AppBackupBundle {
-  static const currentVersion = 2;
+  static const currentVersion = 3;
 
   static Future<Map<String, dynamic>> build({
     required AppDatabase db,
@@ -65,6 +65,9 @@ abstract final class AppBackupBundle {
                 'score': e.score,
                 'progress': e.progress,
                 'totalEpisodes': e.totalEpisodes,
+                'animeMediaStatus': e.animeMediaStatus,
+                'releasedEpisodes': e.releasedEpisodes,
+                'nextEpisodeAirsAt': e.nextEpisodeAirsAt,
                 'notes': e.notes,
                 'updatedAt': e.updatedAt,
               })
@@ -94,7 +97,7 @@ abstract final class AppBackupBundle {
     return m;
   }
 
-  /// Restaura desde JSON (v1 solo library/keyValues; v2 añade prefs y secure).
+  /// Restaura desde JSON (v1 solo library/keyValues; v2 añade prefs y secure; v3 scores 0-100).
   /// Devuelve número de filas de biblioteca importadas.
   static Future<int> restoreFromJson({
     required Map<String, dynamic> json,
@@ -103,6 +106,7 @@ abstract final class AppBackupBundle {
     required FlutterSecureStorage secure,
     required WidgetRef ref,
   }) async {
+    final backupVersion = (json['version'] as int?) ?? 1;
     final secureMap = json['secureStorage'];
     if (secureMap is Map) {
       for (final e in secureMap.entries) {
@@ -165,16 +169,24 @@ abstract final class AppBackupBundle {
     var imported = 0;
     for (final e in entries) {
       try {
-        await db.upsertLibraryEntry(
+        final rawScore = e['score'] as int?;
+        // v1/v2 backups stored scores as 0-10; v3+ stores 0-100.
+        final score100 = (backupVersion < 3 && rawScore != null && rawScore > 0)
+            ? rawScore * 10
+            : rawScore;
+        await db.upsertLibraryEntryIfNewer(
           LibraryEntriesCompanion(
             kind: Value(e['kind'] as int),
             externalId: Value(e['externalId'] as String),
             title: Value(e['title'] as String),
             posterUrl: Value(e['posterUrl'] as String?),
             status: Value((e['status'] as String?) ?? 'PLANNING'),
-            score: Value(e['score'] as int?),
+            score: Value(score100),
             progress: Value(e['progress'] as int?),
             totalEpisodes: Value(e['totalEpisodes'] as int?),
+            animeMediaStatus: Value(e['animeMediaStatus'] as String?),
+            releasedEpisodes: Value(e['releasedEpisodes'] as int?),
+            nextEpisodeAirsAt: Value(e['nextEpisodeAirsAt'] as int?),
             notes: Value(e['notes'] as String?),
             updatedAt: Value(
               (e['updatedAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
@@ -199,13 +211,16 @@ abstract final class AppBackupBundle {
     ref.invalidate(defaultFeedTabProvider);
     ref.invalidate(defaultFeedActivityScopeProvider);
     ref.invalidate(hideTextActivitiesProvider);
+    ref.invalidate(profileAvatarSourceSettingProvider);
+    ref.invalidate(localProfileAvatarProvider);
     ref.invalidate(libraryKindLayoutProvider);
     ref.invalidate(feedFilterLayoutProvider);
     ref.invalidate(defaultLibraryFilterProvider);
     ref.invalidate(favoriteGamesProvider);
     ref.invalidate(favoriteTraktTitlesProvider);
+    ref.invalidate(favoriteAnilistMediaProvider);
     ref.invalidate(igdbPopularProvider);
-    ref.invalidate(igdbGamesHomeAsideProvider);
+    ref.invalidate(igdbGamesHomeFeedProvider);
     ref.invalidate(igdbGamesSectionListProvider);
     ref.invalidate(igdbGameDetailProvider);
     ref.invalidate(igdbReviewByIdProvider);

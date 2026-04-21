@@ -1,4 +1,5 @@
 {
+  "DEV_API_PROXY": "http://127.0.0.1:8787",
   "ANILIST_CLIENT_ID": "",
   "ANILIST_REDIRECT_URI": "https://anilist.co/api/v2/oauth/pin",
   "TWITCH_CLIENT_ID": "",
@@ -9,5 +10,6 @@
   "GOOGLE_IOS_CLIENT_ID": "",
   "TRAKT_CLIENT_ID": "",
   "TRAKT_CLIENT_SECRET": "",
-  "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html"
+  "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html",
+  "GOOGLE_BOOKS_API_KEY": ""
 }

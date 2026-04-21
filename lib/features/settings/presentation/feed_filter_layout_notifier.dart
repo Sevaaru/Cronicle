@@ -10,12 +10,12 @@ part 'feed_filter_layout_notifier.g.dart';
 
 /// Orden fijo de ids válidos (coinciden con [Enum.name] de `_FeedFilter` en el feed).
 const feedFilterLayoutDefaultOrder = <String>[
-  'feed',
   'anime',
   'manga',
   'movie',
   'tv',
   'game',
+  'book',
 ];
 
 class FeedFilterLayoutState {
@@ -36,28 +36,16 @@ class FeedFilterLayoutState {
     try {
       final list = jsonDecode(raw) as List<dynamic>;
       final out = <LayoutSlot>[];
-      var feedMerged = false;
 
       for (final e in list) {
         if (e is! Map) continue;
         final m = Map<String, dynamic>.from(e);
-        var id = m['id'] as String?;
+        final id = m['id'] as String?;
         final vis = m['v'] as bool? ?? true;
         if (id == null) continue;
 
-        if (id == 'following' || id == 'all') {
-          if (!feedMerged) {
-            out.add(LayoutSlot(id: 'feed', visible: vis));
-            feedMerged = true;
-          } else {
-            final idx = out.indexWhere((s) => s.id == 'feed');
-            if (idx >= 0) {
-              final cur = out[idx];
-              out[idx] = LayoutSlot(id: 'feed', visible: cur.visible || vis);
-            }
-          }
-          continue;
-        }
+        // Skip legacy ids that no longer exist.
+        if (id == 'following' || id == 'all' || id == 'feed') continue;
 
         if (!valid.contains(id)) continue;
         if (out.any((s) => s.id == id)) continue;

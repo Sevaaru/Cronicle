@@ -1,11 +1,26 @@
+import 'dart:math' show max;
+
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+
+/// AniList devuelve [updatedAt] de la entrada de lista en **segundos** Unix.
+int? _mediaListUpdatedAtMs(Map<String, dynamic> entry) {
+  final raw = entry['updatedAt'];
+  if (raw == null) return null;
+  if (raw is! num) return null;
+  final v = raw.toInt();
+  if (v <= 0) return null;
+  // Heurística: valores ~1e9–1e10 son segundos; ya en ms serían ~1e12+.
+  if (v < 20000000000) return v * 1000;
+  return v;
+}
 
 Future<int> importAnilistToLocal({
   required AnilistGraphqlDatasource graphql,
@@ -13,15 +28,17 @@ Future<int> importAnilistToLocal({
   required String token,
   required String userName,
 }) async {
-  final results = await Future.wait([
-    graphql.fetchUserMediaList(token, userName, type: 'ANIME'),
-    graphql.fetchUserMediaList(token, userName, type: 'MANGA'),
-  ]);
+  final anime = await graphql
+      .fetchUserMediaList(token, userName, type: 'ANIME')
+      .catchError((Object _) => <Map<String, dynamic>>[]);
+  final manga = await graphql
+      .fetchUserMediaList(token, userName, type: 'MANGA')
+      .catchError((Object _) => <Map<String, dynamic>>[]);
 
   final seen = <String>{};
   int count = 0;
 
-  for (final entry in [...results[0], ...results[1]]) {
+  for (final entry in [...anime, ...manga]) {
     try {
       final media = entry['media'] as Map<String, dynamic>? ?? {};
       final mediaId = media['id']?.toString();
@@ -40,6 +57,39 @@ Future<int> importAnilistToLocal({
           ? (media['chapters'] as num?)?.toInt()
           : (media['episodes'] as num?)?.toInt();
 
+      final animeSt =
+          kind == MediaKind.anime ? media['status'] as String? : null;
+      final released = kind == MediaKind.anime
+          ? AnimeAiringProgress.releasedEpisodesFromAnilistMedia(media)
+          : null;
+      final nextAirAt = kind == MediaKind.anime
+          ? AnimeAiringProgress.nextEpisodeAirsAtSecondsFromAnilistMedia(media)
+          : null;
+
+      var listProgress = (entry['progress'] as num?)?.toInt();
+      if (kind == MediaKind.anime) {
+        final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+          mediaKindCode: kind.code,
+          totalEpisodes: totalEp,
+          releasedEpisodes: released,
+        );
+        if (cap != null && listProgress != null && listProgress > cap) {
+          listProgress = cap;
+        }
+      }
+
+      final existing = await db.getLibraryEntryByKindAndExternalId(
+        kind.code,
+        mediaId,
+      );
+      final apiMs = _mediaListUpdatedAtMs(entry);
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final resolvedUpdatedAt = existing == null
+          ? (apiMs ?? nowMs)
+          : (apiMs == null)
+              ? existing.updatedAt
+              : max(existing.updatedAt, apiMs);
+
       await db.upsertLibraryEntry(LibraryEntriesCompanion(
         kind: drift.Value(kind.code),
         externalId: drift.Value(mediaId),
@@ -51,10 +101,13 @@ Future<int> importAnilistToLocal({
         posterUrl: drift.Value(coverImage['large'] as String?),
         status: drift.Value(entry['status'] as String? ?? 'PLANNING'),
         score: drift.Value((entry['score'] as num?)?.toInt()),
-        progress: drift.Value((entry['progress'] as num?)?.toInt()),
+        progress: drift.Value(listProgress),
         totalEpisodes: drift.Value(totalEp),
+        animeMediaStatus: drift.Value(animeSt),
+        releasedEpisodes: drift.Value(released),
+        nextEpisodeAirsAt: drift.Value(nextAirAt),
         notes: drift.Value(entry['notes'] as String?),
-        updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
+        updatedAt: drift.Value(resolvedUpdatedAt),
       ));
       count++;
     } catch (_) {

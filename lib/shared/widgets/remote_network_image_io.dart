@@ -8,6 +8,7 @@ class RemoteNetworkImage extends StatelessWidget {
     required this.imageUrl,
     this.width,
     this.height,
+    this.maxWidth,
     this.fit = BoxFit.contain,
     this.placeholder,
     this.error,
@@ -16,13 +17,14 @@ class RemoteNetworkImage extends StatelessWidget {
   final String imageUrl;
   final double? width;
   final double? height;
+  final double? maxWidth;
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? error;
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
+    Widget image = CachedNetworkImage(
       imageUrl: imageUrl,
       width: width,
       height: height,
@@ -36,5 +38,12 @@ class RemoteNetworkImage extends StatelessWidget {
           ),
       errorWidget: (_, _, _) => error ?? const Icon(Icons.broken_image, size: 32),
     );
+    if (maxWidth != null) {
+      image = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth!),
+        child: image,
+      );
+    }
+    return image;
   }
 }

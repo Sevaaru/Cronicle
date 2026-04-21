@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -70,11 +72,17 @@ class _MediaGenreTagBrowsePageState
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+    final db = ref.read(databaseProvider);
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      k.code, item['id'].toString(),
+    );
+    if (!mounted) return;
     await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: k,
+      existingEntry: existing,
     );
   }
 
@@ -82,6 +90,11 @@ class _MediaGenreTagBrowsePageState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+
+    final libraryEntries = ref.watch(libraryByKindProvider(widget.kind)).valueOrNull ?? [];
+    final libraryIds = {
+      for (final e in libraryEntries) e.externalId: true,
+    };
 
     final browse = ref.watch(
       anilistGenreTagBrowseProvider(
@@ -209,9 +222,12 @@ class _MediaGenreTagBrowsePageState
                     itemCount: list.length + (hasMore ? 1 : 0),
                     itemBuilder: (context, i) {
                       if (i < list.length) {
+                        final item = list[i];
+                        final id = item['id']?.toString() ?? '';
                         return BrowseResultCard(
-                          item: list[i],
+                          item: item,
                           kind: widget.kind,
+                          inLibrary: libraryIds.containsKey(id),
                           onAdd: _addToLibrary,
                         );
                       }

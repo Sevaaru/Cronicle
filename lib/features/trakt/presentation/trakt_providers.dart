@@ -210,12 +210,18 @@ class TraktMoviesHomeData {
     required this.trending,
     required this.anticipated,
     required this.popular,
+    required this.played,
+    required this.watched,
+    required this.collected,
   });
 
   final List<Map<String, dynamic>> trending;
   /// `/movies/anticipated` (Trakt no ofrece `/movies/watching`).
   final List<Map<String, dynamic>> anticipated;
   final List<Map<String, dynamic>> popular;
+  final List<Map<String, dynamic>> played;
+  final List<Map<String, dynamic>> watched;
+  final List<Map<String, dynamic>> collected;
 }
 
 class TraktShowsHomeData {
@@ -223,46 +229,78 @@ class TraktShowsHomeData {
     required this.trending,
     required this.watching,
     required this.popular,
+    required this.anticipated,
+    required this.watched,
+    required this.collected,
   });
 
   final List<Map<String, dynamic>> trending;
   final List<Map<String, dynamic>> watching;
   final List<Map<String, dynamic>> popular;
+  final List<Map<String, dynamic>> anticipated;
+  final List<Map<String, dynamic>> watched;
+  final List<Map<String, dynamic>> collected;
 }
 
 @riverpod
 Future<TraktMoviesHomeData> traktMoviesHome(TraktMoviesHomeRef ref) async {
   if (EnvConfig.traktClientId.isEmpty) {
-    return const TraktMoviesHomeData(trending: [], anticipated: [], popular: []);
+    return const TraktMoviesHomeData(
+      trending: [],
+      anticipated: [],
+      popular: [],
+      played: [],
+      watched: [],
+      collected: [],
+    );
   }
   final api = ref.watch(traktApiProvider);
   final results = await Future.wait([
-    api.moviesTrending(limit: 18),
+    api.moviesTrending(limit: 20),
     api.moviesAnticipated(limit: 18),
     api.moviesPopular(limit: 18),
+    api.moviesPlayed(limit: 20),
+    api.moviesWatched(limit: 18),
+    api.moviesCollected(limit: 18),
   ]);
   return TraktMoviesHomeData(
     trending: results[0],
     anticipated: results[1],
     popular: results[2],
+    played: results[3],
+    watched: results[4],
+    collected: results[5],
   );
 }
 
 @riverpod
 Future<TraktShowsHomeData> traktShowsHome(TraktShowsHomeRef ref) async {
   if (EnvConfig.traktClientId.isEmpty) {
-    return const TraktShowsHomeData(trending: [], watching: [], popular: []);
+    return const TraktShowsHomeData(
+      trending: [],
+      watching: [],
+      popular: [],
+      anticipated: [],
+      watched: [],
+      collected: [],
+    );
   }
   final api = ref.watch(traktApiProvider);
   final results = await Future.wait([
-    api.showsTrending(limit: 18),
+    api.showsTrending(limit: 20),
     api.showsWatching(limit: 18),
     api.showsPopular(limit: 18),
+    api.showsAnticipated(limit: 18),
+    api.showsWatched(limit: 18),
+    api.showsCollected(limit: 18),
   ]);
   return TraktShowsHomeData(
     trending: results[0],
     watching: results[1],
     popular: results[2],
+    anticipated: results[3],
+    watched: results[4],
+    collected: results[5],
   );
 }
 

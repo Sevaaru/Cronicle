@@ -110,19 +110,34 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  Future<List<Map<String, dynamic>>> moviesPopular({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> moviesPopular({
+    int limit = 20,
+    /// Rango de años de estreno Trakt, p. ej. `2024-2024` o `2010-2015`.
+    String? years,
+  }) async {
     final res = await _dio.get<dynamic>(
       '$_base/movies/popular',
-      queryParameters: {'limit': limit, 'extended': _extended},
+      queryParameters: {
+        'limit': limit,
+        'extended': _extended,
+        if (years != null && years.isNotEmpty) 'years': years,
+      },
       options: await _options(),
     );
     return _fromTrendingMovies(_list(res.data));
   }
 
-  Future<List<Map<String, dynamic>>> showsPopular({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> showsPopular({
+    int limit = 20,
+    String? years,
+  }) async {
     final res = await _dio.get<dynamic>(
       '$_base/shows/popular',
-      queryParameters: {'limit': limit, 'extended': _extended},
+      queryParameters: {
+        'limit': limit,
+        'extended': _extended,
+        if (years != null && years.isNotEmpty) 'years': years,
+      },
       options: await _options(),
     );
     return _fromTrendingShows(_list(res.data));
@@ -136,6 +151,81 @@ class TraktApiDatasource {
       options: await _options(),
     );
     return _fromTrendingMovies(_list(res.data));
+  }
+
+  /// Películas más reproducidas en el período indicado (`weekly`, `monthly`, `yearly`, `all`).
+  Future<List<Map<String, dynamic>>> moviesPlayed({
+    String period = 'weekly',
+    int limit = 20,
+  }) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/movies/played/$period',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingMovies(_list(res.data));
+  }
+
+  /// Películas más vistas (usuarios únicos) en el período indicado.
+  Future<List<Map<String, dynamic>>> moviesWatched({
+    String period = 'weekly',
+    int limit = 20,
+  }) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/movies/watched/$period',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingMovies(_list(res.data));
+  }
+
+  /// Películas más coleccionadas en el período indicado.
+  Future<List<Map<String, dynamic>>> moviesCollected({
+    String period = 'weekly',
+    int limit = 20,
+  }) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/movies/collected/$period',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingMovies(_list(res.data));
+  }
+
+  /// Series más esperadas.
+  Future<List<Map<String, dynamic>>> showsAnticipated({int limit = 20}) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/shows/anticipated',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingShows(_list(res.data));
+  }
+
+  /// Series más vistas (usuarios únicos) en el período indicado.
+  Future<List<Map<String, dynamic>>> showsWatched({
+    String period = 'weekly',
+    int limit = 20,
+  }) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/shows/watched/$period',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingShows(_list(res.data));
+  }
+
+  /// Series más coleccionadas en el período indicado.
+  Future<List<Map<String, dynamic>>> showsCollected({
+    String period = 'weekly',
+    int limit = 20,
+  }) async {
+    final res = await _dio.get<dynamic>(
+      '$_base/shows/collected/$period',
+      queryParameters: {'limit': limit, 'extended': _extended},
+      options: await _options(),
+    );
+    return _fromTrendingShows(_list(res.data));
   }
 
   Future<List<Map<String, dynamic>>> showsWatching({int limit = 30}) async {

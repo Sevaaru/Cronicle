@@ -1,4 +1,30 @@
 abstract final class EnvConfig {
+  /// **Solo desarrollo / Flutter Web.** Origen HTTP del proxy CORS (sin barra final),
+  /// p. ej. `http://127.0.0.1:8787`. Las APIs de Twitch e IGDB no permiten orígenes web
+  /// directos; ejecuta `node scripts/dev_api_proxy.mjs` y pasa
+  /// `--dart-define=DEV_API_PROXY=http://127.0.0.1:8787` junto con tus credenciales.
+  static const String devApiProxyOrigin = String.fromEnvironment(
+    'DEV_API_PROXY',
+    defaultValue: '',
+  );
+
+  static bool get hasDevApiProxy => devApiProxyOrigin.trim().isNotEmpty;
+
+  /// Base `…/v4` de IGDB (directa o vía [devApiProxyOrigin]).
+  static String get igdbApiV4BaseUrl => hasDevApiProxy
+      ? '${devApiProxyOrigin.trim()}/v4'
+      : 'https://api.igdb.com/v4';
+
+  /// Token client_credentials / refresh (Twitch).
+  static String get twitchOAuthTokenUrl => hasDevApiProxy
+      ? '${devApiProxyOrigin.trim()}/oauth2/token'
+      : 'https://id.twitch.tv/oauth2/token';
+
+  /// Helix `GET /users` (login tras OAuth).
+  static String get twitchHelixUsersUrl => hasDevApiProxy
+      ? '${devApiProxyOrigin.trim()}/helix/users'
+      : 'https://api.twitch.tv/helix/users';
+
   static const String anilistClientId = String.fromEnvironment(
     'ANILIST_CLIENT_ID',
     defaultValue: '',
@@ -56,6 +82,20 @@ abstract final class EnvConfig {
   /// Secreto OAuth Trakt (solo importa para conectar cuenta / sync).
   static const String traktClientSecret = String.fromEnvironment(
     'TRAKT_CLIENT_SECRET',
+    defaultValue: '',
+  );
+
+  /// Cabecera `X-RapidAPI-Key` para [OpenCritic en RapidAPI](https://rapidapi.com/opencritic-opencritic-default/api/opencritic-api).
+  /// Sin esto, la sección de críticos OpenCritic en el detalle de juego no se rellena.
+  static const String openCriticRapidApiKey = String.fromEnvironment(
+    'OPENCRITIC_RAPIDAPI_KEY',
+    defaultValue: '',
+  );
+
+  /// API key de Google Books (Google Cloud Console → APIs & Services → Credentials).
+  /// Se añade como query param `key=` a las peticiones públicas de la Books API v1.
+  static const String googleBooksApiKey = String.fromEnvironment(
+    'GOOGLE_BOOKS_API_KEY',
     defaultValue: '',
   );
 

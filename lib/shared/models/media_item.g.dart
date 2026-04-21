@@ -44,4 +44,5 @@ const _$MediaKindEnumMap = {
   MediaKind.tv: 'tv',
   MediaKind.game: 'game',
   MediaKind.manga: 'manga',
+  MediaKind.book: 'book',
 };

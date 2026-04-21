@@ -40,7 +40,7 @@ final traktApiProvider = Provider<TraktApiDatasource>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TraktApiRef = ProviderRef<TraktApiDatasource>;
-String _$traktMoviesHomeHash() => r'909396f1d7a9d68106d59acb7b278a21bef0de2d';
+String _$traktMoviesHomeHash() => r'11cfb443b8143cd3c9da2d424cc510e3237b4b27';
 
 /// See also [traktMoviesHome].
 @ProviderFor(traktMoviesHome)
@@ -58,7 +58,7 @@ final traktMoviesHomeProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TraktMoviesHomeRef = AutoDisposeFutureProviderRef<TraktMoviesHomeData>;
-String _$traktShowsHomeHash() => r'cce65acec96311b23cce23511b40eed797c02281';
+String _$traktShowsHomeHash() => r'4ff2dfffbac5d91ecdc1fd55ae4bd48347071e3b';
 
 /// See also [traktShowsHome].
 @ProviderFor(traktShowsHome)

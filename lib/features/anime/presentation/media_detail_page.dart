@@ -56,6 +56,12 @@ class _DetailContent extends StatefulWidget {
 }
 
 class _DetailContentState extends State<_DetailContent> {
+  /// Primera fila aprox.; si hay más chips, se ofrece «Mostrar más».
+  static const int _kCollapsedChipCount = 6;
+
+  bool _genresExpanded = false;
+  bool _tagsExpanded = false;
+
   Map<String, dynamic> get media => widget.media;
   MediaKind get kind => widget.kind;
 
@@ -269,8 +275,8 @@ class _DetailContentState extends State<_DetailContent> {
                   spacing: 6,
                   runSpacing: 4,
                   children: [
-                    if (format != null) _Tag(format, colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
-                    if (status != null) _Tag(status, colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
+                    if (format != null) _Tag(_formatMediaStatus(format, false, l10n), colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
+                    if (status != null) _Tag(_formatMediaStatus(status, true, l10n), colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
                     if (isAdult) _Tag('18+', colorScheme.errorContainer, colorScheme.onErrorContainer),
                   ],
                 ),
@@ -290,12 +296,7 @@ class _DetailContentState extends State<_DetailContent> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (media['id'] != null)
-                      _MediaFavoriteToggle(
-                        mediaId: media['id'] as int,
-                        mediaType: (media['type'] as String?) ?? 'ANIME',
-                        isFavourite: media['isFavourite'] as bool? ?? false,
-                      ),
+                    if (media['id'] != null) _MediaFavoriteToggle(media: media),
                     if (media['id'] != null) const SizedBox(width: 8),
                     Expanded(
                       child: _AddToLibraryButton(media: media, kind: kind),
@@ -365,17 +366,33 @@ class _DetailContentState extends State<_DetailContent> {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: genres
-                        .map(
-                          (g) => ActionChip(
-                            label: Text(g, style: const TextStyle(fontSize: 12)),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _openBrowseByGenre(g),
-                          ),
-                        )
-                        .toList(),
+                    children: [
+                      for (final g in (_genresExpanded ||
+                              genres.length <= _kCollapsedChipCount)
+                          ? genres
+                          : genres.take(_kCollapsedChipCount))
+                        ActionChip(
+                          label: Text(g, style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _openBrowseByGenre(g),
+                        ),
+                    ],
                   ),
+                  if (genres.length > _kCollapsedChipCount)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () => setState(
+                          () => _genresExpanded = !_genresExpanded,
+                        ),
+                        child: Text(
+                          _genresExpanded
+                              ? l10n.mediaDetailChipsShowLess
+                              : l10n.mediaDetailChipsShowMore,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                 ],
 
@@ -385,23 +402,58 @@ class _DetailContentState extends State<_DetailContent> {
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final t in browseTags)
-                        if ((t['name'] as String?)?.isNotEmpty ?? false)
-                          ActionChip(
-                            label: Text(
-                              t['name'] as String,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            onPressed: () =>
-                                _openBrowseByTag(t['name'] as String),
+                  Builder(
+                    builder: (context) {
+                      final namedTags = browseTags
+                          .where(
+                            (t) =>
+                                (t['name'] as String?)?.isNotEmpty ?? false,
+                          )
+                          .toList();
+                      final visible =
+                          (_tagsExpanded ||
+                                  namedTags.length <= _kCollapsedChipCount)
+                              ? namedTags
+                              : namedTags
+                                  .take(_kCollapsedChipCount)
+                                  .toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final t in visible)
+                                ActionChip(
+                                  label: Text(
+                                    t['name'] as String,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () =>
+                                      _openBrowseByTag(t['name'] as String),
+                                ),
+                            ],
                           ),
-                    ],
+                          if (namedTags.length > _kCollapsedChipCount)
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: TextButton(
+                                onPressed: () => setState(
+                                  () => _tagsExpanded = !_tagsExpanded,
+                                ),
+                                child: Text(
+                                  _tagsExpanded
+                                      ? l10n.mediaDetailChipsShowLess
+                                      : l10n.mediaDetailChipsShowMore,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -422,9 +474,15 @@ class _DetailContentState extends State<_DetailContent> {
 
                 _buildRelations(context, colorScheme),
 
+                _buildCharacters(context, colorScheme, l10n),
+
+                _buildStaff(context, colorScheme, l10n),
+
                 _buildRecommendations(context, colorScheme),
 
                 _buildReviews(colorScheme, l10n),
+
+                _buildForumThreads(context, colorScheme, l10n),
 
                 _buildScoreDistribution(colorScheme, l10n),
 
@@ -506,7 +564,10 @@ class _DetailContentState extends State<_DetailContent> {
             Color labelColor;
             if (siteColor != null) {
               final luminance = siteColor.computeLuminance();
-              if (!isDark && luminance > 0.6) {
+              if (isDark && luminance < 0.4) {
+                // API a veces devuelve negro u oscuro (p. ej. Twitter) → ilegible en fondo oscuro.
+                labelColor = cs.primary;
+              } else if (!isDark && luminance > 0.6) {
                 labelColor = HSLColor.fromColor(siteColor)
                     .withLightness(0.3)
                     .toColor();
@@ -615,6 +676,197 @@ class _DetailContentState extends State<_DetailContent> {
                         style: const TextStyle(fontSize: 11),
                         textAlign: TextAlign.center,
                       ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildCharacters(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final container = media['characters'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    if (edges.isEmpty) return const SizedBox.shrink();
+    final mediaId = media['id'] as int?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(l10n.mediaCharacters,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const Spacer(),
+            if (mediaId != null)
+              TextButton(
+                onPressed: () => context.push('/media/$mediaId/characters'),
+                child: Text(l10n.mediaViewAll,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 175,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: edges.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final edge = edges[i];
+              final node = edge['node'] as Map<String, dynamic>? ?? {};
+              final cId = node['id'] as int?;
+              final cName = (node['name'] as Map?)?['full'] as String? ?? '';
+              final cImg = (node['image'] as Map?)?['large'] as String?;
+              final role = edge['role'] as String?;
+              final vas = (edge['voiceActors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+              final firstVa = vas.isNotEmpty ? vas.first : null;
+
+              return SizedBox(
+                width: 100,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: cId == null ? null : () => context.push('/character/$cId'),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: cImg != null
+                            ? CachedNetworkImage(
+                                imageUrl: cImg,
+                                width: 90,
+                                height: 110,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 90,
+                                height: 110,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.person),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      cName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    if (role != null)
+                      Text(
+                        _formatCharacterRole(role, l10n),
+                        style: TextStyle(fontSize: 9, color: cs.primary, fontWeight: FontWeight.w600),
+                      ),
+                    if (firstVa != null) ...[
+                      const SizedBox(height: 2),
+                      InkWell(
+                        onTap: () {
+                          final id = firstVa['id'] as int?;
+                          if (id != null) context.push('/staff/$id');
+                        },
+                        child: Text(
+                          (firstVa['name'] as Map?)?['full'] as String? ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildStaff(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final container = media['staff'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    if (edges.isEmpty) return const SizedBox.shrink();
+    final mediaId = media['id'] as int?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(l10n.mediaStaff,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const Spacer(),
+            if (mediaId != null)
+              TextButton(
+                onPressed: () => context.push('/media/$mediaId/staff'),
+                child: Text(l10n.mediaViewAll,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 165,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: edges.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final edge = edges[i];
+              final node = edge['node'] as Map<String, dynamic>? ?? {};
+              final sId = node['id'] as int?;
+              final sName = (node['name'] as Map?)?['full'] as String? ?? '';
+              final sImg = (node['image'] as Map?)?['large'] as String?;
+              final role = edge['role'] as String?;
+
+              return SizedBox(
+                width: 100,
+                child: GestureDetector(
+                  onTap: sId == null ? null : () => context.push('/staff/$sId'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: sImg != null
+                            ? CachedNetworkImage(
+                                imageUrl: sImg,
+                                width: 90,
+                                height: 110,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 90,
+                                height: 110,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.person),
+                              ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        sName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      if (role != null)
+                        Text(
+                          role,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
+                        ),
                     ],
                   ),
                 ),
@@ -790,9 +1042,47 @@ class _DetailContentState extends State<_DetailContent> {
     );
   }
 
+  Widget _buildForumThreads(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final mediaId = media['id'] as int?;
+    if (mediaId == null) return const SizedBox.shrink();
+    return Consumer(
+      builder: (context, ref, _) {
+        final threadsAsync = ref.watch(anilistMediaThreadsProvider(mediaId));
+        return threadsAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (e, st) => const SizedBox.shrink(),
+          data: (threads) {
+            if (threads.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.forumDiscussions,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                const SizedBox(height: 8),
+                ...threads.take(3).map((t) => _ForumThreadTile(thread: t, cs: cs)),
+                if (threads.length >= 3)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.arrow_forward, size: 16),
+                      label: Text(l10n.forumViewAll,
+                          style: const TextStyle(fontSize: 12)),
+                      onPressed: () => context.push(
+                        '/forum/media/$mediaId',
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildScoreDistribution(ColorScheme cs, AppLocalizations l10n) {
-    final stats = media['stats'] as Map<String, dynamic>?;
-    final scoreDist = (stats?['scoreDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final scoreDist = (media['stats']?['scoreDistribution'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     if (scoreDist.isEmpty) return const SizedBox.shrink();
 
     final maxAmount = scoreDist.fold<int>(0, (m, s) {
@@ -858,6 +1148,42 @@ class _DetailContentState extends State<_DetailContent> {
 
 }
 
+String _formatCharacterRole(String role, AppLocalizations l10n) {
+  return switch (role) {
+    'MAIN' => l10n.characterRoleMain,
+    'SUPPORTING' => l10n.characterRoleSupporting,
+    'BACKGROUND' => l10n.characterRoleBackground,
+    _ => role,
+  };
+}
+
+String _formatMediaStatus(String raw, bool isStatus, AppLocalizations l10n) {
+  if (!isStatus) {
+    // format codes → pretty label
+    return switch (raw) {
+      'TV' => 'TV',
+      'TV_SHORT' => 'TV Short',
+      'MOVIE' => 'Movie',
+      'SPECIAL' => 'Special',
+      'OVA' => 'OVA',
+      'ONA' => 'ONA',
+      'MUSIC' => 'Music',
+      'MANGA' => 'Manga',
+      'NOVEL' => 'Novel',
+      'ONE_SHOT' => 'One Shot',
+      _ => raw,
+    };
+  }
+  return switch (raw) {
+    'FINISHED' => l10n.mediaStatusFinished,
+    'RELEASING' => l10n.mediaStatusReleasing,
+    'NOT_YET_RELEASED' => l10n.mediaStatusNotYetReleased,
+    'CANCELLED' => l10n.mediaStatusCancelled,
+    'HIATUS' => l10n.mediaStatusHiatus,
+    _ => raw,
+  };
+}
+
 class _Tag extends StatelessWidget {
   const _Tag(this.text, this.bg, this.fg);
   final String text;
@@ -921,15 +1247,9 @@ class _InfoPill extends StatelessWidget {
 }
 
 class _MediaFavoriteToggle extends ConsumerStatefulWidget {
-  const _MediaFavoriteToggle({
-    required this.mediaId,
-    required this.mediaType,
-    required this.isFavourite,
-  });
+  const _MediaFavoriteToggle({required this.media});
 
-  final int mediaId;
-  final String mediaType;
-  final bool isFavourite;
+  final Map<String, dynamic> media;
 
   @override
   ConsumerState<_MediaFavoriteToggle> createState() =>
@@ -939,40 +1259,97 @@ class _MediaFavoriteToggle extends ConsumerStatefulWidget {
 class _MediaFavoriteToggleState extends ConsumerState<_MediaFavoriteToggle> {
   bool _busy = false;
 
+  int get _mediaId => (widget.media['id'] as num).toInt();
+
+  String get _mediaType =>
+      ((widget.media['type'] as String?) ?? 'ANIME').toUpperCase();
+
+  bool _apiFavourite() => widget.media['isFavourite'] as bool? ?? false;
+
+  bool _localFavourite(List<Map<String, dynamic>> local) {
+    return local.any((e) {
+      final id = (e['id'] as num?)?.toInt() ?? 0;
+      final t = (e['type'] as String? ?? 'ANIME').toUpperCase();
+      return id == _mediaId && t == _mediaType;
+    });
+  }
+
+  bool _combinedFavourite() {
+    ref.watch(favoriteAnilistMediaProvider);
+    final local = ref.read(favoriteAnilistMediaProvider);
+    return _apiFavourite() || _localFavourite(local);
+  }
+
   Future<void> _onPressed() async {
     final l10n = AppLocalizations.of(context)!;
     final token = ref.read(anilistTokenProvider).valueOrNull;
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loginRequiredFavorite)),
-      );
+    final favNotifier = ref.read(favoriteAnilistMediaProvider.notifier);
+    final local = ref.read(favoriteAnilistMediaProvider);
+    final serverFav = _apiFavourite();
+    final localHas = _localFavourite(local);
+    final combined = serverFav || localHas;
+
+    if (!combined) {
+      if (token == null) {
+        await favNotifier.toggleLocalFavorite(widget.media);
+        return;
+      }
+      setState(() => _busy = true);
+      try {
+        final gql = ref.read(anilistGraphqlProvider);
+        await gql.toggleFavouriteMedia(
+          mediaId: _mediaId,
+          mediaType: _mediaType,
+          token: token,
+        );
+        await favNotifier.removeFavorite(_mediaId, _mediaType);
+        ref.invalidate(anilistMediaDetailProvider(_mediaId));
+        ref.invalidate(anilistProfileProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
       return;
     }
-    setState(() => _busy = true);
-    try {
-      final gql = ref.read(anilistGraphqlProvider);
-      await gql.toggleFavouriteMedia(
-        mediaId: widget.mediaId,
-        mediaType: widget.mediaType,
-        token: token,
-      );
-      ref.invalidate(anilistMediaDetailProvider(widget.mediaId));
-      ref.invalidate(anilistProfileProvider);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+
+    if (serverFav && token != null) {
+      setState(() => _busy = true);
+      try {
+        final gql = ref.read(anilistGraphqlProvider);
+        await gql.toggleFavouriteMedia(
+          mediaId: _mediaId,
+          mediaType: _mediaType,
+          token: token,
         );
+        await favNotifier.removeFavorite(_mediaId, _mediaType);
+        ref.invalidate(anilistMediaDetailProvider(_mediaId));
+        ref.invalidate(anilistProfileProvider);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorWithMessage('$e'))),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
       }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      return;
+    }
+
+    if (localHas) {
+      await favNotifier.toggleLocalFavorite(widget.media);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isFav = widget.isFavourite;
+    final isFav = _combinedFavourite();
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -1059,6 +1436,99 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
               },
             )
           : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _ForumThreadTile extends StatelessWidget {
+  const _ForumThreadTile({required this.thread, required this.cs});
+
+  final Map<String, dynamic> thread;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = thread['id'] as int?;
+    final title = thread['title'] as String? ?? '';
+    final replyCount = thread['replyCount'] as int? ?? 0;
+    final viewCount = thread['viewCount'] as int? ?? 0;
+    final createdAt = thread['createdAt'] as int?;
+    final user = thread['user'] as Map<String, dynamic>?;
+    final userName = user?['name'] as String? ?? '';
+    final avatar = (user?['avatar'] as Map?)?['medium'] as String?;
+
+    String timeAgo = '';
+    if (createdAt != null) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inDays > 365) {
+        timeAgo = '${diff.inDays ~/ 365}a';
+      } else if (diff.inDays > 30) {
+        timeAgo = '${diff.inDays ~/ 30}mo';
+      } else if (diff.inDays > 0) {
+        timeAgo = '${diff.inDays}d';
+      } else if (diff.inHours > 0) {
+        timeAgo = '${diff.inHours}h';
+      } else {
+        timeAgo = '${diff.inMinutes}min';
+      }
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: id == null
+            ? null
+            : () => context.push('/forum/thread/$id',
+                extra: thread),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                if (avatar != null)
+                  ClipOval(
+                    child: Image.network(avatar,
+                        width: 16, height: 16, fit: BoxFit.cover),
+                  ),
+                if (avatar != null) const SizedBox(width: 4),
+                Text(userName,
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+                if (timeAgo.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text('· $timeAgo',
+                      style: TextStyle(
+                          fontSize: 11, color: cs.onSurfaceVariant)),
+                ],
+                const Spacer(),
+                Icon(Icons.comment_outlined,
+                    size: 13, color: cs.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text('$replyCount',
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+                const SizedBox(width: 8),
+                Icon(Icons.visibility_outlined,
+                    size: 13, color: cs.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text('$viewCount',
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant)),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

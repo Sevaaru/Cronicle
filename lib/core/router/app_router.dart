@@ -2,10 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/core/router/profile_route_transition.dart';
+import 'package:cronicle/core/router/shell_nav_tab.dart';
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/media_genre_tag_browse_page.dart';
+import 'package:cronicle/features/anime/presentation/media_characters_page.dart';
+import 'package:cronicle/features/anime/presentation/media_staff_page.dart';
+import 'package:cronicle/features/anime/presentation/character_detail_page.dart';
+import 'package:cronicle/features/anime/presentation/staff_detail_page.dart';
+import 'package:cronicle/features/anime/presentation/forum_media_threads_page.dart';
+import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/books/presentation/book_detail_page.dart';
+import 'package:cronicle/features/books/presentation/book_subject_browse_page.dart';
+import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
+import 'package:cronicle/features/books/presentation/books_home_section_list_page.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_home_section_list_page.dart';
 import 'package:cronicle/features/feed/presentation/activity_replies_page.dart';
 import 'package:cronicle/features/feed/presentation/anilist_notifications_page.dart';
 import 'package:cronicle/features/feed/presentation/feed_page.dart';
@@ -15,12 +28,20 @@ import 'package:cronicle/features/games/presentation/games_page.dart';
 import 'package:cronicle/features/games/presentation/igdb_game_review_detail_page.dart';
 import 'package:cronicle/features/library/presentation/library_page.dart';
 import 'package:cronicle/features/movies/presentation/movies_page.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_page.dart';
 import 'package:cronicle/features/profile/presentation/personal_stats_page.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_page.dart';
-import 'package:cronicle/features/profile/presentation/profile_page.dart';
+import 'package:cronicle/features/profile/presentation/user_follow_list_page.dart';
 import 'package:cronicle/features/profile/presentation/user_profile_page.dart';
+import 'package:cronicle/features/games/presentation/search_games_theme_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_anilist_browse_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_anilist_genre_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_book_subject_list_page.dart';
+import 'package:cronicle/features/search/presentation/search_browse_by_release_date_page.dart';
 import 'package:cronicle/features/search/presentation/search_page.dart';
+import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
@@ -29,6 +50,7 @@ import 'package:cronicle/features/tv/presentation/tv_page.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
 part 'app_router.g.dart';
 
@@ -63,40 +85,64 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
-int _tabIndexFromPath(String path) {
-  if (path.startsWith('/library')) return 1;
-  if (path.startsWith('/search')) return 2;
-  if (path.startsWith('/profile')) return 3;
-  if (path.startsWith('/settings')) return 4;
-  return 0;
-}
-
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
   final startPage = ref.read(defaultStartPageProvider);
+  final onboardingDone = ref.read(onboardingCompletedProvider);
 
   return GoRouter(
     navigatorKey: cronicleRootNavigatorKey,
-    initialLocation: startPage,
+    initialLocation: onboardingDone ? startPage : '/onboarding',
     redirect: (context, state) {
       // Android entrega el intent OAuth a MainActivity; el sistema puede
       // exponerlo como "ruta" y GoRouter no tiene match → GoException.
+      // AppLinks ya maneja el deep link; mantener al usuario en la página actual.
       if (state.uri.scheme == 'cronicle') {
-        return '/settings';
+        final current =
+            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+        if (current.isNotEmpty && current != '/') return current;
+        final done = ref.read(onboardingCompletedProvider);
+        return done ? startPage : '/onboarding';
+      }
+      // Rutas con barra final no coincidían con los paths registrados.
+      final path = state.uri.path;
+      if (path.length > 1 && path.endsWith('/')) {
+        return state.uri.replace(path: path.substring(0, path.length - 1)).toString();
       }
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
+        redirect: (context, state) {
+          final done = ref.read(onboardingCompletedProvider);
+          if (done) return startPage;
+          return null;
+        },
+      ),
       ShellRoute(
         navigatorKey: _shellKey,
         builder: (context, state, child) {
           final location = state.uri.path;
-          final index = _tabIndexFromPath(location);
+          final index =
+              ref.read(shellNavTabProvider.notifier).bottomNavIndex(location);
+
+          // No modificar providers durante build; persistir tab principal después del frame.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref
+                .read(shellNavTabProvider.notifier)
+                .rememberPrimaryTabFromPath(location);
+          });
 
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              const routes = ['/feed', '/library', '/search', '/profile', '/settings'];
+              // Cierra PopupMenu / overlays del tab anterior (p. ej. filtro biblioteca).
+              _shellKey.currentState?.popUntil(
+                (route) => route is! PopupRoute,
+              );
+              const routes = ['/feed', '/library', '/search', '/social', '/settings'];
               context.go(routes[i]);
             },
             child: child,
@@ -124,12 +170,67 @@ GoRouter appRouter(AppRouterRef ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SearchPage(),
             ),
+            routes: [
+              GoRoute(
+                path: 'anilist/:mediaType/:category',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final mediaType =
+                      state.pathParameters['mediaType']!.toUpperCase();
+                  final category = state.pathParameters['category']!;
+                  if (mediaType != 'ANIME' && mediaType != 'MANGA') {
+                    return const _InvalidBrowseParamsPage();
+                  }
+                  if (!isValidAnilistBrowseCategory(category)) {
+                    return const _InvalidBrowseParamsPage();
+                  }
+                  return SearchAnilistBrowseListPage(
+                    mediaType: mediaType,
+                    category: category,
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'anilist-genres',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final t = (state.uri.queryParameters['type'] ?? 'ANIME')
+                      .toUpperCase();
+                  final mediaType = t == 'MANGA' ? 'MANGA' : 'ANIME';
+                  return SearchAnilistGenreListPage(mediaType: mediaType);
+                },
+              ),
+              GoRoute(
+                path: 'book-subjects',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) => const SearchBookSubjectListPage(),
+              ),
+              GoRoute(
+                path: 'games-themes',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) => const SearchGamesThemeListPage(),
+              ),
+              GoRoute(
+                path: 'browse-by-date',
+                parentNavigatorKey: _shellKey,
+                builder: (context, state) {
+                  final kindCode =
+                      int.tryParse(state.uri.queryParameters['kind'] ?? '') ?? 0;
+                  final kind = MediaKind.fromCode(kindCode);
+                  return SearchBrowseByReleaseDatePage(mediaKind: kind);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/social',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SocialPage(),
+            ),
           ),
           GoRoute(
             path: '/profile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfilePage(),
-            ),
+            pageBuilder: (context, state) => buildProfileTransitionPage(state),
           ),
           GoRoute(
             path: '/profile/personal-stats',
@@ -165,6 +266,34 @@ GoRouter appRouter(AppRouterRef ref) {
             },
           ),
           GoRoute(
+            path: '/media/:id/characters',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return MediaCharactersPage(mediaId: id);
+            },
+          ),
+          GoRoute(
+            path: '/media/:id/staff',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return MediaStaffPage(mediaId: id);
+            },
+          ),
+          GoRoute(
+            path: '/character/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return CharacterDetailPage(characterId: id);
+            },
+          ),
+          GoRoute(
+            path: '/staff/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return StaffDetailPage(staffId: id);
+            },
+          ),
+          GoRoute(
             path: '/browse/media',
             builder: (context, state) {
               final q = state.uri.queryParameters;
@@ -191,6 +320,20 @@ GoRouter appRouter(AppRouterRef ref) {
             },
           ),
           GoRoute(
+            path: '/user/:id/followers',
+            builder: (context, state) {
+              final userId = int.parse(state.pathParameters['id']!);
+              return UserFollowListPage(userId: userId, followers: true);
+            },
+          ),
+          GoRoute(
+            path: '/user/:id/following',
+            builder: (context, state) {
+              final userId = int.parse(state.pathParameters['id']!);
+              return UserFollowListPage(userId: userId, followers: false);
+            },
+          ),
+          GoRoute(
             path: '/user/:id',
             builder: (context, state) {
               final userId = int.parse(state.pathParameters['id']!);
@@ -210,6 +353,21 @@ GoRouter appRouter(AppRouterRef ref) {
               final reviewId = int.parse(state.pathParameters['id']!);
               final extra = state.extra as Map<String, dynamic>?;
               return ReviewDetailPage(reviewId: reviewId, initialData: extra);
+            },
+          ),
+          GoRoute(
+            path: '/forum/media/:id',
+            builder: (context, state) {
+              final mediaId = int.parse(state.pathParameters['id']!);
+              return ForumMediaThreadsPage(mediaId: mediaId);
+            },
+          ),
+          GoRoute(
+            path: '/forum/thread/:id',
+            builder: (context, state) {
+              final threadId = int.parse(state.pathParameters['id']!);
+              final extra = state.extra as Map<String, dynamic>?;
+              return ForumThreadPage(threadId: threadId, initialData: extra);
             },
           ),
           GoRoute(
@@ -247,6 +405,43 @@ GoRouter appRouter(AppRouterRef ref) {
               return TraktShowDetailPage(traktId: id);
             },
           ),
+          GoRoute(
+            path: '/book/:workKey',
+            builder: (context, state) {
+              final workKey = state.pathParameters['workKey']!;
+              return BookDetailPage(workKey: workKey);
+            },
+          ),
+          GoRoute(
+            path: '/books/section/:slug',
+            builder: (context, state) {
+              final slug = state.pathParameters['slug']!;
+              return BooksHomeSectionListPage(slug: slug);
+            },
+          ),
+          GoRoute(
+            path: '/books/subject',
+            builder: (context, state) {
+              final q = state.uri.queryParameters;
+              final subject = q['subject'] ?? '';
+              final sort = q['sort'] ?? 'popularity';
+              if (subject.isEmpty) return const _InvalidBrowseParamsPage();
+              return BookSubjectBrowsePage(
+                subject: subject,
+                initialSortKey: sort,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/trakt-section/:kind/:slug',
+            builder: (context, state) {
+              final kind = state.pathParameters['kind']! == 'movie'
+                  ? MediaKind.movie
+                  : MediaKind.tv;
+              final slug = state.pathParameters['slug']!;
+              return TraktHomeSectionListPage(kind: kind, slug: slug);
+            },
+          ),
         ],
       ),
       GoRoute(
@@ -262,8 +457,35 @@ GoRouter appRouter(AppRouterRef ref) {
         builder: (context, state) => const GamesPage(),
       ),
       GoRoute(
+        path: '/books',
+        builder: (context, state) => const Scaffold(
+          body: BooksHomeFeedView(),
+        ),
+      ),
+      GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthPage(),
+      ),
+      /// Visor de imagen a pantalla completa (misma pila que GoRouter → atrás del sistema coherente).
+      GoRoute(
+        path: '/full-image',
+        parentNavigatorKey: cronicleRootNavigatorKey,
+        pageBuilder: (context, state) {
+          final url = state.extra as String? ?? '';
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            name: state.name,
+            fullscreenDialog: true,
+            opaque: false,
+            barrierDismissible: false,
+            barrierColor: null,
+            transitionDuration: const Duration(milliseconds: 280),
+            transitionsBuilder: (context, animation, _, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: FullscreenImagePage(imageUrl: url),
+          );
+        },
       ),
     ],
   );

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cronicle/core/media/gallery_save_permissions.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -5,23 +7,24 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Abre el visor en el **navigator raíz** para que cubra toda la pantalla,
-/// incluida la barra inferior del [AppShell], y el modo inmersivo oculte las
-/// barras del sistema. El botón atrás de Android cierra primero esta ruta.
+/// Abre el visor como ruta [GoRouter] (`/full-image`) para que el botón atrás
+/// del sistema y [context.pop] coincidan con la flecha de la barra (misma pila).
 void showFullscreenImage(BuildContext context, String imageUrl) {
-  Navigator.of(context, rootNavigator: true).push(
-    PageRouteBuilder<void>(
-      opaque: true,
-      barrierDismissible: false,
-      barrierColor: Colors.black,
-      pageBuilder: (_, _, _) => _FullscreenImageViewer(imageUrl: imageUrl),
-      transitionsBuilder: (_, anim, _, child) =>
-          FadeTransition(opacity: anim, child: child),
-    ),
-  );
+  context.push('/full-image', extra: imageUrl);
+}
+
+/// Registrada en [app_router] con [parentNavigatorKey] raíz (cubre shell / barra inferior).
+class FullscreenImagePage extends StatelessWidget {
+  const FullscreenImagePage({super.key, required this.imageUrl});
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) =>
+      _FullscreenImageViewer(imageUrl: imageUrl);
 }
 
 class _FullscreenImageViewer extends StatefulWidget {
@@ -37,21 +40,35 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
   final _transformController = TransformationController();
   late final AnimationController _zoomAnimCtrl;
   late final AnimationController _dismissAnimCtrl;
+  late final AnimationController _snapBackCtrl;
+  Offset _snapBackStart = Offset.zero;
   Animation<Matrix4>? _zoomMatrixAnimation;
   TapDownDetails? _doubleTapDetails;
   bool _saving = false;
 
-  /// Desplazamiento vertical manual (dismiss por arrastre).
-  double _dragOffsetY = 0;
+  /// Evita doble pop (arrastre-dismiss + botón atrás Android simultáneos).
+  bool _popped = false;
 
-  /// Animación de salida hacia arriba/abajo.
-  double _dismissAnimStartY = 0;
-  double _dismissAnimEndY = 0;
+  /// Desplazamiento 2D (dismiss tipo Twitter/X en cualquier dirección).
+  Offset _dragOffset = Offset.zero;
+
+  /// Escala durante el arrastre y la animación de cierre (zoom out).
+  double _dragGestureScale = 1;
+
+  /// Animación de salida: de → hacia fuera de pantalla con zoom out.
+  Offset _dismissAnimStart = Offset.zero;
+  Offset _dismissAnimEnd = Offset.zero;
+  double _dismissScaleStart = 1;
+  double _dismissScaleEnd = 0.14;
   bool _runningDismissAnimation = false;
 
   static const _zoomThreshold = 1.04;
   static const _dismissDistance = 110.0;
   static const _dismissVelocity = 700.0;
+
+  /// Dedos en pantalla (raw). Con 2+ dedos el overlay de dismiss se ignora y el
+  /// [InteractiveViewer] recibe el pellizco para zoom.
+  final Set<int> _activePointerIds = {};
 
   @override
   void initState() {
@@ -67,22 +84,39 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
 
     _dismissAnimCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 240),
+      duration: const Duration(milliseconds: 320),
     )..addListener(() {
         if (!_runningDismissAnimation) return;
-        final t = Curves.easeOutCubic.transform(_dismissAnimCtrl.value);
+        final raw = _dismissAnimCtrl.value;
+        final tMove = Curves.easeInCubic.transform(raw);
+        final tScale = Curves.easeIn.transform(math.min(1, raw * 1.15));
         setState(() {
-          _dragOffsetY =
-              _dismissAnimStartY + (_dismissAnimEndY - _dismissAnimStartY) * t;
+          _dragOffset = Offset.lerp(
+            _dismissAnimStart,
+            _dismissAnimEnd,
+            tMove,
+          )!;
+          _dragGestureScale = (_dismissScaleStart +
+              (_dismissScaleEnd - _dismissScaleStart) * tScale)
+            .clamp(0.08, 1.0);
         });
       })
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed && _runningDismissAnimation) {
           _runningDismissAnimation = false;
-          if (mounted) {
-            Navigator.of(context, rootNavigator: true).maybePop();
-          }
+          _safePop();
         }
+      });
+
+    _snapBackCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    )..addListener(() {
+        if (!mounted) return;
+        final t = Curves.easeOutCubic.transform(_snapBackCtrl.value);
+        setState(() {
+          _dragOffset = Offset.lerp(_snapBackStart, Offset.zero, t)!;
+        });
       });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _enterImmersive());
@@ -114,13 +148,34 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
 
+  void _safePop() {
+    if (_popped || !mounted) return;
+    _popped = true;
+    if (context.canPop()) context.pop();
+  }
+
   double get _scale => _transformController.value.getMaxScaleOnAxis();
 
+  /// Velo negro: opaco al inicio → transparente al arrastrar para cerrar (se ve la vista de detrás).
   double _backgroundOpacity() {
-    final maxD = MediaQuery.sizeOf(context).height * 0.45;
-    if (maxD <= 0) return 1;
-    final t = (_dragOffsetY.abs() / maxD).clamp(0.0, 1.0);
-    return (1 - t * 0.55).clamp(0.35, 1.0);
+    final sz = MediaQuery.sizeOf(context);
+    // Distancia de referencia (~un tercio del lado largo): a ese recorrido el fondo es casi transparente.
+    final ref = math.max(140.0, math.max(sz.width, sz.height) * 0.32);
+    if (ref <= 0) return 1;
+    final t = (_dragOffset.distance / ref).clamp(0.0, 1.0);
+    // easeOut: el negro baja pronto al empezar a arrastrar (feedback claro).
+    final progress = Curves.easeOut.transform(t);
+    return (1.0 - progress).clamp(0.0, 1.0);
+  }
+
+  /// Escala mientras el usuario arrastra (antes de soltar), estilo “alejar” la imagen.
+  double _liveDragScale() {
+    if (_runningDismissAnimation) return _dragGestureScale;
+    final sz = MediaQuery.sizeOf(context);
+    final ref = math.max(sz.width, sz.height) * 0.55;
+    if (ref <= 0) return 1;
+    final d = _dragOffset.distance;
+    return (1.0 - (d / ref) * 0.38).clamp(0.52, 1.0);
   }
 
   @override
@@ -128,6 +183,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     _restoreSystemUi();
     _zoomAnimCtrl.dispose();
     _dismissAnimCtrl.dispose();
+    _snapBackCtrl.dispose();
     _transformController.dispose();
     super.dispose();
   }
@@ -159,26 +215,54 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     _zoomAnimCtrl.forward(from: 0);
   }
 
-  void _onVerticalDragUpdate(DragUpdateDetails details) {
+  void _onPanUpdate(DragUpdateDetails details) {
     if (_scale > _zoomThreshold || _runningDismissAnimation) return;
-    setState(() => _dragOffsetY += details.delta.dy);
+    if (_snapBackCtrl.isAnimating) {
+      _snapBackCtrl.stop();
+      _snapBackCtrl.reset();
+    }
+    setState(() => _dragOffset += details.delta);
   }
 
-  void _onVerticalDragEnd(DragEndDetails details) {
+  void _onPanEnd(DragEndDetails details) {
     if (_scale > _zoomThreshold || _runningDismissAnimation) return;
-    final v = details.primaryVelocity ??
-        details.velocity.pixelsPerSecond.dy;
-    final shouldDismiss = _dragOffsetY.abs() > _dismissDistance ||
-        v.abs() > _dismissVelocity;
+    final v = details.velocity.pixelsPerSecond;
+    final speed = v.distance;
+    final dist = _dragOffset.distance;
+    final shouldDismiss =
+        dist > _dismissDistance || speed > _dismissVelocity;
     if (!shouldDismiss) {
-      setState(() => _dragOffsetY = 0);
+      _snapBackStart = _dragOffset;
+      if (_snapBackStart.distance < 0.5) {
+        setState(() {
+          _dragOffset = Offset.zero;
+          _dragGestureScale = 1;
+        });
+        return;
+      }
+      _snapBackCtrl.forward(from: 0);
       return;
     }
-    final h = MediaQuery.sizeOf(context).height;
-    final down = _dragOffsetY > 0 || v > 200;
-    _dismissAnimStartY = _dragOffsetY;
-    _dismissAnimEndY = down ? h * 1.15 : -h * 1.15;
-    _runningDismissAnimation = true;
+
+    Offset dir = _dragOffset;
+    if (dir.distance < 16) {
+      dir = v;
+    }
+    if (dir.distance < 1) {
+      dir = const Offset(0, 1);
+    }
+    dir = dir / dir.distance;
+
+    final sz = MediaQuery.sizeOf(context);
+    final pad = math.max(sz.width, sz.height) * 0.65;
+    _dismissAnimStart = _dragOffset;
+    _dismissAnimEnd = _dragOffset + dir * pad;
+    _dismissScaleStart = _liveDragScale();
+    _dismissScaleEnd = 0.12;
+    setState(() {
+      _runningDismissAnimation = true;
+      _dragGestureScale = _dismissScaleStart;
+    });
     _dismissAnimCtrl
       ..reset()
       ..forward();
@@ -243,56 +327,108 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     }
   }
 
+  bool get _ignoreDismissOverlay =>
+      _runningDismissAnimation ||
+      _scale > _zoomThreshold ||
+      _activePointerIds.length > 1;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor:
-          Colors.black.withValues(alpha: _backgroundOpacity()),
+    final scrim = _backgroundOpacity();
+    return PopScope(
+      canPop: !_runningDismissAnimation,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          _popped = true;
+          return;
+        }
+      },
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () {
-              if (_runningDismissAnimation) return;
-              if (_scale <= _zoomThreshold) {
-                Navigator.of(context, rootNavigator: true).maybePop();
-              }
-            },
-            onVerticalDragUpdate: _onVerticalDragUpdate,
-            onVerticalDragEnd: _onVerticalDragEnd,
-            onDoubleTapDown: _handleDoubleTapDown,
-            onDoubleTap: _handleDoubleTap,
-            child: Transform.translate(
-              offset: Offset(0, _dragOffsetY),
+          // Velo negro detrás de todo: al arrastrar baja opacidad y se ve la pantalla anterior.
+          Positioned.fill(
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: scrim),
+            ),
+          ),
+          // Capa inferior: zoom / doble toque (el visor gana el gesto frente a un
+          // GestureDetector padre; por eso el dismiss va en una capa encima).
+          Transform.translate(
+            offset: _dragOffset,
+            child: Transform.scale(
+              scale: _runningDismissAnimation
+                  ? _dragGestureScale.clamp(0.08, 1.0)
+                  : _liveDragScale().clamp(0.08, 1.0),
+              alignment: Alignment.center,
               child: SizedBox.expand(
                 child: ValueListenableBuilder<Matrix4>(
                   valueListenable: _transformController,
                   builder: (context, matrix, _) {
                     final scale = matrix.getMaxScaleOnAxis();
-                    return InteractiveViewer(
-                      transformationController: _transformController,
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      panEnabled: scale > _zoomThreshold,
-                      clipBehavior: Clip.none,
-                      child: Center(
-                        child: CachedNetworkImage(
-                          imageUrl: widget.imageUrl,
-                          fit: BoxFit.contain,
-                          placeholder: (_, _) => const Center(
-                            child: CircularProgressIndicator(
-                                color: Colors.white70),
-                          ),
-                          errorWidget: (_, _, _) => const Icon(
-                            Icons.broken_image,
-                            color: Colors.white54,
-                            size: 48,
+                    return GestureDetector(
+                      onDoubleTapDown: _handleDoubleTapDown,
+                      onDoubleTap: _handleDoubleTap,
+                      behavior: HitTestBehavior.translucent,
+                      child: InteractiveViewer(
+                        transformationController: _transformController,
+                        minScale: 0.5,
+                        maxScale: 5.0,
+                        panEnabled: scale > _zoomThreshold,
+                        clipBehavior: Clip.none,
+                        child: Center(
+                          child: CachedNetworkImage(
+                            imageUrl: widget.imageUrl,
+                            fit: BoxFit.contain,
+                            placeholder: (_, _) => const Center(
+                              child: CircularProgressIndicator(
+                                  color: Colors.white70),
+                            ),
+                            errorWidget: (_, _, _) => const Icon(
+                              Icons.broken_image,
+                              color: Colors.white54,
+                              size: 48,
+                            ),
                           ),
                         ),
                       ),
                     );
                   },
+                ),
+              ),
+            ),
+          ),
+
+          // Capa superior: arrastre omnidireccional y tap para cerrar (1 dedo, sin zoom).
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (e) {
+                setState(() => _activePointerIds.add(e.pointer));
+              },
+              onPointerUp: (e) {
+                setState(() => _activePointerIds.remove(e.pointer));
+              },
+              onPointerCancel: (e) {
+                setState(() => _activePointerIds.remove(e.pointer));
+              },
+              child: IgnorePointer(
+                ignoring: _ignoreDismissOverlay,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (_runningDismissAnimation || _popped) return;
+                    if (_scale <= _zoomThreshold) {
+                      _safePop();
+                    }
+                  },
+                  onPanUpdate: _onPanUpdate,
+                  onPanEnd: _onPanEnd,
+                  onDoubleTapDown: _handleDoubleTapDown,
+                  onDoubleTap: _handleDoubleTap,
+                  child: const SizedBox.expand(),
                 ),
               ),
             ),
@@ -311,8 +447,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white, size: 26),
                       style: IconButton.styleFrom(backgroundColor: Colors.black45),
-                      onPressed: () => Navigator.of(context, rootNavigator: true)
-                          .maybePop(),
+                      onPressed: _safePop,
                     ),
                     if (!kIsWeb)
                       IconButton(
@@ -340,6 +475,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
           ),
         ],
       ),
+    ),
     );
   }
 }

@@ -1,17 +1,21 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
-import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
+import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
+import 'package:cronicle/features/search/presentation/search_category_browse_hub.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -21,7 +25,8 @@ enum _SearchFilter {
   manga,
   movie,
   tv,
-  game;
+  game,
+  book;
 
   IconData get icon => switch (this) {
         _SearchFilter.all => Icons.search_rounded,
@@ -30,6 +35,7 @@ enum _SearchFilter {
         _SearchFilter.movie => Icons.movie_rounded,
         _SearchFilter.tv => Icons.tv_rounded,
         _SearchFilter.game => Icons.sports_esports_rounded,
+        _SearchFilter.book => Icons.auto_stories_rounded,
       };
 }
 
@@ -40,6 +46,7 @@ String _searchFilterLabel(_SearchFilter f, AppLocalizations l10n) => switch (f) 
   _SearchFilter.movie => l10n.filterMovies,
   _SearchFilter.tv => l10n.filterTv,
   _SearchFilter.game => l10n.filterGames,
+  _SearchFilter.book => l10n.filterBooks,
 };
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -83,11 +90,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    final db = ref.read(databaseProvider);
+    final externalId = kind == MediaKind.book
+        ? (item['workKey'] as String? ?? item['id'].toString())
+        : item['id'].toString();
+    final existing = await db.getLibraryEntryByKindAndExternalId(
+      kind.code, externalId,
+    );
+    if (!mounted) return;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: kind,
+      existingEntry: existing,
     );
     if (!mounted || !added) return;
     final l10n = AppLocalizations.of(context)!;
@@ -100,8 +116,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    final searchLayout = ref.watch(searchFilterLayoutProvider);
+    final visibleFilters = _SearchFilter.values
+        .where((f) => searchLayout.isVisible(f.name))
+        .toList();
+
+    // If current filter was hidden, reset to first visible.
+    if (!visibleFilters.contains(_filter)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _filter = visibleFilters.first);
+        }
+      });
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.searchTitle)),
+      appBar: AppBar(
+        clipBehavior: Clip.none,
+        leading: const ProfileAvatarButton(),
+        leadingWidth: kProfileLeadingWidth,
+        titleSpacing: 0,
+        title: Text(l10n.searchTitle, style: pageTitleStyle()),
+      ),
       body: Column(
         children: [
           Padding(
@@ -141,9 +177,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: _SearchFilter.values.length,
+              itemCount: visibleFilters.length,
               itemBuilder: (context, i) {
-                final f = _SearchFilter.values[i];
+                final f = visibleFilters[i];
                 final selected = _filter == f;
                 return FilterChip(
                   selected: selected,
@@ -170,7 +206,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 final hasDraft = draft.isNotEmpty;
                 final debouncePending = _searchDebounce?.isActive ?? false;
                 if (!hasDraft) {
-                  return _PopularContent(filter: _filter, onAdd: _addToLibrary);
+                  return _PopularContent(filter: _filter);
                 }
                 if (debouncePending) {
                   return const Center(
@@ -184,6 +220,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   query: _committedSearchQuery,
                   filter: _filter,
                   onAdd: _addToLibrary,
+                  onPickCategory: (f) => setState(() => _filter = f),
                 );
               },
             ),
@@ -195,320 +232,154 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 }
 
 class _PopularContent extends ConsumerWidget {
-  const _PopularContent({required this.filter, required this.onAdd});
+  const _PopularContent({required this.filter});
   final _SearchFilter filter;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    if (filter == _SearchFilter.movie) {
-      return const TraktHomeFeedView(kind: MediaKind.movie);
-    }
-    if (filter == _SearchFilter.tv) {
-      return const TraktHomeFeedView(kind: MediaKind.tv);
+    if (filter == _SearchFilter.all) {
+      return const _SearchIdleAllPlaceholder();
     }
 
-    if (filter == _SearchFilter.game) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: Colors.teal),
-              const SizedBox(width: 6),
-              Text(l10n.searchTrendingGames,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.teal)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _IgdbPopularGrid(onAdd: onAdd),
-        ],
-      );
+    final hubMode = switch (filter) {
+      _SearchFilter.anime => SearchBrowseCategoryMode.anime,
+      _SearchFilter.manga => SearchBrowseCategoryMode.manga,
+      _SearchFilter.movie => SearchBrowseCategoryMode.movie,
+      _SearchFilter.tv => SearchBrowseCategoryMode.tv,
+      _SearchFilter.game => SearchBrowseCategoryMode.game,
+      _SearchFilter.book => SearchBrowseCategoryMode.book,
+      _SearchFilter.all => null,
+    };
+    if (hubMode != null) {
+      return SearchCategoryBrowseHub(mode: hubMode);
     }
 
-    final showAnime = filter == _SearchFilter.all || filter == _SearchFilter.anime;
-    final showManga = filter == _SearchFilter.all || filter == _SearchFilter.manga;
-    final showGames = filter == _SearchFilter.all;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-      children: [
-        if (showAnime) ...[
-          Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: cs.primary),
-              const SizedBox(width: 6),
-              Text(l10n.searchTrendingAnime,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cs.primary)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _PopularGrid(type: 'ANIME', kind: MediaKind.anime, onAdd: onAdd),
-          const SizedBox(height: 16),
-        ],
-        if (showManga) ...[
-          Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: Colors.deepPurple),
-              const SizedBox(width: 6),
-              Text(l10n.searchTrendingManga,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.deepPurple)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _PopularGrid(type: 'MANGA', kind: MediaKind.manga, onAdd: onAdd),
-          const SizedBox(height: 16),
-        ],
-        if (showGames) ...[
-          Row(
-            children: [
-              Icon(Icons.trending_up_rounded, size: 18, color: Colors.teal),
-              const SizedBox(width: 6),
-              Text(l10n.searchTrendingGames,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.teal)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _IgdbPopularGrid(onAdd: onAdd),
-        ],
-      ],
-    );
+    return const SizedBox.shrink();
   }
 }
 
-class _PopularGrid extends ConsumerWidget {
-  const _PopularGrid({required this.type, required this.kind, required this.onAdd});
-  final String type;
-  final MediaKind kind;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+/// Estado vacío en filtro «Todo» sin texto: sin llamadas a APIs de tendencias.
+class _SearchIdleAllPlaceholder extends StatelessWidget {
+  const _SearchIdleAllPlaceholder();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final popularAsync = ref.watch(anilistPopularProvider(type));
-    final cs = Theme.of(context).colorScheme;
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
-    return popularAsync.when(
-      loading: () => const SizedBox(
-        height: 120,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(l10n.errorWithMessage(e), style: TextStyle(color: cs.error)),
-      ),
-      data: (items) {
-        if (items.isEmpty) return const SizedBox.shrink();
-        return SizedBox(
-          height: 195,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final item = items[i];
-              final title = item['title'] as Map<String, dynamic>? ?? {};
-              final cover = (item['coverImage'] as Map?)?['large'] as String?;
-              final name = (title['english'] as String?) ??
-                  (title['romaji'] as String?) ?? '';
-              final score = item['averageScore'] as int?;
-              final id = item['id'] as int?;
-
-              return GestureDetector(
-                onTap: id != null
-                    ? () => context.push('/media/$id?kind=${kind.code}')
-                    : null,
-                child: SizedBox(
-                  width: 110,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: cover != null
-                            ? CachedNetworkImage(
-                                imageUrl: cover,
-                                width: 110,
-                                height: 150,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                width: 110,
-                                height: 150,
-                                color: cs.surfaceContainerHighest,
-                                child: const Icon(Icons.image),
-                              ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      if (score != null)
-                        Row(
-                          children: [
-                            Icon(Icons.star, size: 11, color: Colors.amber.shade600),
-                            const SizedBox(width: 2),
-                            Text('$score%',
-                                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
-                          ],
-                        ),
-                    ],
-                  ),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.manage_search_rounded,
+                size: 56,
+                color: cs.primary.withValues(alpha: 0.9),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                l10n.searchIdleAllTitle,
+                textAlign: TextAlign.center,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.15,
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.searchIdleAllBody,
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.45,
+                ),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _IgdbPopularGrid extends ConsumerWidget {
-  const _IgdbPopularGrid({required this.onAdd});
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final popularAsync = ref.watch(igdbPopularProvider);
-    final cs = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    return popularAsync.when(
-      loading: () => const SizedBox(
-        height: 120,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          e is IgdbWebUnsupportedException
-              ? l10n.igdbWebNotSupported
-              : l10n.errorWithMessage(e),
-          style: TextStyle(color: cs.error),
         ),
       ),
-      data: (items) {
-        if (items.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              l10n.libraryNoResults,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-            ),
-          );
-        }
-        return SizedBox(
-          height: 195,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final item = items[i];
-              final title = item['title'] as Map<String, dynamic>? ?? {};
-              final cover = (item['coverImage'] as Map?)?['large'] as String?;
-              final name = (title['english'] as String?) ?? '';
-              final score = item['averageScore'] as int?;
-              final id = item['id'] as int?;
-
-              return GestureDetector(
-                onTap: id != null ? () => context.push('/game/$id') : null,
-                child: SizedBox(
-                  width: 110,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: cover != null
-                            ? CachedNetworkImage(
-                                imageUrl: cover,
-                                width: 110,
-                                height: 150,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                width: 110,
-                                height: 150,
-                                color: cs.surfaceContainerHighest,
-                                child: const Icon(Icons.sports_esports),
-                              ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      if (score != null)
-                        Row(
-                          children: [
-                            Icon(Icons.star, size: 11, color: Colors.amber.shade600),
-                            const SizedBox(width: 2),
-                            Text('$score%',
-                                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant)),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 }
+
+/// Resultados por categoría en el filtro «Todo»: vista previa corta + «Ver más» a la pestaña.
+const int _kSearchAllPreviewPerSection = 5;
 
 class _SearchResultsList extends ConsumerWidget {
   const _SearchResultsList({
     required this.query,
     required this.filter,
     required this.onAdd,
+    required this.onPickCategory,
   });
 
   final String query;
   final _SearchFilter filter;
   final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final void Function(_SearchFilter category) onPickCategory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final sections = <_ResultSection>[];
 
+    final libraryEntries = ref.watch(libraryAllProvider()).valueOrNull ?? [];
+    final libraryIds = {
+      for (final e in libraryEntries) '${e.kind}:${e.externalId}': true,
+    };
+
     if (filter == _SearchFilter.all || filter == _SearchFilter.anime) {
-      sections.add(_ResultSection(l10n.filterAnime, MediaKind.anime,
-          ref.watch(anilistSearchProvider(query, 'ANIME'))));
+      sections.add(_ResultSection(
+        l10n.filterAnime,
+        MediaKind.anime,
+        ref.watch(anilistSearchProvider(query, 'ANIME')),
+        _SearchFilter.anime,
+      ));
     }
     if (filter == _SearchFilter.all || filter == _SearchFilter.manga) {
-      sections.add(_ResultSection(l10n.filterManga, MediaKind.manga,
-          ref.watch(anilistSearchProvider(query, 'MANGA'))));
+      sections.add(_ResultSection(
+        l10n.filterManga,
+        MediaKind.manga,
+        ref.watch(anilistSearchProvider(query, 'MANGA')),
+        _SearchFilter.manga,
+      ));
     }
-    if (filter == _SearchFilter.all || filter == _SearchFilter.game) {
-      sections.add(_ResultSection(l10n.filterGames, MediaKind.game,
-          ref.watch(igdbSearchProvider(query))));
-    }
-    if (filter == _SearchFilter.movie) {
+    if (filter == _SearchFilter.all || filter == _SearchFilter.movie) {
       sections.add(_ResultSection(
         l10n.filterMovies,
         MediaKind.movie,
         ref.watch(traktSearchMoviesProvider(query)),
+        _SearchFilter.movie,
       ));
     }
-    if (filter == _SearchFilter.tv) {
+    if (filter == _SearchFilter.all || filter == _SearchFilter.tv) {
       sections.add(_ResultSection(
         l10n.filterTv,
         MediaKind.tv,
         ref.watch(traktSearchShowsProvider(query)),
+        _SearchFilter.tv,
+      ));
+    }
+    if (filter == _SearchFilter.all || filter == _SearchFilter.game) {
+      sections.add(_ResultSection(
+        l10n.filterGames,
+        MediaKind.game,
+        ref.watch(igdbSearchProvider(query)),
+        _SearchFilter.game,
+      ));
+    }
+    if (filter == _SearchFilter.all || filter == _SearchFilter.book) {
+      sections.add(_ResultSection(
+        l10n.filterBooks,
+        MediaKind.book,
+        ref.watch(bookSearchProvider(query)),
+        _SearchFilter.book,
       ));
     }
 
@@ -516,22 +387,14 @@ class _SearchResultsList extends ConsumerWidget {
       return Center(child: Text(l10n.searchSelectFilter));
     }
 
+    final layout = ref.watch(searchFilterLayoutProvider);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
       children: sections.map((section) {
         return section.results.when(
-          loading: () => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Column(
-              children: [
-                Text(section.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(height: 12),
-                const CircularProgressIndicator(),
-              ],
-            ),
-          ),
+          loading: () =>
+              _SearchSectionLoadingPlaceholder(title: section.title),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(
@@ -545,21 +408,42 @@ class _SearchResultsList extends ConsumerWidget {
           ),
           data: (list) {
             if (list.isEmpty) return const SizedBox.shrink();
+            final isAll = filter == _SearchFilter.all;
+            final preview = isAll
+                ? list.take(_kSearchAllPreviewPerSection).toList()
+                : list;
+            final hasMoreInAll =
+                isAll && list.length > _kSearchAllPreviewPerSection;
+            final canOpenCategoryTab =
+                layout.isVisible(section.targetFilter.name);
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (filter == _SearchFilter.all) ...[
+                if (isAll) ...[
                   const SizedBox(height: 12),
                   Text(section.title,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 8),
                 ],
-                ...list.map((item) => BrowseResultCard(
-                      item: item,
-                      kind: section.kind,
-                      onAdd: onAdd,
-                    )),
+                ...preview.map((item) {
+                  final id = item['id']?.toString() ?? '';
+                  final inLib = libraryIds.containsKey('${section.kind.code}:$id');
+                  return BrowseResultCard(
+                    item: item,
+                    kind: section.kind,
+                    inLibrary: inLib,
+                    onAdd: onAdd,
+                  );
+                }),
+                if (hasMoreInAll && canOpenCategoryTab) ...[
+                  const SizedBox(height: 10),
+                  _SearchShowMoreMaterialCta(
+                    label: l10n.searchShowMoreInCategory(section.title),
+                    onTap: () => onPickCategory(section.targetFilter),
+                  ),
+                ],
               ],
             );
           },
@@ -569,11 +453,135 @@ class _SearchResultsList extends ConsumerWidget {
   }
 }
 
+/// CTA «Ver más» con aspecto Material 3 (superficie, estado de enfoque, iconos).
+class _SearchShowMoreMaterialCta extends StatelessWidget {
+  const _SearchShowMoreMaterialCta({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Material(
+      color: cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(
+                Icons.layers_outlined,
+                size: 22,
+                color: cs.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.15,
+                    height: 1.25,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 26,
+                color: cs.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ResultSection {
-  _ResultSection(this.title, this.kind, this.results);
+  _ResultSection(this.title, this.kind, this.results, this.targetFilter);
 
   final String title;
   final MediaKind kind;
   final AsyncValue<List<Map<String, dynamic>>> results;
+  final _SearchFilter targetFilter;
+}
+
+/// Placeholders grises mientras Open Library / otras APIs responden.
+class _SearchSectionLoadingPlaceholder extends StatelessWidget {
+  const _SearchSectionLoadingPlaceholder({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(
+            4,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 12,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 

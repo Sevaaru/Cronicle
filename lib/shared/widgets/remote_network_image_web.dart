@@ -21,6 +21,7 @@ class RemoteNetworkImage extends StatefulWidget {
     required this.imageUrl,
     this.width,
     this.height,
+    this.maxWidth,
     this.fit = BoxFit.contain,
     this.placeholder,
     this.error,
@@ -29,6 +30,7 @@ class RemoteNetworkImage extends StatefulWidget {
   final String imageUrl;
   final double? width;
   final double? height;
+  final double? maxWidth;
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? error;
@@ -61,6 +63,9 @@ class _RemoteNetworkImageState extends State<RemoteNetworkImage> {
       } else {
         img.style.width = '100%';
         img.style.maxWidth = '100vw';
+      }
+      if (widget.maxWidth != null) {
+        img.style.maxWidth = '${widget.maxWidth!.toInt()}px';
       }
       if (h != null) {
         img.style.height = '${h.toInt()}px';

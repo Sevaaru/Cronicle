@@ -14,14 +14,18 @@ class BrowseResultCard extends StatelessWidget {
     required this.kind,
     required this.onAdd,
     this.releaseDateLine,
+    this.inLibrary = false,
   });
 
   final Map<String, dynamic> item;
   final MediaKind kind;
   final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
 
-  /// Ej.: fecha de salida en listados IGDB “Próximamente”.
+  /// Ej.: fecha de salida en listados IGDB "Próximamente".
   final String? releaseDateLine;
+
+  /// Whether this item is already in the user's library.
+  final bool inLibrary;
 
   @override
   Widget build(BuildContext context) {
@@ -43,13 +47,18 @@ class BrowseResultCard extends StatelessWidget {
 
     final bool isManga = kind == MediaKind.manga;
     final bool isGame = kind == MediaKind.game;
+    final bool isBook = kind == MediaKind.book;
+    final pages = item['pages'] as int?;
     final countLabel = isGame
         ? null
-        : isManga
-            ? (chapters != null ? '$chapters cap' : null)
-            : (episodes != null ? '$episodes ep' : null);
+        : isBook
+            ? (pages != null ? '$pages pg' : null)
+            : isManga
+                ? (chapters != null ? '$chapters cap' : null)
+                : (episodes != null ? '$episodes ep' : null);
 
     final itemId = item['id'] as int?;
+    final workKey = item['workKey'] as String?;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -57,7 +66,9 @@ class BrowseResultCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
-          if (itemId != null) {
+          if (kind == MediaKind.book && workKey != null) {
+            context.push('/book/$workKey');
+          } else if (itemId != null) {
             if (kind == MediaKind.game) {
               context.push('/game/$itemId');
             } else if (kind == MediaKind.movie) {
@@ -166,9 +177,11 @@ class BrowseResultCard extends StatelessWidget {
                           Icon(
                             isManga
                                 ? Icons.menu_book
-                                : isGame
-                                    ? Icons.sports_esports
-                                    : Icons.tv,
+                                : isBook
+                                    ? Icons.auto_stories
+                                    : isGame
+                                        ? Icons.sports_esports
+                                        : Icons.tv,
                             size: 13,
                             color: colorScheme.onSurfaceVariant,
                           ),
@@ -193,10 +206,12 @@ class BrowseResultCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: IconButton(
-                icon:
-                    Icon(Icons.add_circle_outline, color: colorScheme.primary),
+                icon: Icon(
+                  inLibrary ? Icons.edit : Icons.add_circle_outline,
+                  color: colorScheme.primary,
+                ),
                 onPressed: () => onAdd(item, kind),
-                tooltip: l10n.addToLibrary,
+                tooltip: inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
               ),
             ),
           ],

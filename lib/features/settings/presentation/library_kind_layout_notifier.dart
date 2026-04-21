@@ -14,6 +14,7 @@ const libraryKindLayoutDefaultOrder = <String>[
   'tv',
   'game',
   'manga',
+  'book',
 ];
 
 Set<String> get _libraryKindValidIds => libraryKindLayoutDefaultOrder.toSet();

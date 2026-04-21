@@ -7,6 +7,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
@@ -271,6 +272,7 @@ class _ThreadOriginalBlock extends ConsumerWidget {
         MediaKind.movie => Icons.movie_rounded,
         MediaKind.tv => Icons.tv_rounded,
         MediaKind.game => Icons.sports_esports_rounded,
+        MediaKind.book => Icons.auto_stories_rounded,
       };
 
   Color _sourceColor(MediaKind kind, ColorScheme cs) => switch (kind) {
@@ -279,6 +281,7 @@ class _ThreadOriginalBlock extends ConsumerWidget {
         MediaKind.movie => Colors.amber.shade700,
         MediaKind.tv => Colors.teal,
         MediaKind.game => Colors.redAccent,
+        MediaKind.book => const Color(0xFFAB47BC),
       };
 
   @override
@@ -474,83 +477,36 @@ class _ThreadOriginalBlock extends ConsumerWidget {
   }
 }
 
-class _OriginalActivityLikeRow extends ConsumerStatefulWidget {
+class _OriginalActivityLikeRow extends ConsumerWidget {
   const _OriginalActivityLikeRow({required this.activityMap});
 
   final Map<String, dynamic> activityMap;
 
-  @override
-  ConsumerState<_OriginalActivityLikeRow> createState() =>
-      _OriginalActivityLikeRowState();
-}
-
-class _OriginalActivityLikeRowState extends ConsumerState<_OriginalActivityLikeRow> {
-  late bool _isLiked;
-  late int _likeCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _isLiked = widget.activityMap['isLiked'] as bool? ?? false;
-    _likeCount = widget.activityMap['likeCount'] as int? ?? 0;
-  }
-
-  Future<void> _handleLike() async {
+  Future<bool?> _handleLike(WidgetRef ref, BuildContext context) async {
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) {
-      if (!mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
       );
-      return;
+      return null;
     }
-    final id = widget.activityMap['id'] as int?;
-    if (id == null) return;
+    final id = activityMap['id'] as int?;
+    if (id == null) return null;
     final graphql = ref.read(anilistGraphqlProvider);
-    final liked = await graphql.toggleLike(id, token);
-    if (!mounted) return;
-    setState(() {
-      _isLiked = liked;
-      _likeCount =
-          liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
-    });
+    return graphql.toggleLike(id, token);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         const SizedBox(width: 4),
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: _handleLike,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _isLiked ? Icons.favorite : Icons.favorite_border,
-                  size: 16,
-                  color: _isLiked
-                      ? Colors.red.shade400
-                      : cs.onSurfaceVariant,
-                ),
-                if (_likeCount > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    '$_likeCount',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        AnimatedLikeButton(
+          isLiked: activityMap['isLiked'] as bool? ?? false,
+          likeCount: activityMap['likeCount'] as int? ?? 0,
+          onToggle: () => _handleLike(ref, context),
         ),
       ],
     );
@@ -627,57 +583,36 @@ class _ReplyInputBar extends ConsumerWidget {
   }
 }
 
-class _ReplyCard extends ConsumerStatefulWidget {
+class _ReplyCard extends ConsumerWidget {
   const _ReplyCard({required this.reply, required this.timeAgo});
   final Map<String, dynamic> reply;
   final String Function(DateTime) timeAgo;
 
-  @override
-  ConsumerState<_ReplyCard> createState() => _ReplyCardState();
-}
-
-class _ReplyCardState extends ConsumerState<_ReplyCard> {
-  late bool _isLiked;
-  late int _likeCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _isLiked = widget.reply['isLiked'] as bool? ?? false;
-    _likeCount = widget.reply['likeCount'] as int? ?? 0;
-  }
-
-  Future<void> _handleLike() async {
+  Future<bool?> _handleLike(WidgetRef ref, BuildContext context) async {
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) {
-      if (!mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
       );
-      return;
+      return null;
     }
-    final replyId = widget.reply['id'] as int?;
-    if (replyId == null) return;
+    final replyId = reply['id'] as int?;
+    if (replyId == null) return null;
     final graphql = ref.read(anilistGraphqlProvider);
-    final liked = await graphql.toggleLike(replyId, token,
-        type: 'ACTIVITY_REPLY');
-    if (!mounted) return;
-    setState(() {
-      _isLiked = liked;
-      _likeCount = liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
-    });
+    return graphql.toggleLike(replyId, token, type: 'ACTIVITY_REPLY');
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    final user = widget.reply['user'] as Map<String, dynamic>? ?? {};
+    final user = reply['user'] as Map<String, dynamic>? ?? {};
     final avatar = (user['avatar'] as Map?)?['medium'] as String?;
     final userName = user['name'] as String? ?? '';
     final userId = user['id'] as int?;
-    final text = widget.reply['text'] as String? ?? '';
+    final text = reply['text'] as String? ?? '';
     final createdAt = DateTime.fromMillisecondsSinceEpoch(
-      ((widget.reply['createdAt'] as int?) ?? 0) * 1000,
+      ((reply['createdAt'] as int?) ?? 0) * 1000,
     );
 
     return GlassCard(
@@ -715,7 +650,7 @@ class _ReplyCardState extends ConsumerState<_ReplyCard> {
                           fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
               ),
-              Text(widget.timeAgo(createdAt),
+              Text(timeAgo(createdAt),
                   style:
                       TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
             ],
@@ -725,27 +660,11 @@ class _ReplyCardState extends ConsumerState<_ReplyCard> {
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface, height: 1.4)),
           const SizedBox(height: 6),
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: _handleLike,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isLiked ? Icons.favorite : Icons.favorite_border,
-                    size: 15,
-                    color: _isLiked ? Colors.red.shade400 : cs.onSurfaceVariant,
-                  ),
-                  if (_likeCount > 0) ...[
-                    const SizedBox(width: 4),
-                    Text('$_likeCount',
-                        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                  ],
-                ],
-              ),
-            ),
+          AnimatedLikeButton(
+            isLiked: reply['isLiked'] as bool? ?? false,
+            likeCount: reply['likeCount'] as int? ?? 0,
+            iconSize: 15,
+            onToggle: () => _handleLike(ref, context),
           ),
         ],
       ),

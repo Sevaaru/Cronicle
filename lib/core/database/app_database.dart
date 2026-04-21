@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
+
 part 'app_database.g.dart';
 
 @DataClassName('KeyValueEntry')
@@ -22,6 +24,27 @@ class LibraryEntries extends Table {
   IntColumn get progress => integer().nullable()();
   IntColumn get totalEpisodes => integer().nullable()();
   TextColumn get notes => text().nullable()();
+
+  // Book-specific tracking fields (only used when kind == MediaKind.book)
+  TextColumn get editionKey => text().nullable()();
+  TextColumn get isbn => text().nullable()();
+  IntColumn get totalPagesFromApi => integer().nullable()();
+  IntColumn get totalChaptersFromApi => integer().nullable()();
+  IntColumn get userTotalPagesOverride => integer().nullable()();
+  IntColumn get userTotalChaptersOverride => integer().nullable()();
+  IntColumn get currentChapter => integer().nullable()();
+  /// "pages" | "percentage" | "chapters" — defaults to pages.
+  TextColumn get bookTrackingMode => text().nullable()();
+
+  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
+  TextColumn get animeMediaStatus => text().nullable()();
+
+  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
+  IntColumn get releasedEpisodes => integer().nullable()();
+
+  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
+  IntColumn get nextEpisodeAirsAt => integer().nullable()();
+
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
 
@@ -37,7 +60,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +70,32 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(libraryEntries);
+          }
+          if (from < 3) {
+            // Migrate scores from 0-10 to 0-100 scale.
+            await customStatement(
+              'UPDATE library_entries SET score = score * 10 WHERE score IS NOT NULL AND score > 0',
+            );
+          }
+          if (from < 4) {
+            // Book tracking columns.
+            await customStatement('ALTER TABLE library_entries ADD COLUMN edition_key TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN isbn TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN total_pages_from_api INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN total_chapters_from_api INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN user_total_pages_override INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN user_total_chapters_override INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN current_chapter INTEGER');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN book_tracking_mode TEXT');
+          }
+          if (from < 5) {
+            await customStatement('ALTER TABLE library_entries ADD COLUMN anime_media_status TEXT');
+            await customStatement('ALTER TABLE library_entries ADD COLUMN released_episodes INTEGER');
+          }
+          if (from < 6) {
+            await customStatement(
+              'ALTER TABLE library_entries ADD COLUMN next_episode_airs_at INTEGER',
+            );
           }
         },
       );
@@ -88,7 +137,10 @@ class AppDatabase extends _$AppDatabase {
             }
             return expr;
           })
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.updatedAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
         .watch();
   }
 
@@ -100,7 +152,10 @@ class AppDatabase extends _$AppDatabase {
             }
             return const Constant(true);
           })
-          ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+          ..orderBy([
+            (t) => OrderingTerm.desc(t.updatedAt),
+            (t) => OrderingTerm.desc(t.id),
+          ]))
         .watch();
   }
 
@@ -112,6 +167,28 @@ class AppDatabase extends _$AppDatabase {
         target: [libraryEntries.kind, libraryEntries.externalId],
       ),
     );
+  }
+
+  /// Igual que [upsertLibraryEntry] pero solo sobrescribe si [entry.updatedAt]
+  /// es más reciente que el registro existente.  Si no existe, inserta siempre.
+  Future<int> upsertLibraryEntryIfNewer(LibraryEntriesCompanion entry) async {
+    final kindVal = entry.kind.value;
+    final extId = entry.externalId.value;
+    final existing = await getLibraryEntryByKindAndExternalId(kindVal, extId);
+    if (existing == null) {
+      return into(libraryEntries).insert(entry, mode: InsertMode.insertOrReplace);
+    }
+    final incomingMs = entry.updatedAt.value;
+    if (incomingMs > existing.updatedAt) {
+      return into(libraryEntries).insert(
+        entry,
+        onConflict: DoUpdate(
+          (old) => entry,
+          target: [libraryEntries.kind, libraryEntries.externalId],
+        ),
+      );
+    }
+    return existing.id;
   }
 
   Future<void> deleteLibraryEntry(int id) {
@@ -144,6 +221,7 @@ class AppDatabase extends _$AppDatabase {
               'progress' => ascending ? OrderingTerm.asc(t.progress) : OrderingTerm.desc(t.progress),
               _ => ascending ? OrderingTerm.asc(t.updatedAt) : OrderingTerm.desc(t.updatedAt),
             },
+        (t) => ascending ? OrderingTerm.asc(t.id) : OrderingTerm.desc(t.id),
       ])
       ..limit(limit, offset: offset);
     return q.get();
@@ -177,10 +255,59 @@ class AppDatabase extends _$AppDatabase {
     final entry = await getLibraryEntryById(entryId);
     if (entry == null) return;
     final current = entry.progress ?? 0;
-    if (entry.totalEpisodes != null && current >= entry.totalEpisodes!) return;
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && current >= cap) return;
+    final next = current + 1;
+    final seriesTotal = entry.totalEpisodes;
+    final reachedTotal =
+        seriesTotal != null && seriesTotal > 0 && next >= seriesTotal;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
-        progress: Value(current + 1),
+        progress: Value(next),
+        status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  Future<void> incrementBookProgress(int entryId) async {
+    final entry = await getLibraryEntryById(entryId);
+    if (entry == null) return;
+    if (entry.kind != 5) return;
+
+    final mode = (entry.bookTrackingMode ?? 'pages').toLowerCase();
+
+    if (mode == 'chapters') {
+      final current = entry.currentChapter ?? 0;
+      final total = entry.userTotalChaptersOverride ?? entry.totalChaptersFromApi;
+      if (total != null && current >= total) return;
+      final next = current + 1;
+      final reachedTotal = total != null && total > 0 && next >= total;
+      await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+        LibraryEntriesCompanion(
+          currentChapter: Value(next),
+          status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+          updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+        ),
+      );
+      return;
+    }
+
+    final current = entry.progress ?? 0;
+    final total = mode == 'percentage'
+        ? 100
+        : entry.userTotalPagesOverride ?? entry.totalPagesFromApi ?? entry.totalEpisodes;
+    if (total != null && current >= total) return;
+    final next = current + 1;
+    final reachedTotal = total != null && total > 0 && next >= total;
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        progress: Value(next),
+        status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
@@ -191,9 +318,12 @@ class AppDatabase extends _$AppDatabase {
     if (entry == null) return;
     var p = progress;
     if (p < 0) p = 0;
-    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
-      p = entry.totalEpisodes!;
-    }
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && p > cap) p = cap;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
         progress: Value(p),
@@ -211,14 +341,43 @@ class AppDatabase extends _$AppDatabase {
     if (entry == null) return;
     var p = progress;
     if (p < 0) p = 0;
-    if (entry.totalEpisodes != null && p > entry.totalEpisodes!) {
-      p = entry.totalEpisodes!;
-    }
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: entry.releasedEpisodes,
+    );
+    if (cap != null && p > cap) p = cap;
     await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
       LibraryEntriesCompanion(
         progress: Value(p),
         status: Value(status.toUpperCase()),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
+  /// Actualiza metadatos de emisión Anilist y ajusta progreso si superaba el tope emitido.
+  Future<void> updateAnimeAiringMetadata({
+    required int id,
+    required String? animeMediaStatus,
+    required int? releasedEpisodes,
+    required int? nextEpisodeAirsAt,
+  }) async {
+    final entry = await getLibraryEntryById(id);
+    if (entry == null) return;
+    final cap = AnimeAiringProgress.animeEpisodeProgressCap(
+      mediaKindCode: entry.kind,
+      totalEpisodes: entry.totalEpisodes,
+      releasedEpisodes: releasedEpisodes,
+    );
+    var p = entry.progress ?? 0;
+    if (cap != null && p > cap) p = cap;
+    await (update(libraryEntries)..where((t) => t.id.equals(id))).write(
+      LibraryEntriesCompanion(
+        animeMediaStatus: Value(animeMediaStatus),
+        releasedEpisodes: Value(releasedEpisodes),
+        nextEpisodeAirsAt: Value(nextEpisodeAirsAt),
+        progress: p != (entry.progress ?? 0) ? Value(p) : const Value.absent(),
       ),
     );
   }

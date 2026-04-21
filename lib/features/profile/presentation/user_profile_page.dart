@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/utils/json_int.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/profile/presentation/anilist_profile_follow_row.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
@@ -117,8 +120,16 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
     final favs = p['favourites'] as Map<String, dynamic>? ?? {};
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
     final favManga = (favs['manga'] as Map?)?['nodes'] as List? ?? [];
+    final favCharacters = (favs['characters'] as Map?)?['nodes'] as List? ?? [];
+    final favStaff = (favs['staff'] as Map?)?['nodes'] as List? ?? [];
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Banner 150px; fila avatar en top: 105 con radio 38 + borde 4 → baja hasta ~189px.
+    const bannerH = 150.0;
+    const avatarRowTop = 105.0;
+    const avatarOuter = 84.0; // (38+4)*2
+    const headerStackHeight = avatarRowTop + avatarOuter;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -131,13 +142,19 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                Stack(
+                SizedBox(
+                  height: headerStackHeight,
+                  child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    GestureDetector(
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: bannerH,
+                      child: GestureDetector(
                       onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
                       child: Container(
-                        height: 150,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           image: banner != null
@@ -168,8 +185,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                         ),
                       ),
                     ),
+                    ),
                     Positioned(
-                      left: 16, right: 16, top: 105,
+                      left: 16, right: 16, top: avatarRowTop,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -245,7 +263,16 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 46),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: AnilistProfileFollowRow(
+                    userId: widget.userId,
+                    followersCount: jsonInt(p['followersCount']),
+                    followingCount: jsonInt(p['followingCount']),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -328,6 +355,44 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
+                // Favoritos personajes
+                if (favCharacters.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SectionHeader(l10n.sectionFavCharacters, Icons.face_rounded, Colors.pinkAccent),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: favCharacters.length,
+                      itemBuilder: (context, i) => _FavPersonCard(
+                        node: favCharacters[i] as Map<String, dynamic>,
+                        isCharacter: true,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Favoritos staff
+                if (favStaff.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SectionHeader(l10n.sectionFavStaff, Icons.badge_rounded, Colors.indigoAccent),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: favStaff.length,
+                      itemBuilder: (context, i) => _FavPersonCard(
+                        node: favStaff[i] as Map<String, dynamic>,
+                        isCharacter: false,
+                      ),
+                    ),
+                  ),
+                ],
+
                 // Actividad reciente
                 if (_activity.isNotEmpty) ...[
                   const SizedBox(height: 20),
@@ -397,25 +462,60 @@ class _FavCard extends StatelessWidget {
   }
 }
 
-class _UserActivityCard extends ConsumerStatefulWidget {
+class _FavPersonCard extends StatelessWidget {
+  const _FavPersonCard({required this.node, required this.isCharacter});
+  final Map<String, dynamic> node;
+  final bool isCharacter;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final id = node['id'] as int?;
+    final name = (node['name'] as Map?)?['full'] as String? ?? '';
+    final img = (node['image'] as Map?)?['large'] as String? ??
+        (node['image'] as Map?)?['medium'] as String?;
+    return GestureDetector(
+      onTap: id != null
+          ? () => context.push(isCharacter ? '/character/$id' : '/staff/$id')
+          : null,
+      child: SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: img != null
+                  ? CachedNetworkImage(
+                      imageUrl: img,
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 100,
+                      height: 130,
+                      color: cs.surfaceContainerHighest,
+                      child: const Icon(Icons.person),
+                    ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserActivityCard extends ConsumerWidget {
   const _UserActivityCard({required this.activity, required this.cs});
   final Map<String, dynamic> activity;
   final ColorScheme cs;
-
-  @override
-  ConsumerState<_UserActivityCard> createState() => _UserActivityCardState();
-}
-
-class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
-  late bool _isLiked;
-  late int _likeCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _isLiked = widget.activity['isLiked'] as bool? ?? false;
-    _likeCount = widget.activity['likeCount'] as int? ?? 0;
-  }
 
   String _timeAgo(int timestamp, AppLocalizations l10n) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
@@ -427,31 +527,24 @@ class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
     return l10n.timeWeeks((diff.inDays / 7).floor());
   }
 
-  Future<void> _handleLike() async {
+  Future<bool?> _handleLike(WidgetRef ref, BuildContext context) async {
     final token = await ref.read(anilistTokenProvider.future);
     if (token == null) {
-      if (!mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.loginRequiredLike)),
       );
-      return;
+      return null;
     }
-    final actId = widget.activity['id'] as int?;
-    if (actId == null) return;
+    final actId = activity['id'] as int?;
+    if (actId == null) return null;
     final graphql = ref.read(anilistGraphqlProvider);
-    final liked = await graphql.toggleLike(actId, token);
-    if (!mounted) return;
-    setState(() {
-      _isLiked = liked;
-      _likeCount = liked ? _likeCount + 1 : (_likeCount - 1).clamp(0, 999999);
-    });
+    return graphql.toggleLike(actId, token);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = widget.cs;
-    final activity = widget.activity;
     final actType = activity['type'] as String? ?? '';
     final isText = actType == 'TEXT';
     final media = activity['media'] as Map<String, dynamic>? ?? {};
@@ -570,27 +663,10 @@ class _UserActivityCardState extends ConsumerState<_UserActivityCard> {
             const SizedBox(height: 6),
             Row(
               children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _handleLike,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isLiked ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: _isLiked ? Colors.red.shade400 : cs.onSurfaceVariant,
-                        ),
-                        if (_likeCount > 0) ...[
-                          const SizedBox(width: 4),
-                          Text('$_likeCount',
-                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
-                        ],
-                      ],
-                    ),
-                  ),
+                AnimatedLikeButton(
+                  isLiked: activity['isLiked'] as bool? ?? false,
+                  likeCount: activity['likeCount'] as int? ?? 0,
+                  onToggle: () => _handleLike(ref, context),
                 ),
                 const SizedBox(width: 12),
                 if (actId != null)
@@ -681,8 +757,6 @@ class _ExpandableMarkdownState extends State<_ExpandableMarkdown> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     if (!_isLong || _expanded) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,

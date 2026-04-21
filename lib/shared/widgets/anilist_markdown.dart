@@ -1,9 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
-import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class AnilistMarkdown extends StatelessWidget {
   const AnilistMarkdown(this.text, {super.key, this.style});
@@ -45,6 +45,27 @@ class _NodesColumn extends StatelessWidget {
           buf.add(_Inline(text: n.text, bold: n.bold, italic: n.italic, strike: n.strike));
         case _Link():
           buf.add(_Inline(text: n.label, url: n.url));
+        case _Code():
+          if (n.text.contains('\n')) {
+            // Block code
+            flush();
+            widgets.add(Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(n.text, style: baseStyle.copyWith(
+                fontFamily: 'monospace',
+                fontSize: (baseStyle.fontSize ?? 13) - 1,
+              )),
+            ));
+          } else {
+            // Inline code
+            buf.add(_Inline(text: n.text, code: true));
+          }
         case _Break():
           buf.add(const _Inline(text: '\n'));
         case _Spoiler():
@@ -75,6 +96,19 @@ class _NodesColumn extends StatelessWidget {
             ),
             child: Text(n.text, style: baseStyle.copyWith(fontStyle: FontStyle.italic)),
           ));
+        case _ListItem():
+          flush();
+          final bullet = n.ordered ? '${n.index ?? '•'}. ' : '• ';
+          widgets.add(Padding(
+            padding: const EdgeInsets.only(left: 8, top: 1, bottom: 1),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(bullet, style: baseStyle),
+                Expanded(child: _NodesColumn(nodes: n.children, baseStyle: baseStyle)),
+              ],
+            ),
+          ));
         case _Hr():
           flush();
           widgets.add(Divider(height: 20, thickness: 1, color: cs.outlineVariant));
@@ -89,15 +123,17 @@ class _NodesColumn extends StatelessWidget {
 }
 
 class _Inline {
-  const _Inline({this.text = '', this.bold = false, this.italic = false, this.strike = false, this.url});
+  const _Inline({this.text = '', this.bold = false, this.italic = false, this.strike = false, this.url, this.code = false});
   final String text;
   final bool bold;
   final bool italic;
   final bool strike;
   final String? url;
+  final bool code;
 
   InlineSpan toSpan(TextStyle base, ColorScheme cs) {
     var s = base;
+    if (code) s = s.copyWith(fontFamily: 'monospace', backgroundColor: cs.surfaceContainerHighest, fontSize: (base.fontSize ?? 13) - 1);
     if (bold) s = s.copyWith(fontWeight: FontWeight.bold);
     if (italic) s = s.copyWith(fontStyle: FontStyle.italic);
     if (strike) s = s.copyWith(decoration: TextDecoration.lineThrough);
@@ -122,36 +158,51 @@ class _ImgWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final maxW = MediaQuery.of(context).size.width - 32;
+    final effectiveWidth = width != null && width! < maxW ? width! : maxW;
+
+    final errorWidget = GestureDetector(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.open_in_new, size: 16, color: cs.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text('Abrir imagen', style: TextStyle(fontSize: 12, color: cs.primary)),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: GestureDetector(
         onTap: () => showFullscreenImage(context, url),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: RemoteNetworkImage(
-            key: ValueKey(url),
-            imageUrl: url,
-            width: width,
-            fit: BoxFit.contain,
-            error: GestureDetector(
-              onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.open_in_new, size: 16, color: cs.primary),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text('Abrir imagen', style: TextStyle(fontSize: 12, color: cs.primary)),
-                    ),
-                  ],
+          child: SizedBox(
+            width: effectiveWidth,
+            child: CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.scaleDown,
+              placeholder: (_, _) => SizedBox(
+                height: 80,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: cs.primary,
+                  ),
                 ),
               ),
+              errorWidget: (_, _, _) => errorWidget,
             ),
           ),
         ),
@@ -222,15 +273,21 @@ class _Spoiler extends _Node { _Spoiler(this.content); final String content; }
 class _Break extends _Node {}
 class _Hr extends _Node {}
 class _Header extends _Node { _Header(this.children, this.level); final List<_Node> children; final int level; }
-class _Quote extends _Node { _Quote(this.text); final String text; }
+class _ListItem extends _Node { _ListItem(this.children, {this.ordered = false, this.index}); final List<_Node> children; final bool ordered; final int? index; }
 
-// --- Parser ---
+class _Quote extends _Node { _Quote(this.text); final String text; }
+class _Code extends _Node { _Code(this.text); final String text; }
 
 List<_Node> _parse(String raw) {
   var text = raw
       .replaceAll('\r\n', '\n')
       .replaceAll('\r', '\n')
       .replaceAll(RegExp(r'<br\s*/?>'), '\n')
+      .replaceAll(RegExp(r'<hr\s*/?>', caseSensitive: false), '\n---\n')
+      .replaceAllMapped(RegExp(r'<blockquote[^>]*>(.*?)</blockquote>', caseSensitive: false, dotAll: true),
+          (m) => m.group(1)!.split('\n').map((l) => '> $l').join('\n'))
+      .replaceAllMapped(RegExp(r'<pre[^>]*>(.*?)</pre>', caseSensitive: false, dotAll: true),
+          (m) => '```\n${m.group(1)}\n```')
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')
@@ -247,7 +304,7 @@ List<_Node> _parse(String raw) {
 
   // Rejoin URLs broken across lines inside img(), youtube(), webm(), ![](), []()
   text = text.replaceAllMapped(
-    RegExp(r'(img\d+\(https?://|!\[[^\]]*\]\(https?://|\[[^\]]*\]\(https?://|youtube\(|webm\()([^)]*)\)',
+    RegExp(r'(img\d*\(https?://|!\[[^\]]*\]\(https?://|\[[^\]]*\]\(https?://|youtube\(|webm\()([^)]*)\)',
         caseSensitive: false, dotAll: true),
     (m) => '${m.group(1)}${m.group(2)!.replaceAll(RegExp(r'\s+'), '')})',
   );
@@ -271,13 +328,17 @@ List<_Node> _parse(String raw) {
       flushBuf(); nodes.add(_Hr()); i++; continue;
     }
 
-    final hm = RegExp(r'^(#{1,5})\s+(.+)$').firstMatch(line);
+    final hm = RegExp(r'^(#{1,5})\s*(.*)$').firstMatch(line);
     if (hm != null) {
       flushBuf();
       final headerContent = hm.group(2)!.trim();
-      final headerNodes = <_Node>[];
-      _parseInline(headerContent, headerNodes);
-      nodes.add(_Header(headerNodes, hm.group(1)!.length));
+      if (headerContent.isEmpty) {
+        nodes.add(_Break());
+      } else {
+        final headerNodes = <_Node>[];
+        _parseInline(headerContent, headerNodes);
+        nodes.add(_Header(headerNodes, hm.group(1)!.length));
+      }
       i++; continue;
     }
 
@@ -289,6 +350,49 @@ List<_Node> _parse(String raw) {
         i++;
       }
       nodes.add(_Quote(ql.join('\n')));
+      continue;
+    }
+
+    // Code blocks: ``` ... ```
+    if (line.trimLeft().startsWith('```')) {
+      flushBuf();
+      final cl = <String>[];
+      i++;
+      while (i < lines.length && !lines[i].trimRight().startsWith('```')) {
+        cl.add(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing ```
+      nodes.add(_Code(cl.join('\n')));
+      continue;
+    }
+
+    // Bullet lists: - item, * item, + item
+    final bulletRx = RegExp(r'^(\s*)[-*+]\s+(.+)$');
+    if (bulletRx.hasMatch(line)) {
+      flushBuf();
+      while (i < lines.length && bulletRx.hasMatch(lines[i])) {
+        final lm = bulletRx.firstMatch(lines[i])!;
+        final itemNodes = <_Node>[];
+        _parseInline(lm.group(2)!, itemNodes);
+        nodes.add(_ListItem(itemNodes));
+        i++;
+      }
+      continue;
+    }
+
+    // Numbered lists: 1. item, 2. item
+    final numRx = RegExp(r'^(\s*)(\d+)\.\s+(.+)$');
+    if (numRx.hasMatch(line)) {
+      flushBuf();
+      while (i < lines.length && numRx.hasMatch(lines[i])) {
+        final lm = numRx.firstMatch(lines[i])!;
+        final idx = int.tryParse(lm.group(2)!);
+        final itemNodes = <_Node>[];
+        _parseInline(lm.group(3)!, itemNodes);
+        nodes.add(_ListItem(itemNodes, ordered: true, index: idx));
+        i++;
+      }
       continue;
     }
 
@@ -363,10 +467,13 @@ void _parseInline(String text, List<_Node> nodes) {
   final patterns = <(RegExp, String)>[
     // ~~~content~~~ inline center (must be before strikethrough)
     (RegExp(r'~~~(.+?)~~~'), 'inlineCenter'),
-    (RegExp(r'img(\d+)\((https?://[^\)]+)\)', caseSensitive: false), 'img'),
+    // Inline code: `code`
+    (RegExp(r'`([^`]+)`'), 'inlineCode'),
+    (RegExp(r'img(\d*)\((https?://[^\)]+)\)', caseSensitive: false), 'img'),
     (RegExp(r'!\[([^\]]*)\]\((https?://[^\)]+)\)'), 'mdImg'),
     (RegExp(r'<img[^>]+src="(https?://[^"]+)"[^>]*/?>'), 'htmlImg'),
-    (RegExp(r'youtube\((?:https?://(?:www\.)?youtube\.com/watch\?v=)?([a-zA-Z0-9_-]+)\)'), 'youtube'),
+    (RegExp(r'youtube\((?:https?://(?:www\.)?youtu(?:\.be/|be\.com/watch\?v=))([a-zA-Z0-9_-]+)[^\)]*\)'), 'youtube'),
+    (RegExp(r'youtube\(([a-zA-Z0-9_-]{11})\)'), 'youtube'),
     (RegExp(r'webm\((https?://[^\)]+)\)'), 'webm'),
     (RegExp(r'~!(.+?)!~', dotAll: true), 'spoiler'),
     (RegExp(r'\[([^\]]+)\]\((https?://[^\)]+)\)'), 'link'),
@@ -399,6 +506,7 @@ void _parseInline(String text, List<_Node> nodes) {
         final inner = <_Node>[];
         _parseInline(best.group(1)!, inner);
         nodes.add(_Center(inner));
+      case 'inlineCode': nodes.add(_Code(best.group(1)!));
       case 'img': nodes.add(_Image(best.group(2)!, width: double.tryParse(best.group(1)!)));
       case 'mdImg': nodes.add(_Image(best.group(2)!));
       case 'htmlImg': nodes.add(_Image(best.group(1)!));

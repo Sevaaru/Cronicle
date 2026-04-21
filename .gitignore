@@ -1,4 +1,3 @@
-# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -11,19 +10,10 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
-# IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -32,23 +22,11 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-
-# Symbolication related
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
-
-# Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-# Internal project guide (not for version control)
 /guide/
-
-# Twitch / IGDB (local secrets for --dart-define-from-file)
 twitch_secrets.json
-
-# Defines de compilación (copia desde dart_defines.example.json)
 dart_defines.local.json

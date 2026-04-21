@@ -1,4 +1,21 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:dio/dio.dart';
+
+import 'package:cronicle/core/utils/json_int.dart';
+
+/// Lanzada cuando AniList responde 429 (rate-limit) y se agotaron los reintentos.
+class AnilistRateLimitException implements Exception {
+  AnilistRateLimitException({this.retryAfterSeconds});
+
+  /// Segundos sugeridos por la cabecera `retry-after` (si vino).
+  final int? retryAfterSeconds;
+
+  @override
+  String toString() =>
+      'AnilistRateLimitException(retryAfter=${retryAfterSeconds}s)';
+}
 
 /// Queries the public Anilist GraphQL API.
 class AnilistGraphqlDatasource {
@@ -40,6 +57,39 @@ class AnilistGraphqlDatasource {
     return lines.isNotEmpty ? lines.join('\n') : 'GraphQL error';
   }
 
+  int _retryDelaySeconds(Response<dynamic>? response, int attempt) {
+    final retryAfter = int.tryParse(response?.headers.value('retry-after') ?? '');
+    if (retryAfter != null && retryAfter > 0) {
+      return retryAfter.clamp(1, 60);
+    }
+    final exponential = 1 << attempt;
+    final jitter = Random().nextInt(2);
+    return (exponential + jitter).clamp(1, 60);
+  }
+
+  List<Map<String, dynamic>> _normalizeThreadChildComments(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      } catch (_) {
+        return const [];
+      }
+    }
+    return const [];
+  }
+
   Future<Map<String, dynamic>> _post(
     String query, {
     Map<String, dynamic>? variables,
@@ -52,28 +102,56 @@ class AnilistGraphqlDatasource {
     if (token != null) headers['Authorization'] = 'Bearer $token';
 
     late final Map<String, dynamic> body;
-    try {
-      final res = await _dio.post<dynamic>(
-        _url,
-        data: {'query': query, 'variables': variables},
-        options: Options(
-          headers: headers,
-          responseType: ResponseType.json,
-          validateStatus: (_) => true,
-        ),
-      );
-      if (res.data is Map<String, dynamic>) {
-        body = res.data as Map<String, dynamic>;
-      } else {
-        throw Exception('HTTP ${res.statusCode}');
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final res = await _dio.post<dynamic>(
+          _url,
+          data: {'query': query, 'variables': variables},
+          options: Options(
+            headers: headers,
+            responseType: ResponseType.json,
+            validateStatus: (_) => true,
+          ),
+        );
+        // Retry on 429 Too Many Requests
+        if (res.statusCode == 429 && attempt < maxAttempts) {
+          final retryAfter = _retryDelaySeconds(res, attempt);
+          await Future<void>.delayed(
+              Duration(seconds: retryAfter.clamp(1, 60)));
+          continue;
+        }
+        if (res.statusCode == 429) {
+          final hint = int.tryParse(
+              res.headers.value('retry-after') ?? '');
+          throw AnilistRateLimitException(retryAfterSeconds: hint);
+        }
+        if (res.data is Map<String, dynamic>) {
+          body = res.data as Map<String, dynamic>;
+        } else {
+          throw Exception('HTTP ${res.statusCode}');
+        }
+      } on DioException catch (e) {
+        // Retry on 429 from DioException too
+        if (e.response?.statusCode == 429 && attempt < maxAttempts) {
+          final retryAfter = _retryDelaySeconds(e.response, attempt);
+          await Future<void>.delayed(
+              Duration(seconds: retryAfter.clamp(1, 60)));
+          continue;
+        }
+        if (e.response?.statusCode == 429) {
+          final hint = int.tryParse(
+              e.response?.headers.value('retry-after') ?? '');
+          throw AnilistRateLimitException(retryAfterSeconds: hint);
+        }
+        final data = e.response?.data;
+        if (data is Map<String, dynamic>) {
+          body = data;
+        } else {
+          throw Exception('Network error: ${e.message}');
+        }
       }
-    } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map<String, dynamic>) {
-        body = data;
-      } else {
-        throw Exception('Network error: ${e.message}');
-      }
+      break;
     }
 
     final errors = body['errors'] as List?;
@@ -155,6 +233,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
           }
         }
       }
@@ -178,8 +257,9 @@ class AnilistGraphqlDatasource {
   }
 
   /// Home browse rails for Anilist: [category] is
-  /// `seasonal`, `top_rated`, `upcoming`, `recently_released`.
-  Future<List<Map<String, dynamic>>> fetchBrowseMedia({
+  /// `seasonal`, `trending`, `top_rated`, `upcoming`, `recently_released`,
+  /// `popularity` (POPULARITY_DESC), `start_date` (START_DATE_DESC).
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})> fetchBrowseMedia({
     required String type,
     required String category,
     int page = 1,
@@ -197,6 +277,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
     ''';
 
     final s = currentMediaSeason();
@@ -205,6 +286,7 @@ class AnilistGraphqlDatasource {
       final query = '''
       query (\$type: MediaType, \$season: MediaSeason, \$seasonYear: Int, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, season: \$season, seasonYear: \$seasonYear, sort: POPULARITY_DESC) {
             $mediaFields
           }
@@ -218,15 +300,43 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
+    if (category == 'trending') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: TRENDING_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'top_rated') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, sort: SCORE_DESC, averageScore_greater: 60) {
             $mediaFields
           }
@@ -238,15 +348,19 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'upcoming') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, status: NOT_YET_RELEASED, sort: POPULARITY_DESC) {
             $mediaFields
           }
@@ -258,15 +372,19 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
     if (category == 'recently_released') {
       final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
           media(type: \$type, status: RELEASING, sort: START_DATE_DESC) {
             $mediaFields
           }
@@ -278,12 +396,118 @@ class AnilistGraphqlDatasource {
         'page': page,
         'perPage': perPage,
       });
-      return (data['data']?['Page']?['media'] as List?)
-              ?.cast<Map<String, dynamic>>() ??
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
           [];
+      return (items: list, hasNextPage: hasNext);
     }
 
-    return [];
+    if (category == 'popularity') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: POPULARITY_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
+    if (category == 'start_date') {
+      final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(type: \$type, sort: START_DATE_DESC) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+      final data = await _post(query, variables: {
+        'type': type,
+        'page': page,
+        'perPage': perPage,
+      });
+      final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+      final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+      final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+      final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+          [];
+      return (items: list, hasNextPage: hasNext);
+    }
+
+    return (items: <Map<String, dynamic>>[], hasNextPage: false);
+  }
+
+  /// Rango de fechas de estreno (FuzzyDateInt: YYYYMMDD). Inclusive en ambos extremos.
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
+      fetchMediaByReleaseDateRange({
+    required String type,
+    required int startDateGreaterOrEqual,
+    required int startDateLesserOrEqual,
+    int page = 1,
+    int perPage = 24,
+  }) async {
+    const mediaFields = '''
+            id
+            type
+            title { romaji english }
+            coverImage { large }
+            episodes
+            chapters
+            volumes
+            averageScore
+            status
+            format
+            genres
+            startDate { year month day }
+            nextAiringEpisode { episode }
+    ''';
+
+    // Fechas como literales en el documento: en web, JSON numérico en variables
+    // a veces se tipa como Int y Anilist exige FuzzyDateInt en esas posiciones.
+    final query = '''
+      query (\$type: MediaType, \$page: Int, \$perPage: Int) {
+        Page(page: \$page, perPage: \$perPage) {
+          pageInfo { hasNextPage }
+          media(
+            type: \$type
+            startDate_greater: $startDateGreaterOrEqual
+            startDate_lesser: $startDateLesserOrEqual
+            sort: POPULARITY_DESC
+          ) {
+            $mediaFields
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      'type': type,
+      'page': page,
+      'perPage': perPage,
+    });
+    final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+    final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
+    final list = (pageMap?['media'] as List?)?.cast<Map<String, dynamic>>() ??
+        [];
+    return (items: list, hasNextPage: hasNext);
   }
 
   /// Listado paginado por género y/o etiqueta Anilist ([genre] / [tag] son listas de un elemento).
@@ -316,6 +540,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode }
     ''';
 
     final useGenre = genre != null && genre.isNotEmpty;
@@ -394,6 +619,7 @@ class AnilistGraphqlDatasource {
             status
             format
             genres
+            nextAiringEpisode { episode airingAt timeUntilAiring }
           }
         }
       }
@@ -405,6 +631,46 @@ class AnilistGraphqlDatasource {
     return (data['data']?['Page']?['media'] as List?)
             ?.cast<Map<String, dynamic>>() ??
         [];
+  }
+
+  /// Metadatos de emisión para varios anime (API pública; no requiere token).
+  Future<Map<int, Map<String, dynamic>>> fetchMediaAiringSnapshots(
+    List<int> ids,
+  ) async {
+    if (ids.isEmpty) return {};
+    const chunkSize = 50;
+    final out = <int, Map<String, dynamic>>{};
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final end = i + chunkSize > ids.length ? ids.length : i + chunkSize;
+      final slice = ids.sublist(i, end);
+      const query = r'''
+        query ($ids: [Int], $page: Int, $perPage: Int) {
+          Page(page: $page, perPage: $perPage) {
+            media(id_in: $ids) {
+              id
+              status
+              episodes
+              nextAiringEpisode { episode airingAt timeUntilAiring }
+            }
+          }
+        }
+      ''';
+      final data = await _post(query, variables: {
+        'ids': slice,
+        'page': 1,
+        'perPage': chunkSize,
+      });
+      final list = (data['data']?['Page']?['media'] as List?)
+              ?.cast<Map<String, dynamic>>() ??
+          [];
+      for (final m in list) {
+        final id = jsonInt(m['id']);
+        if (id > 0) {
+          out[id] = m;
+        }
+      }
+    }
+    return out;
   }
 
   /// Fetch full media details by Anilist ID.
@@ -464,6 +730,34 @@ class AnilistGraphqlDatasource {
               }
             }
           }
+          characters(sort: [ROLE, RELEVANCE, ID], perPage: 12) {
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+            }
+          }
+          staff(sort: [RELEVANCE, ID], perPage: 8) {
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+            }
+          }
           reviews(sort: RATING_DESC, perPage: 5) {
             nodes {
               id
@@ -494,20 +788,271 @@ class AnilistGraphqlDatasource {
     required String token,
   }) async {
     final isAnime = mediaType == 'ANIME';
+    // La API devuelve [Favourites], no User: no existe `id` en ese tipo.
     const mutation = r'''
       mutation ($animeId: Int, $mangaId: Int) {
         ToggleFavourite(animeId: $animeId, mangaId: $mangaId) {
-          id
+          __typename
         }
       }
     ''';
     await _post(
       mutation,
       variables: {
-        'animeId': isAnime ? mediaId : null,
-        'mangaId': isAnime ? null : mediaId,
+        if (isAnime) 'animeId': mediaId,
+        if (!isAnime) 'mangaId': mediaId,
       },
       token: token,
+    );
+  }
+
+  /// Toggle viewer favourite for a character (requires auth).
+  Future<void> toggleFavouriteCharacter({
+    required int characterId,
+    required String token,
+  }) async {
+    const mutation = r'''
+      mutation ($characterId: Int) {
+        ToggleFavourite(characterId: $characterId) { __typename }
+      }
+    ''';
+    await _post(mutation, variables: {'characterId': characterId}, token: token);
+  }
+
+  /// Toggle viewer favourite for a staff member (requires auth).
+  Future<void> toggleFavouriteStaff({
+    required int staffId,
+    required String token,
+  }) async {
+    const mutation = r'''
+      mutation ($staffId: Int) {
+        ToggleFavourite(staffId: $staffId) { __typename }
+      }
+    ''';
+    await _post(mutation, variables: {'staffId': staffId}, token: token);
+  }
+
+  /// Fetch full character detail with paginated media appearances.
+  Future<Map<String, dynamic>?> fetchCharacterDetail(
+    int id, {
+    String? token,
+    int mediaPage = 1,
+    int mediaPerPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Character(id: $id) {
+          id
+          name { full native alternative alternativeSpoiler userPreferred }
+          image { large medium }
+          description(asHtml: false)
+          gender
+          age
+          bloodType
+          dateOfBirth { year month day }
+          favourites
+          isFavourite
+          siteUrl
+          media(sort: [POPULARITY_DESC], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              characterRole
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+              node {
+                id
+                type
+                format
+                title { romaji english native }
+                coverImage { large }
+                averageScore
+                seasonYear
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': id, 'page': mediaPage, 'perPage': mediaPerPage},
+      token: token,
+    );
+    return data['data']?['Character'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch full staff detail with character roles and staff media credits.
+  Future<Map<String, dynamic>?> fetchStaffDetail(
+    int id, {
+    String? token,
+    int charactersPage = 1,
+    int charactersPerPage = 25,
+    int staffMediaPage = 1,
+    int staffMediaPerPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $cPage: Int, $cPerPage: Int, $sPage: Int, $sPerPage: Int) {
+        Staff(id: $id) {
+          id
+          name { full native userPreferred }
+          image { large medium }
+          description(asHtml: false)
+          languageV2
+          primaryOccupations
+          gender
+          age
+          yearsActive
+          homeTown
+          bloodType
+          dateOfBirth { year month day }
+          dateOfDeath { year month day }
+          favourites
+          isFavourite
+          siteUrl
+          characterMedia(sort: [POPULARITY_DESC], page: $cPage, perPage: $cPerPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              characterRole
+              characters {
+                id
+                name { full native }
+                image { large medium }
+              }
+              node {
+                id
+                type
+                title { romaji english native }
+                coverImage { large }
+                seasonYear
+              }
+            }
+          }
+          staffMedia(sort: [POPULARITY_DESC], page: $sPage, perPage: $sPerPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              staffRole
+              node {
+                id
+                type
+                title { romaji english native }
+                coverImage { large }
+                seasonYear
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {
+        'id': id,
+        'cPage': charactersPage,
+        'cPerPage': charactersPerPage,
+        'sPage': staffMediaPage,
+        'sPerPage': staffMediaPerPage,
+      },
+      token: token,
+    );
+    return data['data']?['Staff'] as Map<String, dynamic>?;
+  }
+
+  /// Paginated characters list for a media (used in "View all").
+  Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
+      fetchMediaCharacters(
+    int mediaId, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Media(id: $id) {
+          characters(sort: [ROLE, RELEVANCE, ID], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': mediaId, 'page': page, 'perPage': perPage},
+    );
+    final container =
+        data['data']?['Media']?['characters'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        <Map<String, dynamic>>[];
+    final pageInfo = container?['pageInfo'] as Map<String, dynamic>? ?? {};
+    return (
+      edges: edges,
+      hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
+      total: jsonInt(pageInfo['total']),
+    );
+  }
+
+  /// Paginated staff list for a media (used in "View all").
+  Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
+      fetchMediaStaff(
+    int mediaId, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Media(id: $id) {
+          staff(sort: [RELEVANCE, ID], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': mediaId, 'page': page, 'perPage': perPage},
+    );
+    final container =
+        data['data']?['Media']?['staff'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        <Map<String, dynamic>>[];
+    final pageInfo = container?['pageInfo'] as Map<String, dynamic>? ?? {};
+    return (
+      edges: edges,
+      hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
+      total: jsonInt(pageInfo['total']),
     );
   }
 
@@ -736,7 +1281,9 @@ class AnilistGraphqlDatasource {
 
   /// Recent public activity. Pass null [activityType] for all types.
   /// If [isFollowing] is true, only shows activity from users the viewer follows.
-  Future<List<Map<String, dynamic>>> fetchRecentActivityByType({
+  /// [hasNextPage] reflects Anilist pagination (do not infer from filtered length).
+  Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
+      fetchRecentActivityByType({
     String? activityType,
     int page = 1,
     int perPage = 25,
@@ -746,6 +1293,9 @@ class AnilistGraphqlDatasource {
     const query = r'''
       query ($page: Int, $perPage: Int, $type: ActivityType, $isFollowing: Boolean) {
         Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            hasNextPage
+          }
           activities(type: $type, sort: ID_DESC, isFollowing: $isFollowing) {
             ... on ListActivity {
               id
@@ -792,14 +1342,18 @@ class AnilistGraphqlDatasource {
       if (activityType != null) 'type': activityType,
       'isFollowing': isFollowing ? true : null,
     }, token: token);
+    final pageMap = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageMap?['pageInfo'] as Map<String, dynamic>?;
+    final hasNext = pageInfo?['hasNextPage'] as bool? ?? false;
     final activities =
-        (data['data']?['Page']?['activities'] as List?)
-                ?.cast<Map<String, dynamic>>() ??
-            [];
-    return activities.where((a) => a['media'] != null || a['type'] == 'TEXT').toList();
+        (pageMap?['activities'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final filtered = activities
+        .where((a) => a['media'] != null || a['type'] == 'TEXT')
+        .toList();
+    return (items: filtered, hasNextPage: hasNext);
   }
 
-  /// Toggle like on an activity or reply. Requires auth token.
+  /// Toggle like on an activity, reply, thread or thread comment. Requires auth token.
   Future<bool> toggleLike(int id, String token, {String type = 'ACTIVITY'}) async {
     const query = r'''
       mutation ($id: Int, $type: LikeableType) {
@@ -807,6 +1361,8 @@ class AnilistGraphqlDatasource {
           ... on ListActivity { id isLiked likeCount }
           ... on TextActivity { id isLiked likeCount }
           ... on ActivityReply { id isLiked likeCount }
+          ... on Thread { id isLiked likeCount }
+          ... on ThreadComment { id isLiked likeCount }
         }
       }
     ''';
@@ -1002,10 +1558,11 @@ class AnilistGraphqlDatasource {
             entries {
               id
               status
-              score(format: POINT_10)
+              score(format: POINT_100)
               progress
               progressVolumes
               notes
+              updatedAt
               media {
                 id
                 type
@@ -1015,6 +1572,8 @@ class AnilistGraphqlDatasource {
                 chapters
                 volumes
                 format
+                status
+                nextAiringEpisode { episode }
               }
             }
           }
@@ -1055,6 +1614,7 @@ class AnilistGraphqlDatasource {
                 type
                 status
                 title { romaji english native }
+                coverImage { large }
                 nextAiringEpisode { airingAt episode }
               }
             }
@@ -1086,11 +1646,90 @@ class AnilistGraphqlDatasource {
           id
           name
           avatar { medium }
+          mediaListOptions { scoreFormat }
         }
       }
     ''';
     final data = await _post(query, token: token);
     return data['data']?['Viewer'] as Map<String, dynamic>?;
+  }
+
+  /// Totales de seguidores y seguidos (una sola petición con dos campos [Page]).
+  Future<Map<String, int>> fetchUserFollowCounts(int userId, {String? token}) async {
+    const query = r'''
+      query ($userId: Int!) {
+        fc: Page(page: 1, perPage: 1) {
+          pageInfo { total }
+          followers(userId: $userId) { id }
+        }
+        fg: Page(page: 1, perPage: 1) {
+          pageInfo { total }
+          following(userId: $userId) { id }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'userId': userId}, token: token);
+    final fc = data['data']?['fc'] as Map<String, dynamic>?;
+    final fg = data['data']?['fg'] as Map<String, dynamic>?;
+    final followers = jsonInt((fc?['pageInfo'] as Map?)?['total']);
+    final following = jsonInt((fg?['pageInfo'] as Map?)?['total']);
+    return {'followers': followers, 'following': following};
+  }
+
+  /// Lista paginada de seguidores o de cuentas que [userId] sigue.
+  Future<({List<Map<String, dynamic>> users, bool hasNextPage, int total})>
+      fetchUserFollowListPage(
+    int userId, {
+    required bool followers,
+    int page = 1,
+    int perPage = 50,
+    String? token,
+  }) async {
+    const followersQ = r'''
+      query ($userId: Int!, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            total
+            hasNextPage
+          }
+          followers(userId: $userId) {
+            id
+            name
+            avatar { large medium }
+          }
+        }
+      }
+    ''';
+    const followingQ = r'''
+      query ($userId: Int!, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo {
+            total
+            hasNextPage
+          }
+          following(userId: $userId) {
+            id
+            name
+            avatar { large medium }
+          }
+        }
+      }
+    ''';
+    final query = followers ? followersQ : followingQ;
+    final data = await _post(
+      query,
+      variables: {'userId': userId, 'page': page, 'perPage': perPage},
+      token: token,
+    );
+    final field = followers ? 'followers' : 'following';
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final pageInfo = pageData?['pageInfo'] as Map<String, dynamic>? ?? {};
+    final total = jsonInt(pageInfo['total']);
+    final hasNextPage = pageInfo['hasNextPage'] as bool? ?? false;
+    final users =
+        (pageData?[field] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
+            <Map<String, dynamic>>[];
+    return (users: users, hasNextPage: hasNextPage, total: total);
   }
 
   /// Fetch a public user profile by ID, including favourites.
@@ -1112,6 +1751,12 @@ class AnilistGraphqlDatasource {
             }
             manga(perPage: 10) {
               nodes { id title { romaji english } coverImage { large } }
+            }
+            characters(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
+            staff(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
             }
           }
           statistics {
@@ -1135,8 +1780,18 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'id': userId}, token: token);
-    return data['data']?['User'] as Map<String, dynamic>?;
+    final results = await Future.wait([
+      _post(query, variables: {'id': userId}, token: token),
+      fetchUserFollowCounts(userId, token: token)
+          .catchError((Object _) => <String, int>{'followers': 0, 'following': 0}),
+    ]);
+    final body = results[0];
+    final user = body['data']?['User'] as Map<String, dynamic>?;
+    if (user == null) return null;
+    final counts = results[1];
+    user['followersCount'] = jsonInt(counts['followers']);
+    user['followingCount'] = jsonInt(counts['following']);
+    return user;
   }
 
   /// Fetch recent activity of a specific user.
@@ -1193,7 +1848,7 @@ class AnilistGraphqlDatasource {
   }
 
   /// Save (create/update) a media list entry on Anilist.
-  /// [score] expects POINT_10 format (0-10), converted to scoreRaw (0-100).
+  /// [score] expects 0-100 raw format, sent directly as scoreRaw.
   Future<Map<String, dynamic>?> saveMediaListEntry({
     required int mediaId,
     required String token,
@@ -1207,7 +1862,7 @@ class AnilistGraphqlDatasource {
         SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $scoreRaw, progress: $progress, notes: $notes) {
           id
           status
-          score(format: POINT_10)
+          score(format: POINT_100)
           progress
           notes
         }
@@ -1215,7 +1870,7 @@ class AnilistGraphqlDatasource {
     ''';
     final variables = <String, dynamic>{'mediaId': mediaId};
     if (status != null) variables['status'] = status;
-    if (score != null) variables['scoreRaw'] = score * 10;
+    if (score != null) variables['scoreRaw'] = score;
     if (progress != null) variables['progress'] = progress;
     if (notes != null) variables['notes'] = notes;
 
@@ -1335,6 +1990,12 @@ class AnilistGraphqlDatasource {
             manga(perPage: 10) {
               nodes { id title { romaji english } coverImage { large } }
             }
+            characters(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
+            staff(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
           }
           statistics {
             anime {
@@ -1358,6 +2019,192 @@ class AnilistGraphqlDatasource {
       }
     ''';
     final data = await _post(query, token: token);
-    return data['data']?['Viewer'] as Map<String, dynamic>?;
+    final user = data['data']?['Viewer'] as Map<String, dynamic>?;
+    if (user == null) return null;
+    final id = jsonInt(user['id']);
+    if (id > 0) {
+      try {
+        final counts = await fetchUserFollowCounts(id, token: token);
+        user['followersCount'] = jsonInt(counts['followers']);
+        user['followingCount'] = jsonInt(counts['following']);
+      } catch (_) {
+        user['followersCount'] = 0;
+        user['followingCount'] = 0;
+      }
+    } else {
+      user['followersCount'] = 0;
+      user['followingCount'] = 0;
+    }
+    return user;
+  }
+
+  /// Post a comment on a forum thread. Requires auth.
+  Future<Map<String, dynamic>> saveThreadComment(
+      int threadId, String text, String token, {int? parentCommentId}) async {
+    const query = r'''
+      mutation ($threadId: Int, $parentCommentId: Int, $comment: String) {
+        SaveThreadComment(threadId: $threadId, parentCommentId: $parentCommentId, comment: $comment) {
+          id comment createdAt isLiked likeCount
+          user { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(
+        query,
+        variables: {'threadId': threadId, 'parentCommentId': parentCommentId, 'comment': text},
+        token: token);
+    final saved = data['data']?['SaveThreadComment'];
+    if (saved is Map<String, dynamic>) return saved;
+    if (saved is Map) return Map<String, dynamic>.from(saved);
+    throw Exception('SaveThreadComment returned no data');
+  }
+
+  /// Forum threads related to a media item.
+  Future<List<Map<String, dynamic>>> fetchMediaThreads(int mediaId, {int perPage = 10}) async {
+    const query = r'''
+      query ($mediaId: Int, $perPage: Int) {
+        Page(perPage: $perPage) {
+          threads(mediaCategoryId: $mediaId, sort: REPLIED_AT_DESC) {
+            id title createdAt updatedAt replyCount viewCount
+            user { id name avatar { medium } }
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'mediaId': mediaId, 'perPage': perPage});
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Full forum thread with comments.
+  Future<Map<String, dynamic>?> fetchForumThread(int threadId, {String? token}) async {
+    const query = r'''
+      query ($id: Int, $perPage: Int) {
+        Thread(id: $id) {
+          id title body createdAt updatedAt replyCount viewCount isLiked likeCount
+          user { id name avatar { medium } }
+          categories { id name }
+          mediaCategories { id type title { romaji english } coverImage { large } }
+        }
+        Page(perPage: $perPage) {
+          threadComments(threadId: $id) {
+            id comment createdAt isLiked likeCount isLocked
+            user { id name avatar { medium } }
+            childComments
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': threadId, 'perPage': 25}, token: token);
+    final thread = data['data']?['Thread'] as Map<String, dynamic>?;
+    if (thread == null) return null;
+    final commentsRaw = (data['data']?['Page']?['threadComments'] as List?)
+        ?.cast<Map<String, dynamic>>() ??
+      [];
+    final comments = commentsRaw
+      .map((c) {
+        final mapped = Map<String, dynamic>.from(c);
+        mapped['childComments'] = _normalizeThreadChildComments(c['childComments']);
+        return mapped;
+      })
+      .toList();
+    return {...thread, 'comments': comments};
+  }
+
+  /// Browse forum threads with optional category filter and sort.
+  /// [categoryId]: Anilist forum category (e.g. 1=General, 2=Anime, 3=Manga,
+  /// 5=Release Discussions, 7=Music, 9=Gaming, etc.)
+  /// [sort]: e.g. REPLIED_AT_DESC, CREATED_AT_DESC, IS_STICKY, etc.
+  Future<List<Map<String, dynamic>>> fetchForumThreads({
+    int? categoryId,
+    String sort = 'REPLIED_AT_DESC',
+    int perPage = 15,
+    int page = 1,
+  }) async {
+    const query = r'''
+      query ($categoryId: Int, $sort: [ThreadSort], $perPage: Int, $page: Int) {
+        Page(perPage: $perPage, page: $page) {
+          threads(categoryId: $categoryId, sort: $sort) {
+            id title createdAt updatedAt replyCount viewCount isSticky isLocked
+            user { id name avatar { medium } }
+            categories { id name }
+            repliedAt
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      if (categoryId != null) 'categoryId': categoryId,
+      'sort': [sort],
+      'perPage': perPage,
+      'page': page,
+    });
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Search forum threads by query string.
+  Future<List<Map<String, dynamic>>> searchForumThreads({
+    required String search,
+    int? categoryId,
+    int perPage = 20,
+    int page = 1,
+  }) async {
+    const query = r'''
+      query ($search: String, $categoryId: Int, $sort: [ThreadSort], $perPage: Int, $page: Int) {
+        Page(perPage: $perPage, page: $page) {
+          threads(search: $search, categoryId: $categoryId, sort: $sort) {
+            id title createdAt updatedAt replyCount viewCount isSticky isLocked
+            user { id name avatar { medium } }
+            categories { id name }
+            repliedAt
+          }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {
+      'search': search,
+      if (categoryId != null) 'categoryId': categoryId,
+      'sort': ['SEARCH_MATCH'],
+      'perPage': perPage,
+      'page': page,
+    });
+    final threads = data['data']?['Page']?['threads'] as List?;
+    return threads?.cast<Map<String, dynamic>>() ?? [];
+  }
+
+  /// Fetch all forum feed sections using individual queries.
+  /// Returns a map with keys: 'sticky', 'recent', 'newest', 'releases'.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchForumFeed({
+    int? categoryId,
+  }) async {
+    Future<List<Map<String, dynamic>>> safeFetch({
+      int? cat,
+      required String sort,
+      required int perPage,
+    }) async {
+      try {
+        return await fetchForumThreads(
+          categoryId: cat,
+          sort: sort,
+          perPage: perPage,
+        );
+      } catch (_) {
+        return [];
+      }
+    }
+
+    final results = await Future.wait([
+      safeFetch(cat: categoryId, sort: 'IS_STICKY', perPage: 10),
+      safeFetch(cat: categoryId, sort: 'REPLIED_AT_DESC', perPage: 8),
+      safeFetch(cat: categoryId, sort: 'CREATED_AT_DESC', perPage: 8),
+      safeFetch(cat: 5, sort: 'REPLIED_AT_DESC', perPage: 8),
+    ]);
+    return {
+      'sticky': results[0].where((t) => t['isSticky'] == true).toList(),
+      'recent': results[1],
+      'newest': results[2],
+      'releases': results[3],
+    };
   }
 }

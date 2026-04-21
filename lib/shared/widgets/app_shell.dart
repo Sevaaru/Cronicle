@@ -1,8 +1,19 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
+
+TextStyle pageTitleStyle() => GoogleFonts.inter(
+  fontSize: 20,
+  fontWeight: FontWeight.w700,
+  letterSpacing: 0.5,
+);
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({
@@ -42,8 +53,8 @@ class _AppShellState extends ConsumerState<AppShell> {
 
     final items = [
       GlassNavItem(
-        icon: Icons.rss_feed_outlined,
-        activeIcon: Icons.rss_feed_rounded,
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
         label: l10n.navHome,
       ),
       GlassNavItem(
@@ -57,9 +68,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         label: l10n.navSearch,
       ),
       GlassNavItem(
-        icon: Icons.person_outlined,
-        activeIcon: Icons.person_rounded,
-        label: l10n.navProfile,
+        icon: Icons.forum_outlined,
+        activeIcon: Icons.forum_rounded,
+        label: l10n.navSocial,
       ),
       GlassNavItem(
         icon: Icons.settings_outlined,
@@ -75,6 +86,114 @@ class _AppShellState extends ConsumerState<AppShell> {
         currentIndex: widget.currentIndex,
         onTap: widget.onTabChanged,
         items: items,
+      ),
+    );
+  }
+}
+
+class ProfileAvatarButton extends ConsumerStatefulWidget {
+  const ProfileAvatarButton({super.key});
+
+  @override
+  ConsumerState<ProfileAvatarButton> createState() => _ProfileAvatarButtonState();
+}
+
+class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
+  final GlobalKey _avatarBoundsKey = GlobalKey();
+  bool _hover = false;
+
+  void _openProfile() {
+    final box = _avatarBoundsKey.currentContext?.findRenderObject() as RenderBox?;
+    Rect? origin;
+    if (box != null && box.hasSize) {
+      final o = box.localToGlobal(Offset.zero);
+      origin = Rect.fromLTWH(o.dx, o.dy, box.size.width, box.size.height);
+    }
+    context.push('/profile', extra: origin);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final resolvedAvatar = ref.watch(resolvedProfileAvatarProvider);
+
+    final avatarUrl = resolvedAvatar.networkUrl;
+    final avatarBytes = resolvedAvatar.memoryBytes;
+
+    final avatarCore = SizedBox(
+      key: _avatarBoundsKey,
+      width: kProfileLeadingCircleSize,
+      height: kProfileLeadingCircleSize,
+      child: ClipOval(
+        child: ColoredBox(
+          color: cs.surfaceContainerHighest,
+          child: avatarBytes != null
+              ? Image.memory(
+                  avatarBytes,
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  fit: BoxFit.cover,
+                )
+              : (avatarUrl != null && avatarUrl.isNotEmpty)
+              ? CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  fit: BoxFit.cover,
+                )
+              : Icon(Icons.person, size: 20, color: cs.onSurfaceVariant),
+        ),
+      ),
+    );
+
+    return SizedBox(
+      width: kProfileLeadingWidth,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: kProfileLeadingPadding,
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              // Sombra solo en el círculo del avatar (no en el padding del leading).
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: _hover
+                    ? [
+                        BoxShadow(
+                          color: cs.primary.withAlpha(100),
+                          blurRadius: 12,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: SizedBox(
+                  width: kProfileLeadingCircleSize,
+                  height: kProfileLeadingCircleSize,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    color: Colors.transparent,
+                    clipBehavior: Clip.none,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _openProfile,
+                      child: avatarCore,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

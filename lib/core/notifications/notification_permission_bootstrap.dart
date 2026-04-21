@@ -8,12 +8,12 @@ import 'package:cronicle/core/notifications/device_notification_prefs.dart';
 import 'package:cronicle/core/notifications/notification_work_scheduler.dart';
 import 'package:cronicle/core/router/app_router.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
+import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Colgar bajo [MaterialApp] para que [showDialog] use un contexto con
-/// [Navigator] (el de [cronicleRootNavigatorKey]) y se muestren el aviso
-/// inicial y el permiso del sistema en Android 13+ / iOS.
+/// Mounted under [MaterialApp] so that system notification permission is
+/// requested right after onboarding completes (Android 13+ / iOS).
 class NotificationPermissionBootstrap extends ConsumerStatefulWidget {
   const NotificationPermissionBootstrap({required this.child, super.key});
 
@@ -32,17 +32,18 @@ class _NotificationPermissionBootstrapState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _maybeRequestNotificationPermission();
+      final alreadyDone = ref.read(onboardingCompletedProvider);
+      if (alreadyDone) {
+        _maybeRequestNotificationPermission();
+      } else {
+        ref.listenManual(
+          onboardingCompletedProvider,
+          (_, completed) {
+            if (completed) _maybeRequestNotificationPermission();
+          },
+        );
+      }
     });
-  }
-
-  Future<BuildContext?> _waitForNavigatorContext() async {
-    for (var i = 0; i < 30; i++) {
-      final ctx = cronicleRootNavigatorKey.currentContext;
-      if (ctx != null && ctx.mounted) return ctx;
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return null;
   }
 
   Future<void> _maybeRequestNotificationPermission() async {
@@ -60,38 +61,31 @@ class _NotificationPermissionBootstrapState
     _inFlight = true;
 
     try {
-      final navCtx = await _waitForNavigatorContext();
-      if (navCtx == null || !navCtx.mounted) return;
-
-      final l10n = AppLocalizations.of(navCtx)!;
-      final accept = await showDialog<bool>(
-        context: navCtx,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.notifPermissionTitle),
-          content: Text(l10n.notifPermissionBody),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.notifPermissionNotNow),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.notifPermissionAllow),
-            ),
-          ],
-        ),
-      );
+      // Small delay so the feed page is fully mounted before the system dialog.
+      await Future<void>.delayed(const Duration(milliseconds: 600));
 
       await prefs.setBool(DeviceNotificationPrefs.permissionPrompted, true);
 
-      if (!navCtx.mounted) return;
-      if (accept == true) {
-        await CronicleLocalNotifications.requestSystemPermission();
+      final granted =
+          await CronicleLocalNotifications.requestSystemPermission() ?? false;
+
+      if (granted) {
         await ref
             .read(deviceNotificationSettingsProvider.notifier)
             .applyDefaultsAfterPermissionGranted();
+      } else {
+        // Show a hint that notifications can be enabled later.
+        final navCtx = cronicleRootNavigatorKey.currentContext;
+        if (navCtx != null && navCtx.mounted) {
+          final l10n = AppLocalizations.of(navCtx);
+          if (l10n != null) {
+            ScaffoldMessenger.of(navCtx).showSnackBar(
+              SnackBar(content: Text(l10n.notifPermissionDeniedHint)),
+            );
+          }
+        }
       }
+
       await NotificationWorkScheduler.applyFromPrefs(
         ref.read(sharedPreferencesProvider),
       );

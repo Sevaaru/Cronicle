@@ -24,6 +24,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navProfile => 'Perfil';
 
   @override
+  String get navSocial => 'Social';
+
+  @override
   String get navSettings => 'Ajustes';
 
   @override
@@ -51,6 +54,40 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Ajustes';
 
   @override
+  String get settingsAboutApp => 'Acerca de esta aplicación';
+
+  @override
+  String settingsAboutCopyright(Object year) {
+    return '© $year Todos los derechos reservados.';
+  }
+
+  @override
+  String get settingsAboutCreator => 'Cronicle está creada por Sevaaru.';
+
+  @override
+  String get settingsWearTitle => 'Reloj (Wear OS)';
+
+  @override
+  String get settingsWearConnected => 'Reloj conectado';
+
+  @override
+  String get settingsWearCompanionInstalled => 'App companion instalada';
+
+  @override
+  String get settingsWearNoCompanion =>
+      'Hay un reloj emparejado pero la app companion no está instalada.';
+
+  @override
+  String get settingsWearNoWatch =>
+      '¿Tienes un reloj Wear OS? Instala la app companion de Cronicle para ver y actualizar tu progreso desde la muñeca.';
+
+  @override
+  String get settingsWearOpenPlayStore => 'Abrir Google Play';
+
+  @override
+  String get settingsWearRefresh => 'Comprobar de nuevo';
+
+  @override
   String get themeMode => 'Tema';
 
   @override
@@ -73,6 +110,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorNetwork => 'Sin conexión o error de red.';
+
+  @override
+  String get errorAnilistRateLimit =>
+      'AniList ha limitado las peticiones. Reintenta en unos segundos.';
+
+  @override
+  String errorAnilistRateLimitWithSeconds(int seconds) {
+    return 'AniList ha limitado las peticiones. Reintenta en $seconds s.';
+  }
 
   @override
   String errorWithMessage(Object message) {
@@ -217,17 +263,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Inicia sesión en Anilist en Ajustes para ver notificaciones.';
 
   @override
-  String get notifPermissionTitle => '¿Activar notificaciones?';
-
-  @override
-  String get notifPermissionBody =>
-      'Cronicle puede avisarte en el sistema cuando salga un nuevo capítulo de anime o manga que sigues en curso, y opcionalmente reenviar notificaciones de tu bandeja de Anilist. Puedes cambiarlo después en Ajustes.';
-
-  @override
-  String get notifPermissionNotNow => 'Ahora no';
-
-  @override
-  String get notifPermissionAllow => 'Permitir';
+  String get notifPermissionDeniedHint =>
+      'Puedes activar las notificaciones en cualquier momento desde Ajustes.';
 
   @override
   String get gallerySaveUnavailableWeb => 'Descarga no disponible en web';
@@ -372,6 +409,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedBrowseSeasonal => 'De temporada';
 
   @override
+  String get feedBrowseTrending => 'Tendencias';
+
+  @override
   String get feedBrowseTopRated => 'Mejor valorados';
 
   @override
@@ -382,6 +422,57 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedBrowseEmpty => 'No hay títulos en esta lista.';
+
+  @override
+  String get feedSummary => 'Descubrir';
+
+  @override
+  String get summaryTrendingAnime => 'Anime en tendencia';
+
+  @override
+  String get summaryTrendingManga => 'Manga en tendencia';
+
+  @override
+  String get summaryTrendingMovies => 'Películas en tendencia';
+
+  @override
+  String get summaryTrendingShows => 'Series en tendencia';
+
+  @override
+  String get summaryPopularGames => 'Juegos populares';
+
+  @override
+  String get summaryTrendingBooks => 'Libros en tendencia';
+
+  @override
+  String get summaryNewBooks => 'Novedades';
+
+  @override
+  String get summaryTopAnime => 'Anime mejor valorado';
+
+  @override
+  String get summaryTopManga => 'Manga mejor valorado';
+
+  @override
+  String get summaryAnticipatedMovies => 'Películas más esperadas';
+
+  @override
+  String get summaryAnticipatedShows => 'Series más esperadas';
+
+  @override
+  String get summaryAnticipatedGames => 'Juegos más esperados';
+
+  @override
+  String get summaryRandom => 'Descubre algo nuevo';
+
+  @override
+  String get summaryRandomButton => 'Título al azar';
+
+  @override
+  String get summaryRandomSub => 'Prueba algo de tus intereses';
+
+  @override
+  String get summarySeeAll => 'Ver todo';
 
   @override
   String get filterFollowing => 'Siguiendo';
@@ -408,7 +499,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterGames => 'Juegos';
 
   @override
+  String get filterBooks => 'Libros';
+
+  @override
   String get filterAll => 'Todo';
+
+  @override
+  String get filterStatus => 'Estado';
 
   @override
   String get loginRequiredFollowing =>
@@ -418,11 +515,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get loginRequiredLike => 'Inicia sesión en Anilist para dar like';
 
   @override
+  String get loginRequiredComment => 'Inicia sesión en Anilist para comentar';
+
+  @override
   String get loginRequiredFavorite =>
       'Inicia sesión en Anilist en Ajustes para usar favoritos';
 
   @override
   String get sectionFavGames => 'Juegos favoritos';
+
+  @override
+  String get sectionFavBooks => 'Libros favoritos';
+
+  @override
+  String get sectionFavCharacters => 'Personajes favoritos';
+
+  @override
+  String get sectionFavStaff => 'Staff favorito';
+
+  @override
+  String get loginRequiredFavoriteCharacter =>
+      'Inicia sesión con Anilist en Ajustes para marcar personajes favoritos';
+
+  @override
+  String get loginRequiredFavoriteStaff =>
+      'Inicia sesión con Anilist en Ajustes para marcar staff favorito';
 
   @override
   String get tooltipAddFavorite => 'Añadir a favoritos';
@@ -564,6 +681,79 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String searchShowMoreInCategory(Object category) {
+    return 'Ver más — $category';
+  }
+
+  @override
+  String get searchIdleAllTitle => 'Buscar en todo';
+
+  @override
+  String get searchIdleAllBody =>
+      'Escribe para buscar en todas las categorías a la vez, o elige una categoría arriba para explorar tendencias y acotar la búsqueda.';
+
+  @override
+  String get searchBrowsePopularityAllTime => 'Por popularidad';
+
+  @override
+  String get searchBrowseByStartDate => 'Por fecha de estreno';
+
+  @override
+  String get searchBrowseByGenre => 'Por género';
+
+  @override
+  String get searchBrowseGenresAnime => 'Géneros de anime';
+
+  @override
+  String get searchBrowseGenresManga => 'Géneros de manga';
+
+  @override
+  String get searchBrowseGameThemes => 'Por temática';
+
+  @override
+  String get searchBrowseBookSubjects => 'Temas';
+
+  @override
+  String get searchReleaseDateHint =>
+      'Elige el año y, si quieres, el mes para acotar.';
+
+  @override
+  String get searchReleaseDateYear => 'Año';
+
+  @override
+  String get searchReleaseDateMonth => 'Mes';
+
+  @override
+  String get searchReleaseDateAllMonths => 'Todo el año';
+
+  @override
+  String get searchReleaseDateEmpty => 'No hay resultados para este periodo.';
+
+  @override
+  String get searchOlSubjectFantasy => 'Fantasía';
+
+  @override
+  String get searchOlSubjectRomance => 'Romance';
+
+  @override
+  String get searchOlSubjectScienceFiction => 'Ciencia ficción';
+
+  @override
+  String get searchOlSubjectHorror => 'Terror';
+
+  @override
+  String get searchOlSubjectMystery => 'Misterio';
+
+  @override
+  String get searchOlSubjectFiction => 'Ficción';
+
+  @override
+  String get searchOlSubjectHistory => 'Historia';
+
+  @override
+  String get searchOlSubjectBiography => 'Biografía';
+
+  @override
   String get addToLibrary => 'Añadir a biblioteca';
 
   @override
@@ -619,6 +809,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileNotFound => 'No se encontró el usuario';
+
+  @override
+  String get anilistProfileFollowers => 'Seguidores';
+
+  @override
+  String get anilistProfileFollowing => 'Siguiendo';
+
+  @override
+  String get anilistFollowListEmpty => 'Nadie aquí todavía.';
 
   @override
   String get sectionAnime => 'Anime';
@@ -783,6 +982,81 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mediaRecommendations => 'Recomendaciones';
 
   @override
+  String get mediaCharacters => 'Personajes';
+
+  @override
+  String get mediaStaff => 'Staff';
+
+  @override
+  String get mediaViewAll => 'Ver todo';
+
+  @override
+  String get characterRoleMain => 'Principal';
+
+  @override
+  String get characterRoleSupporting => 'Secundario';
+
+  @override
+  String get characterRoleBackground => 'Fondo';
+
+  @override
+  String get characterVoiceActors => 'Actores de voz';
+
+  @override
+  String get characterAppearances => 'Apariciones';
+
+  @override
+  String get characterDescription => 'Descripción';
+
+  @override
+  String get staffRoles => 'Roles de staff';
+
+  @override
+  String get staffCharacterRoles => 'Personajes interpretados';
+
+  @override
+  String get staffOccupations => 'Ocupaciones';
+
+  @override
+  String get staffYearsActive => 'Años activos';
+
+  @override
+  String get staffHomeTown => 'Ciudad natal';
+
+  @override
+  String get staffBloodType => 'Tipo de sangre';
+
+  @override
+  String get staffDateOfBirth => 'Fecha de nacimiento';
+
+  @override
+  String get staffDateOfDeath => 'Fecha de fallecimiento';
+
+  @override
+  String get staffAge => 'Edad';
+
+  @override
+  String get staffGender => 'Género';
+
+  @override
+  String get characterAge => 'Edad';
+
+  @override
+  String get characterGender => 'Género';
+
+  @override
+  String get characterDateOfBirth => 'Fecha de nacimiento';
+
+  @override
+  String get characterBloodType => 'Tipo de sangre';
+
+  @override
+  String get characterAlternativeNames => 'Nombres alternativos';
+
+  @override
+  String get characterAlternativeSpoiler => 'Nombres con spoiler';
+
+  @override
   String get mediaScoreDistribution => 'Distribución de notas';
 
   @override
@@ -793,6 +1067,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mediaAnonymous => 'Anónimo';
+
+  @override
+  String get mediaDetailChipsShowMore => 'Mostrar más';
+
+  @override
+  String get mediaDetailChipsShowLess => 'Mostrar menos';
 
   @override
   String get mediaGenresSection => 'Géneros';
@@ -871,6 +1151,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get traktSectionPopular => 'Popular';
+
+  @override
+  String get traktSectionMostPlayed => 'Más reproducidas';
+
+  @override
+  String get traktSectionMostWatched => 'Más vistas';
+
+  @override
+  String get traktSectionMostCollected => 'Más coleccionadas';
+
+  @override
+  String get traktSectionAnticipatedShows => 'Series más esperadas';
 
   @override
   String get traktTitle => 'Trakt.tv';
@@ -1287,6 +1579,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mediaKindGame => 'Juegos';
 
   @override
+  String get mediaKindBook => 'Libros';
+
+  @override
   String get reviewTitle => 'Reseña';
 
   @override
@@ -1343,24 +1638,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get statusCurrentGame => 'Jugando';
 
   @override
+  String get statusCurrentBook => 'Leyendo';
+
+  @override
   String get statusReplayingGame => 'Rejugando';
+
+  @override
+  String get statusRereadingBook => 'Releyendo';
 
   @override
   String get searchTrendingGames => 'Juegos en tendencia';
 
   @override
+  String get searchTrendingBooks => 'Libros en tendencia';
+
+  @override
   String get igdbWebNotSupported =>
-      'IGDB no está disponible en el navegador (el sitio de IGDB no permite peticiones desde la web). Usa la app en Windows, Android o iOS para buscar juegos.';
-
-  @override
-  String get twitchSyncPromptTitle => 'Conecta con Twitch';
-
-  @override
-  String get twitchSyncPromptBody =>
-      'Conecta tu cuenta de Twitch para sincronizar tus juegos en el futuro.\n\nTambién puedes hacerlo más tarde desde Ajustes.';
-
-  @override
-  String get twitchSyncPromptNoThanks => 'No, gracias';
+      'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).';
 
   @override
   String get twitchConnect => 'Conectar Twitch';
@@ -1396,6 +1690,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gameDetailRating => 'Puntuación';
 
   @override
+  String get gameDetailStatUserScore => 'Usuarios';
+
+  @override
+  String get gameDetailStatCriticScore => 'Críticos (IGDB)';
+
+  @override
+  String gameDetailStatRatingsCount(Object count) {
+    return '$count valoraciones';
+  }
+
+  @override
+  String gameDetailStatCriticReviewsCount(Object count) {
+    return '$count reseñas';
+  }
+
+  @override
   String get gameDetailSimilarGames => 'Juegos similares';
 
   @override
@@ -1406,6 +1716,59 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addToListHoursPlayed => 'Horas jugadas';
+
+  @override
+  String get addToListPagesRead => 'Páginas leídas';
+
+  @override
+  String libraryPagesRemaining(Object count) {
+    return '$count pág. restantes';
+  }
+
+  @override
+  String libraryChaptersRemaining(Object count) {
+    return '$count capítulos restantes';
+  }
+
+  @override
+  String libraryAnimeAiringBehind(Object count) {
+    return '$count atrasados';
+  }
+
+  @override
+  String bookProgressPageOf(Object current, Object total, Object pct) {
+    return 'Página $current de $total ($pct%)';
+  }
+
+  @override
+  String bookProgressPageSimple(Object current) {
+    return 'Página $current';
+  }
+
+  @override
+  String bookProgressChapterOf(Object current, Object total, Object pct) {
+    return 'Capítulo $current de $total ($pct%)';
+  }
+
+  @override
+  String bookProgressChapterSimple(Object current) {
+    return 'Capítulo $current';
+  }
+
+  @override
+  String bookPercentRemaining(Object count) {
+    return '$count% restantes';
+  }
+
+  @override
+  String bookLibraryProgressChaptersShort(Object current, Object total) {
+    return '$current/$total cap.';
+  }
+
+  @override
+  String bookLibraryProgressChapterOnly(Object current) {
+    return '$current cap.';
+  }
 
   @override
   String get gameDetailLinksSection => 'Enlaces';
@@ -1482,6 +1845,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gamesHomeComingSoon => 'Próximamente';
 
   @override
+  String get gamesHomeBestRated => 'Mejor valorados';
+
+  @override
+  String get gamesHomeIndiePicks => 'Indie destacados';
+
+  @override
+  String get gamesHomeHorrorPicks => 'Terror';
+
+  @override
+  String get gamesHomeMultiplayer => 'Multijugador';
+
+  @override
+  String get gamesHomeRpgSpotlight => 'RPG destacados';
+
+  @override
+  String get gamesHomeSportsSpotlight => 'Deportes';
+
+  @override
   String get gamesHomeSectionExpand => 'Ver más';
 
   @override
@@ -1527,6 +1908,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String gameDetailReviewBy(Object name) {
     return 'Por $name';
   }
+
+  @override
+  String get gameDetailOpenCriticSection => 'Críticas (OpenCritic)';
+
+  @override
+  String gameDetailOpenCriticMeta(Object score, Object count) {
+    return 'Nota destacada: $score · $count reseñas';
+  }
+
+  @override
+  String get gameDetailOpenCriticNoMatch =>
+      'No hay coincidencia en OpenCritic para este título.';
+
+  @override
+  String get gameDetailOpenCriticReadReview => 'Leer reseña';
+
+  @override
+  String get gameDetailOpenCriticOpenSite => 'Abrir en OpenCritic';
 
   @override
   String gameDetailPlaytimeHoursMinutes(Object hours, Object minutes) {
@@ -1602,4 +2001,330 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gameDetailExtCatOther => 'Tienda externa';
+
+  @override
+  String get bookDetailSubjects => 'Temas';
+
+  @override
+  String get bookDetailAuthors => 'Autores';
+
+  @override
+  String get bookDetailPublishDate => 'Primera publicación';
+
+  @override
+  String bookDetailPages(Object count) {
+    return '$count páginas';
+  }
+
+  @override
+  String get bookDetailDescription => 'Descripción';
+
+  @override
+  String get bookDetailNoData => 'No se encontraron datos del libro';
+
+  @override
+  String get bookDetailOpenOnGoogleBooks => 'Abrir en Google Books';
+
+  @override
+  String get bookDetailEditions => 'Ediciones';
+
+  @override
+  String get bookDetailPublisher => 'Editorial';
+
+  @override
+  String get bookDetailLanguage => 'Idioma';
+
+  @override
+  String get bookDetailPrintType => 'Tipo';
+
+  @override
+  String get bookDetailMaturity => 'Clasificación';
+
+  @override
+  String get bookDetailPreview => 'Vista previa';
+
+  @override
+  String get bookDetailFormats => 'Formatos';
+
+  @override
+  String get bookDetailAvailability => 'Disponibilidad';
+
+  @override
+  String get bookDetailIdentifiers => 'Identificadores';
+
+  @override
+  String get bookActionPreview => 'Vista previa';
+
+  @override
+  String get bookActionReadOnline => 'Leer online';
+
+  @override
+  String get bookActionBuy => 'Comprar';
+
+  @override
+  String get bookActionReviews => 'Reseñas';
+
+  @override
+  String get booksHomePopularNow => 'Popular ahora';
+
+  @override
+  String get booksHomeNewReleases => 'Novedades';
+
+  @override
+  String get booksHomeTrending => 'Tendencias';
+
+  @override
+  String get booksHomeClassics => 'Clásicos';
+
+  @override
+  String get booksHomeMystery => 'Misterio';
+
+  @override
+  String get onboardingWelcomeTitle => 'Bienvenido a Cronicle';
+
+  @override
+  String get onboardingWelcomeBody =>
+      'Registra tu progreso en anime, manga, películas, series, juegos y libros en un solo lugar. Organiza tus listas, anota tu avance y mantén todo sincronizado con tus servicios favoritos.';
+
+  @override
+  String get onboardingNext => 'Siguiente';
+
+  @override
+  String get onboardingTitle => '¿Qué te interesa?';
+
+  @override
+  String get onboardingSubtitle =>
+      'Selecciona al menos una categoría para personalizar tu experiencia';
+
+  @override
+  String get onboardingContinue => 'Continuar';
+
+  @override
+  String get onboardingInterestAnime => 'Anime';
+
+  @override
+  String get onboardingInterestManga => 'Manga';
+
+  @override
+  String get onboardingInterestMovies => 'Películas';
+
+  @override
+  String get onboardingInterestTv => 'Series de TV';
+
+  @override
+  String get onboardingInterestGames => 'Videojuegos';
+
+  @override
+  String get onboardingInterestBooks => 'Libros';
+
+  @override
+  String get onboardingAccountsTitle => 'Conecta tus cuentas';
+
+  @override
+  String get onboardingAccountsSubtitle =>
+      'Es recomendable iniciar sesión para tener tus datos sincronizados en la nube. Google sincroniza todos los datos y cuentas conectadas.';
+
+  @override
+  String get onboardingConnectAnilist => 'Conectar Anilist';
+
+  @override
+  String get onboardingConnectAnilistDesc =>
+      'Sincroniza tus listas de anime y manga';
+
+  @override
+  String get onboardingConnectTrakt => 'Conectar Trakt';
+
+  @override
+  String get onboardingConnectTraktDesc => 'Sincroniza tus películas y series';
+
+  @override
+  String get onboardingConnectGoogle => 'Iniciar sesión con Google';
+
+  @override
+  String get onboardingConnectGoogleDesc =>
+      'Copia de seguridad en la nube de todos tus datos y cuentas';
+
+  @override
+  String get onboardingSkip => 'Usar sin cuentas';
+
+  @override
+  String get onboardingFinish => 'Finalizar configuración';
+
+  @override
+  String get onboardingConnected => 'Conectado';
+
+  @override
+  String get onboardingAccountSynced => 'Sincronizado';
+
+  @override
+  String get onboardingSyncing => 'Sincronizando tus datos…';
+
+  @override
+  String get settingsCustomizeSearchFilters => 'Filtros de búsqueda';
+
+  @override
+  String get settingsCustomizeSearchFiltersDesc =>
+      'Reordena u oculta los filtros en la pestaña de búsqueda';
+
+  @override
+  String get settingsInterests => 'Tus intereses';
+
+  @override
+  String get settingsInterestsDesc =>
+      'Cambia los contenidos que ves en inicio, biblioteca y búsqueda';
+
+  @override
+  String get settingsInterestsChanged => 'Intereses actualizados';
+
+  @override
+  String get socialTitle => 'Social';
+
+  @override
+  String get settingsScoringTitle => 'Sistema de puntuación';
+
+  @override
+  String get settingsScoringDesc =>
+      'Cambia cómo se muestran e ingresan las puntuaciones en toda la app. Se sincroniza automáticamente con tu cuenta de AniList';
+
+  @override
+  String get scoringPoint100 => '100 puntos';
+
+  @override
+  String get scoringPoint10Decimal => '10 puntos decimal';
+
+  @override
+  String get scoringPoint10 => '10 puntos';
+
+  @override
+  String get scoringPoint5 => '5 estrellas';
+
+  @override
+  String get scoringPoint3 => '3 caritas';
+
+  @override
+  String get settingsAdvancedScoring => 'Puntuación avanzada (Anilist)';
+
+  @override
+  String get settingsAdvancedScoringDesc =>
+      'Puntúa por categorías: historia, personajes, visual, audio y disfrute';
+
+  @override
+  String get advScoringStory => 'Historia';
+
+  @override
+  String get advScoringCharacters => 'Personajes';
+
+  @override
+  String get advScoringVisuals => 'Visual';
+
+  @override
+  String get advScoringAudio => 'Audio';
+
+  @override
+  String get advScoringEnjoyment => 'Disfrute';
+
+  @override
+  String get advScoringReset => 'Restablecer';
+
+  @override
+  String get mediaStatusFinished => 'Finalizado';
+
+  @override
+  String get mediaStatusReleasing => 'En emisión';
+
+  @override
+  String get mediaStatusNotYetReleased => 'Sin estrenar';
+
+  @override
+  String get mediaStatusCancelled => 'Cancelado';
+
+  @override
+  String get mediaStatusHiatus => 'En hiato';
+
+  @override
+  String get forumDiscussions => 'Discusiones en el foro';
+
+  @override
+  String get forumViewAll => 'Ver más';
+
+  @override
+  String get forumThread => 'Hilo del foro';
+
+  @override
+  String forumReplies(int count) {
+    return '$count respuestas';
+  }
+
+  @override
+  String get forumNoReplies => 'Aún no hay respuestas';
+
+  @override
+  String get forumReplyButton => 'Responder';
+
+  @override
+  String forumReplyingTo(String name) {
+    return 'Respondiendo a @$name';
+  }
+
+  @override
+  String get socialFeedTab => 'Feed';
+
+  @override
+  String get socialForumTab => 'Foro';
+
+  @override
+  String get forumPinnedThreads => 'Hilos fijados';
+
+  @override
+  String get forumRecentlyReplied => 'Con actividad reciente';
+
+  @override
+  String get forumNewlyCreated => 'Recién creados';
+
+  @override
+  String get forumReleaseDiscussions => 'Discusiones de estrenos';
+
+  @override
+  String get bookTrackingModeLabel => 'Modo de seguimiento';
+
+  @override
+  String get bookTrackingModePages => 'Páginas';
+
+  @override
+  String get bookTrackingModePercent => '%';
+
+  @override
+  String get bookTrackingModeChapters => 'Capítulos';
+
+  @override
+  String get bookPercentageRead => 'Porcentaje leído';
+
+  @override
+  String get bookChapterProgress => 'Capítulo actual';
+
+  @override
+  String get bookOverrideTotalsLabel => 'Configura tus totales';
+
+  @override
+  String get bookOverrideTotalsHint =>
+      'Tu valor manual tiene prioridad sobre la API.';
+
+  @override
+  String get bookTotalPagesOverride => 'Total de páginas';
+
+  @override
+  String get bookTotalChaptersOverride => 'Total de capítulos';
+
+  @override
+  String get bookReadingProgress => 'Progreso de lectura';
+
+  @override
+  String get bookEditionLabel => 'Edición';
+
+  @override
+  String get bookEditionUnknownPages => 'Cantidad de páginas desconocida';
+
+  @override
+  String get bookEditionNoPageHint =>
+      'Si no hay páginas en la API, puedes definir tu total manualmente.';
 }
