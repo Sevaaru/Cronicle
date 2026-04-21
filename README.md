@@ -37,8 +37,8 @@ Anime · Manga · Movies · TV · Games · Books — with offline-first storage 
 
 ###  Wear OS companion
 
-| Library | Detail | Tile |
-|---|---|---|
+| Library | Detail |
+|---|---|
 | ![Wear library screenshot](assets/screenshots/wear-library.png) | ![Wear detail screenshot](assets/screenshots/wear-detail.png) |
 
 
