@@ -23,6 +23,27 @@ Anime · Manga · Movies · TV · Games · Books — with offline-first storage 
 
 ---
 
+##  Screenshots
+
+###  Android app
+
+| Home | Library |
+|---|---|
+| ![Home screenshot](assets/screenshots/android-home.jpg) | ![Library screenshot](assets/screenshots/android-library.jpg) |
+
+| Detail | Profile |
+|---|---|
+| ![Detail screenshot](assets/screenshots/android-detail.jpg) | ![Profile screenshot](assets/screenshots/android-profile.jpg) |
+
+###  Wear OS companion
+
+| Library | Detail | Tile |
+|---|---|---|
+| ![Wear library screenshot](assets/screenshots/wear-library.png) | ![Wear detail screenshot](assets/screenshots/wear-detail.png) |
+
+
+---
+
 ##  Features
 
 ###  Track everything in one library
