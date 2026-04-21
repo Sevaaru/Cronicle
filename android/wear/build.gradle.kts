@@ -25,8 +25,8 @@ android {
         targetSdk = 35
         // Mantener sincronizado con `pubspec.yaml` (version: x.y.z+versionCode)
         // del módulo móvil para que ambas subidas a Play Console avancen juntas.
-        versionCode = 39
-        versionName = "1.0.9"
+        versionCode = 44
+        versionName = "1.1.2"
     }
 
     compileOptions {
@@ -102,9 +102,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
     // Compose for Wear OS
-    implementation("androidx.wear.compose:compose-material:1.4.0")
-    implementation("androidx.wear.compose:compose-foundation:1.4.0")
-    implementation("androidx.wear.compose:compose-navigation:1.4.0")
+    // 1.4.1 corrige SecurityException al leer Settings.Global.reduce_motion
+    // en Android 15 (API 35) cuando targetSdk >= 35.
+    implementation("androidx.wear.compose:compose-material:1.4.1")
+    implementation("androidx.wear.compose:compose-foundation:1.4.1")
+    implementation("androidx.wear.compose:compose-navigation:1.4.1")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material:material-icons-core")
 
