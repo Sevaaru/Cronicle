@@ -193,91 +193,210 @@ class _NotLoggedIn extends ConsumerWidget {
             );
           },
         ),
-        Consumer(
-          builder: (context, ref, _) {
-            final favGames = ref.watch(favoriteGamesProvider);
-            if (favGames.isEmpty) return const SizedBox.shrink();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Text(l10n.sectionFavGames,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: cs.onSurface)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 160,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(right: 8),
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemCount: favGames.length,
-                    itemBuilder: (context, i) {
-                      return _FavoriteGameCard(game: favGames[i]);
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
+        const SizedBox(height: 16),
+        const _FavoritesPreviewSection(),
+      ],
+    );
+  }
+}
+
+class _FavoritesPreviewSection extends ConsumerWidget {
+  const _FavoritesPreviewSection({
+    this.apiFavAnime = const [],
+    this.apiFavManga = const [],
+    this.apiFavCharacters = const [],
+    this.apiFavStaff = const [],
+  });
+
+  final List<dynamic> apiFavAnime;
+  final List<dynamic> apiFavManga;
+  final List<dynamic> apiFavCharacters;
+  final List<dynamic> apiFavStaff;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    final favGames = ref.watch(favoriteGamesProvider);
+    final favBooks = ref.watch(favoriteBooksProvider);
+    final favTraktAll = ref.watch(favoriteTraktTitlesProvider);
+    final localAnilistFavs = ref.watch(favoriteAnilistMediaProvider);
+    final localChars = ref.watch(favoriteAnilistCharactersProvider);
+    final localStaff = ref.watch(favoriteAnilistStaffProvider);
+
+    final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
+      apiNodes: apiFavAnime,
+      localSnapshots: localAnilistFavs,
+      mediaTypeUpper: 'ANIME',
+    );
+    final favMangaMerged = mergeAnilistFavoriteApiNodesWithLocal(
+      apiNodes: apiFavManga,
+      localSnapshots: localAnilistFavs,
+      mediaTypeUpper: 'MANGA',
+    );
+    final favCharsMerged = mergeAnilistFavoritePeopleApiNodesWithLocal(
+      apiNodes: apiFavCharacters,
+      localSnapshots: localChars,
+    );
+    final favStaffMerged = mergeAnilistFavoritePeopleApiNodesWithLocal(
+      apiNodes: apiFavStaff,
+      localSnapshots: localStaff,
+    );
+
+    final favMovies = favTraktAll
+        .where((e) => (e['trakt_type'] as String?) != 'show')
+        .toList();
+    final favShows = favTraktAll
+        .where((e) => (e['trakt_type'] as String?) == 'show')
+        .toList();
+
+    List<ProfileFavPreviewThumb> thumbsFromNodes(
+        List<dynamic> nodes, IconData fb) {
+      return nodes.take(80).map((raw) {
+        final m = raw as Map<String, dynamic>;
+        final u = (m['coverImage'] as Map?)?['large'] as String?;
+        return ProfileFavPreviewThumb(imageUrl: u, fallbackIcon: fb);
+      }).toList();
+    }
+
+    List<ProfileFavPreviewThumb> thumbsFromBookFavorites(
+        List<Map<String, dynamic>> books) {
+      return books.take(80).map((m) {
+        final u = (m['coverImage'] as Map?)?['large'] as String?;
+        return ProfileFavPreviewThumb(
+          imageUrl: u,
+          fallbackIcon: Icons.auto_stories_rounded,
+        );
+      }).toList();
+    }
+
+    List<ProfileFavPreviewThumb> thumbsFromCharStaff(List<dynamic> nodes) {
+      return nodes.take(80).map((raw) {
+        final m = raw as Map<String, dynamic>;
+        final u = (m['image'] as Map?)?['large'] as String? ??
+            (m['image'] as Map?)?['medium'] as String?;
+        return ProfileFavPreviewThumb(imageUrl: u, fallbackIcon: Icons.person);
+      }).toList();
+    }
+
+    final previewRows = <Widget>[];
+    if (favAnimeMerged.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.animation_rounded,
+        iconColor: Colors.red.shade400,
+        title: l10n.sectionFavAnime,
+        count: favAnimeMerged.length,
+        thumbs: thumbsFromNodes(favAnimeMerged, Icons.animation_rounded),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.anime.segment}'),
+      ));
+    }
+    if (favMangaMerged.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.menu_book_rounded,
+        iconColor: Colors.deepPurple,
+        title: l10n.sectionFavManga,
+        count: favMangaMerged.length,
+        thumbs: thumbsFromNodes(favMangaMerged, Icons.menu_book_rounded),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.manga.segment}'),
+      ));
+    }
+    if (favMovies.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.movie_outlined,
+        iconColor: Colors.amber.shade700,
+        title: l10n.sectionFavTraktMovies,
+        count: favMovies.length,
+        thumbs: thumbsFromNodes(favMovies, Icons.movie_outlined),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.movies.segment}'),
+      ));
+    }
+    if (favShows.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.tv_rounded,
+        iconColor: Colors.teal,
+        title: l10n.sectionFavTraktShows,
+        count: favShows.length,
+        thumbs: thumbsFromNodes(favShows, Icons.tv_rounded),
+        onTap: () => context
+            .push('/profile/favorites/${ProfileFavoritesKind.tv.segment}'),
+      ));
+    }
+    if (favGames.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.sports_esports_rounded,
+        iconColor: Colors.redAccent.shade400,
+        title: l10n.sectionFavGames,
+        count: favGames.length,
+        thumbs: thumbsFromNodes(favGames, Icons.sports_esports_rounded),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.games.segment}'),
+      ));
+    }
+    if (favBooks.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.auto_stories_rounded,
+        iconColor: Colors.brown.shade500,
+        title: l10n.sectionFavBooks,
+        count: favBooks.length,
+        thumbs: thumbsFromBookFavorites(favBooks),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.books.segment}'),
+      ));
+    }
+    if (favCharsMerged.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.face_rounded,
+        iconColor: Colors.pinkAccent,
+        title: l10n.sectionFavCharacters,
+        count: favCharsMerged.length,
+        thumbs: thumbsFromCharStaff(favCharsMerged),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.characters.segment}'),
+      ));
+    }
+    if (favStaffMerged.isNotEmpty) {
+      previewRows.add(ProfileFavoritesPreviewRow(
+        icon: Icons.badge_rounded,
+        iconColor: Colors.indigoAccent,
+        title: l10n.sectionFavStaff,
+        count: favStaffMerged.length,
+        thumbs: thumbsFromCharStaff(favStaffMerged),
+        onTap: () => context.push(
+            '/profile/favorites/${ProfileFavoritesKind.staff.segment}'),
+      ));
+    }
+
+    if (previewRows.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ProfileStatsSectionHeader(
+          l10n.profileFavoritesSectionTitle,
+          Icons.favorite_rounded,
+          Colors.red.shade400,
         ),
-        Consumer(
-          builder: (context, ref, _) {
-            final local = ref.watch(favoriteAnilistMediaProvider);
-            final anime = local
-                .where((e) =>
-                    (e['type'] as String? ?? 'ANIME').toUpperCase() == 'ANIME')
-                .toList();
-            final manga = local
-                .where((e) =>
-                    (e['type'] as String? ?? 'ANIME').toUpperCase() == 'MANGA')
-                .toList();
-            if (anime.isEmpty && manga.isEmpty) return const SizedBox.shrink();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (anime.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(l10n.sectionFavAnime,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface)),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 160,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(right: 8),
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemCount: anime.length,
-                      itemBuilder: (context, i) =>
-                          _FavoriteAnilistMediaCard(item: anime[i]),
-                    ),
+        const SizedBox(height: 8),
+        GlassCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < previewRows.length; i++) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: cs.outlineVariant.withValues(alpha: 0.32),
                   ),
-                ],
-                if (manga.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(l10n.sectionFavManga,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface)),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 160,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(right: 8),
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemCount: manga.length,
-                      itemBuilder: (context, i) =>
-                          _FavoriteAnilistMediaCard(item: manga[i]),
-                    ),
-                  ),
-                ],
+                previewRows[i],
               ],
-            );
-          },
+            ],
+          ),
         ),
       ],
     );
@@ -490,199 +609,11 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
               _PersonalStatsNavTile(l10n: l10n, colorScheme: cs),
               const SizedBox(height: 12),
 
-              Consumer(
-                builder: (context, ref, _) {
-                  final favGames = ref.watch(favoriteGamesProvider);
-                  final favBooks = ref.watch(favoriteBooksProvider);
-                  final favTraktAll = ref.watch(favoriteTraktTitlesProvider);
-                  final localAnilistFavs = ref.watch(favoriteAnilistMediaProvider);
-                  final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
-                    apiNodes: favAnime,
-                    localSnapshots: localAnilistFavs,
-                    mediaTypeUpper: 'ANIME',
-                  );
-                  final favMangaMerged = mergeAnilistFavoriteApiNodesWithLocal(
-                    apiNodes: favManga,
-                    localSnapshots: localAnilistFavs,
-                    mediaTypeUpper: 'MANGA',
-                  );
-                  final favMovies = favTraktAll
-                      .where((e) => (e['trakt_type'] as String?) != 'show')
-                      .toList();
-                  final favShows =
-                      favTraktAll.where((e) => (e['trakt_type'] as String?) == 'show').toList();
-
-                  List<ProfileFavPreviewThumb> thumbsFromNodes(List<dynamic> nodes, IconData fb) {
-                    return nodes
-                        .take(80)
-                        .map((raw) {
-                          final m = raw as Map<String, dynamic>;
-                          final u = (m['coverImage'] as Map?)?['large'] as String?;
-                          return ProfileFavPreviewThumb(imageUrl: u, fallbackIcon: fb);
-                        })
-                        .toList();
-                  }
-
-                  List<ProfileFavPreviewThumb> thumbsFromBookFavorites(
-                    List<Map<String, dynamic>> books,
-                  ) {
-                    return books
-                        .take(80)
-                        .map((m) {
-                          final u = (m['coverImage'] as Map?)?['large'] as String?;
-                          return ProfileFavPreviewThumb(
-                            imageUrl: u,
-                            fallbackIcon: Icons.auto_stories_rounded,
-                          );
-                        })
-                        .toList();
-                  }
-
-                  final previewRows = <Widget>[];
-                  if (favAnimeMerged.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.animation_rounded,
-                        iconColor: Colors.red.shade400,
-                        title: l10n.sectionFavAnime,
-                        count: favAnimeMerged.length,
-                        thumbs: thumbsFromNodes(favAnimeMerged, Icons.animation_rounded),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.anime.segment}'),
-                      ),
-                    );
-                  }
-                  if (favMangaMerged.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.menu_book_rounded,
-                        iconColor: Colors.deepPurple,
-                        title: l10n.sectionFavManga,
-                        count: favMangaMerged.length,
-                        thumbs: thumbsFromNodes(favMangaMerged, Icons.menu_book_rounded),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.manga.segment}'),
-                      ),
-                    );
-                  }
-                  if (favMovies.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.movie_outlined,
-                        iconColor: Colors.amber.shade700,
-                        title: l10n.sectionFavTraktMovies,
-                        count: favMovies.length,
-                        thumbs: thumbsFromNodes(favMovies, Icons.movie_outlined),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.movies.segment}'),
-                      ),
-                    );
-                  }
-                  if (favShows.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.tv_rounded,
-                        iconColor: Colors.teal,
-                        title: l10n.sectionFavTraktShows,
-                        count: favShows.length,
-                        thumbs: thumbsFromNodes(favShows, Icons.tv_rounded),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.tv.segment}'),
-                      ),
-                    );
-                  }
-                  if (favGames.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.sports_esports_rounded,
-                        iconColor: Colors.redAccent.shade400,
-                        title: l10n.sectionFavGames,
-                        count: favGames.length,
-                        thumbs: thumbsFromNodes(favGames, Icons.sports_esports_rounded),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.games.segment}'),
-                      ),
-                    );
-                  }
-                  if (favBooks.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.auto_stories_rounded,
-                        iconColor: Colors.brown.shade500,
-                        title: l10n.sectionFavBooks,
-                        count: favBooks.length,
-                        thumbs: thumbsFromBookFavorites(favBooks),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.books.segment}'),
-                      ),
-                    );
-                  }
-
-                  List<ProfileFavPreviewThumb> thumbsFromCharStaff(
-                    List<dynamic> nodes,
-                  ) {
-                    return nodes.take(80).map((raw) {
-                      final m = raw as Map<String, dynamic>;
-                      final u = (m['image'] as Map?)?['large'] as String? ??
-                          (m['image'] as Map?)?['medium'] as String?;
-                      return ProfileFavPreviewThumb(
-                        imageUrl: u,
-                        fallbackIcon: Icons.person,
-                      );
-                    }).toList();
-                  }
-
-                  if (favCharacters.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.face_rounded,
-                        iconColor: Colors.pinkAccent,
-                        title: l10n.sectionFavCharacters,
-                        count: favCharacters.length,
-                        thumbs: thumbsFromCharStaff(favCharacters),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.characters.segment}'),
-                      ),
-                    );
-                  }
-                  if (favStaff.isNotEmpty) {
-                    previewRows.add(
-                      ProfileFavoritesPreviewRow(
-                        icon: Icons.badge_rounded,
-                        iconColor: Colors.indigoAccent,
-                        title: l10n.sectionFavStaff,
-                        count: favStaff.length,
-                        thumbs: thumbsFromCharStaff(favStaff),
-                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.staff.segment}'),
-                      ),
-                    );
-                  }
-
-                  if (previewRows.isEmpty) return const SizedBox.shrink();
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      ProfileStatsSectionHeader(
-                        l10n.profileFavoritesSectionTitle,
-                        Icons.favorite_rounded,
-                        Colors.red.shade400,
-                      ),
-                      const SizedBox(height: 8),
-                      GlassCard(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (var i = 0; i < previewRows.length; i++) ...[
-                              if (i > 0)
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: cs.outlineVariant.withValues(alpha: 0.32),
-                                ),
-                              previewRows[i],
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              _FavoritesPreviewSection(
+                apiFavAnime: favAnime,
+                apiFavManga: favManga,
+                apiFavCharacters: favCharacters,
+                apiFavStaff: favStaff,
               ),
 
               const SizedBox(height: 16),

@@ -41,6 +41,9 @@
 
   "errorGeneric": "Something went wrong. Please try again.",
   "errorNetwork": "No connection or network error.",
+  "errorAnilistRateLimit": "AniList rate-limited the requests. Try again in a few seconds.",
+  "errorAnilistRateLimitWithSeconds": "AniList rate-limited the requests. Try again in {seconds}s.",
+  "@errorAnilistRateLimitWithSeconds": { "placeholders": { "seconds": { "type": "int" } } },
   "errorWithMessage": "Error: {message}",
   "errorVerifyingSession": "Error verifying session",
   "errorVerifyingToken": "Error verifying token",

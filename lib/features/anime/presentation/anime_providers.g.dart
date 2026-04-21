@@ -1158,7 +1158,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'0c50f307d8de50e0fec881f44f0ba3c10568b824';
+String _$anilistTokenHash() => r'0fb1ddb38edcc98c4599f8f18c19a60716f7ff58';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)
@@ -1537,10 +1537,10 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AutoDisposeAsyncNotifier<List<FeedActivity>>;
-String _$anilistSocialFeedHash() => r'00144d85d0980cf283b8e2d8b8f4df339a89d0ac';
+String _$anilistSocialFeedHash() => r'41b61ae6888f5eb66d92786f5da2fb139aa35df3';
 
 abstract class _$AnilistSocialFeed
-    extends BuildlessAutoDisposeAsyncNotifier<List<FeedActivity>> {
+    extends BuildlessAsyncNotifier<List<FeedActivity>> {
   late final String? activityType;
   late final bool isFollowing;
 
@@ -1585,11 +1585,7 @@ class AnilistSocialFeedFamily extends Family<AsyncValue<List<FeedActivity>>> {
 
 /// See also [AnilistSocialFeed].
 class AnilistSocialFeedProvider
-    extends
-        AutoDisposeAsyncNotifierProviderImpl<
-          AnilistSocialFeed,
-          List<FeedActivity>
-        > {
+    extends AsyncNotifierProviderImpl<AnilistSocialFeed, List<FeedActivity>> {
   /// See also [AnilistSocialFeed].
   AnilistSocialFeedProvider(String? activityType, bool isFollowing)
     : this._internal(
@@ -1649,7 +1645,7 @@ class AnilistSocialFeedProvider
   }
 
   @override
-  AutoDisposeAsyncNotifierProviderElement<AnilistSocialFeed, List<FeedActivity>>
+  AsyncNotifierProviderElement<AnilistSocialFeed, List<FeedActivity>>
   createElement() {
     return _AnilistSocialFeedProviderElement(this);
   }
@@ -1673,8 +1669,7 @@ class AnilistSocialFeedProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin AnilistSocialFeedRef
-    on AutoDisposeAsyncNotifierProviderRef<List<FeedActivity>> {
+mixin AnilistSocialFeedRef on AsyncNotifierProviderRef<List<FeedActivity>> {
   /// The parameter `activityType` of this provider.
   String? get activityType;
 
@@ -1683,11 +1678,7 @@ mixin AnilistSocialFeedRef
 }
 
 class _AnilistSocialFeedProviderElement
-    extends
-        AutoDisposeAsyncNotifierProviderElement<
-          AnilistSocialFeed,
-          List<FeedActivity>
-        >
+    extends AsyncNotifierProviderElement<AnilistSocialFeed, List<FeedActivity>>
     with AnilistSocialFeedRef {
   _AnilistSocialFeedProviderElement(super.provider);
 
@@ -1944,5 +1935,42 @@ final favoriteAnilistMediaProvider =
     );
 
 typedef _$FavoriteAnilistMedia = Notifier<List<Map<String, dynamic>>>;
+String _$favoriteAnilistCharactersHash() =>
+    r'9f00f950514eee9680da130106abc66911a87128';
+
+/// See also [FavoriteAnilistCharacters].
+@ProviderFor(FavoriteAnilistCharacters)
+final favoriteAnilistCharactersProvider =
+    NotifierProvider<
+      FavoriteAnilistCharacters,
+      List<Map<String, dynamic>>
+    >.internal(
+      FavoriteAnilistCharacters.new,
+      name: r'favoriteAnilistCharactersProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$favoriteAnilistCharactersHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$FavoriteAnilistCharacters = Notifier<List<Map<String, dynamic>>>;
+String _$favoriteAnilistStaffHash() =>
+    r'35e4e68d9f411bde7462fed6cbc92348f00aae63';
+
+/// See also [FavoriteAnilistStaff].
+@ProviderFor(FavoriteAnilistStaff)
+final favoriteAnilistStaffProvider =
+    NotifierProvider<FavoriteAnilistStaff, List<Map<String, dynamic>>>.internal(
+      FavoriteAnilistStaff.new,
+      name: r'favoriteAnilistStaffProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$favoriteAnilistStaffHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$FavoriteAnilistStaff = Notifier<List<Map<String, dynamic>>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

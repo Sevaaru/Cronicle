@@ -51,20 +51,21 @@ class _StaffContentState extends ConsumerState<_StaffContent> {
   Future<void> _toggleFavourite() async {
     final l10n = AppLocalizations.of(context)!;
     final token = await ref.read(anilistTokenProvider.future);
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loginRequiredFavoriteStaff)),
-      );
-      return;
-    }
     setState(() => _busy = true);
     try {
-      await ref.read(anilistGraphqlProvider).toggleFavouriteStaff(
-            staffId: s['id'] as int,
-            token: token,
-          );
-      ref.invalidate(anilistStaffDetailProvider(s['id'] as int));
-      ref.invalidate(anilistProfileProvider);
+      final id = s['id'] as int;
+      if (token == null) {
+        await ref
+            .read(favoriteAnilistStaffProvider.notifier)
+            .toggleLocalFavorite(s);
+      } else {
+        await ref.read(anilistGraphqlProvider).toggleFavouriteStaff(
+              staffId: id,
+              token: token,
+            );
+        ref.invalidate(anilistStaffDetailProvider(id));
+        ref.invalidate(anilistProfileProvider);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -92,7 +93,10 @@ class _StaffContentState extends ConsumerState<_StaffContent> {
         (image['large'] as String?) ?? (image['medium'] as String?);
     final description = s['description'] as String?;
     final favourites = s['favourites'] as int?;
-    final isFav = s['isFavourite'] as bool? ?? false;
+    final localFav = ref
+        .watch(favoriteAnilistStaffProvider)
+        .any((e) => ((e['id'] as num?)?.toInt() ?? 0) == (s['id'] as int? ?? 0));
+    final isFav = (s['isFavourite'] as bool? ?? false) || localFav;
     final siteUrl = s['siteUrl'] as String?;
 
     final age = s['age']?.toString();

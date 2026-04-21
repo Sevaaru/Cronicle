@@ -42,6 +42,9 @@
 
   "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
   "errorNetwork": "Sin conexión o error de red.",
+  "errorAnilistRateLimit": "AniList ha limitado las peticiones. Reintenta en unos segundos.",
+  "errorAnilistRateLimitWithSeconds": "AniList ha limitado las peticiones. Reintenta en {seconds} s.",
+  "@errorAnilistRateLimitWithSeconds": { "placeholders": { "seconds": { "type": "int" } } },
   "errorWithMessage": "Error: {message}",
   "@errorWithMessage": { "placeholders": { "message": {} } },
   "errorVerifyingSession": "Error al verificar sesión",

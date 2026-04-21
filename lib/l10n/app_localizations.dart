@@ -296,6 +296,18 @@ abstract class AppLocalizations {
   /// **'Sin conexión o error de red.'**
   String get errorNetwork;
 
+  /// No description provided for @errorAnilistRateLimit.
+  ///
+  /// In es, this message translates to:
+  /// **'AniList ha limitado las peticiones. Reintenta en unos segundos.'**
+  String get errorAnilistRateLimit;
+
+  /// No description provided for @errorAnilistRateLimitWithSeconds.
+  ///
+  /// In es, this message translates to:
+  /// **'AniList ha limitado las peticiones. Reintenta en {seconds} s.'**
+  String errorAnilistRateLimitWithSeconds(int seconds);
+
   /// No description provided for @errorWithMessage.
   ///
   /// In es, this message translates to:

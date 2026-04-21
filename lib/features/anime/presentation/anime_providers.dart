@@ -12,6 +12,7 @@ import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/features/anime/presentation/anilist_feed_cache.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -59,6 +60,16 @@ class AnilistToken extends _$AnilistToken {
           .read(favoriteAnilistMediaProvider.notifier)
           .pushPendingFavoritesToAnilist(token),
     );
+    unawaited(
+      ref
+          .read(favoriteAnilistCharactersProvider.notifier)
+          .pushPendingFavoritesToAnilist(token),
+    );
+    unawaited(
+      ref
+          .read(favoriteAnilistStaffProvider.notifier)
+          .pushPendingFavoritesToAnilist(token),
+    );
   }
 
   Future<void> clearToken() async {
@@ -79,6 +90,8 @@ class AnilistToken extends _$AnilistToken {
     ref.invalidate(anilistSocialFeedProvider);
     ref.invalidate(anilistUnreadNotificationCountProvider);
     ref.invalidate(anilistNotificationsListProvider);
+    ref.invalidate(favoriteAnilistCharactersProvider);
+    ref.invalidate(favoriteAnilistStaffProvider);
   }
 
   /// OAuth implícito vía HTTPS puente + `cronicle://anilist-oauth` (Android/iOS, navegador externo).
@@ -512,13 +525,14 @@ class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AnilistSocialFeed extends _$AnilistSocialFeed {
   static const _perPage = 25;
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
   int _generation = 0;
+  DateTime? _lastFetchedAt;
 
   bool get hasMore => _hasMore;
 
@@ -531,7 +545,62 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
-    return _fetchPage();
+
+    // 1) Intenta servir desde caché si está fresca.
+    final cache = AnilistFeedCache(ref.read(sharedPreferencesProvider));
+    final cached = cache.read(activityType, isFollowing);
+    if (cached != null) {
+      _lastFetchedAt = cached.fetchedAt;
+      if (cache.isFresh(cached.fetchedAt) && cached.items.isNotEmpty) {
+        debugPrint(
+          '[AniList] Social feed (type=$activityType, foll=$isFollowing) '
+          'sirviendo desde caché fresca (${cached.items.length} ítems).',
+        );
+        return cached.items;
+      }
+      // Stale-while-revalidate: muestra los ítems cacheados YA, refetch en bg.
+      if (cached.items.isNotEmpty) {
+        scheduleMicrotask(() async {
+          try {
+            final fresh = await _fetchPage();
+            _lastFetchedAt = DateTime.now();
+            unawaited(
+              cache.write(activityType, isFollowing, fresh),
+            );
+            state = AsyncData(fresh);
+          } catch (e) {
+            debugPrint(
+              '[AniList] Social feed background refresh failed: $e',
+            );
+          }
+        });
+        return cached.items;
+      }
+    }
+
+    // 2) Fetch de red normal.
+    final fresh = await _fetchPage();
+    _lastFetchedAt = DateTime.now();
+    unawaited(cache.write(activityType, isFollowing, fresh));
+    return fresh;
+  }
+
+  /// Fuerza recarga ignorando la caché (pull-to-refresh).
+  Future<void> refresh() async {
+    _generation++;
+    _page = 1;
+    _hasMore = true;
+    _isLoadingMore = false;
+    state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
+    try {
+      final fresh = await _fetchPage();
+      _lastFetchedAt = DateTime.now();
+      final cache = AnilistFeedCache(ref.read(sharedPreferencesProvider));
+      unawaited(cache.write(activityType, isFollowing, fresh));
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
 
   Future<List<FeedActivity>> _fetchPage() async {
@@ -928,6 +997,250 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
     }
     for (final id in touchedIds) {
       ref.invalidate(anilistMediaDetailProvider(id));
+    }
+    ref.invalidate(anilistProfileProvider);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Favoritos personajes/staff (local sin sesión; al conectar Anilist se sincronizan)
+// ---------------------------------------------------------------------------
+
+const _favoriteAnilistCharactersPrefsKey = 'favorite_anilist_characters_v1';
+const _favoriteAnilistStaffPrefsKey = 'favorite_anilist_staff_v1';
+
+List<Map<String, dynamic>> _decodeFavoriteAnilistPeopleJson(String? raw) {
+  if (raw == null || raw.isEmpty) return [];
+  try {
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  } catch (_) {
+    return [];
+  }
+}
+
+Map<String, dynamic> _snapshotAnilistPersonForFavorites(
+  Map<String, dynamic> person,
+) {
+  final name = person['name'] as Map<String, dynamic>? ?? {};
+  final image = person['image'] as Map<String, dynamic>? ?? {};
+  final id = person['id'];
+  return {
+    'id': id is int ? id : (id as num?)?.toInt(),
+    'name': {
+      'full': name['full'],
+      'native': name['native'],
+      'userPreferred': name['userPreferred'],
+    },
+    'image': {
+      'large': image['large'] ?? image['medium'],
+      'medium': image['medium'] ?? image['large'],
+    },
+  };
+}
+
+/// Une nodos del perfil Anilist con favoritos guardados solo en local.
+List<Map<String, dynamic>> mergeAnilistFavoritePeopleApiNodesWithLocal({
+  required List<dynamic> apiNodes,
+  required List<Map<String, dynamic>> localSnapshots,
+}) {
+  int? parseId(dynamic raw) {
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  final out = <Map<String, dynamic>>[
+    ...apiNodes.map((e) => Map<String, dynamic>.from(e as Map)),
+  ];
+  final seen = out.map((m) => parseId(m['id'])).whereType<int>().toSet();
+  for (final loc in localSnapshots) {
+    final id = parseId(loc['id']);
+    if (id == null || id <= 0 || seen.contains(id)) continue;
+    out.add(Map<String, dynamic>.from(loc));
+    seen.add(id);
+  }
+  return out;
+}
+
+@Riverpod(keepAlive: true)
+class FavoriteAnilistCharacters extends _$FavoriteAnilistCharacters {
+  Future<void>? _pushInFlight;
+
+  @override
+  List<Map<String, dynamic>> build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _decodeFavoriteAnilistPeopleJson(
+      prefs.getString(_favoriteAnilistCharactersPrefsKey),
+    );
+  }
+
+  bool hasFavorite(int characterId) {
+    return state.any((e) => ((e['id'] as num?)?.toInt() ?? 0) == characterId);
+  }
+
+  Future<void> _persist(List<Map<String, dynamic>> next) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(
+      _favoriteAnilistCharactersPrefsKey,
+      jsonEncode(next),
+    );
+    state = next;
+  }
+
+  Future<void> toggleLocalFavorite(Map<String, dynamic> character) async {
+    final id = (character['id'] as num?)?.toInt();
+    if (id == null || id <= 0) return;
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere(
+      (e) => ((e['id'] as num?)?.toInt() ?? 0) == id,
+    );
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add(_snapshotAnilistPersonForFavorites(character));
+    }
+    await _persist(next);
+  }
+
+  Future<void> removeFavorite(int characterId) async {
+    final next = state
+        .where((e) => ((e['id'] as num?)?.toInt() ?? 0) != characterId)
+        .toList();
+    if (next.length == state.length) return;
+    await _persist(next);
+  }
+
+  Future<void> pushPendingFavoritesToAnilist(String token) async {
+    if (_pushInFlight != null) {
+      await _pushInFlight;
+      return;
+    }
+    _pushInFlight = _push(token);
+    try {
+      await _pushInFlight;
+    } finally {
+      _pushInFlight = null;
+    }
+  }
+
+  Future<void> _push(String token) async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final pending = List<Map<String, dynamic>>.from(state);
+    if (pending.isEmpty) return;
+    final touched = <int>{};
+    for (final item in pending) {
+      final id = (item['id'] as num?)?.toInt();
+      if (id == null || id <= 0) continue;
+      try {
+        final detail = await graphql.fetchCharacterDetail(id, token: token);
+        final onServer = detail?['isFavourite'] as bool? ?? false;
+        if (!onServer) {
+          await graphql.toggleFavouriteCharacter(
+            characterId: id,
+            token: token,
+          );
+        }
+        await removeFavorite(id);
+        touched.add(id);
+      } catch (e) {
+        debugPrint('[AniList] Character favorite sync failed for $id: $e');
+      }
+    }
+    for (final id in touched) {
+      ref.invalidate(anilistCharacterDetailProvider(id));
+    }
+    ref.invalidate(anilistProfileProvider);
+  }
+}
+
+@Riverpod(keepAlive: true)
+class FavoriteAnilistStaff extends _$FavoriteAnilistStaff {
+  Future<void>? _pushInFlight;
+
+  @override
+  List<Map<String, dynamic>> build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _decodeFavoriteAnilistPeopleJson(
+      prefs.getString(_favoriteAnilistStaffPrefsKey),
+    );
+  }
+
+  bool hasFavorite(int staffId) {
+    return state.any((e) => ((e['id'] as num?)?.toInt() ?? 0) == staffId);
+  }
+
+  Future<void> _persist(List<Map<String, dynamic>> next) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(
+      _favoriteAnilistStaffPrefsKey,
+      jsonEncode(next),
+    );
+    state = next;
+  }
+
+  Future<void> toggleLocalFavorite(Map<String, dynamic> staff) async {
+    final id = (staff['id'] as num?)?.toInt();
+    if (id == null || id <= 0) return;
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere(
+      (e) => ((e['id'] as num?)?.toInt() ?? 0) == id,
+    );
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add(_snapshotAnilistPersonForFavorites(staff));
+    }
+    await _persist(next);
+  }
+
+  Future<void> removeFavorite(int staffId) async {
+    final next = state
+        .where((e) => ((e['id'] as num?)?.toInt() ?? 0) != staffId)
+        .toList();
+    if (next.length == state.length) return;
+    await _persist(next);
+  }
+
+  Future<void> pushPendingFavoritesToAnilist(String token) async {
+    if (_pushInFlight != null) {
+      await _pushInFlight;
+      return;
+    }
+    _pushInFlight = _push(token);
+    try {
+      await _pushInFlight;
+    } finally {
+      _pushInFlight = null;
+    }
+  }
+
+  Future<void> _push(String token) async {
+    final graphql = ref.read(anilistGraphqlProvider);
+    final pending = List<Map<String, dynamic>>.from(state);
+    if (pending.isEmpty) return;
+    final touched = <int>{};
+    for (final item in pending) {
+      final id = (item['id'] as num?)?.toInt();
+      if (id == null || id <= 0) continue;
+      try {
+        final detail = await graphql.fetchStaffDetail(id, token: token);
+        final onServer = detail?['isFavourite'] as bool? ?? false;
+        if (!onServer) {
+          await graphql.toggleFavouriteStaff(
+            staffId: id,
+            token: token,
+          );
+        }
+        await removeFavorite(id);
+        touched.add(id);
+      } catch (e) {
+        debugPrint('[AniList] Staff favorite sync failed for $id: $e');
+      }
+    }
+    for (final id in touched) {
+      ref.invalidate(anilistStaffDetailProvider(id));
     }
     ref.invalidate(anilistProfileProvider);
   }

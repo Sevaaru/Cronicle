@@ -57,9 +57,20 @@ class _SocialPageState extends ConsumerState<SocialPage>
   }
 
   void _invalidate() {
-    ref.invalidate(
-      anilistSocialFeedProvider(_activityType.apiValue, _isFollowing),
-    );
+    // Pull-to-refresh: fuerza recarga ignorando la caché del feed.
+    try {
+      ref
+          .read(
+            anilistSocialFeedProvider(_activityType.apiValue, _isFollowing)
+                .notifier,
+          )
+          .refresh();
+    } catch (_) {
+      // Si el provider aún no está construido, fallback a invalidate.
+      ref.invalidate(
+        anilistSocialFeedProvider(_activityType.apiValue, _isFollowing),
+      );
+    }
   }
 
   void _loadMore() {

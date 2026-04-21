@@ -1,10 +1,12 @@
 import 'dart:math' show max;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -277,7 +279,21 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
         }
         return const Center(child: CircularProgressIndicator());
       },
-      error: (e, _) {
+      error: (e, st) {
+        debugPrint(
+          '[AniList] ActivityFeedList error '
+          '(following=${widget.feedIsFollowing}): $e',
+        );
+        final isRateLimit = e is AnilistRateLimitException;
+        final retryHint =
+            isRateLimit ? (e).retryAfterSeconds : null;
+        final errorIcon =
+            isRateLimit ? Icons.hourglass_top_rounded : Icons.wifi_off;
+        final errorMessage = isRateLimit
+            ? (retryHint != null && retryHint > 0
+                ? widget.l10n.errorAnilistRateLimitWithSeconds(retryHint)
+                : widget.l10n.errorAnilistRateLimit)
+            : widget.l10n.errorNetwork;
         if (scopeHeader != null) {
           return LayoutBuilder(
             builder: (context, c) {
@@ -287,9 +303,9 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                 children: [
                   scopeHeader,
                   SizedBox(height: max(48.0, c.maxHeight * 0.12)),
-                  Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
+                  Icon(errorIcon, size: 48, color: colorScheme.error),
                   const SizedBox(height: 12),
-                  Center(child: Text(widget.l10n.errorNetwork)),
+                  Center(child: Text(errorMessage)),
                   const SizedBox(height: 12),
                   Center(
                     child: FilledButton(
@@ -306,9 +322,9 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off, size: 48, color: colorScheme.error),
+              Icon(errorIcon, size: 48, color: colorScheme.error),
               const SizedBox(height: 12),
-              Text(widget.l10n.errorNetwork),
+              Text(errorMessage),
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: widget.onRefresh,

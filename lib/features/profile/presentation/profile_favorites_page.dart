@@ -161,39 +161,43 @@ class ProfileFavoritesPage extends ConsumerWidget {
   ) {
     final profileAsync = ref.watch(anilistProfileProvider);
     final cs = Theme.of(context).colorScheme;
+    final localChars = ref.watch(favoriteAnilistCharactersProvider);
+    final localStaff = ref.watch(favoriteAnilistStaffProvider);
+    final isCharacters = kind == ProfileFavoritesKind.characters;
+    final localList = isCharacters ? localChars : localStaff;
+
+    Widget buildBodyFor(List<dynamic> apiNodes) {
+      final merged = mergeAnilistFavoritePeopleApiNodesWithLocal(
+        apiNodes: apiNodes,
+        localSnapshots: localList,
+      );
+      if (merged.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(l10n.profileLibraryEmpty,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: cs.onSurfaceVariant)),
+          ),
+        );
+      }
+      return _PersonGrid(
+        nodes: merged.cast<Map<String, dynamic>>(),
+        isCharacter: isCharacters,
+      );
+    }
+
     return profileAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
+      error: (_, _) => buildBodyFor(const []),
       data: (profile) {
-        if (profile == null) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(l10n.profileLibraryEmpty,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: cs.onSurfaceVariant)),
-            ),
-          );
-        }
-        final key = kind == ProfileFavoritesKind.characters ? 'characters' : 'staff';
-        final nodes = (((profile['favourites'] as Map?)?[key] as Map?)?['nodes']
-                as List?)
-                ?.cast<Map<String, dynamic>>() ??
-            const [];
-        if (nodes.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(l10n.profileLibraryEmpty,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: cs.onSurfaceVariant)),
-            ),
-          );
-        }
-        return _PersonGrid(
-          nodes: nodes,
-          isCharacter: kind == ProfileFavoritesKind.characters,
-        );
+        final key = isCharacters ? 'characters' : 'staff';
+        final apiNodes = profile == null
+            ? const <dynamic>[]
+            : (((profile['favourites'] as Map?)?[key] as Map?)?['nodes']
+                    as List? ??
+                const <dynamic>[]);
+        return buildBodyFor(apiNodes);
       },
     );
   }

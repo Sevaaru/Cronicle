@@ -112,6 +112,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNetwork => 'No connection or network error.';
 
   @override
+  String get errorAnilistRateLimit =>
+      'AniList rate-limited the requests. Try again in a few seconds.';
+
+  @override
+  String errorAnilistRateLimitWithSeconds(int seconds) {
+    return 'AniList rate-limited the requests. Try again in ${seconds}s.';
+  }
+
+  @override
   String errorWithMessage(Object message) {
     return 'Error: $message';
   }

@@ -5,6 +5,18 @@ import 'package:dio/dio.dart';
 
 import 'package:cronicle/core/utils/json_int.dart';
 
+/// Lanzada cuando AniList responde 429 (rate-limit) y se agotaron los reintentos.
+class AnilistRateLimitException implements Exception {
+  AnilistRateLimitException({this.retryAfterSeconds});
+
+  /// Segundos sugeridos por la cabecera `retry-after` (si vino).
+  final int? retryAfterSeconds;
+
+  @override
+  String toString() =>
+      'AnilistRateLimitException(retryAfter=${retryAfterSeconds}s)';
+}
+
 /// Queries the public Anilist GraphQL API.
 class AnilistGraphqlDatasource {
   AnilistGraphqlDatasource(this._dio);
@@ -109,6 +121,11 @@ class AnilistGraphqlDatasource {
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
         }
+        if (res.statusCode == 429) {
+          final hint = int.tryParse(
+              res.headers.value('retry-after') ?? '');
+          throw AnilistRateLimitException(retryAfterSeconds: hint);
+        }
         if (res.data is Map<String, dynamic>) {
           body = res.data as Map<String, dynamic>;
         } else {
@@ -121,6 +138,11 @@ class AnilistGraphqlDatasource {
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
+        }
+        if (e.response?.statusCode == 429) {
+          final hint = int.tryParse(
+              e.response?.headers.value('retry-after') ?? '');
+          throw AnilistRateLimitException(retryAfterSeconds: hint);
         }
         final data = e.response?.data;
         if (data is Map<String, dynamic>) {
