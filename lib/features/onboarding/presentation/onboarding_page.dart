@@ -122,6 +122,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Future<void> _finishSetup() async {
+    // Solo mostramos estado de sync si hay algo que realmente sincronizar.
     final hasAnyAccount = _googleConnected ||
         (ref.read(anilistTokenProvider).valueOrNull != null) ||
         (ref.read(traktSessionProvider).valueOrNull?.connected ?? false);
@@ -142,6 +143,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Future<void> _syncConnectedAccounts() async {
+    // Esta pasada trae datos de cuentas conectadas y los deja en local.
     final db = ref.read(databaseProvider);
 
     final anilistToken = await ref.read(anilistTokenProvider.future);

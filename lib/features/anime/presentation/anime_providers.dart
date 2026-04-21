@@ -78,6 +78,7 @@ class AnilistToken extends _$AnilistToken {
   }
 
   void _invalidateSessionScopedProviders() {
+    // Al cambiar login limpiamos cache de providers para evitar datos viejos.
     ref.invalidate(anilistProfileProvider);
     ref.invalidate(anilistMediaDetailProvider);
     ref.invalidate(anilistForumThreadProvider);
@@ -213,6 +214,7 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   Future<void> loadMore() async {
     if (!_hasMore || _isLoadingMore) return;
     _isLoadingMore = true;
+    // Si llega una respuesta vieja, la descartamos con generation.
     final generation = _generation;
     _page++;
     final prev = state.valueOrNull ?? [];

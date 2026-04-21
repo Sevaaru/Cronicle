@@ -226,6 +226,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final current = _scrollController.position.pixels;
+    // Disparamos un poco antes del final para que no se note el corte.
     if (current >= maxScroll - 300) {
       widget.onLoadMore();
     }

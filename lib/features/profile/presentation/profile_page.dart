@@ -225,6 +225,7 @@ class _FavoritesPreviewSection extends ConsumerWidget {
     final localChars = ref.watch(favoriteAnilistCharactersProvider);
     final localStaff = ref.watch(favoriteAnilistStaffProvider);
 
+    // Mezclamos API + local para que favoritos offline tambien aparezcan.
     final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
       apiNodes: apiFavAnime,
       localSnapshots: localAnilistFavs,

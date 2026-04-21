@@ -58,6 +58,7 @@ class _SocialPageState extends ConsumerState<SocialPage>
 
   void _invalidate() {
     try {
+      // Si el notifier sigue vivo, refrescamos directo.
       ref
           .read(
             anilistSocialFeedProvider(_activityType.apiValue, _isFollowing)
@@ -65,6 +66,7 @@ class _SocialPageState extends ConsumerState<SocialPage>
           )
           .refresh();
     } catch (_) {
+      // Fallback: invalidamos provider para forzar recarga limpia.
       ref.invalidate(
         anilistSocialFeedProvider(_activityType.apiValue, _isFollowing),
       );
@@ -87,6 +89,7 @@ class _SocialPageState extends ConsumerState<SocialPage>
     final l10n = AppLocalizations.of(context)!;
 
     if (!_scopeInitialized) {
+      // Lo leemos una vez para no resetear el filtro en cada rebuild.
       final scopeStr = ref.read(defaultFeedActivityScopeProvider);
       _scope = scopeStr == 'following'
           ? FeedActivityScope.following

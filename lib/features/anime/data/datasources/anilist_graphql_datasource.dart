@@ -64,6 +64,7 @@ class AnilistGraphqlDatasource {
   }
 
   List<Map<String, dynamic>> _normalizeThreadChildComments(dynamic raw) {
+    // AniList a veces manda esto como JSON string, asi que lo normalizamos a lista.
     if (raw is List) {
       return raw
           .whereType<Map>()
@@ -99,6 +100,7 @@ class AnilistGraphqlDatasource {
 
     late final Map<String, dynamic> body;
     const maxAttempts = 3;
+    // Reintento corto con backoff para no caernos por 429 temporales.
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         final res = await _dio.post<dynamic>(
