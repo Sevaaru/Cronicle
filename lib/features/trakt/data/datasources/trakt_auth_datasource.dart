@@ -3,7 +3,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 
-/// OAuth2 Trakt (opcional). La API pública solo necesita [EnvConfig.traktClientId].
 class TraktAuthDatasource {
   TraktAuthDatasource(this._storage, this._dio);
 
@@ -43,7 +42,6 @@ class TraktAuthDatasource {
     await _storage.delete(key: _userAvatarUrlKey);
   }
 
-  /// Devuelve un access token válido o null si no hay sesión.
   Future<String?> getValidAccessToken() async {
     final access = await getAccessToken();
     if (access == null || access.isEmpty) return null;

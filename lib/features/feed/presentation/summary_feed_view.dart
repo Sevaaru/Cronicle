@@ -15,8 +15,6 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
-/// Resumen / Discover tab – shows trending content from all the user's
-/// visible feed categories plus a "random pick" button.
 class SummaryFeedView extends ConsumerWidget {
   const SummaryFeedView({
     super.key,
@@ -26,8 +24,6 @@ class SummaryFeedView extends ConsumerWidget {
 
   final VoidCallback onRefresh;
 
-  /// Called when the user taps "See all" on a section header.
-  /// The string matches the [_FeedFilter] enum name: 'anime', 'manga', etc.
   final ValueChanged<String> onSwitchCategory;
 
   @override
@@ -36,13 +32,10 @@ class SummaryFeedView extends ConsumerWidget {
     final visible =
         ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
-    // Collect sections dynamically based on the user's visible categories.
     final sections = <Widget>[];
 
-    // ── Random pick card (always first) ─────────────────────────────────
     sections.add(_RandomPickCard(visible: visible));
 
-    // ── Anime (hero layout) ─────────────────────────────────────────────
     if (visible.contains('anime')) {
       sections.add(
         _AsyncHeroSection(
@@ -55,7 +48,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Manga (standard poster carousel) ────────────────────────────────
     if (visible.contains('manga')) {
       sections.add(
         _AsyncCarouselSection(
@@ -68,7 +60,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Movies (wide landscape + numbered anticipated) ──────────────────
     if (visible.contains('movie') && EnvConfig.traktClientId.isNotEmpty) {
       sections.add(
         _TraktCarouselSection(
@@ -80,7 +71,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── TV Shows (wide landscape + numbered anticipated) ────────────────
     if (visible.contains('tv') && EnvConfig.traktClientId.isNotEmpty) {
       sections.add(
         _TraktCarouselSection(
@@ -92,7 +82,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Games (poster carousel + numbered anticipated) ──────────────────
     if (visible.contains('game')) {
       sections.add(
         _GamesCarouselSection(
@@ -103,7 +92,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Books (poster carousel) ─────────────────────────────────────────
     if (visible.contains('book')) {
       sections.add(
         _AsyncCarouselSection(
@@ -117,13 +105,11 @@ class SummaryFeedView extends ConsumerWidget {
     }
 
     if (sections.length <= 1) {
-      // Only the random card – nothing visible.
       return Center(child: Text(l10n.feedBrowseEmpty));
     }
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Invalidate all summary-relevant providers.
         if (visible.contains('anime')) {
           ref.invalidate(anilistPopularProvider('ANIME'));
         }
@@ -153,9 +139,6 @@ class SummaryFeedView extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// RANDOM PICK CARD
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _RandomPickCard extends ConsumerWidget {
   const _RandomPickCard({required this.visible});
@@ -167,9 +150,6 @@ class _RandomPickCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    // Warm up all-time / cross-era pools so the random pick isn't biased
-    // toward "newest only". These providers aren't keepAlive on their own,
-    // so watching them here keeps them loaded while Discover is on screen.
     if (visible.contains('anime')) {
       ref.watch(anilistBrowseMediaProvider('ANIME', 'top_rated'));
       ref.watch(anilistBrowseMediaProvider('ANIME', 'popularity'));
@@ -233,9 +213,6 @@ class _RandomPickCard extends ConsumerWidget {
   }
 
   void _pickRandom(BuildContext context, WidgetRef ref) {
-    // Build a pool **per kind**. Each kind aggregates multiple source rails
-    // (popular + trending + anticipated + genre-specific) so the random pick
-    // isn't biased toward "newest" or any single category.
     final perKind = <MediaKind, List<Map<String, dynamic>>>{};
 
     void addAll(MediaKind kind, Iterable<Map<String, dynamic>>? items) {
@@ -249,7 +226,6 @@ class _RandomPickCard extends ConsumerWidget {
     ) =>
         addAll(kind, async.valueOrNull);
 
-    // ── Anime ────────────────────────────────────────────────
     if (visible.contains('anime')) {
       addAsync(MediaKind.anime, ref.read(anilistPopularProvider('ANIME')));
       addAsync(MediaKind.anime,
@@ -258,7 +234,6 @@ class _RandomPickCard extends ConsumerWidget {
           ref.read(anilistBrowseMediaProvider('ANIME', 'popularity')));
     }
 
-    // ── Manga ────────────────────────────────────────────────
     if (visible.contains('manga')) {
       addAsync(MediaKind.manga, ref.read(anilistPopularProvider('MANGA')));
       addAsync(MediaKind.manga,
@@ -267,7 +242,6 @@ class _RandomPickCard extends ConsumerWidget {
           ref.read(anilistBrowseMediaProvider('MANGA', 'popularity')));
     }
 
-    // ── Movies (trending + anticipated + popular) ────────────
     if (visible.contains('movie')) {
       final data = ref.read(traktMoviesHomeProvider).valueOrNull;
       if (data != null) {
@@ -277,7 +251,6 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── TV Shows (trending + anticipated + popular) ──────────
     if (visible.contains('tv')) {
       final data = ref.read(traktShowsHomeProvider).valueOrNull;
       if (data != null) {
@@ -287,10 +260,8 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── Games (popular + every genre rail from the home feed) ─
     if (visible.contains('game')) {
       addAsync(MediaKind.game, ref.read(igdbPopularProvider));
-      // Best rated all-time (80 items, broader than the home rail)
       addAsync(
           MediaKind.game,
           ref.read(igdbGamesSectionListProvider(GamesFeedSection.bestRated)));
@@ -307,7 +278,6 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── Books (trending + every subject rail) ────────────────
     if (visible.contains('book')) {
       addAsync(MediaKind.book, ref.read(bookTrendingProvider));
       for (final subject in const [
@@ -321,18 +291,14 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // Drop kinds with empty pools.
     perKind.removeWhere((_, list) => list.isEmpty);
     if (perKind.isEmpty) return;
 
     final rng = Random();
 
-    // 1. Pick a kind uniformly so every configured interest has equal odds.
     final kinds = perKind.keys.toList();
     final kind = kinds[rng.nextInt(kinds.length)];
 
-    // 2. Deduplicate items within that kind by their identifier so the same
-    //    title appearing in multiple rails doesn't get extra weight.
     final seen = <String>{};
     final unique = <Map<String, dynamic>>[];
     for (final item in perKind[kind]!) {
@@ -348,11 +314,7 @@ class _RandomPickCard extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// CAROUSEL SECTIONS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
-/// Hero layout: first item big, rest as small poster cards.
 class _AsyncHeroSection extends ConsumerWidget {
   const _AsyncHeroSection({
     required this.provider,
@@ -388,7 +350,6 @@ class _AsyncHeroSection extends ConsumerWidget {
   }
 }
 
-/// Standard poster carousel that watches an async provider.
 class _AsyncCarouselSection extends ConsumerWidget {
   const _AsyncCarouselSection({
     required this.provider,
@@ -424,7 +385,6 @@ class _AsyncCarouselSection extends ConsumerWidget {
   }
 }
 
-/// Trakt section – wide landscape trending + numbered anticipated.
 class _TraktCarouselSection extends ConsumerWidget {
   const _TraktCarouselSection({
     required this.isMovie,
@@ -499,7 +459,6 @@ class _TraktCarouselSection extends ConsumerWidget {
   }
 }
 
-/// Games section – poster carousel for popular, numbered for anticipated.
 class _GamesCarouselSection extends ConsumerWidget {
   const _GamesCarouselSection({
     required this.titlePopular,
@@ -554,9 +513,6 @@ class _GamesCarouselSection extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 1 – HERO (big first card + small side cards)
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
@@ -671,9 +627,6 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 2 – STANDARD POSTER CAROUSEL
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _PosterCarouselSection extends StatelessWidget {
   const _PosterCarouselSection({
@@ -726,9 +679,6 @@ class _PosterCarouselSection extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 3 – WIDE LANDSCAPE CARDS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _WideCarouselSection extends StatelessWidget {
   const _WideCarouselSection({
@@ -821,7 +771,6 @@ class _WideCard extends StatelessWidget {
                         )
                       : _PosterPlaceholder(width: width, height: height),
                 ),
-                // Gradient overlay for readability
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -871,9 +820,6 @@ class _WideCard extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 4 – NUMBERED RANK HORIZONTAL LIST
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _NumberedRankSection extends StatelessWidget {
   const _NumberedRankSection({
@@ -952,7 +898,6 @@ class _RankCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Rank number
             SizedBox(
               width: 24,
               child: Text(
@@ -965,7 +910,6 @@ class _RankCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Small poster
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: url != null
@@ -1216,9 +1160,6 @@ class _SectionShimmer extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// HELPERS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder({required this.width, required this.height});

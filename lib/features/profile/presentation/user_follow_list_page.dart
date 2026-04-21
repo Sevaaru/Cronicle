@@ -6,7 +6,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Lista de seguidores o de cuentas seguidas (Anilist).
 class UserFollowListPage extends ConsumerStatefulWidget {
   const UserFollowListPage({
     super.key,

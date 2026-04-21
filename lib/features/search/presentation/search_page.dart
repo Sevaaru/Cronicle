@@ -59,7 +59,6 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _searchCtrl = TextEditingController();
   Timer? _searchDebounce;
-  /// Query passed to Anilist/IGDB providers (updated after debounce or submit).
   String _committedSearchQuery = '';
   _SearchFilter _filter = _SearchFilter.all;
 
@@ -121,7 +120,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         .where((f) => searchLayout.isVisible(f.name))
         .toList();
 
-    // If current filter was hidden, reset to first visible.
     if (!visibleFilters.contains(_filter)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -170,7 +168,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
           ),
           const SizedBox(height: 8),
-          // Filter chips
           SizedBox(
             height: 38,
             child: ListView.separated(
@@ -258,7 +255,6 @@ class _PopularContent extends ConsumerWidget {
   }
 }
 
-/// Estado vacío en filtro «Todo» sin texto: sin llamadas a APIs de tendencias.
 class _SearchIdleAllPlaceholder extends StatelessWidget {
   const _SearchIdleAllPlaceholder();
 
@@ -308,7 +304,6 @@ class _SearchIdleAllPlaceholder extends StatelessWidget {
   }
 }
 
-/// Resultados por categoría en el filtro «Todo»: vista previa corta + «Ver más» a la pestaña.
 const int _kSearchAllPreviewPerSection = 5;
 
 class _SearchResultsList extends ConsumerWidget {
@@ -453,7 +448,6 @@ class _SearchResultsList extends ConsumerWidget {
   }
 }
 
-/// CTA «Ver más» con aspecto Material 3 (superficie, estado de enfoque, iconos).
 class _SearchShowMoreMaterialCta extends StatelessWidget {
   const _SearchShowMoreMaterialCta({
     required this.label,
@@ -518,7 +512,6 @@ class _ResultSection {
   final _SearchFilter targetFilter;
 }
 
-/// Placeholders grises mientras Open Library / otras APIs responden.
 class _SearchSectionLoadingPlaceholder extends StatelessWidget {
   const _SearchSectionLoadingPlaceholder({required this.title});
 

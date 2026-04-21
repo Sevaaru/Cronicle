@@ -8,11 +8,6 @@ import com.google.android.gms.wearable.WearableListenerService
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-/**
- * Notified by Google Play Services whenever the phone pushes a new DataItem at
- * `/library/items`. We just rebroadcast a tick through [LibraryUpdateBus] so any
- * active screen reloads its snapshot.
- */
 class WearLibraryListener : WearableListenerService() {
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         super.onDataChanged(dataEvents)
@@ -32,7 +27,6 @@ class WearLibraryListener : WearableListenerService() {
     companion object { private const val TAG = "WearLibraryListener" }
 }
 
-/** Process-wide one-shot fan-out used by the UI to refetch after a snapshot push. */
 object LibraryUpdateBus {
     private val _updates = MutableSharedFlow<Long>(replay = 0, extraBufferCapacity = 4)
     val updates = _updates.asSharedFlow()
@@ -43,6 +37,5 @@ object LibraryUpdateBus {
 
     @Suppress("unused")
     fun init(@Suppress("UNUSED_PARAMETER") context: Context) {
-        // reserved for future warm-up
     }
 }

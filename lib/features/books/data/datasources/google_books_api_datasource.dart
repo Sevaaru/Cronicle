@@ -6,10 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/api_endpoints.dart';
 
-/// REST datasource for the Google Books API v1.
-///
-/// Public endpoints use `key=` query param for quota tracking.
-/// https://developers.google.com/books/docs/v1/reference/volumes
 class GoogleBooksApiDatasource {
   GoogleBooksApiDatasource(this._dio, {String? apiKey})
       : _apiKey = apiKey ?? EnvConfig.googleBooksApiKey;
@@ -19,8 +15,6 @@ class GoogleBooksApiDatasource {
 
   static const _base = ApiEndpoints.googleBooksV1;
 
-  /// Google Books categories that indicate manga / Japanese comics
-  /// (already covered by AniList).
   static bool categoriesIndicateManga(Iterable<String> categories) {
     for (final c in categories) {
       final t = c.toLowerCase().trim();
@@ -41,17 +35,9 @@ class GoogleBooksApiDatasource {
   Map<String, String> get _keyParam =>
       _apiKey.isNotEmpty ? {'key': _apiKey} : {};
 
-  /// Convert an internal slug or a Google Books BISAC category into a safe
-  /// `subject:` query value.
-  ///
-  /// Google Books rejects (HTTP 400) values containing reserved characters
-  /// like `/`, `:`, `&`, etc. Categories returned by the API often look like
-  /// `"Fiction / Fantasy / Epic"`, so we keep only the first segment and
-  /// strip anything that isn't alphanumeric / space / underscore.
   static String _normalizeSubject(String raw) {
     var s = raw.trim();
     if (s.isEmpty) return s;
-    // Take the first segment of multi-level BISAC categories.
     final slash = s.indexOf('/');
     if (slash > 0) s = s.substring(0, slash);
     s = s
@@ -63,27 +49,14 @@ class GoogleBooksApiDatasource {
     return s;
   }
 
-  /// Build a `subject:` query fragment, quoting multi-word values so that
-  /// Google Books treats them as a single phrase instead of multiple terms.
   static String _subjectQuery(String raw) {
     final s = _normalizeSubject(raw);
     if (s.isEmpty) return '';
     return s.contains(' ') ? 'subject:"$s"' : 'subject:$s';
   }
 
-  /// Options that bypass Dio's strict UTF-8 JSON transformer.
-  /// We download raw bytes and decode them ourselves with `allowMalformed: true`
-  /// because Google Books responses sometimes contain invalid UTF-8 sequences
-  /// in book descriptions (e.g. broken Spanish accents in user-uploaded data).
   static final _bytesOptions = Options(responseType: ResponseType.bytes);
 
-  // ---------------------------------------------------------------------------
-  // Concurrency limiter (process-wide).
-  //
-  // Google Books rate-limits aggressive bursts (HTTP 503). Limiting in-flight
-  // requests to 2 keeps things parallel-ish while staying under the limit and
-  // is much faster than the previous strictly sequential approach.
-  // ---------------------------------------------------------------------------
 
   static const _maxConcurrent = 2;
   static int _inFlight = 0;
@@ -107,8 +80,6 @@ class GoogleBooksApiDatasource {
     }
   }
 
-  /// Decode raw bytes from a Google Books response into a JSON map,
-  /// tolerating malformed UTF-8 by substituting U+FFFD.
   static Map<String, dynamic> _decodeJsonBytes(List<int> bytes) {
     final text = utf8.decode(bytes, allowMalformed: true);
     final decoded = jsonDecode(text);
@@ -117,9 +88,6 @@ class GoogleBooksApiDatasource {
     return const {};
   }
 
-  /// GET that downloads bytes and decodes JSON leniently.
-  /// Retries up to 3 times on HTTP 429 / 503 (rate-limit / server overload)
-  /// with exponential backoff. Throttled by [_acquireSlot].
   Future<Map<String, dynamic>> _getJson(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -157,11 +125,7 @@ class GoogleBooksApiDatasource {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Search
-  // ---------------------------------------------------------------------------
 
-  /// General search for books by free-text query.
   Future<List<Map<String, dynamic>>> searchBooks(
     String query, {
     int maxResults = 20,
@@ -181,7 +145,6 @@ class GoogleBooksApiDatasource {
     return _extractAndNormalize(data);
   }
 
-  /// Search books by subject/category.
   Future<List<Map<String, dynamic>>> searchBooksBySubject(
     String subject, {
     int maxResults = 40,
@@ -199,15 +162,12 @@ class GoogleBooksApiDatasource {
     return _extractAndNormalize(data);
   }
 
-  /// Search books published in a specific year (and optionally month).
   Future<List<Map<String, dynamic>>> searchBooksByPublishYear({
     required int year,
     int? month,
     int limit = 40,
     int offset = 0,
   }) async {
-    // Google Books doesn't have date-range filters, but we can approximate
-    // using inpublisher-date isn't available; use free query instead.
     final dateQuery =
         month != null ? '$year-${month.toString().padLeft(2, '0')}' : '$year';
     final data = await _getJson(
@@ -224,13 +184,7 @@ class GoogleBooksApiDatasource {
     return _extractAndNormalize(data);
   }
 
-  // ---------------------------------------------------------------------------
-  // Trending / Popular
-  // ---------------------------------------------------------------------------
 
-  /// Fetch popular/best-selling books for a subject.
-  /// Google Books has no explicit "trending" endpoint, so we query
-  /// a popular subject sorted by relevance.
   Future<List<Map<String, dynamic>>> fetchSubject(
     String subject, {
     int limit = 20,
@@ -248,7 +202,6 @@ class GoogleBooksApiDatasource {
     return _extractAndNormalize(data);
   }
 
-  /// "Trending" substitute: best-selling fiction, newest releases, etc.
   Future<List<Map<String, dynamic>>> fetchTrending({
     int limit = 20,
   }) async {
@@ -265,11 +218,7 @@ class GoogleBooksApiDatasource {
     return _extractAndNormalize(data);
   }
 
-  // ---------------------------------------------------------------------------
-  // Volume detail
-  // ---------------------------------------------------------------------------
 
-  /// Fetch full volume detail by ID (e.g. "zyTCAlFPjgYC").
   Future<Map<String, dynamic>> fetchWork(String volumeId) async {
     final data = await _getJson(
       '$_base/volumes/$volumeId',
@@ -278,11 +227,7 @@ class GoogleBooksApiDatasource {
     return _normalizeVolume(data);
   }
 
-  // ---------------------------------------------------------------------------
-  // Editions (Google Books: same volume in different formats)
-  // ---------------------------------------------------------------------------
 
-  /// Fetch a single "edition" – in Google Books this is just another volume.
   Future<Map<String, dynamic>> fetchEdition(String volumeId) async {
     final data = await _getJson(
       '$_base/volumes/$volumeId',
@@ -291,14 +236,10 @@ class GoogleBooksApiDatasource {
     return _normalizeEdition(data);
   }
 
-  /// Search for related editions of a volume by title + first author.
-  /// Google Books doesn't have a works→editions hierarchy like OL,
-  /// so we approximate by searching the same title.
   Future<List<Map<String, dynamic>>> fetchWorkEditions(
     String volumeId, {
     int limit = 20,
   }) async {
-    // First fetch the volume to get its title/author.
     final vol = await _getJson(
       '$_base/volumes/$volumeId',
       queryParameters: _keyParam,
@@ -329,32 +270,12 @@ class GoogleBooksApiDatasource {
         .toList();
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers – image URL
-  // ---------------------------------------------------------------------------
 
-  /// Pick the best cover URL for a volume.
-  ///
-  /// Google Books returns `imageLinks` with multiple sizes (smallThumbnail,
-  /// thumbnail, small, medium, large, extraLarge) but only some are populated
-  /// per volume — and `thumbnail`/`smallThumbnail` are very low resolution
-  /// (~128 px) which looks blurry/pixelated when upscaled.
-  ///
-  /// Strategy:
-  /// 1. Pick the largest size available from `imageLinks`.
-  /// 2. Force HTTPS, drop `edge=curl`.
-  /// 3. Replace `zoom=` with `fife=w<width>` to get a sharp,
-  ///    server-rendered cover at the requested size (Google's CDN supports
-  ///    arbitrary widths via `fife`).
-  /// 4. If `imageLinks` is missing entirely, fall back to the public
-  ///    cover endpoint built from the volume id, which works for most
-  ///    volumes even when the API doesn't expose images.
   static String? _bestCoverUrl(
     Map<String, dynamic> imageLinks,
     String volumeId, {
     int width = 512,
   }) {
-    // 1. Pick the largest direct link.
     final raw = (imageLinks['extraLarge'] ??
             imageLinks['large'] ??
             imageLinks['medium'] ??
@@ -366,17 +287,12 @@ class GoogleBooksApiDatasource {
     if (raw != null && raw.isNotEmpty) {
       var url = raw.replaceFirst('http://', 'https://');
       url = url.replaceAll(RegExp(r'&?edge=curl'), '');
-      // Drop existing zoom param – we'll request a specific width with fife.
       url = url.replaceAll(RegExp(r'&?zoom=\d+'), '');
-      // Append fife=w<width> for a sharp, properly sized image.
       final sep = url.contains('?') ? '&' : '?';
       url = '$url${sep}fife=w$width';
       return url;
     }
 
-    // 2. Fallback: build the public Google Books content URL from the volume
-    //    id. This works for the majority of volumes even when imageLinks is
-    //    absent (e.g. older / lesser-known editions).
     if (volumeId.isEmpty) return null;
     return 'https://books.google.com/books/content'
         '?id=$volumeId'
@@ -386,9 +302,6 @@ class GoogleBooksApiDatasource {
         '&fife=w$width';
   }
 
-  // ---------------------------------------------------------------------------
-  // Extraction + normalization
-  // ---------------------------------------------------------------------------
 
   List<Map<String, dynamic>> _extractAndNormalize(Map<String, dynamic>? data) {
     if (data == null) return [];
@@ -404,8 +317,6 @@ class GoogleBooksApiDatasource {
         .toList();
   }
 
-  /// Normalize a Google Books volume to the same shape the app expects
-  /// (compatible with `BrowseResultCard`, `BookWorkData`, etc.).
   Map<String, dynamic> _normalizeVolume(Map<String, dynamic> volume) {
     final id = volume['id'] as String? ?? '';
     final info =
@@ -432,18 +343,15 @@ class GoogleBooksApiDatasource {
     final rating = (info['averageRating'] as num?)?.toDouble();
     final ratingsCount = (info['ratingsCount'] as num?)?.toInt();
 
-    // Description: plain text preferred, fall back to snippet.
     final description = info['description'] as String? ??
         searchInfo['textSnippet'] as String?;
 
-    // Publish date → year
     final publishedDate = info['publishedDate'] as String?;
     int? year;
     if (publishedDate != null && publishedDate.length >= 4) {
       year = int.tryParse(publishedDate.substring(0, 4));
     }
 
-    // Identifiers split by type
     String? isbn10;
     String? isbn13;
     final isbns = <String>[];
@@ -458,7 +366,6 @@ class GoogleBooksApiDatasource {
       if (type == 'ISBN_13') isbn13 = ident;
     }
 
-    // Sale info
     final saleability = saleInfo['saleability'] as String?;
     final isEbook = saleInfo['isEbook'] as bool? ?? false;
     final buyLink = saleInfo['buyLink'] as String?;
@@ -468,7 +375,6 @@ class GoogleBooksApiDatasource {
     final priceAmount = (price?['amount'] as num?)?.toDouble();
     final priceCurrency = price?['currencyCode'] as String?;
 
-    // Access info
     final viewability = accessInfo['viewability'] as String?;
     final publicDomain = accessInfo['publicDomain'] as bool? ?? false;
     final epubAvailable =
@@ -477,7 +383,6 @@ class GoogleBooksApiDatasource {
         (accessInfo['pdf'] as Map?)?['isAvailable'] as bool? ?? false;
     final webReaderLink = accessInfo['webReaderLink'] as String?;
 
-    // Reading modes
     final readingModes =
         (info['readingModes'] as Map<String, dynamic>?) ?? const {};
 
@@ -517,24 +422,20 @@ class GoogleBooksApiDatasource {
       'printType': info['printType'] as String?,
       'maturityRating': info['maturityRating'] as String?,
       'textSnippet': searchInfo['textSnippet'] as String?,
-      // Sale
       'saleability': saleability,
       'isEbook': isEbook,
       'buyLink': buyLink,
       'priceAmount': priceAmount,
       'priceCurrency': priceCurrency,
-      // Access
       'viewability': viewability,
       'publicDomain': publicDomain,
       'epubAvailable': epubAvailable,
       'pdfAvailable': pdfAvailable,
-      // Reading modes
       'hasTextMode': readingModes['text'] as bool? ?? false,
       'hasImageMode': readingModes['image'] as bool? ?? false,
     };
   }
 
-  /// Normalize a volume as an "edition" shape for the editions list.
   Map<String, dynamic> _normalizeEdition(Map<String, dynamic> volume) {
     final id = volume['id'] as String? ?? '';
     final info =

@@ -5,33 +5,24 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/core/router/app_router.dart';
 
-/// IDs de canal Android (8+). Sufijo `_v2`: importancia alta para avisos con la
-/// app en primer plano (los canales ya creados no admiten cambiar importancia).
 const String kCronicleChannelAiring = 'cronicle_airing_v2';
 const String kCronicleChannelAnilist = 'cronicle_anilist_v2';
 
-/// Nombre único de la tarea periódica de Workmanager.
 const String kCronicleNotifWorkName = 'cronicle_notif_sync';
 
-/// Tarea periódica opcional: subir copia JSON a Drive sin UI (si hay sesión).
 const String kCronicleDriveBackupWorkName = 'cronicle_drive_auto_backup';
 
-/// Agrupación en Android 7+ (NotificationCompat): un solo paquete para toda la app.
 const String kAndroidNotificationGroupCronicle =
     'com.cronicle.app.notifications';
 
-/// [GoRouter] `go()` al pulsar la notificación (bandeja Anilist en la app).
 const String kNotificationPayloadAnilistInbox = '/notifications';
 
-/// Al pulsar aviso de nuevo capítulo, abrir inicio.
 const String kNotificationPayloadFeed = '/feed';
 
 final FlutterLocalNotificationsPlugin _fln = FlutterLocalNotificationsPlugin();
 
 bool _cronicleNotifInited = false;
 
-/// Ruta pendiente si la app arrancó desde una notificación o el [Navigator]
-/// aún no estaba listo al pulsar.
 String? _pendingRouteFromNotification;
 
 bool get _isAndroidOrIos =>
@@ -58,8 +49,6 @@ void _onNotificationResponse(NotificationResponse response) {
 class CronicleLocalNotifications {
   CronicleLocalNotifications._();
 
-  /// Consume la ruta guardada al abrir la app desde una notificación (llamar
-  /// una vez con el router ya montado).
   static void consumePendingLaunchRoute(GoRouter router) {
     final route = _pendingRouteFromNotification;
     _pendingRouteFromNotification = null;
@@ -114,7 +103,6 @@ class CronicleLocalNotifications {
     _cronicleNotifInited = true;
   }
 
-  /// Permiso del sistema (Android 13+ / iOS). Devuelve null en plataformas sin API.
   static Future<bool?> requestSystemPermission() async {
     if (kIsWeb) return false;
     if (defaultTargetPlatform == TargetPlatform.android) {

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/features/profile/presentation/profile_page.dart';
 
-/// Radio mínimo para que el reveal arranque “desde el avatar” (evita punto invisible).
 double _beginRevealRadius(Rect? rect, Size screen) {
   if (rect != null) {
     return math.max(rect.width, rect.height) * 0.55;
@@ -32,11 +31,9 @@ Offset _revealCenter(Rect? rect, Size size) {
   if (rect != null) {
     return rect.center;
   }
-  // Fallback: zona del leading del AppBar (~arriba a la izquierda).
   return Offset(size.width * 0.1, size.height * 0.08);
 }
 
-/// Apertura/cierre tipo “circular reveal” (contenido del perfil dentro del círculo que crece o mengua).
 CustomTransitionPage<void> buildProfileTransitionPage(GoRouterState state) {
   final originRect = state.extra is Rect ? state.extra as Rect : null;
 

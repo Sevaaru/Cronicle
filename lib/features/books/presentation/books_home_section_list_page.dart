@@ -10,7 +10,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-/// Full list page for a book category (`/books/section/:slug`).
 class BooksHomeSectionListPage extends ConsumerWidget {
   const BooksHomeSectionListPage({super.key, required this.slug});
 

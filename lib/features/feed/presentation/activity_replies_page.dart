@@ -256,7 +256,6 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
   }
 }
 
-/// Cabecera: actividad raíz (texto, lista o mensaje) al estilo del feed.
 class _ThreadOriginalBlock extends ConsumerWidget {
   const _ThreadOriginalBlock({
     required this.activity,

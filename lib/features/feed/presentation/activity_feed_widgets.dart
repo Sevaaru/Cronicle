@@ -16,9 +16,6 @@ import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 String activityTimeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
@@ -29,9 +26,6 @@ String activityTimeAgo(DateTime dt, AppLocalizations l10n) {
   return l10n.timeWeeks((diff.inDays / 7).floor());
 }
 
-// ---------------------------------------------------------------------------
-// Scope enum + scope bar
-// ---------------------------------------------------------------------------
 
 enum FeedActivityScope { following, global }
 
@@ -91,9 +85,6 @@ class FeedActivityScopeBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Following feed guard
-// ---------------------------------------------------------------------------
 
 class FollowingFeedGuard extends ConsumerWidget {
   const FollowingFeedGuard({
@@ -109,7 +100,6 @@ class FollowingFeedGuard extends ConsumerWidget {
   final VoidCallback onLoadMore;
   final AppLocalizations l10n;
 
-  /// Mismo valor que `AnilistSocialFeed` (`null` = todas las actividades).
   final String? activityTypeApi;
 
   @override
@@ -161,8 +151,6 @@ class FollowingFeedGuard extends ConsumerWidget {
             ],
           );
         }
-        // Suscripción al feed solo con sesión resuelta: evita que el primer fetch
-        // de «siguiendo» corra con token aún null y quede en lista vacía.
         final feed = anilistSocialFeedProvider(activityTypeApi, true);
         return ActivityFeedList(
           feedAsync: ref.watch(feed),
@@ -184,9 +172,6 @@ class FollowingFeedGuard extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Feed list
-// ---------------------------------------------------------------------------
 
 class ActivityFeedList extends ConsumerStatefulWidget {
   const ActivityFeedList({
@@ -401,9 +386,6 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Compose card
-// ---------------------------------------------------------------------------
 
 class ComposeCard extends ConsumerStatefulWidget {
   const ComposeCard({super.key, required this.onPosted});
@@ -546,9 +528,6 @@ class _ComposeCardState extends ConsumerState<ComposeCard> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Expandable text
-// ---------------------------------------------------------------------------
 
 class ExpandableText extends StatefulWidget {
   const ExpandableText({super.key, required this.text, this.style});
@@ -657,9 +636,6 @@ class _ExpandToggleButton extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Activity card
-// ---------------------------------------------------------------------------
 
 class ActivityCard extends ConsumerWidget {
   const ActivityCard({super.key, required this.activity});

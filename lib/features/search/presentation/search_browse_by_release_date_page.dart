@@ -40,7 +40,6 @@ List<Map<String, dynamic>> _filterTraktByMonth(
   }).toList();
 }
 
-/// Explorar por año (y opcionalmente mes) de estreno / publicación.
 class SearchBrowseByReleaseDatePage extends ConsumerStatefulWidget {
   const SearchBrowseByReleaseDatePage({super.key, required this.mediaKind});
 
@@ -191,7 +190,6 @@ class _SearchBrowseByReleaseDatePageState
         if (_month == null) return raw;
         return _filterTraktByMonth(raw, _year, _month!);
       case MediaKind.game:
-        // IGDB usa Unix en segundos alineado al calendario UTC; DateTime local desplazaba la ventana.
         final start = DateTime.utc(_year, _month ?? 1, 1);
         final end = _month == null
             ? DateTime.utc(_year, 12, 31, 23, 59, 59)

@@ -2,13 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// A heart‐shaped like button with optimistic UI update, scale animation on
-/// toggle, and a busy guard that prevents rapid‐fire network requests.
-///
-/// The caller is responsible for providing [onToggle] which performs the actual
-/// network mutation and returns the server‐confirmed `isLiked` value.
-/// If the server result differs from the optimistic prediction the widget
-/// self‐corrects.
 class AnimatedLikeButton extends StatefulWidget {
   const AnimatedLikeButton({
     super.key,
@@ -25,21 +18,15 @@ class AnimatedLikeButton extends StatefulWidget {
   final bool isLiked;
   final int likeCount;
 
-  /// Called when the user taps the button. Must perform the server mutation and
-  /// return the confirmed `isLiked` value. If it throws, the optimistic state
-  /// is reverted.
   final Future<bool?> Function() onToggle;
 
   final double iconSize;
   final double fontSize;
 
-  /// Colour when liked. Defaults to `Colors.red.shade400`.
   final Color? likedColor;
 
-  /// Colour when not liked. Defaults to `ColorScheme.onSurfaceVariant`.
   final Color? defaultColor;
 
-  /// Whether to show the count next to the heart.
   final bool showCount;
 
   @override
@@ -73,7 +60,6 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
   @override
   void didUpdateWidget(covariant AnimatedLikeButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync with parent when not in the middle of a network call.
     if (!_busy) {
       _liked = widget.isLiked;
       _count = widget.likeCount;
@@ -90,7 +76,6 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
     if (_busy) return;
     _busy = true;
 
-    // Optimistic update
     final prevLiked = _liked;
     final prevCount = _count;
     setState(() {
@@ -102,7 +87,6 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
     try {
       final serverLiked = await widget.onToggle();
       if (!mounted) return;
-      // If the server response is available and differs, correct the state.
       if (serverLiked != null && serverLiked != _liked) {
         setState(() {
           _liked = serverLiked;
@@ -112,7 +96,6 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
         });
       }
     } catch (_) {
-      // Revert on error
       if (mounted) {
         setState(() {
           _liked = prevLiked;

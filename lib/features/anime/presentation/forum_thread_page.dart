@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +47,6 @@ List<Map<String, dynamic>> _parseChildComments(dynamic raw) {
   return const [];
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class ForumThreadPage extends ConsumerStatefulWidget {
   const ForumThreadPage({
     super.key,
@@ -195,10 +194,8 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           _commentLikeCount[newId] = 0;
         }
         if (replyTarget == null) {
-          // Top-level comment — append to list
           _comments = [..._comments, newComment];
         } else {
-          // Reply — insert into parent's childComments
           _comments = _comments.map((c) {
             if (c['id'] == replyTarget.id) {
               final children = List<dynamic>.from(
@@ -211,7 +208,6 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           }).toList();
         }
       });
-      // Scroll to bottom after adding a top-level comment
       if (replyTarget == null && _scrollController.hasClients) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollController.animateTo(
@@ -607,7 +603,6 @@ class _CommentTileState extends State<_CommentTile> {
           ),
           if (hasChildren) ...[
             const SizedBox(height: 10),
-            // Collapse/expand toggle strip
             InkWell(
               onTap: () => setState(() => _collapsed = !_collapsed),
               borderRadius: BorderRadius.circular(6),
@@ -668,7 +663,6 @@ class _CommentTileState extends State<_CommentTile> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _CommentHeader extends StatelessWidget {
   const _CommentHeader({
     required this.avatar,
@@ -723,7 +717,6 @@ class _CommentHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ReplyButton extends StatelessWidget {
   const _ReplyButton({
     required this.onTap,
@@ -761,7 +754,6 @@ class _ReplyButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _LockedChip extends StatelessWidget {
   const _LockedChip({required this.cs, this.small = false});
 
@@ -798,7 +790,6 @@ class _LockedChip extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ChildCommentTile extends StatelessWidget {
   const _ChildCommentTile({
     required this.comment,
@@ -885,7 +876,6 @@ class _ChildCommentTile extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _ReplyInputBar extends ConsumerWidget {
   const _ReplyInputBar({
     required this.controller,

@@ -13,7 +13,6 @@ class DriveBackupRepository implements BackupRepository {
 
   final GoogleSignIn _googleSignIn;
 
-  /// [GoogleDriveFailure.message] cuando no existe el fichero de copia en appData.
   static const String noDriveBackupFailureMessage = 'No backup found';
 
   static const _fileName = 'cronicle_backup.json';
@@ -60,8 +59,6 @@ class DriveBackupRepository implements BackupRepository {
     return right(unit);
   }
 
-  /// Sube la copia solo si ya hay tokens de Drive **sin** abrir UI de permisos.
-  /// Para tareas en segundo plano (Workmanager).
   Future<AppResult<Unit>> uploadBackupWithoutUserInteraction(
     Uint8List data,
   ) async {

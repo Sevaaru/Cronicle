@@ -6,7 +6,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
-/// Tarjeta estilo búsqueda (portada, chips, géneros, nota, botón + a biblioteca).
 class BrowseResultCard extends StatelessWidget {
   const BrowseResultCard({
     super.key,
@@ -21,10 +20,8 @@ class BrowseResultCard extends StatelessWidget {
   final MediaKind kind;
   final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
 
-  /// Ej.: fecha de salida en listados IGDB "Próximamente".
   final String? releaseDateLine;
 
-  /// Whether this item is already in the user's library.
   final bool inLibrary;
 
   @override

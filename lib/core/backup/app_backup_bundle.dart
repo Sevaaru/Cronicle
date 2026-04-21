@@ -14,7 +14,6 @@ import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:drift/drift.dart' show Value;
 
-/// Claves en [FlutterSecureStorage] que se incluyen en el backup cifrado en Drive.
 const _secureKeysForBackup = <String>[
   'anilist_access_token',
   'anilist_user_name',
@@ -32,7 +31,6 @@ const _secureKeysForBackup = <String>[
   'trakt_user_avatar_url',
 ];
 
-/// JSON de copia: biblioteca Drift, key-value Drift, SharedPreferences y tokens seguros.
 abstract final class AppBackupBundle {
   static const currentVersion = 3;
 
@@ -97,8 +95,6 @@ abstract final class AppBackupBundle {
     return m;
   }
 
-  /// Restaura desde JSON (v1 solo library/keyValues; v2 añade prefs y secure; v3 scores 0-100).
-  /// Devuelve número de filas de biblioteca importadas.
   static Future<int> restoreFromJson({
     required Map<String, dynamic> json,
     required AppDatabase db,
@@ -170,7 +166,6 @@ abstract final class AppBackupBundle {
     for (final e in entries) {
       try {
         final rawScore = e['score'] as int?;
-        // v1/v2 backups stored scores as 0-10; v3+ stores 0-100.
         final score100 = (backupVersion < 3 && rawScore != null && rawScore > 0)
             ? rawScore * 10
             : rawScore;

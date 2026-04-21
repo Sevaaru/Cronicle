@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-/// Entrada ordenable en listas de personalización (feed, biblioteca).
 class LayoutSlot {
   const LayoutSlot({required this.id, this.visible = true});
 

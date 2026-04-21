@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Contadores de seguidores / seguidos Anilist; al pulsar abre la lista correspondiente.
 class AnilistProfileFollowRow extends StatelessWidget {
   const AnilistProfileFollowRow({
     super.key,

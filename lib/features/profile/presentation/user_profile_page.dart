@@ -125,7 +125,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Banner 150px; fila avatar en top: 105 con radio 38 + borde 4 → baja hasta ~189px.
     const bannerH = 150.0;
     const avatarRowTop = 105.0;
     const avatarOuter = 84.0; // (38+4)*2
@@ -289,7 +288,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   const SizedBox(height: 12),
                 ],
 
-                // Stats
                 _SectionHeader(l10n.sectionAnime, Icons.animation_rounded, cs.primary),
                 const SizedBox(height: 8),
                 GlassCard(
@@ -317,7 +315,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ),
 
-                // Favoritos anime
                 if (favAnime.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _SectionHeader(l10n.sectionFavAnime, Icons.favorite_rounded, Colors.red.shade400),
@@ -336,7 +333,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos manga
                 if (favManga.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavManga, Icons.favorite_rounded, Colors.red.shade400),
@@ -355,7 +351,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos personajes
                 if (favCharacters.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavCharacters, Icons.face_rounded, Colors.pinkAccent),
@@ -374,7 +369,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos staff
                 if (favStaff.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavStaff, Icons.badge_rounded, Colors.indigoAccent),
@@ -393,7 +387,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Actividad reciente
                 if (_activity.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _SectionHeader(l10n.sectionRecentActivity, Icons.history_rounded, cs.tertiary),

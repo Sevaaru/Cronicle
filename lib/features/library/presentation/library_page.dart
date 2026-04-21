@@ -27,8 +27,6 @@ import 'package:cronicle/shared/widgets/glass_card.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
 
-/// [PopupMenuItem] con `value: null` no es seleccionable (Material lo trata como divisor).
-/// En el menú usamos cadena vacía para «todas» y la mapeamos a `null` en el estado.
 const _statusMenuValueAll = '';
 
 String _statusLabel(String? key, AppLocalizations l10n) => switch (key) {
@@ -320,12 +318,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
           const SizedBox(height: 6),
 
-          // Status dropdown + Sort chips
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                // Status dropdown
                 _StatusDropdown(
                   value: _selectedStatus,
                   label: _statusLabel(_selectedStatus, l10n),
@@ -339,7 +335,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   color: cs.outlineVariant.withAlpha(60),
                 ),
                 const SizedBox(width: 8),
-                // Sort chips
                 Expanded(
                   child: SizedBox(
                     height: 36,
@@ -380,7 +375,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
           const SizedBox(height: 6),
 
-          // List
           Expanded(
             child: listAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -453,13 +447,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
-  /// Descarga en segundo plano las listas de AniList y Trakt para reflejar
-  /// cambios hechos fuera de la app (p. ej. desde la web).
   Future<void> _silentRemoteMerge() async {
     if (mounted) setState(() => _remoteSyncing = true);
     final db = ref.read(databaseProvider);
     var changed = false;
-    // AniList
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final auth = ref.read(anilistAuthProvider);
@@ -470,7 +461,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       );
       changed = true;
     } catch (_) {}
-    // Trakt
     try {
       final traktAuth = ref.read(traktAuthProvider);
       final traktApi = ref.read(traktApiProvider);
@@ -517,9 +507,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Status dropdown
-// ---------------------------------------------------------------------------
 class _StatusDropdown extends StatelessWidget {
   const _StatusDropdown({
     required this.value,
@@ -593,9 +580,6 @@ class _StatusDropdown extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Chip builder
-// ---------------------------------------------------------------------------
 Widget _buildChip({
   required String label,
   required IconData icon,
@@ -625,9 +609,6 @@ Widget _buildChip({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Entry card
-// ---------------------------------------------------------------------------
 class _EntryCard extends StatelessWidget {
   const _EntryCard({
     super.key,
@@ -868,9 +849,6 @@ class _EntryCard extends StatelessWidget {
       };
 }
 
-// ---------------------------------------------------------------------------
-// Increment button
-// ---------------------------------------------------------------------------
 class _IncrementButton extends StatefulWidget {
   const _IncrementButton({required this.entry, required this.ref, required this.onUpdated});
   final LibraryEntry entry;

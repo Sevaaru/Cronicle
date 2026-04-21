@@ -8,7 +8,6 @@ import 'package:cronicle/features/trakt/presentation/trakt_home_section_list_pag
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Filtro de contenido «popular» en búsqueda (sin «todo»).
 enum SearchBrowseCategoryMode {
   anime,
   manga,
@@ -20,7 +19,6 @@ enum SearchBrowseCategoryMode {
 
 typedef _HubEntry = ({IconData icon, String title, VoidCallback onTap});
 
-/// Hub sin llamadas a API: solo navega a listas concretas.
 class SearchCategoryBrowseHub extends StatelessWidget {
   const SearchCategoryBrowseHub({super.key, required this.mode});
 
@@ -44,7 +42,6 @@ class SearchCategoryBrowseHub extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 8,
         crossAxisSpacing: 10,
-        // Mitad de altura respecto a un cuadrado (ancho × alto): ratio = ancho/alto = 2
         childAspectRatio: 2,
       ),
       itemCount: entries.length,

@@ -23,10 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/**
- * Quick-glance tile shown on the watch face. Displays the count of in-progress items
- * cached on the watch and tapping launches [MainActivity].
- */
 class LibraryTileService : TileService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

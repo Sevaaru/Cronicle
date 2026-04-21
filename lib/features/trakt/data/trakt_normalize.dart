@@ -1,7 +1,5 @@
 import 'package:cronicle/features/trakt/data/trakt_genre_utils.dart';
 
-/// Trakt devuelve rutas tipo `media.trakt.tv/images/...` sin esquema; en web el
-/// `<img>` las resolvería contra el origen de la app y fallan.
 String? _httpsImageUrl(String? url) {
   if (url == null || url.isEmpty) return null;
   final t = url.trim();
@@ -74,8 +72,6 @@ Map<String, dynamic> _detailExtras(Map<String, dynamic> raw, {required bool isSh
   };
 }
 
-/// Convierte un objeto `movie` de Trakt a la forma que usan [BrowseResultCard] y
-/// [showAddToLibrarySheet] (título Anilist-like + `id` numérico Trakt).
 Map<String, dynamic> normalizeTraktMovie(Map<String, dynamic> raw) {
   final ids = raw['ids'] as Map<String, dynamic>? ?? {};
   final traktId = ids['trakt'];

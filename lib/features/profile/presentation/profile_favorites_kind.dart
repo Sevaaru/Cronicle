@@ -1,4 +1,3 @@
-/// Segmentos de ruta `/profile/favorites/:kind`.
 enum ProfileFavoritesKind {
   anime('anime'),
   manga('manga'),

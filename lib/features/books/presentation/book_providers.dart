@@ -9,18 +9,12 @@ import 'package:cronicle/features/books/data/datasources/google_books_api_dataso
 
 part 'book_providers.g.dart';
 
-// ---------------------------------------------------------------------------
-// Datasource singleton
-// ---------------------------------------------------------------------------
 
 @Riverpod(keepAlive: true)
 GoogleBooksApiDatasource googleBooksApi(GoogleBooksApiRef ref) {
   return GoogleBooksApiDatasource(ref.watch(dioProvider));
 }
 
-// ---------------------------------------------------------------------------
-// Search
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookSearch(
@@ -32,11 +26,7 @@ Future<List<Map<String, dynamic>>> bookSearch(
   return api.searchBooks(query);
 }
 
-// ---------------------------------------------------------------------------
-// Trending / Discover
-// ---------------------------------------------------------------------------
 
-/// All home feed sections, fetched sequentially to avoid rate-limit 503.
 class BooksHomeFeedData {
   const BooksHomeFeedData({
     required this.trending,
@@ -70,7 +60,6 @@ Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
     }
   }
 
-  // Fetch sequentially with delays to avoid 503 rate-limit
   final trending = await safe(() => api.fetchTrending(limit: 20));
   await Future<void>.delayed(delay);
   final love = await safe(() => api.fetchSubject('love', limit: 20));
@@ -116,9 +105,6 @@ Future<List<Map<String, dynamic>>> bookSubject(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Work detail
-// ---------------------------------------------------------------------------
 
 @Riverpod(keepAlive: true)
 Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
@@ -126,9 +112,6 @@ Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
   return api.fetchWork(workKey);
 }
 
-// ---------------------------------------------------------------------------
-// Favorite books (local, SharedPreferences — same pattern as games / trakt)
-// ---------------------------------------------------------------------------
 
 const _favoriteBooksPrefsKey = 'favorite_books_v1';
 
@@ -182,9 +165,6 @@ class FavoriteBooks extends _$FavoriteBooks {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Subject browse (uses search endpoint for richer data + client-side sorting)
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookSubjectBrowse(
@@ -196,9 +176,6 @@ Future<List<Map<String, dynamic>>> bookSubjectBrowse(
   return api.searchBooksBySubject(subject, maxResults: limit);
 }
 
-// ---------------------------------------------------------------------------
-// Editions for a work
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookWorkEditions(

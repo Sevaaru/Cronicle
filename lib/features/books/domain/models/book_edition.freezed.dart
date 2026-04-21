@@ -1,13 +1,6 @@
-// coverage:ignore-file
-// GENERATED CODE - DO NOT MODIFY BY HAND
-// ignore_for_file: type=lint
-// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'book_edition.dart';
 
-// **************************************************************************
-// FreezedGenerator
-// **************************************************************************
 
 T _$identity<T>(T value) => value;
 
@@ -19,7 +12,6 @@ BookEdition _$BookEditionFromJson(Map<String, dynamic> json) {
   return _BookEdition.fromJson(json);
 }
 
-/// @nodoc
 mixin _$BookEdition {
   String get editionKey => throw _privateConstructorUsedError;
   String? get isbn => throw _privateConstructorUsedError;
@@ -30,17 +22,13 @@ mixin _$BookEdition {
   String? get publishDate => throw _privateConstructorUsedError;
   String? get coverUrl => throw _privateConstructorUsedError;
 
-  /// Serializes this BookEdition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of BookEdition
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   $BookEditionCopyWith<BookEdition> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
-/// @nodoc
 abstract class $BookEditionCopyWith<$Res> {
   factory $BookEditionCopyWith(
     BookEdition value,
@@ -59,18 +47,13 @@ abstract class $BookEditionCopyWith<$Res> {
   });
 }
 
-/// @nodoc
 class _$BookEditionCopyWithImpl<$Res, $Val extends BookEdition>
     implements $BookEditionCopyWith<$Res> {
   _$BookEditionCopyWithImpl(this._value, this._then);
 
-  // ignore: unused_field
   final $Val _value;
-  // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of BookEdition
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -123,7 +106,6 @@ class _$BookEditionCopyWithImpl<$Res, $Val extends BookEdition>
   }
 }
 
-/// @nodoc
 abstract class _$$BookEditionImplCopyWith<$Res>
     implements $BookEditionCopyWith<$Res> {
   factory _$$BookEditionImplCopyWith(
@@ -144,7 +126,6 @@ abstract class _$$BookEditionImplCopyWith<$Res>
   });
 }
 
-/// @nodoc
 class __$$BookEditionImplCopyWithImpl<$Res>
     extends _$BookEditionCopyWithImpl<$Res, _$BookEditionImpl>
     implements _$$BookEditionImplCopyWith<$Res> {
@@ -153,8 +134,6 @@ class __$$BookEditionImplCopyWithImpl<$Res>
     $Res Function(_$BookEditionImpl) _then,
   ) : super(_value, _then);
 
-  /// Create a copy of BookEdition
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -206,7 +185,6 @@ class __$$BookEditionImplCopyWithImpl<$Res>
   }
 }
 
-/// @nodoc
 @JsonSerializable()
 class _$BookEditionImpl implements _BookEdition {
   const _$BookEditionImpl({
@@ -239,7 +217,6 @@ class _$BookEditionImpl implements _BookEdition {
   @JsonKey()
   List<String> get publishers {
     if (_publishers is EqualUnmodifiableListView) return _publishers;
-    // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_publishers);
   }
 
@@ -289,8 +266,6 @@ class _$BookEditionImpl implements _BookEdition {
     coverUrl,
   );
 
-  /// Create a copy of BookEdition
-  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
@@ -335,8 +310,6 @@ abstract class _BookEdition implements BookEdition {
   @override
   String? get coverUrl;
 
-  /// Create a copy of BookEdition
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$BookEditionImplCopyWith<_$BookEditionImpl> get copyWith =>

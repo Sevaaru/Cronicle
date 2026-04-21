@@ -17,10 +17,6 @@ import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/cronicle_app.dart';
-// Imported solely so that `wearSyncMain` (the Wear OS background entrypoint)
-// is included in the Dart kernel bundle. Otherwise the `@pragma('vm:entry-point')`
-// has nothing to protect — the file would never be compiled.
-// ignore: unused_import
 import 'package:cronicle/wear_sync_entry.dart';
 
 String? _trimOrNull(String value) {
@@ -28,7 +24,6 @@ String? _trimOrNull(String value) {
   return t.isEmpty ? null : t;
 }
 
-/// Pestaña «Siguiendo»/«Global» → «feed» + ámbito por defecto (una sola vez en disco).
 Future<void> _migrateUnifiedFeedPreferences(SharedPreferences p) async {
   final tab = p.getString('default_feed_tab');
   if (tab == 'following') {
@@ -85,7 +80,6 @@ Future<void> main() async {
     await GoogleDriveBackupScheduler.applyFromPrefs(prefs);
   }
 
-  // Normalizar status de entries guardados con lowercase
   try {
     await AppDatabase().normalizeStatuses();
   } catch (_) {}
@@ -113,7 +107,6 @@ Future<void> _handleAnilistOAuthCallback() async {
     if (name != null && name.isNotEmpty) {
       await auth.saveUserName(name);
     }
-    // Persist AniList scoring format so it becomes the app default.
     final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
     final fmt = opts?['scoreFormat'] as String?;
     if (fmt != null) {

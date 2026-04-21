@@ -7,7 +7,6 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
-/// Anilist forum category IDs.
 enum _ForumCategory {
   all(null, 'All', Icons.forum_rounded),
   general(7, 'General', Icons.chat_rounded),
@@ -51,7 +50,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
   bool _loading = true;
   String? _error;
 
-  // Search state
   final _searchController = TextEditingController();
   List<Map<String, dynamic>>? _searchResults;
   bool _searching = false;
@@ -169,12 +167,10 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
 
     return Column(
       children: [
-        // Category dropdown + search bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              // Dropdown — 50% width
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.5 - 16,
                 child: _ForumCategoryDropdown(
@@ -183,7 +179,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
                 ),
               ),
               const SizedBox(width: 8),
-              // Search field
               Expanded(
                 child: SizedBox(
                   height: 38,
@@ -227,7 +222,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
           ),
         ),
 
-        // Content — search results or feed sections
         Expanded(
           child: _isSearchActive
               ? _buildSearchResults(cs, l10n)
@@ -317,7 +311,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          // Sticky / Pinned
           if (_stickyThreads != null &&
               _stickyThreads!.isNotEmpty) ...[
             _SectionHeader(
@@ -332,7 +325,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Recently replied
           if (_recentlyReplied != null &&
               _recentlyReplied!.isNotEmpty) ...[
             _SectionHeader(
@@ -346,7 +338,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Newly created
           if (_newlyCreated != null &&
               _newlyCreated!.isNotEmpty) ...[
             _SectionHeader(
@@ -360,7 +351,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Release discussions
           if (_releaseDiscussions != null &&
               _releaseDiscussions!.isNotEmpty) ...[
             _SectionHeader(
@@ -380,7 +370,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ForumCategoryDropdown extends StatelessWidget {
   const _ForumCategoryDropdown({
     required this.current,
@@ -449,7 +438,6 @@ class _ForumCategoryDropdown extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.icon,
@@ -475,7 +463,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 String _forumTimeAgo(int? ts) {
   if (ts == null) return '';
   final dt = DateTime.fromMillisecondsSinceEpoch(ts * 1000);

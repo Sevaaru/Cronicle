@@ -39,9 +39,6 @@ class BookDetailPage extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Carga: layout similar al detalle (placeholders grises, sin spinner aislado)
-// ---------------------------------------------------------------------------
 
 class _BookDetailLoadingView extends StatelessWidget {
   const _BookDetailLoadingView();
@@ -173,9 +170,6 @@ class _BookDetailLoadingView extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main content — mirrors the anime / manga detail layout
-// ---------------------------------------------------------------------------
 
 class _DetailContent extends StatelessWidget {
   const _DetailContent({required this.book, required this.workKey});
@@ -239,7 +233,6 @@ class _DetailContent extends StatelessWidget {
       ),
       child: CustomScrollView(
         slivers: [
-          // ── Banner + poster + title ──────────────────────────────
           SliverToBoxAdapter(
             child: Column(
               children: [
@@ -250,7 +243,6 @@ class _DetailContent extends StatelessWidget {
                       headerOverflowAllowance,
                   child: Stack(
                     children: [
-                      // Banner (reuses poster as blurred background)
                       GestureDetector(
                         onTap: poster != null
                             ? () => showFullscreenImage(context, poster)
@@ -293,7 +285,6 @@ class _DetailContent extends StatelessWidget {
                         ),
                       ),
 
-                      // Poster + title
                       Positioned(
                         left: 16,
                         right: 16,
@@ -381,7 +372,6 @@ class _DetailContent extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // Format / metadata chips
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Wrap(
@@ -407,7 +397,6 @@ class _DetailContent extends StatelessWidget {
             ),
           ),
 
-          // ── Body ─────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -416,7 +405,6 @@ class _DetailContent extends StatelessWidget {
                 children: [
                   const SizedBox(height: 12),
 
-                  // Favorite toggle + Add-to-library row
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -430,10 +418,8 @@ class _DetailContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Reading progress card (only shown when entry exists)
                   _BookProgressCard(workKey: workKey),
 
-                  // Subtitle
                   if (subtitle != null && subtitle.isNotEmpty) ...[
                     Text(
                       subtitle,
@@ -445,7 +431,6 @@ class _DetailContent extends StatelessWidget {
                     const SizedBox(height: 10),
                   ],
 
-                  // Stats card (rating + count + pages + year)
                   if (score != null ||
                       ratingsCount != null ||
                       (pages != null && pages > 0) ||
@@ -489,7 +474,6 @@ class _DetailContent extends StatelessWidget {
                       ),
                     ),
 
-                  // Action buttons: preview, web reader, buy, reviews
                   if (previewLink != null ||
                       webReaderLink != null ||
                       buyLink != null ||
@@ -534,7 +518,6 @@ class _DetailContent extends StatelessWidget {
                       ),
                     ),
 
-                  // Info card
                   SizedBox(
                     width: double.infinity,
                     child: GlassCard(
@@ -592,7 +575,6 @@ class _DetailContent extends StatelessWidget {
                     ),
                   ),
 
-                  // Identifiers card (ISBN-10, ISBN-13)
                   if (isbn10 != null || isbn13 != null)
                     SizedBox(
                       width: double.infinity,
@@ -616,7 +598,6 @@ class _DetailContent extends StatelessWidget {
                       ),
                     ),
 
-                  // Subjects / genres
                   if (genres.isNotEmpty) ...[
                     Text(
                       l10n.bookDetailSubjects,
@@ -642,7 +623,6 @@ class _DetailContent extends StatelessWidget {
                     const SizedBox(height: 12),
                   ],
 
-                  // Description
                   if (description != null && description.isNotEmpty) ...[
                     Text(l10n.bookDetailDescription,
                         style: const TextStyle(
@@ -661,7 +641,6 @@ class _DetailContent extends StatelessWidget {
                     const SizedBox(height: 16),
                   ],
 
-                  // Open in Google Books link
                   Center(
                     child: TextButton.icon(
                       icon: const Icon(Icons.open_in_new, size: 16),
@@ -747,9 +726,6 @@ class _DetailContent extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Star rating row (0..5 with halves)
-// ---------------------------------------------------------------------------
 
 class _StarRow extends StatelessWidget {
   const _StarRow({required this.rating});
@@ -783,9 +759,6 @@ class _StarRow extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Action chip used in the row of detail-page actions
-// ---------------------------------------------------------------------------
 
 class _ActionChip extends StatelessWidget {
   const _ActionChip({
@@ -828,9 +801,6 @@ class _ActionChip extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Copyable identifier row (ISBN-10/13)
-// ---------------------------------------------------------------------------
 
 class _CopyableRow extends StatelessWidget {
   const _CopyableRow({required this.label, required this.value});
@@ -880,9 +850,6 @@ class _CopyableRow extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Reusable small widgets (same style as anime / manga detail)
-// ---------------------------------------------------------------------------
 
 class _Tag extends StatelessWidget {
   const _Tag(this.text, this.bg, this.fg);
@@ -954,9 +921,6 @@ class _InfoPill extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Reading progress card (shown when entry exists in library)
-// ---------------------------------------------------------------------------
 
 class _BookProgressCard extends ConsumerWidget {
   const _BookProgressCard({required this.workKey});
@@ -1056,9 +1020,6 @@ class _BookProgressCard extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Favorite toggle (local SharedPreferences — same pattern as games)
-// ---------------------------------------------------------------------------
 
 class _BookFavoriteButton extends ConsumerWidget {
   const _BookFavoriteButton({required this.book});
@@ -1095,9 +1056,6 @@ class _BookFavoriteButton extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Add-to-library button (reactive, matches anime detail)
-// ---------------------------------------------------------------------------
 
 class _AddToLibraryButton extends ConsumerStatefulWidget {
   const _AddToLibraryButton({required this.book, required this.workKey});

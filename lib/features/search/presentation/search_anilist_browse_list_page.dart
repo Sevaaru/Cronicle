@@ -35,7 +35,6 @@ String searchAnilistBrowseTitle(AppLocalizations l10n, String category) =>
       _ => category,
     };
 
-/// Lista paginada Anilist desde búsqueda (`/search/anilist/...`).
 class SearchAnilistBrowseListPage extends ConsumerStatefulWidget {
   const SearchAnilistBrowseListPage({
     super.key,

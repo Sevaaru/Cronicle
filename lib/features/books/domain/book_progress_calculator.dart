@@ -1,7 +1,6 @@
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Tracking modes for book progress.
 enum BookTrackingMode {
   pages,
   percentage,
@@ -14,40 +13,25 @@ enum BookTrackingMode {
       };
 }
 
-/// Pure-function utilities for book reading-progress calculations.
-///
-/// Priority for totals: user override → API value → null (user enters manually).
 class BookProgressCalculator {
   const BookProgressCalculator._();
 
-  // ---------------------------------------------------------------------------
-  // Effective totals
-  // ---------------------------------------------------------------------------
 
-  /// Returns the effective total pages for this entry.
-  /// Priority: userTotalPagesOverride → totalPagesFromApi → totalEpisodes (legacy) → null.
   static int? getEffectiveTotalPages(LibraryEntry entry) {
     return entry.userTotalPagesOverride ??
         entry.totalPagesFromApi ??
         entry.totalEpisodes;
   }
 
-  /// Returns the effective total chapters for this entry.
-  /// Priority: userTotalChaptersOverride → totalChaptersFromApi → null.
   static int? getEffectiveTotalChapters(LibraryEntry entry) {
     return entry.userTotalChaptersOverride ?? entry.totalChaptersFromApi;
   }
 
-  /// Resolved tracking mode.
   static BookTrackingMode getTrackingMode(LibraryEntry entry) {
     return BookTrackingMode.fromString(entry.bookTrackingMode);
   }
 
-  // ---------------------------------------------------------------------------
-  // Progress percentage (always 0–100)
-  // ---------------------------------------------------------------------------
 
-  /// Calculate completion percentage based on the current tracking mode.
   static double calculateProgressPercentage(LibraryEntry entry) {
     final mode = getTrackingMode(entry);
     switch (mode) {
@@ -58,7 +42,6 @@ class BookProgressCalculator {
         return (current / total * 100).clamp(0, 100);
 
       case BookTrackingMode.percentage:
-        // `progress` stores the raw percentage (0–100).
         return (entry.progress ?? 0).toDouble().clamp(0, 100);
 
       case BookTrackingMode.chapters:
@@ -69,11 +52,7 @@ class BookProgressCalculator {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Friendly text helpers
-  // ---------------------------------------------------------------------------
 
-  /// Human-readable progress string, e.g. "Page 120 of 350 (34%)".
   static String getProgressText(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
     final pct = calculateProgressPercentage(entry).round();
@@ -100,7 +79,6 @@ class BookProgressCalculator {
     }
   }
 
-  /// "X pages left" / "X chapters left" depending on mode.
   static String? getRemainingText(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
 
@@ -124,7 +102,6 @@ class BookProgressCalculator {
     }
   }
 
-  /// Short label for library list cards, e.g. "120/350" or "34%".
   static String getShortProgressLabel(LibraryEntry entry, AppLocalizations l10n) {
     final mode = getTrackingMode(entry);
 
@@ -148,7 +125,6 @@ class BookProgressCalculator {
     }
   }
 
-  /// The effective "max" value for the increment button cap.
   static int? getIncrementCap(LibraryEntry entry) {
     final mode = getTrackingMode(entry);
     return switch (mode) {

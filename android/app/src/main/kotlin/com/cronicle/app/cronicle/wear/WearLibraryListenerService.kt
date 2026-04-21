@@ -10,21 +10,6 @@ import com.google.android.gms.wearable.WearableListenerService
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Phone-side service that responds to messages sent from the Wear OS companion app.
- *
- * Two endpoints (paths) are handled:
- *   - `/library/request_sync` → reads the in-progress rows from the Drift database and
- *     publishes a JSON snapshot at the DataClient path `/library/items`. The watch's
- *     `WearableListenerService` picks up the change and refreshes its UI.
- *   - `/library/action` → applies an `increment` or `complete` action against the
- *     given `(kind, externalId)` row, then re-publishes the snapshot so the watch
- *     reflects the new state immediately.
- *
- * Important: this service runs even when the Flutter app is not in the foreground —
- * Android starts it on-demand when a message arrives. It must therefore be free of
- * Flutter dependencies and write directly to the SQLite file.
- */
 class WearLibraryListenerService : WearableListenerService() {
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
@@ -63,11 +48,7 @@ class WearLibraryListenerService : WearableListenerService() {
             }
             Log.d(TAG, "Applied $action on $kind:$externalId → $applied")
             if (applied) {
-                // Push the change to AniList / Trakt by booting a hidden Flutter
-                // engine. Drift already has the new local state.
                 WearRemoteSyncService.enqueueAndLaunch(applicationContext, kind, externalId)
-                // Notify the foreground Flutter app (if running) so it invalidates
-                // its in-memory Drift streams and re-reads the database.
                 try {
                     val intent = Intent(com.cronicle.app.cronicle.MainActivity.ACTION_LIBRARY_CHANGED)
                         .setPackage(packageName)
@@ -122,7 +103,6 @@ class WearLibraryListenerService : WearableListenerService() {
     companion object {
         private const val TAG = "WearLibraryListener"
 
-        // Must mirror the Wear-side `WearProtocol` constants.
         private const val PATH_REQUEST_SYNC = "/library/request_sync"
         private const val PATH_LIBRARY_ITEMS = "/library/items"
         private const val PATH_ACTION = "/library/action"

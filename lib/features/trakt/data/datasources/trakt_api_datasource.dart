@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/trakt/data/trakt_normalize.dart';
 
-/// Trakt.tv API v2. Requiere [EnvConfig.traktClientId] en cabecera `trakt-api-key`.
 class TraktApiDatasource {
   TraktApiDatasource(this._dio);
 
@@ -112,7 +111,6 @@ class TraktApiDatasource {
 
   Future<List<Map<String, dynamic>>> moviesPopular({
     int limit = 20,
-    /// Rango de años de estreno Trakt, p. ej. `2024-2024` o `2010-2015`.
     String? years,
   }) async {
     final res = await _dio.get<dynamic>(
@@ -143,7 +141,6 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  /// Películas más esperadas (la API **no** expone `/movies/watching`; solo existe para series).
   Future<List<Map<String, dynamic>>> moviesAnticipated({int limit = 30}) async {
     final res = await _dio.get<dynamic>(
       '$_base/movies/anticipated',
@@ -153,7 +150,6 @@ class TraktApiDatasource {
     return _fromTrendingMovies(_list(res.data));
   }
 
-  /// Películas más reproducidas en el período indicado (`weekly`, `monthly`, `yearly`, `all`).
   Future<List<Map<String, dynamic>>> moviesPlayed({
     String period = 'weekly',
     int limit = 20,
@@ -166,7 +162,6 @@ class TraktApiDatasource {
     return _fromTrendingMovies(_list(res.data));
   }
 
-  /// Películas más vistas (usuarios únicos) en el período indicado.
   Future<List<Map<String, dynamic>>> moviesWatched({
     String period = 'weekly',
     int limit = 20,
@@ -179,7 +174,6 @@ class TraktApiDatasource {
     return _fromTrendingMovies(_list(res.data));
   }
 
-  /// Películas más coleccionadas en el período indicado.
   Future<List<Map<String, dynamic>>> moviesCollected({
     String period = 'weekly',
     int limit = 20,
@@ -192,7 +186,6 @@ class TraktApiDatasource {
     return _fromTrendingMovies(_list(res.data));
   }
 
-  /// Series más esperadas.
   Future<List<Map<String, dynamic>>> showsAnticipated({int limit = 20}) async {
     final res = await _dio.get<dynamic>(
       '$_base/shows/anticipated',
@@ -202,7 +195,6 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  /// Series más vistas (usuarios únicos) en el período indicado.
   Future<List<Map<String, dynamic>>> showsWatched({
     String period = 'weekly',
     int limit = 20,
@@ -215,7 +207,6 @@ class TraktApiDatasource {
     return _fromTrendingShows(_list(res.data));
   }
 
-  /// Series más coleccionadas en el período indicado.
   Future<List<Map<String, dynamic>>> showsCollected({
     String period = 'weekly',
     int limit = 20,
@@ -327,7 +318,6 @@ class TraktApiDatasource {
     return normalizeTraktShow(raw);
   }
 
-  /// Historial visto (OAuth). Películas completadas / reproducidas.
   Future<List<Map<String, dynamic>>> syncWatchedMovies(String accessToken) async {
     final res = await _dio.get<dynamic>(
       '$_base/sync/watched/movies',
@@ -347,7 +337,6 @@ class TraktApiDatasource {
     return out;
   }
 
-  /// Historial series (OAuth).
   Future<List<Map<String, dynamic>>> syncWatchedShows(String accessToken) async {
     final res = await _dio.get<dynamic>(
       '$_base/sync/watched/shows',
@@ -378,7 +367,6 @@ class TraktApiDatasource {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  /// Estadísticas públicas de usuario (`/users/{slug}/stats`).
   Future<Map<String, dynamic>> fetchUserStats(String userSlug) async {
     final enc = Uri.encodeComponent(userSlug);
     final res = await _dio.get<dynamic>(
@@ -389,10 +377,6 @@ class TraktApiDatasource {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  /// Favoritos de película en perfil Trakt (excluye anime en normalización).
-  ///
-  /// [accessToken]: OAuth del usuario; necesario si el perfil o los favoritos
-  /// son privados (sin token la API suele devolver 401 y la lista queda vacía).
   Future<List<Map<String, dynamic>>> fetchUserFavoriteMovies(
     String userSlug, {
     int limit = 40,
@@ -412,9 +396,6 @@ class TraktApiDatasource {
     return _favoriteRowsToMedia(_list(res.data), nestedKey: 'movie', isShow: false);
   }
 
-  /// Favoritos de serie en perfil Trakt (excluye anime en normalización).
-  ///
-  /// [accessToken]: OAuth del usuario para favoritos / perfil privado.
   Future<List<Map<String, dynamic>>> fetchUserFavoriteShows(
     String userSlug, {
     int limit = 40,
@@ -481,8 +462,6 @@ class TraktApiDatasource {
     }
   }
 
-  /// Episodios en orden emisión (temporada asc, episodio asc). Omite temporada 0
-  /// (especiales) si existe al menos una temporada > 0.
   Future<List<(int season, int episode)>> fetchShowEpisodesAiringOrder(int showTraktId) async {
     final res = await _dio.get<dynamic>(
       '$_base/shows/$showTraktId/seasons',

@@ -11,7 +11,6 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
-/// Estadísticas detalladas (Anilist, Trakt, juegos locales) fuera del perfil principal.
 class PersonalStatsPage extends ConsumerWidget {
   const PersonalStatsPage({super.key});
 

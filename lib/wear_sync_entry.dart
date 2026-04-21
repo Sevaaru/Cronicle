@@ -1,12 +1,3 @@
-// Headless Dart entry point that the phone-side WearableListenerService spins up
-// in a hidden FlutterEngine after applying a watch action to the local database.
-//
-// The job here is to drain the small JSONL queue that Kotlin appends to
-// (`<docs>/wear_pending.jsonl`) and push every queued action to AniList / Trakt,
-// then signal Kotlin via a MethodChannel so it can dispose the engine.
-//
-// Because we run in a separate isolate, plugins must be registered explicitly
-// via `DartPluginRegistrant.ensureInitialized()`.
 
 import 'dart:convert';
 import 'dart:io';
@@ -31,8 +22,6 @@ const _channelName = 'cronicle.wear.sync';
 @pragma('vm:entry-point')
 Future<void> wearSyncMain() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Required for plugins (path_provider, flutter_secure_storage, …) to work
-  // in this background FlutterEngine isolate.
   DartPluginRegistrant.ensureInitialized();
   debugPrint('[Cronicle] wearSyncMain starting');
 
@@ -59,7 +48,6 @@ Future<void> _drainPendingActions() async {
     } catch (_) {}
     return;
   }
-  // Delete eagerly so concurrent appends don't get re-processed.
   try {
     await file.delete();
   } catch (_) {}
@@ -71,8 +59,6 @@ Future<void> _drainPendingActions() async {
   final trakt = TraktApiDatasource(dio);
   final traktAuth = TraktAuthDatasource(secure, dio);
 
-  // Deduplicate by (kind, externalId): only the latest action per entry needs to
-  // hit the remote service, since the local DB already has the final state.
   final seen = <String>{};
   final queue = <Map<String, dynamic>>[];
   for (final raw in lines.reversed) {

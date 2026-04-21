@@ -9,8 +9,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-/// Browse books by subject with sort options (score, popularity, name).
-/// Mirrors [MediaGenreTagBrowsePage] for anime/manga.
 class BookSubjectBrowsePage extends ConsumerStatefulWidget {
   const BookSubjectBrowsePage({
     super.key,

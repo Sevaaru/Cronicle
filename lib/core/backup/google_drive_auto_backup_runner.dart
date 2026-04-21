@@ -39,8 +39,6 @@ Future<void> _ensureGoogleSignInInitialized() async {
   );
 }
 
-/// Tarea Workmanager: sube el JSON a Drive si el usuario activó la opción,
-/// hay red y ya existe autorización **sin** pedir permisos por UI.
 Future<bool> runGoogleDriveAutoBackupTask() async {
   if (kIsWeb) return true;
   if (!Platform.isAndroid && !Platform.isIOS) return true;

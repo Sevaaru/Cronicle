@@ -20,7 +20,6 @@ bool _movieWatched(String status, int? prog) {
   return s == 'COMPLETED' || (prog ?? 0) >= 1;
 }
 
-/// Lista «quiero ver» en Trakt: planning / paused / repeating / current sin terminar.
 bool _traktWatchlistOn(String status, bool watched) {
   switch (status.toUpperCase()) {
     case 'DROPPED':
@@ -33,7 +32,6 @@ bool _traktWatchlistOn(String status, bool watched) {
   }
 }
 
-/// Sincroniza el estado local de una fila de biblioteca (película o serie Trakt) con Trakt.tv.
 Future<void> pushCronicleLibraryStateToTrakt(
   TraktApiDatasource api,
   String token, {
@@ -146,7 +144,6 @@ Future<void> pushCronicleLibraryStateToTrakt(
   }
 }
 
-/// Lee la entrada en Drift y la empuja a Trakt (si hay token OAuth).
 Future<void> syncTraktEntryFromLocalDatabase(WidgetRef ref, MediaKind kind, int traktId) async {
   final token = await ref.read(traktAuthProvider).getValidAccessToken();
   if (token == null) return;
@@ -169,7 +166,6 @@ Future<void> syncTraktEntryFromLocalDatabase(WidgetRef ref, MediaKind kind, int 
   }
 }
 
-/// Tras borrar en la app: quita de historial, lista y valoraciones en Trakt.
 Future<void> removeTraktRemoteForDeletedEntry(WidgetRef ref, MediaKind kind, int traktId) async {
   final token = await ref.read(traktAuthProvider).getValidAccessToken();
   if (token == null) return;

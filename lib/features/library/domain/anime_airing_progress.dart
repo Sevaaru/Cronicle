@@ -1,9 +1,6 @@
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Episodios emitidos según metadatos de Anilist (anime en emisión).
 abstract final class AnimeAiringProgress {
-  /// Episodios ya emitidos: si el próximo en calendario es el 8, devuelve 7.
-  /// [FINISHED] → `null` (usar total de episodios almacenado en la entrada).
   static int? releasedEpisodesFromAnilistMedia(Map<String, dynamic> media) {
     final status = media['status'] as String?;
     final total = (media['episodes'] as num?)?.toInt();
@@ -24,7 +21,6 @@ abstract final class AnimeAiringProgress {
     return null;
   }
 
-  /// Unix segundos del próximo estreno (`nextAiringEpisode.airingAt` en Anilist).
   static int? nextEpisodeAirsAtSecondsFromAnilistMedia(
     Map<String, dynamic> media,
   ) {
@@ -33,7 +29,6 @@ abstract final class AnimeAiringProgress {
     return (next['airingAt'] as num?)?.toInt();
   }
 
-  /// Vas al día con lo emitido (listo para el siguiente capítulo cuando salga).
   static bool isAnimeCaughtUpWithAiring({
     required int mediaKindCode,
     String? animeMediaStatus,
@@ -48,7 +43,6 @@ abstract final class AnimeAiringProgress {
     return p >= aired;
   }
 
-  /// Segundos restantes hasta el estreno; null si ya pasó o sin dato.
   static int? secondsUntilNextEpisodeAiring(int? airingAtUnixSeconds) {
     if (airingAtUnixSeconds == null) return null;
     final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -56,7 +50,6 @@ abstract final class AnimeAiringProgress {
     return left > 0 ? left : null;
   }
 
-  /// Número del próximo capítulo para mostrar (p. ej. 8 si van 7 emitidos).
   static int? nextEpisodeLabelNumber({
     required int mediaKindCode,
     int? releasedEpisodes,
@@ -67,7 +60,6 @@ abstract final class AnimeAiringProgress {
     return aired + 1;
   }
 
-  /// Tope de progreso en episodios (no marcar más de lo emitido en emisión).
   static int? animeEpisodeProgressCap({
     required int mediaKindCode,
     int? totalEpisodes,
@@ -87,7 +79,6 @@ abstract final class AnimeAiringProgress {
     return total;
   }
 
-  /// Episodios de retraso respecto al último emitido (solo anime RELEASING con dato).
   static int? episodesBehind({
     required int mediaKindCode,
     String? animeMediaStatus,
@@ -103,7 +94,6 @@ abstract final class AnimeAiringProgress {
     return b > 0 ? b : null;
   }
 
-  /// Total mostrado en UI tipo `visto/total` (prioriza emitidos si hay cap de emisión).
   static int? displayEpisodeTotal({
     required int mediaKindCode,
     int? totalEpisodes,
@@ -116,7 +106,6 @@ abstract final class AnimeAiringProgress {
     );
   }
 
-  /// Tope al editar una entrada anime ya guardada (prioriza DB + API).
   static int? maxProgressForStoredAnime({
     required int? totalEpisodes,
     required int? releasedEpisodes,
@@ -128,7 +117,6 @@ abstract final class AnimeAiringProgress {
     );
   }
 
-  /// Máximo permitido al editar progreso en el sheet (anime).
   static int? maxProgressForAnimeItem(Map<String, dynamic> item) {
     final status = item['status'] as String?;
     final episodes = (item['episodes'] as num?)?.toInt();

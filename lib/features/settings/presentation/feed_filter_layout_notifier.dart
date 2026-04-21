@@ -8,7 +8,6 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 
 part 'feed_filter_layout_notifier.g.dart';
 
-/// Orden fijo de ids válidos (coinciden con [Enum.name] de `_FeedFilter` en el feed).
 const feedFilterLayoutDefaultOrder = <String>[
   'anime',
   'manga',
@@ -44,7 +43,6 @@ class FeedFilterLayoutState {
         final vis = m['v'] as bool? ?? true;
         if (id == null) continue;
 
-        // Skip legacy ids that no longer exist.
         if (id == 'following' || id == 'all' || id == 'feed') continue;
 
         if (!valid.contains(id)) continue;

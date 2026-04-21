@@ -4,13 +4,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.dart';
 
-/// IGDB no expone CORS al navegador; en web hace falta [EnvConfig.devApiProxyOrigin]
-/// o usar Android / escritorio.
 class IgdbWebUnsupportedException implements Exception {
   const IgdbWebUnsupportedException();
 }
 
-/// Talks to the IGDB v4 API using Apicalypse query syntax.
 class IgdbApiDatasource {
   IgdbApiDatasource(this._dio, this._auth);
 
@@ -22,13 +19,10 @@ class IgdbApiDatasource {
   static bool get _blockWebWithoutProxy =>
       kIsWeb && !EnvConfig.hasDevApiProxy;
 
-  /// Resuelve el `popularity_type` de visitas IGDB (PopScore); cacheado en memoria.
   int? _cachedVisitPopularityTypeId;
 
-  /// Tras el primer acierto se reutiliza (evita probar `/review` y `/reviews` en cada lista).
   String? _cachedReviewsPath;
 
-  /// Breve pausa solo entre reintentos tras fallo o lista vacía (no bloquear el camino feliz).
   static const _queryRetryDelayMs = 40;
 
   String? _cachedHeaderToken;
@@ -49,14 +43,12 @@ class IgdbApiDatasource {
     return _cachedHeaderOptions!;
   }
 
-  /// Builds an IGDB image URL from an image_id.
   static String coverUrl(String imageId, {String size = 't_cover_big'}) =>
       'https://images.igdb.com/igdb/image/upload/$size/$imageId.jpg';
 
   static String screenshotUrl(String imageId) =>
       'https://images.igdb.com/igdb/image/upload/t_screenshot_big/$imageId.jpg';
 
-  /// Search games by name.
   Future<List<Map<String, dynamic>>> searchGames(String query) async {
     final escaped = query.replaceAll('"', '\\"');
     final body = '''
@@ -68,8 +60,6 @@ limit 20;
     return _postList('/games', body);
   }
 
-  /// Lista ancha para el home cuando un carrusel especializado devuelve [] (misma
-  /// base que Popular pero con [offset] para no repetir exactamente las mismas filas).
   Future<List<Map<String, dynamic>>> fetchGamesHomeRatedPage({
     int limit = 24,
     int offset = 0,
@@ -88,11 +78,7 @@ limit $limit;
     }
   }
 
-  /// Popular vía IGDB PopScore (`/popularity_primitives` + `/games` por ids en
-  /// orden de visitas). Si no hay datos, orden estable por `total_rating`.
   Future<List<Map<String, dynamic>>> fetchPopularGames({int limit = 24}) async {
-    // Una sola petición: mucho más rápido que PopScore (2–3 RTT). Misma calidad
-    // que el primer fallback por rating cuando hay `total_rating`.
     try {
       final fast = await _postList('/games', '''
 fields name, cover.image_id, genres.name, platforms.name, platforms.abbreviation,
@@ -144,11 +130,6 @@ limit $limit;
     return [];
   }
 
-  /// Primera salida comercial en ventana Unix `[startSec, endSec]` (inclusive).
-  ///
-  /// IGDB suele devolver **0 filas** si en `/release_dates` se usa `where game.category = …`:
-  /// los predicados sobre campos expandidos no aplican bien. Por eso se filtra **solo por
-  /// `date`** y se descartan DLC/remasters en cliente con [category] y [version_parent].
   Future<List<Map<String, dynamic>>> fetchGamesByFirstReleaseBetween({
     required int startSec,
     required int endSec,
@@ -176,7 +157,6 @@ limit $limit;
     }
 
     try {
-      // 1) /release_dates: solo rango de fecha (fiable); filtro de juego base en Dart.
       try {
         final rd = await _postList(
           '/release_dates',
@@ -195,7 +175,6 @@ limit $fetchCap;
         if (out.isNotEmpty) return out;
       } catch (_) {}
 
-      // 2) /games por release_dates anidado (sin filtrar game.* en otro endpoint).
       try {
         final list = await runGames(
           'category = 0 & version_parent = null & release_dates.date >= $startSec & release_dates.date <= $endSec',
@@ -214,7 +193,6 @@ limit $fetchCap;
         if (d.isNotEmpty) return d;
       } catch (_) {}
 
-      // 3) Por first_release_date agregado en /games.
       final byFirst = await runGames(
         'category = 0 & version_parent = null & first_release_date >= $startSec & first_release_date <= $endSec',
         'sort first_release_date desc;',
@@ -225,7 +203,6 @@ limit $fetchCap;
     }
   }
 
-  /// Quita DLC/expansiones y deduplica; [category] 0 = juego principal en IGDB.
   static List<Map<String, dynamic>> _gamesFromReleaseDateRows(
     List<Map<String, dynamic>> rows, {
     required int limit,
@@ -255,7 +232,6 @@ limit $fetchCap;
     if (g['version_parent'] != null) return false;
     final c = g['category'];
     if (c is num) return c.toInt() == 0;
-    // Sin categoría cargada: no excluir (p. ej. respuestas mínimas).
     return true;
   }
 
@@ -369,9 +345,6 @@ limit ${orderedIds.length};
     }
   }
 
-  /// Ejecuta varias consultas `/games` hasta obtener resultados (p. ej. tras 400
-  /// por campos retirados o listas vacías por filtros demasiado estrictos).
-  /// Se detiene inmediatamente en errores de rate-limit (429).
   Future<List<Map<String, dynamic>>> _tryPostGameQueries(
     List<String> candidates,
   ) async {
@@ -384,14 +357,12 @@ limit ${orderedIds.length};
         final list = await _postList('/games', candidates[i]);
         if (list.isNotEmpty) return list;
       } catch (e) {
-        // No seguir probando fallbacks si IGDB nos está limitando.
         if (isRateLimitError(e)) rethrow;
       }
     }
     return [];
   }
 
-  /// Próximos lanzamientos con más **hypes** (alineado con “más esperados” en IGDB).
   Future<List<Map<String, dynamic>>> fetchGamesMostAnticipated(
       {int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -421,7 +392,6 @@ limit $limit;
     ]);
   }
 
-  /// Lanzados recientemente (ventana ~18 meses, con ampliaciones y `release_dates`).
   Future<List<Map<String, dynamic>>> fetchGamesRecentlyReleased(
       {int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -452,7 +422,6 @@ limit $limit;
     ]);
   }
 
-  /// Próximo a salir (fecha futura); alternativas por `release_dates` y sin tope.
   Future<List<Map<String, dynamic>>> fetchGamesComingSoon({int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final cap = now + 730 * 24 * 3600; // 2 years
@@ -481,13 +450,11 @@ limit $limit;
     ]);
   }
 
-  /// IGDB genre ids (stable): Indie = 32, Horror = 19, RPG = 12, Sport = 14.
   static const int genreIdIndie = 32;
   static const int genreIdHorror = 19;
   static const int genreIdRpg = 12;
   static const int genreIdSports = 14;
 
-  /// Juegos muy bien valorados con suficientes votos (usuarios IGDB).
   Future<List<Map<String, dynamic>>> fetchGamesBestRated({int limit = 24}) async {
     return _tryPostGameQueries([
       '''
@@ -514,8 +481,6 @@ limit $limit;
     ]);
   }
 
-  /// Carrusel por género (un id de [Genres] en IGDB). Varias consultas por si el
-  /// filtro de nota deja la lista vacía (Apicalypse: `genres = (id)` = contiene ese género).
   Future<List<Map<String, dynamic>>> fetchGamesGenreSpotlight(
     int genreId, {
     int limit = 24,
@@ -546,7 +511,6 @@ limit $limit;
     ]);
   }
 
-  /// Modo multijugador (`game_modes` id 2 en IGDB). Fallbacks si la nota mínima deja 0 filas.
   Future<List<Map<String, dynamic>>> fetchGamesMultiplayerPopular(
       {int limit = 24}) async {
     return _tryPostGameQueries([
@@ -574,7 +538,6 @@ limit $limit;
     ]);
   }
 
-  /// `game.cover.image_id` en reseñas (mismo criterio que [normalize]).
   static String? reviewNestedCoverImageId(Map<String, dynamic>? game) {
     final coverRaw = game?['cover'];
     Map<String, dynamic>? cover;
@@ -586,7 +549,6 @@ limit $limit;
     return _readCoverImageId(cover);
   }
 
-  /// Reseñas recientes (comunidad IGDB).
   Future<List<Map<String, dynamic>>> fetchReviewsRecent({int limit = 30}) async {
     final body = '''
 fields id, title, content, score, created_at, user.username,
@@ -604,7 +566,6 @@ limit $limit;
     }
   }
 
-  /// Reseñas con puntuación alta (aprox. “críticos” / destacadas).
   Future<List<Map<String, dynamic>>> fetchReviewsHighScore(
       {int limit = 24, int minScore = 80}) async {
     final body = '''
@@ -624,8 +585,6 @@ limit $limit;
     }
   }
 
-  /// Reseñas de juegos concretos (`where game = (…)`); alinea el aside con el
-  /// pool [fetchPopularGames] cuando las listas globales vienen vacías o escasas.
   Future<List<Map<String, dynamic>>> fetchReviewsForGameIds(
     List<int> gameIds, {
     int limit = 48,
@@ -658,7 +617,6 @@ limit $limit;
     }
   }
 
-  /// Una reseña por id (para pantalla de lectura).
   Future<Map<String, dynamic>?> fetchReviewById(int reviewId) async {
     final body = '''
 fields id, title, content, score, created_at, user.username,
@@ -673,14 +631,6 @@ where id = $reviewId;
     }
   }
 
-  /// Full game detail by ID.
-  ///
-  /// Playtime estimates live on the separate [GameTimeToBeat] resource
-  /// (`/game_time_to_beats`), not as `game.time_to_beat` — requesting the
-  /// latter in `fields` returns HTTP 400 from IGDB.
-  ///
-  /// Varias peticiones en **paralelo** (núcleo + extras + ttb + reseñas) para
-  /// no sumar latencias como una sola query gigante seguida de más RTT.
   Future<Map<String, dynamic>?> fetchGameDetail(int gameId) async {
     final coreBody = '''
 fields name, summary, total_rating, total_rating_count,
@@ -743,7 +693,6 @@ limit 1;
     return list.isEmpty ? null : list.first;
   }
 
-  /// Community reviews for a game (IGDB `review` / `reviews`).
   Future<List<Map<String, dynamic>>> fetchGameReviews(int gameId) async {
     final body = '''
 fields id, title, content, score, created_at, user.username;
@@ -758,7 +707,6 @@ limit 15;
     }
   }
 
-  /// Prueba `/review` y `/reviews` (Apicalypse); si ambos devuelven 404, [].
   Future<List<Map<String, dynamic>>> _postReviewsList(String body) async {
     final cached = _cachedReviewsPath;
     if (cached != null) {
@@ -794,7 +742,6 @@ limit 15;
     return s.contains('HTTP 404') || s.contains('(404)');
   }
 
-  /// IGDB often returns protocol-relative URLs (`//www.igdb.com/...`).
   static String? absoluteHttpUrl(String? u) {
     if (u == null || u.isEmpty) return null;
     final t = u.trim();
@@ -810,7 +757,6 @@ limit 15;
     return int.tryParse('$v');
   }
 
-  /// IGDB may return `image_id` as String or int depending on JSON decoder.
   static String? _readCoverImageId(Map<String, dynamic>? cover) {
     if (cover == null) return null;
     final v = cover['image_id'];
@@ -819,8 +765,6 @@ limit 15;
     return '$v';
   }
 
-  /// Normalizes a raw IGDB game map into the common format used by
-  /// [SearchPage] and [AddToLibrarySheet].
   static Map<String, dynamic> normalize(Map<String, dynamic> raw) {
     final name = raw['name']?.toString() ?? '';
     Map<String, dynamic>? cover;
@@ -898,23 +842,16 @@ limit 15;
     };
   }
 
-  /// Thrown on HTTP 429 so callers can short-circuit fallback queries.
   static bool isRateLimitError(Object e) {
     final s = e.toString();
     return s.contains('429') || s.contains('Too Many Requests');
   }
 
-  /// Sends a multiquery body to `/multiquery` and returns results keyed by
-  /// the name given to each sub-query (e.g. `"anticipated"`, `"rpg"`).
-  ///
-  /// IGDB multiquery allows up to 10 sub-queries in a single HTTP POST,
-  /// completely avoiding the 4 req/sec rate limit for home-feed loads.
   Future<Map<String, List<Map<String, dynamic>>>> _postMultiquery(
       String body) async {
     if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
     var options = await _headers();
 
-    // attempt 0 = normal, attempt 1 = retry tras 401/429
     for (var attempt = 0; attempt < 2; attempt++) {
       final res = await _dio.post<dynamic>(
         '$_baseUrl/multiquery',
@@ -946,8 +883,6 @@ limit 15;
         throw Exception('IGDB multiquery ($code): ${m['message'] ?? res.data}');
       }
 
-      // IGDB returns HTTP 200 with a List on success.
-      // Error objects in the list (sub-query failures) have no 'name' key; skip them.
       if (res.data is List) {
         final raw = res.data as List;
         final out = <String, List<Map<String, dynamic>>>{};
@@ -956,7 +891,6 @@ limit 15;
           if (item is! Map<String, dynamic>) continue;
           final name = item['name'] as String? ?? '';
           if (name.isEmpty) {
-            // Collect IGDB sub-query error details for diagnostics.
             final title = item['title'] ?? item['message'] ?? item['cause'] ?? item;
             errors.add('$title');
             continue;
@@ -968,7 +902,6 @@ limit 15;
             out[name] = [];
           }
         }
-        // If every sub-query failed (all were error objects), surface the error.
         if (out.isEmpty && errors.isNotEmpty) {
           throw Exception('IGDB multiquery sub-queries all failed: ${errors.join('; ')}');
         }
@@ -979,16 +912,11 @@ limit 15;
     return {};
   }
 
-  /// Fetches all 9 home-feed game carousels in a single multiquery POST.
-  ///
-  /// Returns a map keyed by carousel name. Empty list means no results for
-  /// that carousel (not an error). Throws on network/auth errors.
   Future<Map<String, List<Map<String, dynamic>>>> fetchHomeFeedGames() async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final twoYears = now + 730 * 24 * 3600;
     final past18m = now - 548 * 24 * 3600;
 
-    // All 9 carousels in one request (IGDB limit: 10 sub-queries per multiquery).
     const f = 'fields name, cover.image_id, genres.name, '
         'platforms.abbreviation, total_rating, first_release_date';
 
@@ -1059,7 +987,6 @@ query games "sports" {
     }
     var options = await _headers();
 
-    // Up to 2 attempts: retry once on 401/429.
     for (var attempt = 0; attempt < 2; attempt++) {
       final res = await _dio.post<dynamic>(
         '$_baseUrl$endpoint',
@@ -1079,7 +1006,6 @@ query games "sports" {
         continue;
       }
 
-      // Rate-limited: wait and retry once.
       if (code == 429 && attempt == 0) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
         continue;

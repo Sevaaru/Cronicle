@@ -80,8 +80,6 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
   }
 }
 
-/// [Navigator] raíz de [GoRouter]. Usar para [showDialog] antes de que exista
-/// un [BuildContext] bajo el árbol del router (p. ej. desde [MaterialApp]).
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
@@ -94,9 +92,6 @@ GoRouter appRouter(AppRouterRef ref) {
     navigatorKey: cronicleRootNavigatorKey,
     initialLocation: onboardingDone ? startPage : '/onboarding',
     redirect: (context, state) {
-      // Android entrega el intent OAuth a MainActivity; el sistema puede
-      // exponerlo como "ruta" y GoRouter no tiene match → GoException.
-      // AppLinks ya maneja el deep link; mantener al usuario en la página actual.
       if (state.uri.scheme == 'cronicle') {
         final current =
             GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
@@ -104,7 +99,6 @@ GoRouter appRouter(AppRouterRef ref) {
         final done = ref.read(onboardingCompletedProvider);
         return done ? startPage : '/onboarding';
       }
-      // Rutas con barra final no coincidían con los paths registrados.
       final path = state.uri.path;
       if (path.length > 1 && path.endsWith('/')) {
         return state.uri.replace(path: path.substring(0, path.length - 1)).toString();
@@ -128,7 +122,6 @@ GoRouter appRouter(AppRouterRef ref) {
           final index =
               ref.read(shellNavTabProvider.notifier).bottomNavIndex(location);
 
-          // No modificar providers durante build; persistir tab principal después del frame.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref
                 .read(shellNavTabProvider.notifier)
@@ -138,7 +131,6 @@ GoRouter appRouter(AppRouterRef ref) {
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              // Cierra PopupMenu / overlays del tab anterior (p. ej. filtro biblioteca).
               _shellKey.currentState?.popUntil(
                 (route) => route is! PopupRoute,
               );
@@ -466,7 +458,6 @@ GoRouter appRouter(AppRouterRef ref) {
         path: '/auth',
         builder: (context, state) => const AuthPage(),
       ),
-      /// Visor de imagen a pantalla completa (misma pila que GoRouter → atrás del sistema coherente).
       GoRoute(
         path: '/full-image',
         parentNavigatorKey: cronicleRootNavigatorKey,

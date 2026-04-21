@@ -6,7 +6,6 @@ import 'package:cronicle/core/backup/google_drive_backup_prefs.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
 
-/// Registra o cancela la tarea periódica de copia automática a Drive.
 class GoogleDriveBackupScheduler {
   GoogleDriveBackupScheduler._();
 

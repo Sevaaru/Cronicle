@@ -6,7 +6,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cronicle/core/backup/domain/backup_repository.dart';
 import 'package:cronicle/core/errors/app_failure.dart';
 
-/// Placeholder until Drive App Data export/import is implemented in settings.
 class StubDriveBackupRepository implements BackupRepository {
   StubDriveBackupRepository(this._googleSignIn);
 

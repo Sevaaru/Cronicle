@@ -103,7 +103,6 @@ class DeviceNotificationSettings extends _$DeviceNotificationSettings {
     );
   }
 
-  /// Tras conceder permiso en el arranque: activa opciones por defecto y agenda trabajo.
   Future<void> applyDefaultsAfterPermissionGranted() async {
     await _persistAndSchedule(
       const DeviceNotificationState(

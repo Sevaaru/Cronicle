@@ -14,10 +14,6 @@ import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// En web, el motor a veces calcula [MediaQuery.viewInsets] negativos al redimensionar
-/// o al cerrar el teclado; eso dispara un assert en el engine. Si el frame llega a
-/// construirse con insets inválidos, los limitamos a ≥ 0 para widgets que lean
-/// `viewInsets` (p. ej. bottom sheets).
 Widget _webClampViewInsets(Widget child) {
   if (!kIsWeb) return child;
   return Builder(
@@ -54,8 +50,6 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
   @override
   void initState() {
     super.initState();
-    // Eagerly initialise the wear-event listener so the foreground app
-    // refetches the library when the watch mutates the database.
     ref.read(wearEventListenerProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

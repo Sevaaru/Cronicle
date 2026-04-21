@@ -26,7 +26,6 @@ List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
   return out;
 }
 
-// (pool slicing helpers removed — dedicated genre queries used instead)
 
 List<Map<String, dynamic>> _filterReviewsWithGame(
   List<Map<String, dynamic>> raw,
@@ -97,7 +96,6 @@ List<Map<String, dynamic>> _sortReviewsByScoreDesc(
   return copy;
 }
 
-/// All IGDB home rows except [igdbPopular] (loaded separately for faster first paint).
 class IgdbGamesHomeFeedData {
   const IgdbGamesHomeFeedData({
     required this.anticipated,
@@ -147,7 +145,6 @@ Future<List<Map<String, dynamic>>> igdbSearch(
   return _normalizeGamesSafe(raw);
 }
 
-/// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
 @Riverpod(keepAlive: true)
 Future<List<Map<String, dynamic>>> igdbPopular(IgdbPopularRef ref) async {
   final api = ref.read(igdbApiProvider);
@@ -172,16 +169,10 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-/// Aside: un único POST a /multiquery trae los 9 carruseles de juegos (= 1 req
-/// contra el rate-limit de IGDB). Las reseñas van en 2 llamadas adicionales.
-/// Si algún sub-query falla la sección simplemente queda vacía; si el POST
-/// completo falla se propaga el error y la UI muestra el botón "Reintentar".
 @Riverpod(keepAlive: true)
 Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
   final api = ref.read(igdbApiProvider);
 
-  // Ejecutar multiquery y reviews en paralelo. Si multiquery lanza, el provider
-  // lanza también → la UI mostrará _errorBox con el mensaje real.
   final results = await Future.wait([
     api.fetchHomeFeedGames(),
     _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: 36)),
@@ -219,7 +210,6 @@ Future<Map<String, dynamic>?> igdbReviewById(
   return api.fetchReviewById(reviewId);
 }
 
-/// Listado extendido para `/games/section/:slug`.
 @riverpod
 Future<List<Map<String, dynamic>>> igdbGamesSectionList(
   IgdbGamesSectionListRef ref,
@@ -287,7 +277,6 @@ Map<String, dynamic> _snapshotGameForFavorites(Map<String, dynamic> game) {
   };
 }
 
-/// Juegos marcados como favoritos (solo local, SharedPreferences).
 @Riverpod(keepAlive: true)
 class FavoriteGames extends _$FavoriteGames {
   @override
@@ -312,7 +301,6 @@ class FavoriteGames extends _$FavoriteGames {
   }
 }
 
-/// Estado de la cuenta Twitch vinculada a IGDB (OAuth de usuario).
 class TwitchIgdbAccountState {
   const TwitchIgdbAccountState({
     required this.userConnected,
@@ -336,7 +324,6 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     );
   }
 
-  /// OAuth en navegador seguro; no disponible en web (IGDB no expone CORS ahí).
   Future<void> connectOAuth() async {
     if (kIsWeb) {
       throw UnsupportedError('web');
@@ -386,8 +373,6 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     await auth.exchangeAuthorizationCode(code);
     await prefs.remove(_oauthStatePrefsKey);
     invalidateIgdbProviders(ref);
-    // No invalidar este mismo provider desde el notifier: puede provocar
-    // rebuild reentrante y "A provider cannot depend on itself".
     final login = await auth.getUserLogin();
     state = AsyncData(
       TwitchIgdbAccountState(userConnected: true, login: login),

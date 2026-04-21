@@ -102,7 +102,6 @@ class TraktInfoPill extends StatelessWidget {
   }
 }
 
-/// Cabecera estilo detalle Anilist/IGDB: banner + póster superpuesto + título.
 class TraktDetailHeroHeader extends StatelessWidget {
   const TraktDetailHeroHeader({
     super.key,
@@ -471,7 +470,6 @@ List<Widget> traktExternalLinkChips(
   ];
 }
 
-/// Progreso por episodio (conteo local) para series Trakt en biblioteca.
 class TraktTvEpisodeProgressCard extends ConsumerWidget {
   const TraktTvEpisodeProgressCard({
     super.key,

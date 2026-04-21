@@ -5,9 +5,6 @@ import 'package:flutter/widgets.dart';
 
 import 'package:cronicle/core/notifications/notification_sync_runner.dart';
 
-/// - Al pasar a segundo plano: una comprobación (WorkManager en Android se retrasa).
-/// - Con la app en primer plano: comprobación periódica para que nuevas entradas
-///   de Anilist / airing también disparen notificaciones del sistema en Android.
 class NotificationLifecycleSync extends StatefulWidget {
   const NotificationLifecycleSync({required this.child, super.key});
 

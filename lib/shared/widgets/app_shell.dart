@@ -158,7 +158,6 @@ class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
-              // Sombra solo en el círculo del avatar (no en el padding del leading).
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: _hover

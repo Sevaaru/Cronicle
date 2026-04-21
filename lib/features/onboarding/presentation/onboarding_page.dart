@@ -21,7 +21,6 @@ import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.da
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-// ─── Interest model ──────────────────────────────────────────────────────────
 
 class _Interest {
   const _Interest({
@@ -76,7 +75,6 @@ final _interests = [
   ),
 ];
 
-// ─── Main onboarding page (PageView with 3 steps) ───────────────────────────
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -137,7 +135,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         .complete(_selected);
     if (!mounted) return;
 
-    // --- Auto-sync connected accounts ---
     await _syncConnectedAccounts();
 
     if (!mounted) return;
@@ -147,7 +144,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   Future<void> _syncConnectedAccounts() async {
     final db = ref.read(databaseProvider);
 
-    // 1) Anilist import (anime + manga)
     final anilistToken = await ref.read(anilistTokenProvider.future);
     if (anilistToken != null && anilistToken.isNotEmpty) {
       try {
@@ -166,13 +162,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
             token: anilistToken,
             userName: userName,
           );
-          // Mark as synced so library page doesn't show the sync dialog again.
           await db.setKeyValue('anilist_library_synced', 'true');
         }
       } catch (_) {}
     }
 
-    // 2) Trakt import (movies + TV)
     final traktState = ref.read(traktSessionProvider).valueOrNull;
     if (traktState != null && traktState.connected) {
       try {
@@ -188,7 +182,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       } catch (_) {}
     }
 
-    // 3) Google Drive restore (after Anilist/Trakt so direct imports take priority)
     if (_googleConnected && !_driveRestored) {
       try {
         final repo = ref.read(backupRepositoryProvider);
@@ -217,7 +210,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           opacity: _fadeIn,
           child: Column(
             children: [
-              // Page indicator row with optional back button
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: SizedBox(
@@ -301,7 +293,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 }
 
-// ─── Page 1: Welcome ─────────────────────────────────────────────────────────
 
 class _WelcomePage extends StatelessWidget {
   const _WelcomePage({required this.onNext});
@@ -369,7 +360,6 @@ class _WelcomePage extends StatelessWidget {
   }
 }
 
-// ─── Page 2: Interests ───────────────────────────────────────────────────────
 
 class _InterestsPage extends StatelessWidget {
   const _InterestsPage({
@@ -466,7 +456,6 @@ class _InterestsPage extends StatelessWidget {
   }
 }
 
-// ─── Page 3: Connect Accounts ────────────────────────────────────────────────
 
 class _AccountsPage extends ConsumerStatefulWidget {
   const _AccountsPage({
@@ -514,15 +503,11 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
           setState(() => _googleConnected = connected);
           widget.onGoogleChanged(connected);
           if (connected) {
-            // Restore Drive backup first so previously linked AniList/Trakt
-            // tokens are written to secure storage and their providers
-            // re-emit as connected (green tick) automatically.
             await _restoreFromDriveAndSync();
           }
         }
       }
     } catch (_) {
-      // User cancelled or error — stay on page
     } finally {
       if (mounted) setState(() => _connectingGoogle = false);
     }
@@ -548,12 +533,9 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
       }
       if (mounted) widget.onDriveRestored();
     } catch (_) {
-      // Ignore: no backup yet or transient failure.
     } finally {
       if (mounted) setState(() => _restoringFromDrive = false);
     }
-    // Now import library data using whatever tokens are present
-    // (either pre-existing or just restored from Drive).
     if (mounted) unawaited(_syncOtherAccounts());
   }
 
@@ -570,14 +552,12 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
     try {
       await ref.read(traktSessionProvider.notifier).connectOAuth();
     } catch (_) {
-      // User cancelled or error
     }
   }
 
   Future<void> _syncOtherAccounts() async {
     final db = ref.read(databaseProvider);
 
-    // Anilist
     final anilistToken = await ref.read(anilistTokenProvider.future);
     if (anilistToken != null && anilistToken.isNotEmpty) {
       if (mounted) setState(() => _anilistSyncing = true);
@@ -605,7 +585,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
       }
     }
 
-    // Trakt
     final traktState = ref.read(traktSessionProvider).valueOrNull;
     if (traktState != null && traktState.connected) {
       if (mounted) setState(() => _traktSyncing = true);
@@ -671,7 +650,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
           ),
           const SizedBox(height: 32),
 
-          // Anilist
           _AccountTile(
             icon: Icons.animation_rounded,
             color: const Color(0xFF5C6BC0),
@@ -686,7 +664,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
           ),
           const SizedBox(height: 12),
 
-          // Trakt
           _AccountTile(
             icon: Icons.movie_filter_rounded,
             color: const Color(0xFFED1C24),
@@ -701,7 +678,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
           ),
           const SizedBox(height: 12),
 
-          // Google
           _AccountTile(
             icon: Icons.cloud_rounded,
             color: const Color(0xFF4285F4),
@@ -716,7 +692,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
           const Spacer(flex: 3),
 
-          // Finish / Skip
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -767,7 +742,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
   }
 }
 
-// ─── Account connection tile ─────────────────────────────────────────────────
 
 class _AccountTile extends StatelessWidget {
   const _AccountTile({
@@ -876,7 +850,6 @@ class _AccountTile extends StatelessWidget {
   }
 }
 
-// ─── Interest bubble chip ────────────────────────────────────────────────────
 
 class _InterestBubble extends StatelessWidget {
   const _InterestBubble({

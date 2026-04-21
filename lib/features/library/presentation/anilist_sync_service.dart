@@ -10,14 +10,12 @@ import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// AniList devuelve [updatedAt] de la entrada de lista en **segundos** Unix.
 int? _mediaListUpdatedAtMs(Map<String, dynamic> entry) {
   final raw = entry['updatedAt'];
   if (raw == null) return null;
   if (raw is! num) return null;
   final v = raw.toInt();
   if (v <= 0) return null;
-  // Heurística: valores ~1e9–1e10 son segundos; ya en ms serían ~1e12+.
   if (v < 20000000000) return v * 1000;
   return v;
 }
@@ -117,9 +115,6 @@ Future<int> importAnilistToLocal({
   return count;
 }
 
-/// Si hay sesión de Anilist, descarga anime+manga desde la API y hace upsert en [db]
-/// (misma idea que «Combinar» en [showAnilistSyncDialog]), para que copias/exportaciones
-/// incluyan la lista completa aunque en local solo hubiera un subconjunto.
 Future<void> mergeAnilistLibraryIntoLocalIfSignedIn({
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,

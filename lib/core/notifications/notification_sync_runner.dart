@@ -11,7 +11,6 @@ import 'package:cronicle/core/utils/anilist_media_title.dart';
 import 'package:cronicle/core/utils/anilist_notification_contexts.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 
-/// Descarga una imagen y devuelve los bytes, o null si falla.
 Future<Uint8List?> _downloadImageBytes(String? url) async {
   if (url == null || url.isEmpty) return null;
   try {
@@ -30,12 +29,7 @@ Future<Uint8List?> _downloadImageBytes(String? url) async {
   }
 }
 
-/// Elige la imagen más representativa para una notificación de Anilist:
-/// avatar del usuario para interacciones sociales, portada del media para
-/// notificaciones de airing / cambios de media.
 Future<Uint8List?> _resolveNotificationImage(Map<String, dynamic> n) async {
-  // Para AiringNotification y notificaciones relativas a un media concreto,
-  // usamos la portada.
   final media = n['media'] as Map<String, dynamic>?;
   if (media != null) {
     final cover = media['coverImage'] as Map<String, dynamic>?;
@@ -45,7 +39,6 @@ Future<Uint8List?> _resolveNotificationImage(Map<String, dynamic> n) async {
     }
   }
 
-  // Para interacciones sociales (likes, replies, follows…), avatar del usuario.
   final user = n['user'] as Map<String, dynamic>?;
   if (user != null) {
     final avatar = user['avatar'] as Map<String, dynamic>?;
@@ -69,8 +62,6 @@ int _stableNotifId(String salt, int id) {
   return h == 0 ? id.abs() % 2000000000 : h % 2000000000;
 }
 
-/// Nombre de usuario, staff, personaje, etc. (como el subtítulo en la pantalla
-/// de notificaciones de la app).
 String? _actorDisplayName(Map<String, dynamic> n) {
   final user = n['user'] as Map<String, dynamic>?;
   final uName = user?['name'] as String?;
@@ -96,7 +87,6 @@ String? _actorDisplayName(Map<String, dynamic> n) {
   return null;
 }
 
-/// Texto de contexto de Anilist (p. ej. "liked your activity") sin repetir actor.
 String _contextOrSummaryLine(Map<String, dynamic> n) {
   final ctx = n['context'] as String?;
   if (ctx != null && ctx.isNotEmpty) return ctx;
@@ -138,8 +128,6 @@ String _anilistNotifTitle(String? typename, bool isEs) {
   };
 }
 
-/// Título y cuerpo del sistema: si hay actor (quien likeó, etc.), va en el
-/// título y el contexto de Anilist en el cuerpo — como en la lista in-app.
 (String title, String body) _anilistPushTitleAndBody(
   Map<String, dynamic> n,
   bool isEs,
@@ -162,8 +150,6 @@ String _anilistNotifTitle(String? typename, bool isEs) {
     final title = mediaTitle != 'Media' && mediaTitle.isNotEmpty
         ? mediaTitle
         : _anilistNotifTitle(typename, isEs);
-    // Do not use raw `contexts` for the system body: Anilist fragments often
-    // render wrong when joined; title already shows the series name.
     final body = episode != null
         ? '$kindWord $episode'
         : (contextLine.isNotEmpty
@@ -388,7 +374,6 @@ Future<void> _syncAnilistInbox(
       continue;
     }
 
-    // Imagen: avatar del usuario para social, portada del media para airing/media.
     final imageBytes = await _resolveNotificationImage(n);
 
     await CronicleLocalNotifications.showAnilistMirror(

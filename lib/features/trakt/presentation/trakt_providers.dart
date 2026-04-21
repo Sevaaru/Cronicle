@@ -28,7 +28,6 @@ TraktApiDatasource traktApi(TraktApiRef ref) {
   return TraktApiDatasource(ref.watch(dioProvider));
 }
 
-/// Sesión Trakt (OAuth opcional).
 @Riverpod(keepAlive: true)
 class TraktSession extends _$TraktSession {
   static const _oauthStatePrefsKey = 'trakt_oauth_state';
@@ -91,7 +90,6 @@ class TraktSession extends _$TraktSession {
     );
   }
 
-  /// OAuth en navegador seguro (mismo esquema `cronicle://` que Twitch).
   Future<void> connectOAuth() async {
     if (kIsWeb) {
       throw UnsupportedError('web');
@@ -110,8 +108,6 @@ class TraktSession extends _$TraktSession {
     await prefs.setString(_oauthStatePrefsKey, oauthState);
 
     final uri = auth.buildAuthorizeUri(oauthState);
-    // Android: Chrome Custom Tab / Auth Tab no entregan bien cronicle:// ni cierran la pestaña;
-    // abrimos el navegador del sistema y esperamos el deep link en MainActivity (app_links).
     final String result;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       result = await _traktOAuthAndroidExternalBrowser(uri, oauthState);
@@ -216,7 +212,6 @@ class TraktMoviesHomeData {
   });
 
   final List<Map<String, dynamic>> trending;
-  /// `/movies/anticipated` (Trakt no ofrece `/movies/watching`).
   final List<Map<String, dynamic>> anticipated;
   final List<Map<String, dynamic>> popular;
   final List<Map<String, dynamic>> played;
@@ -368,7 +363,6 @@ Map<String, dynamic> _snapshotTraktTitleForFavorites(Map<String, dynamic> item) 
   };
 }
 
-/// Películas y series Trakt marcadas como favoritas (solo local, SharedPreferences).
 @Riverpod(keepAlive: true)
 class FavoriteTraktTitles extends _$FavoriteTraktTitles {
   @override

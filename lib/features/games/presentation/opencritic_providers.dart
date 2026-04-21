@@ -12,7 +12,6 @@ OpenCriticApiDatasource openCriticApi(OpenCriticApiRef ref) {
   return OpenCriticApiDatasource(ref.watch(dioProvider));
 }
 
-/// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
 @riverpod
 Future<OpenCriticGameInsights?> openCriticGameInsights(
   OpenCriticGameInsightsRef ref,

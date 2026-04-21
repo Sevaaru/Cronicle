@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Géneros admitidos por AniList (nombre exacto para la API).
 const kAnilistBrowseGenres = <String>[
   'Action',
   'Adventure',
@@ -22,11 +21,9 @@ const kAnilistBrowseGenres = <String>[
   'Thriller',
 ];
 
-/// Elige un género y abre el listado con filtros (`/browse/media`).
 class SearchAnilistGenreListPage extends StatelessWidget {
   const SearchAnilistGenreListPage({super.key, required this.mediaType});
 
-  /// `ANIME` o `MANGA`.
   final String mediaType;
 
   MediaKind get _kind => mediaType == 'MANGA' ? MediaKind.manga : MediaKind.anime;

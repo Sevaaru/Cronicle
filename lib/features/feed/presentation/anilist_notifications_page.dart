@@ -24,8 +24,6 @@ String _timeAgo(DateTime dt, AppLocalizations l10n) {
 int _kindCodeFromAnilistType(String? t) =>
     t == 'MANGA' ? MediaKind.manga.code : MediaKind.anime.code;
 
-/// `/notifications` vive dentro del [ShellRoute]; [push] apila la pantalla destino
-/// para que el botón Atrás (p. ej. en Android) vuelva a notificaciones.
 void _navigateShellRoute(BuildContext context, String location) {
   if (!context.mounted) return;
   GoRouter.of(context).push(location);
@@ -55,9 +53,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
       return l10n.notificationTypeAiring;
     }
 
-    // Para notificaciones sociales: si hay un actor (usuario, staff, etc.)
-    // usarlo como título para que se lea "Username" (título) +
-    // "liked your activity" (subtítulo).
     final actor = _actorName(n);
     if (actor != null && actor.isNotEmpty) return actor;
 
@@ -101,7 +96,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
     };
   }
 
-  /// Nombre del actor (usuario, staff, personaje) para mostrar como título.
   String? _actorName(Map<String, dynamic> n) {
     final user = n['user'] as Map<String, dynamic>?;
     if (user != null) return user['name'] as String?;
@@ -141,8 +135,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
       return mediaTitle != 'Media' ? mediaTitle : null;
     }
 
-    // Para notificaciones sociales: si hay actor (mostrado como título),
-    // el subtítulo es la acción de contexto ("liked your activity", etc.).
     final actor = _actorName(n);
     if (actor != null && actor.isNotEmpty) {
       final ctx = n['context'] as String?;
@@ -152,7 +144,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
         final flat = anilistFlattenContexts(ctxs).trim();
         if (flat.isNotEmpty) return flat;
       }
-      // Fallback: media title, thread title, etc.
       final media = n['media'] as Map<String, dynamic>?;
       if (media != null) {
         final resolved = anilistMediaDisplayTitle(media);
@@ -196,7 +187,6 @@ class AnilistNotificationsPage extends ConsumerWidget {
     return null;
   }
 
-  /// ID del usuario cuyo avatar se muestra, para navegar a su perfil.
   int? _avatarUserId(Map<String, dynamic> n) {
     final user = n['user'] as Map<String, dynamic>?;
     return (user?['id'] as num?)?.toInt();

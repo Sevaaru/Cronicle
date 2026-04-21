@@ -6,7 +6,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 
 part 'library_kind_layout_notifier.g.dart';
 
-/// Ids: `all` + [MediaKind.name] (orden por defecto alineado con la lista horizontal).
 const libraryKindLayoutDefaultOrder = <String>[
   'all',
   'anime',
@@ -54,7 +53,6 @@ class LibraryKindLayoutState {
 
   int get visibleCount => slots.where((s) => s.visible).length;
 
-  /// Primer tipo de medio visible distinto de «all».
   MediaKind? get firstVisibleKind {
     for (final s in slots) {
       if (!s.visible || s.id == 'all') continue;

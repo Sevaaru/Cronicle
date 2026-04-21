@@ -176,9 +176,7 @@ class _DeviceNotificationsSectionState
     if (v) {
       final status = await Permission.notification.status;
       if (status.isPermanentlyDenied) {
-        // System won't show the dialog again — open app settings.
         await openAppSettings();
-        // Re-check after returning from settings.
         final after = await Permission.notification.status;
         if (!after.isGranted) return;
       } else if (!status.isGranted) {
@@ -1053,7 +1051,6 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
     super.dispose();
   }
 
-  /// Devuelve si hay autorización de Drive (sesión útil para copias en la nube).
   Future<bool> _refreshSignedIn([GoogleSignInAccount? authenticatedAccount]) async {
     if (kIsWeb) {
       if (mounted) {
@@ -1074,8 +1071,6 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
 
       var auth = await authClientForUser().authorizationForScopes(_driveScopes);
 
-      // Tras [authenticate], los scopes de Drive deben pedirse con el cliente
-      // de [GoogleSignInAccount]; el cliente global suele devolver null.
       if (auth == null && account != null) {
         try {
           auth =
@@ -1186,7 +1181,6 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
     }
   }
 
-  /// Tras conectar Google con permiso de Drive: descarga la copia en la nube y fusiona en local.
   Future<void> _restoreFromDriveAfterSignIn() async {
     if (!mounted || kIsWeb) return;
     if (_syncing) return;
@@ -1710,7 +1704,6 @@ class _InterestsQuickEditor extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    // Derive currently selected interests from the feed layout.
     final feedLayout = ref.watch(feedFilterLayoutProvider);
     final selected = <String>{
       for (final s in feedLayout.slots)

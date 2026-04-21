@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -66,7 +66,6 @@ const _anilistBrowseCategories = [
   'recently_released',
 ];
 
-/// Categorías de browse para manga (sin «de temporada»; la primera es tendencias).
 const _mangaBrowseCategories = [
   'trending',
   'top_rated',
@@ -100,7 +99,6 @@ const List<_AnimeMangaBrowseTab> _animeBrowseTabs = [
   _AnimeMangaBrowseTab.recentlyReleased,
 ];
 
-/// Manga: sin «De temporada»; se abre en tendencias (evita seasonal vacío).
 const List<_AnimeMangaBrowseTab> _mangaBrowseTabs = [
   _AnimeMangaBrowseTab.trending,
   _AnimeMangaBrowseTab.topRated,
@@ -128,7 +126,6 @@ class _FeedPageState extends ConsumerState<FeedPage>
   void _invalidateFeed() {
     switch (_filter) {
       case _FeedFilter.summary:
-        // Summary refreshes inside its own RefreshIndicator.
         break;
       case _FeedFilter.anime:
         ref.invalidate(anilistFeedByTypeProvider('ANIME_LIST'));
@@ -309,7 +306,6 @@ class _FeedPageState extends ConsumerState<FeedPage>
                       if (prev != f &&
                           (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
                         _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
-                        // Force controller rebuild for new filter
                         _browseTabController?.removeListener(_onBrowseTabSwipe);
                         _browseTabController?.dispose();
                         _browseTabController = null;
@@ -345,7 +341,6 @@ class _FeedPageState extends ConsumerState<FeedPage>
                       itemCount: tabs.length,
                       itemBuilder: (context, i) {
                         final tab = tabs[i];
-                        // Progressive selection: 1.0 = fully selected, 0.0 = unselected.
                         final diff = (animValue - i).abs();
                         final t = (1.0 - diff).clamp(0.0, 1.0);
                         final cs = Theme.of(context).colorScheme;

@@ -54,7 +54,6 @@ const _bookStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
-/// Slider estilo Material 3 (pista redondeada, pulgar con elevación suave).
 SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   final base = SliderTheme.of(context);
@@ -215,7 +214,6 @@ Future<bool> showAddToLibrarySheet({
             : null,
       ),
       notes: drift.Value(result.notes),
-      // Book-specific fields
       editionKey: drift.Value(result.editionKey),
       isbn: drift.Value(result.isbn),
       totalPagesFromApi: drift.Value(result.totalPagesFromApi),
@@ -311,7 +309,6 @@ class _AddResult {
     this.progress,
     this.notes,
     this.deleted = false,
-    // Book-specific
     this.editionKey,
     this.isbn,
     this.totalPagesFromApi,
@@ -326,7 +323,6 @@ class _AddResult {
   final int? progress;
   final String? notes;
   final bool deleted;
-  // Book-specific
   final String? editionKey;
   final String? isbn;
   final int? totalPagesFromApi;
@@ -386,7 +382,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   late final TextEditingController _notesCtrl;
   late final Map<String, double> _advScores;
 
-  // Book-specific state
   late BookTrackingMode _bookTrackingMode;
   late final TextEditingController _chapterCtrl;
   late final TextEditingController _totalPagesOverrideCtrl;
@@ -410,7 +405,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     _notesCtrl = TextEditingController(text: e?.notes ?? '');
     _advScores = {for (final c in kAnilistAdvancedScoringCategories) c: 0};
 
-    // Book-specific init
     _bookTrackingMode = e != null
         ? BookTrackingMode.fromString(e.bookTrackingMode)
         : BookTrackingMode.pages;
@@ -456,7 +450,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                           AnimeAiringProgress.maxProgressForAnimeItem(widget.item))
                       : widget.item['episodes'] as int?;
 
-  /// For books, the effective total depends on the tracking mode.
   int? get _bookEffectiveTotal {
     switch (_bookTrackingMode) {
       case BookTrackingMode.pages:
@@ -791,7 +784,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
 
               const SizedBox(height: 12),
 
-              // Book tracking mode selector
               if (_isBook) ...[
                 Text(l10n.bookTrackingModeLabel, style: TextStyle(
                   fontSize: 13,
@@ -908,7 +900,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                   return const SizedBox.shrink();
                 }),
 
-              // Book chapter tracking (shown when mode == chapters)
               if (_isBook && _bookTrackingMode == BookTrackingMode.chapters) ...[
                 const SizedBox(height: 12),
                 Row(
@@ -955,7 +946,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ],
 
-              // Book totals override section
               if (_isBook) ...[
                 const SizedBox(height: 12),
                 Text(l10n.bookOverrideTotalsLabel, style: TextStyle(
@@ -1041,7 +1031,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                       score: _score > 0 ? ref.read(scoringSystemSettingProvider).toStoredScore(_score) : null,
                       progress: progress != null && progress > 0 ? progress : null,
                       notes: notes.isNotEmpty ? notes : null,
-                      // Book-specific
                       editionKey: _isBook ? _selectedEditionKey : null,
                       isbn: _isBook ? _selectedIsbn : null,
                       totalPagesFromApi: _isBook ? _totalPagesFromApi : null,

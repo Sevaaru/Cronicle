@@ -56,7 +56,6 @@ class _DetailContent extends StatefulWidget {
 }
 
 class _DetailContentState extends State<_DetailContent> {
-  /// Primera fila aprox.; si hay más chips, se ofrece «Mostrar más».
   static const int _kCollapsedChipCount = 6;
 
   bool _genresExpanded = false;
@@ -565,7 +564,6 @@ class _DetailContentState extends State<_DetailContent> {
             if (siteColor != null) {
               final luminance = siteColor.computeLuminance();
               if (isDark && luminance < 0.4) {
-                // API a veces devuelve negro u oscuro (p. ej. Twitter) → ilegible en fondo oscuro.
                 labelColor = cs.primary;
               } else if (!isDark && luminance > 0.6) {
                 labelColor = HSLColor.fromColor(siteColor)
@@ -1159,7 +1157,6 @@ String _formatCharacterRole(String role, AppLocalizations l10n) {
 
 String _formatMediaStatus(String raw, bool isStatus, AppLocalizations l10n) {
   if (!isStatus) {
-    // format codes → pretty label
     return switch (raw) {
       'TV' => 'TV',
       'TV_SHORT' => 'TV Short',

@@ -57,7 +57,6 @@ class _SocialPageState extends ConsumerState<SocialPage>
   }
 
   void _invalidate() {
-    // Pull-to-refresh: fuerza recarga ignorando la caché del feed.
     try {
       ref
           .read(
@@ -66,7 +65,6 @@ class _SocialPageState extends ConsumerState<SocialPage>
           )
           .refresh();
     } catch (_) {
-      // Si el provider aún no está construido, fallback a invalidate.
       ref.invalidate(
         anilistSocialFeedProvider(_activityType.apiValue, _isFollowing),
       );
@@ -101,14 +99,11 @@ class _SocialPageState extends ConsumerState<SocialPage>
     final feedProvider =
         anilistSocialFeedProvider(_activityType.apiValue, _isFollowing);
 
-    // No hacer `watch(feedProvider)` en «siguiendo» en el padre: FollowingFeedGuard
-    // se suscribe tras el token para evitar carreras (lista vacía hasta cambiar de pestaña).
 
     final scopeBar = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          // Scope chips (siguiendo / global)
           FilterChip(
             selected: _scope == FeedActivityScope.following,
             label: Row(
@@ -141,7 +136,6 @@ class _SocialPageState extends ConsumerState<SocialPage>
             visualDensity: VisualDensity.compact,
           ),
           const Spacer(),
-          // Activity type dropdown
           _ActivityTypeDropdown(
             value: _activityType,
             cs: cs,
@@ -170,7 +164,6 @@ class _SocialPageState extends ConsumerState<SocialPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Feed tab
           _isFollowing
               ? FollowingFeedGuard(
                   feedScopeBar: scopeBar,
@@ -194,7 +187,6 @@ class _SocialPageState extends ConsumerState<SocialPage>
                   feedScopeHeader: scopeBar,
                   l10n: l10n,
                 ),
-          // Forum tab
           const ForumFeedTab(),
         ],
       ),

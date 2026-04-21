@@ -9,7 +9,6 @@ import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Conexión Anilist: en móvil con redirect HTTPS puente, OAuth sin pegar token; si no, flujo PIN.
 Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context)!;
   if (kIsWeb) {

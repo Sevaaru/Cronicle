@@ -11,13 +11,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Abre el visor como ruta [GoRouter] (`/full-image`) para que el botón atrás
-/// del sistema y [context.pop] coincidan con la flecha de la barra (misma pila).
 void showFullscreenImage(BuildContext context, String imageUrl) {
   context.push('/full-image', extra: imageUrl);
 }
 
-/// Registrada en [app_router] con [parentNavigatorKey] raíz (cubre shell / barra inferior).
 class FullscreenImagePage extends StatelessWidget {
   const FullscreenImagePage({super.key, required this.imageUrl});
   final String imageUrl;
@@ -46,16 +43,12 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
   TapDownDetails? _doubleTapDetails;
   bool _saving = false;
 
-  /// Evita doble pop (arrastre-dismiss + botón atrás Android simultáneos).
   bool _popped = false;
 
-  /// Desplazamiento 2D (dismiss tipo Twitter/X en cualquier dirección).
   Offset _dragOffset = Offset.zero;
 
-  /// Escala durante el arrastre y la animación de cierre (zoom out).
   double _dragGestureScale = 1;
 
-  /// Animación de salida: de → hacia fuera de pantalla con zoom out.
   Offset _dismissAnimStart = Offset.zero;
   Offset _dismissAnimEnd = Offset.zero;
   double _dismissScaleStart = 1;
@@ -66,8 +59,6 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
   static const _dismissDistance = 110.0;
   static const _dismissVelocity = 700.0;
 
-  /// Dedos en pantalla (raw). Con 2+ dedos el overlay de dismiss se ignora y el
-  /// [InteractiveViewer] recibe el pellizco para zoom.
   final Set<int> _activePointerIds = {};
 
   @override
@@ -156,19 +147,15 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
 
   double get _scale => _transformController.value.getMaxScaleOnAxis();
 
-  /// Velo negro: opaco al inicio → transparente al arrastrar para cerrar (se ve la vista de detrás).
   double _backgroundOpacity() {
     final sz = MediaQuery.sizeOf(context);
-    // Distancia de referencia (~un tercio del lado largo): a ese recorrido el fondo es casi transparente.
     final ref = math.max(140.0, math.max(sz.width, sz.height) * 0.32);
     if (ref <= 0) return 1;
     final t = (_dragOffset.distance / ref).clamp(0.0, 1.0);
-    // easeOut: el negro baja pronto al empezar a arrastrar (feedback claro).
     final progress = Curves.easeOut.transform(t);
     return (1.0 - progress).clamp(0.0, 1.0);
   }
 
-  /// Escala mientras el usuario arrastra (antes de soltar), estilo “alejar” la imagen.
   double _liveDragScale() {
     if (_runningDismissAnimation) return _dragGestureScale;
     final sz = MediaQuery.sizeOf(context);
@@ -200,11 +187,8 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
     if (currentScale > _zoomThreshold) {
       end = Matrix4.identity();
     } else {
-      // ignore: deprecated_member_use
       end = Matrix4.identity()
-        // ignore: deprecated_member_use
         ..translate(-pos.dx * 2, -pos.dy * 2)
-        // ignore: deprecated_member_use
         ..scale(3.0);
     }
 
@@ -348,14 +332,11 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Velo negro detrás de todo: al arrastrar baja opacidad y se ve la pantalla anterior.
           Positioned.fill(
             child: ColoredBox(
               color: Colors.black.withValues(alpha: scrim),
             ),
           ),
-          // Capa inferior: zoom / doble toque (el visor gana el gesto frente a un
-          // GestureDetector padre; por eso el dismiss va en una capa encima).
           Transform.translate(
             offset: _dragOffset,
             child: Transform.scale(
@@ -401,7 +382,6 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer>
             ),
           ),
 
-          // Capa superior: arrastre omnidireccional y tap para cerrar (1 dedo, sin zoom).
           Positioned.fill(
             child: Listener(
               behavior: HitTestBehavior.translucent,

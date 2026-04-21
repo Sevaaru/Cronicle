@@ -4,18 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/shared/models/feed_activity.dart';
 
-/// Cache simple en SharedPreferences para el feed social de Anilist.
-///
-/// Evita golpear la API en cada apertura/pestaña. Reglas:
-/// - TTL: si han pasado menos de [freshnessWindow] desde el último fetch,
-///   se considera fresco y NO se refetchea (salvo pull-to-refresh manual).
-/// - Persistencia: la última página se serializa para sobrevivir cierres.
 class AnilistFeedCache {
   AnilistFeedCache(this._prefs);
 
   final SharedPreferences _prefs;
 
-  /// Ventana de frescura por defecto (60 s).
   static const Duration defaultFreshness = Duration(seconds: 60);
 
   static String _keyFor(String? activityType, bool isFollowing) {
@@ -56,7 +49,6 @@ class AnilistFeedCache {
     bool isFollowing,
     List<FeedActivity> items,
   ) async {
-    // Limita el tamaño persistido para no inflar prefs.
     final capped = items.take(50).toList();
     final payload = jsonEncode({
       'fetchedAt': DateTime.now().millisecondsSinceEpoch,

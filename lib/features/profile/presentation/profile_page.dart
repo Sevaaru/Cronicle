@@ -450,7 +450,6 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
     final favCharacters = (favs['characters'] as Map?)?['nodes'] as List? ?? [];
     final favStaff = (favs['staff'] as Map?)?['nodes'] as List? ?? [];
 
-    // Misma geometría que [UserProfilePage]: banner 150px + fila avatar (top 105, ~84px alto).
     const bannerH = 150.0;
     const avatarRowTop = 105.0;
     const avatarOuter = 84.0;
@@ -618,7 +617,6 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
 
               const SizedBox(height: 16),
 
-              // Connected accounts
               ProfileStatsSectionHeader(l10n.sectionConnectedAccounts, Icons.link_rounded, cs.tertiary),
               const SizedBox(height: 8),
               GlassCard(
@@ -754,7 +752,6 @@ class _ProfileAvatarPreferencesCardState
           return out;
         }
       } catch (_) {
-        // Keep trying with smaller dimensions.
       }
     }
     return best;
@@ -1285,7 +1282,6 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
   }
 }
 
-/// Entrada a estadísticas personales (mismo estilo plano que el resto de `GlassCard` del perfil).
 class _PersonalStatsNavTile extends StatelessWidget {
   const _PersonalStatsNavTile({
     required this.l10n,

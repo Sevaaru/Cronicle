@@ -45,7 +45,6 @@ class AnilistToken extends _$AnilistToken {
       if (name != null && name.isNotEmpty) {
         await ref.read(anilistAuthProvider).saveUserName(name);
       }
-      // Auto-set scoring format from AniList account.
       final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
       final fmt = opts?['scoreFormat'] as String?;
       if (fmt != null) {
@@ -94,7 +93,6 @@ class AnilistToken extends _$AnilistToken {
     ref.invalidate(favoriteAnilistStaffProvider);
   }
 
-  /// OAuth implícito vía HTTPS puente + `cronicle://anilist-oauth` (Android/iOS, navegador externo).
   Future<void> connectOAuthBridge() async {
     if (kIsWeb) {
       throw UnsupportedError('web');
@@ -185,8 +183,6 @@ Future<List<Map<String, dynamic>>> anilistPopular(
   return graphql.fetchPopular(type: type);
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
 @riverpod
 class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   static const _perPage = 24;
@@ -247,7 +243,6 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   }
 }
 
-/// Convierte una actividad Anilist (mapa GraphQL) en [FeedActivity] para la UI del feed.
 FeedActivity? feedActivityFromAnilistActivityMap(Map<String, dynamic> a) {
   final actType = a['type'] as String? ?? '';
 
@@ -546,7 +541,6 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     _hasMore = true;
     _isLoadingMore = false;
 
-    // 1) Intenta servir desde caché si está fresca.
     final cache = AnilistFeedCache(ref.read(sharedPreferencesProvider));
     final cached = cache.read(activityType, isFollowing);
     if (cached != null) {
@@ -558,7 +552,6 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
         );
         return cached.items;
       }
-      // Stale-while-revalidate: muestra los ítems cacheados YA, refetch en bg.
       if (cached.items.isNotEmpty) {
         scheduleMicrotask(() async {
           try {
@@ -578,14 +571,12 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
       }
     }
 
-    // 2) Fetch de red normal.
     final fresh = await _fetchPage();
     _lastFetchedAt = DateTime.now();
     unawaited(cache.write(activityType, isFollowing, fresh));
     return fresh;
   }
 
-  /// Fuerza recarga ignorando la caché (pull-to-refresh).
   Future<void> refresh() async {
     _generation++;
     _page = 1;
@@ -662,7 +653,6 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
   }
 }
 
-/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
 @riverpod
 class AnilistGenreTagBrowse extends _$AnilistGenreTagBrowse {
   static const _perPage = 24;
@@ -752,7 +742,6 @@ Future<Map<String, dynamic>?> anilistMediaDetail(
   return graphql.fetchMediaDetail(mediaId, token: token);
 }
 
-/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
 @riverpod
 Future<Map<String, dynamic>?> anilistCharacterDetail(
   AnilistCharacterDetailRef ref,
@@ -763,7 +752,6 @@ Future<Map<String, dynamic>?> anilistCharacterDetail(
   return graphql.fetchCharacterDetail(characterId, token: token);
 }
 
-/// Detalle completo de un miembro del staff Anilist (con personajes y media).
 @riverpod
 Future<Map<String, dynamic>?> anilistStaffDetail(
   AnilistStaffDetailRef ref,
@@ -774,7 +762,6 @@ Future<Map<String, dynamic>?> anilistStaffDetail(
   return graphql.fetchStaffDetail(staffId, token: token);
 }
 
-/// Full Anilist user profile with statistics (requires auth).
 @riverpod
 Future<Map<String, dynamic>?> anilistProfile(AnilistProfileRef ref) async {
   final token = await ref.watch(anilistTokenProvider.future);
@@ -802,7 +789,6 @@ Future<Map<String, dynamic>?> anilistForumThread(
   return graphql.fetchForumThread(threadId, token: token);
 }
 
-/// Unread Anilist notification count (0 if not logged in).
 @riverpod
 Future<int> anilistUnreadNotificationCount(
   AnilistUnreadNotificationCountRef ref,
@@ -813,7 +799,6 @@ Future<int> anilistUnreadNotificationCount(
   return await graphql.fetchUnreadNotificationCount(token) ?? 0;
 }
 
-/// First page of Anilist notifications; [resetNotificationCount] clears unread on Anilist.
 @riverpod
 Future<List<Map<String, dynamic>>> anilistNotificationsList(
   AnilistNotificationsListRef ref,
@@ -832,9 +817,6 @@ Future<List<Map<String, dynamic>>> anilistNotificationsList(
   return list;
 }
 
-// ---------------------------------------------------------------------------
-// Favoritos anime/manga (local sin sesión; al conectar Anilist se suben a la API)
-// ---------------------------------------------------------------------------
 
 const _favoriteAnilistPrefsKey = 'favorite_anilist_media_v1';
 
@@ -866,7 +848,6 @@ Map<String, dynamic> _snapshotAnilistMediaForFavorites(Map<String, dynamic> medi
   };
 }
 
-/// Une los nodos del perfil Anilist con favoritos guardados solo en local.
 List<Map<String, dynamic>> mergeAnilistFavoriteApiNodesWithLocal({
   required List<dynamic> apiNodes,
   required List<Map<String, dynamic>> localSnapshots,
@@ -923,7 +904,6 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
     state = next;
   }
 
-  /// Añade o quita favorito solo en dispositivo (sin token Anilist).
   Future<void> toggleLocalFavorite(Map<String, dynamic> media) async {
     final id = (media['id'] as num?)?.toInt();
     if (id == null || id <= 0) return;
@@ -953,7 +933,6 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
     await _persist(next);
   }
 
-  /// Tras iniciar sesión: favoritos locales que no estén en Anilist se envían con [ToggleFavourite].
   Future<void> pushPendingFavoritesToAnilist(String token) async {
     if (_pushInFlight != null) {
       await _pushInFlight;
@@ -992,7 +971,6 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
         touchedIds.add(id);
       } catch (e) {
         debugPrint('[AniList] Favorite sync failed for $id/$type: $e');
-        // Mantener en local para reintentar más tarde.
       }
     }
     for (final id in touchedIds) {
@@ -1002,9 +980,6 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Favoritos personajes/staff (local sin sesión; al conectar Anilist se sincronizan)
-// ---------------------------------------------------------------------------
 
 const _favoriteAnilistCharactersPrefsKey = 'favorite_anilist_characters_v1';
 const _favoriteAnilistStaffPrefsKey = 'favorite_anilist_staff_v1';
@@ -1039,7 +1014,6 @@ Map<String, dynamic> _snapshotAnilistPersonForFavorites(
   };
 }
 
-/// Une nodos del perfil Anilist con favoritos guardados solo en local.
 List<Map<String, dynamic>> mergeAnilistFavoritePeopleApiNodesWithLocal({
   required List<dynamic> apiNodes,
   required List<Map<String, dynamic>> localSnapshots,

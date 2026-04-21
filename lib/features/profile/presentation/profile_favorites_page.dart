@@ -11,7 +11,6 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Lista compacta de favoritos por categoría (anime, manga, cine, series, juegos).
 class ProfileFavoritesPage extends ConsumerWidget {
   const ProfileFavoritesPage({super.key, required this.kind});
 
@@ -127,7 +126,6 @@ class ProfileFavoritesPage extends ConsumerWidget {
     return _FavoritesBooksGrid(books: books);
   }
 
-  /// Mismos títulos que el corazón en detalle Trakt ([favoriteTraktTitlesProvider]).
   Widget _localTraktFavoritesBody(
     BuildContext context,
     WidgetRef ref,

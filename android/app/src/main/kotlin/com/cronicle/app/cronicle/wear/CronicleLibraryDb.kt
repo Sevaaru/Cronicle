@@ -5,30 +5,10 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import java.io.File
 
-/**
- * Direct, read/write access to the Cronicle Drift database (`cronicle.db`) from the
- * Android side.
- *
- * The Flutter app uses `drift_flutter`, which stores `cronicle.db` under the Flutter
- * documents directory (`<app>/app_flutter/cronicle.db`). Because Drift on Android uses
- * the standard sqlite3 file format, the platform `SQLiteDatabase` API can read & write
- * to it concurrently with the Flutter app — sqlite locking is honored.
- *
- * The methods here mirror the relevant Dart logic in `AppDatabase`:
- *   - [incrementProgress] for anime/tv/manga (and books delegating to [incrementBookProgress]).
- *   - [markCompleted] for movies/games/anything (writes `status = 'COMPLETED'`).
- *
- * Auto-completion (when `progress` reaches `totalEpisodes`) replicates the same behaviour
- * the Dart layer applies on the local DB.
- */
 internal class CronicleLibraryDb private constructor(private val db: SQLiteDatabase) {
 
     fun close() = db.close()
 
-    /**
-     * Returns every library row whose status is `CURRENT`, ordered by recency. The
-     * shape mirrors the columns the watch UI cares about.
-     */
     fun queryInProgress(): List<Map<String, Any?>> {
         val out = mutableListOf<Map<String, Any?>>()
         val cursor = db.rawQuery(
@@ -74,9 +54,6 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
         return out
     }
 
-    /**
-     * Reads a single entry by natural key. Returns `null` if no row exists.
-     */
     private fun findEntry(kind: Int, externalId: String): EntrySnapshot? {
         val cursor = db.rawQuery(
             """
@@ -109,10 +86,6 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
         }
     }
 
-    /**
-     * Increments the standard progress field. Auto-completes when reaching the cap.
-     * Mirrors `AppDatabase.incrementProgress` and `incrementBookProgress` in Dart.
-     */
     fun incrementProgress(kind: Int, externalId: String): Boolean {
         val entry = findEntry(kind, externalId) ?: return false
         return if (entry.kind == KIND_BOOK) {
@@ -178,10 +151,6 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
         }
     }
 
-    /**
-     * Marks the entry as `COMPLETED`. For series-like entries the progress is bumped
-     * to the known total (so the row reads "12/12" rather than staying mid-progress).
-     */
     fun markCompleted(kind: Int, externalId: String): Boolean {
         val entry = findEntry(kind, externalId) ?: return false
         val now = System.currentTimeMillis()
@@ -235,15 +204,7 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
         private const val KIND_ANIME = 0
         private const val KIND_BOOK = 5
 
-        /**
-         * Opens the Drift database file. Returns null when the Flutter app has not
-         * been launched even once on this device (and therefore the DB does not yet
-         * exist).
-         */
         fun openOrNull(context: Context): CronicleLibraryDb? {
-            // Drift's `driftDatabase(name: 'cronicle.db', ...)` actually persists the
-            // file as `<name>.sqlite` inside `path_provider`'s documents directory
-            // (which on Android maps to `<app>/app_flutter/`).
             val names = listOf("cronicle.db.sqlite", "cronicle.db")
             val dirs = listOf(
                 File(context.dataDir, "app_flutter"),

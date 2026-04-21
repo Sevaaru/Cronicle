@@ -9,7 +9,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-// ─── Trakt section slugs ────────────────────────────────────────────────────
 
 class TraktFeedSection {
   TraktFeedSection._();
@@ -39,7 +38,6 @@ String traktSectionTitle(AppLocalizations l10n, MediaKind kind, String slug) =>
       _ => slug,
     };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 List<Map<String, dynamic>> _movieSection(TraktMoviesHomeData d, String slug) =>
     switch (slug) {
@@ -63,9 +61,7 @@ List<Map<String, dynamic>> _showSection(TraktShowsHomeData d, String slug) =>
       _ => const [],
     };
 
-// ─── Page ────────────────────────────────────────────────────────────────────
 
-/// Full list page for a Trakt category (`/trakt-section/:kind/:slug`).
 class TraktHomeSectionListPage extends ConsumerWidget {
   const TraktHomeSectionListPage({
     super.key,
