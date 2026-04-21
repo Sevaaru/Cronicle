@@ -565,6 +565,284 @@ class _AnilistMediaDetailProviderElement
   int get mediaId => (origin as AnilistMediaDetailProvider).mediaId;
 }
 
+String _$anilistCharacterDetailHash() =>
+    r'52b4cc682ca3f47544da9f56412fc37468f91418';
+
+/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+///
+/// Copied from [anilistCharacterDetail].
+@ProviderFor(anilistCharacterDetail)
+const anilistCharacterDetailProvider = AnilistCharacterDetailFamily();
+
+/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+///
+/// Copied from [anilistCharacterDetail].
+class AnilistCharacterDetailFamily
+    extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+  ///
+  /// Copied from [anilistCharacterDetail].
+  const AnilistCharacterDetailFamily();
+
+  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+  ///
+  /// Copied from [anilistCharacterDetail].
+  AnilistCharacterDetailProvider call(int characterId) {
+    return AnilistCharacterDetailProvider(characterId);
+  }
+
+  @override
+  AnilistCharacterDetailProvider getProviderOverride(
+    covariant AnilistCharacterDetailProvider provider,
+  ) {
+    return call(provider.characterId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistCharacterDetailProvider';
+}
+
+/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+///
+/// Copied from [anilistCharacterDetail].
+class AnilistCharacterDetailProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+  ///
+  /// Copied from [anilistCharacterDetail].
+  AnilistCharacterDetailProvider(int characterId)
+    : this._internal(
+        (ref) => anilistCharacterDetail(
+          ref as AnilistCharacterDetailRef,
+          characterId,
+        ),
+        from: anilistCharacterDetailProvider,
+        name: r'anilistCharacterDetailProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistCharacterDetailHash,
+        dependencies: AnilistCharacterDetailFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistCharacterDetailFamily._allTransitiveDependencies,
+        characterId: characterId,
+      );
+
+  AnilistCharacterDetailProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.characterId,
+  }) : super.internal();
+
+  final int characterId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(AnilistCharacterDetailRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistCharacterDetailProvider._internal(
+        (ref) => create(ref as AnilistCharacterDetailRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        characterId: characterId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _AnilistCharacterDetailProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistCharacterDetailProvider &&
+        other.characterId == characterId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, characterId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistCharacterDetailRef
+    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `characterId` of this provider.
+  int get characterId;
+}
+
+class _AnilistCharacterDetailProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with AnilistCharacterDetailRef {
+  _AnilistCharacterDetailProviderElement(super.provider);
+
+  @override
+  int get characterId => (origin as AnilistCharacterDetailProvider).characterId;
+}
+
+String _$anilistStaffDetailHash() =>
+    r'86fe1250e986cf41ba613a12310d3f043bf11cc2';
+
+/// Detalle completo de un miembro del staff Anilist (con personajes y media).
+///
+/// Copied from [anilistStaffDetail].
+@ProviderFor(anilistStaffDetail)
+const anilistStaffDetailProvider = AnilistStaffDetailFamily();
+
+/// Detalle completo de un miembro del staff Anilist (con personajes y media).
+///
+/// Copied from [anilistStaffDetail].
+class AnilistStaffDetailFamily
+    extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
+  ///
+  /// Copied from [anilistStaffDetail].
+  const AnilistStaffDetailFamily();
+
+  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
+  ///
+  /// Copied from [anilistStaffDetail].
+  AnilistStaffDetailProvider call(int staffId) {
+    return AnilistStaffDetailProvider(staffId);
+  }
+
+  @override
+  AnilistStaffDetailProvider getProviderOverride(
+    covariant AnilistStaffDetailProvider provider,
+  ) {
+    return call(provider.staffId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistStaffDetailProvider';
+}
+
+/// Detalle completo de un miembro del staff Anilist (con personajes y media).
+///
+/// Copied from [anilistStaffDetail].
+class AnilistStaffDetailProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
+  ///
+  /// Copied from [anilistStaffDetail].
+  AnilistStaffDetailProvider(int staffId)
+    : this._internal(
+        (ref) => anilistStaffDetail(ref as AnilistStaffDetailRef, staffId),
+        from: anilistStaffDetailProvider,
+        name: r'anilistStaffDetailProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistStaffDetailHash,
+        dependencies: AnilistStaffDetailFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistStaffDetailFamily._allTransitiveDependencies,
+        staffId: staffId,
+      );
+
+  AnilistStaffDetailProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.staffId,
+  }) : super.internal();
+
+  final int staffId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(AnilistStaffDetailRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistStaffDetailProvider._internal(
+        (ref) => create(ref as AnilistStaffDetailRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        staffId: staffId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _AnilistStaffDetailProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistStaffDetailProvider && other.staffId == staffId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, staffId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistStaffDetailRef
+    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `staffId` of this provider.
+  int get staffId;
+}
+
+class _AnilistStaffDetailProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with AnilistStaffDetailRef {
+  _AnilistStaffDetailProviderElement(super.provider);
+
+  @override
+  int get staffId => (origin as AnilistStaffDetailProvider).staffId;
+}
+
 String _$anilistProfileHash() => r'5db6478c90720d03d1a8f9d9dec4c26f09733e9c';
 
 /// Full Anilist user profile with statistics (requires auth).
@@ -880,7 +1158,7 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$anilistTokenHash() => r'126b7eaa4ef994eb596983dfcbea9e6377d39593';
+String _$anilistTokenHash() => r'0c50f307d8de50e0fec881f44f0ba3c10568b824';
 
 /// See also [AnilistToken].
 @ProviderFor(AnilistToken)

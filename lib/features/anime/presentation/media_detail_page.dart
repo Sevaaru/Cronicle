@@ -474,6 +474,10 @@ class _DetailContentState extends State<_DetailContent> {
 
                 _buildRelations(context, colorScheme),
 
+                _buildCharacters(context, colorScheme, l10n),
+
+                _buildStaff(context, colorScheme, l10n),
+
                 _buildRecommendations(context, colorScheme),
 
                 _buildReviews(colorScheme, l10n),
@@ -672,6 +676,197 @@ class _DetailContentState extends State<_DetailContent> {
                         style: const TextStyle(fontSize: 11),
                         textAlign: TextAlign.center,
                       ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildCharacters(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final container = media['characters'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    if (edges.isEmpty) return const SizedBox.shrink();
+    final mediaId = media['id'] as int?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(l10n.mediaCharacters,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const Spacer(),
+            if (mediaId != null)
+              TextButton(
+                onPressed: () => context.push('/media/$mediaId/characters'),
+                child: Text(l10n.mediaViewAll,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 175,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: edges.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final edge = edges[i];
+              final node = edge['node'] as Map<String, dynamic>? ?? {};
+              final cId = node['id'] as int?;
+              final cName = (node['name'] as Map?)?['full'] as String? ?? '';
+              final cImg = (node['image'] as Map?)?['large'] as String?;
+              final role = edge['role'] as String?;
+              final vas = (edge['voiceActors'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+              final firstVa = vas.isNotEmpty ? vas.first : null;
+
+              return SizedBox(
+                width: 100,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: cId == null ? null : () => context.push('/character/$cId'),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: cImg != null
+                            ? CachedNetworkImage(
+                                imageUrl: cImg,
+                                width: 90,
+                                height: 110,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 90,
+                                height: 110,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.person),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      cName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                    if (role != null)
+                      Text(
+                        _formatCharacterRole(role, l10n),
+                        style: TextStyle(fontSize: 9, color: cs.primary, fontWeight: FontWeight.w600),
+                      ),
+                    if (firstVa != null) ...[
+                      const SizedBox(height: 2),
+                      InkWell(
+                        onTap: () {
+                          final id = firstVa['id'] as int?;
+                          if (id != null) context.push('/staff/$id');
+                        },
+                        child: Text(
+                          (firstVa['name'] as Map?)?['full'] as String? ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildStaff(BuildContext context, ColorScheme cs, AppLocalizations l10n) {
+    final container = media['staff'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    if (edges.isEmpty) return const SizedBox.shrink();
+    final mediaId = media['id'] as int?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(l10n.mediaStaff,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const Spacer(),
+            if (mediaId != null)
+              TextButton(
+                onPressed: () => context.push('/media/$mediaId/staff'),
+                child: Text(l10n.mediaViewAll,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 165,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: edges.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final edge = edges[i];
+              final node = edge['node'] as Map<String, dynamic>? ?? {};
+              final sId = node['id'] as int?;
+              final sName = (node['name'] as Map?)?['full'] as String? ?? '';
+              final sImg = (node['image'] as Map?)?['large'] as String?;
+              final role = edge['role'] as String?;
+
+              return SizedBox(
+                width: 100,
+                child: GestureDetector(
+                  onTap: sId == null ? null : () => context.push('/staff/$sId'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: sImg != null
+                            ? CachedNetworkImage(
+                                imageUrl: sImg,
+                                width: 90,
+                                height: 110,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                width: 90,
+                                height: 110,
+                                color: cs.surfaceContainerHighest,
+                                child: const Icon(Icons.person),
+                              ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        sName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      if (role != null)
+                        Text(
+                          role,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
+                        ),
                     ],
                   ),
                 ),
@@ -951,6 +1146,15 @@ class _DetailContentState extends State<_DetailContent> {
     return '$n';
   }
 
+}
+
+String _formatCharacterRole(String role, AppLocalizations l10n) {
+  return switch (role) {
+    'MAIN' => l10n.characterRoleMain,
+    'SUPPORTING' => l10n.characterRoleSupporting,
+    'BACKGROUND' => l10n.characterRoleBackground,
+    _ => role,
+  };
 }
 
 String _formatMediaStatus(String raw, bool isStatus, AppLocalizations l10n) {

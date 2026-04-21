@@ -84,7 +84,7 @@ fun DetailScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .blur(18.dp),
+                        .blur(6.dp),
                 )
                 Box(
                     modifier = Modifier
@@ -92,9 +92,9 @@ fun DetailScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.Black.copy(alpha = 0.55f),
-                                    Color.Black.copy(alpha = 0.75f),
-                                    Color.Black.copy(alpha = 0.92f),
+                                    Color.Black.copy(alpha = 0.30f),
+                                    Color.Black.copy(alpha = 0.50f),
+                                    Color.Black.copy(alpha = 0.70f),
                                 ),
                             ),
                         ),

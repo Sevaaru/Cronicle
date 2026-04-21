@@ -519,6 +519,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sectionFavBooks => 'Libros favoritos';
 
   @override
+  String get sectionFavCharacters => 'Personajes favoritos';
+
+  @override
+  String get sectionFavStaff => 'Staff favorito';
+
+  @override
+  String get loginRequiredFavoriteCharacter =>
+      'Inicia sesión con Anilist en Ajustes para marcar personajes favoritos';
+
+  @override
+  String get loginRequiredFavoriteStaff =>
+      'Inicia sesión con Anilist en Ajustes para marcar staff favorito';
+
+  @override
   String get tooltipAddFavorite => 'Añadir a favoritos';
 
   @override
@@ -957,6 +971,81 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mediaRecommendations => 'Recomendaciones';
+
+  @override
+  String get mediaCharacters => 'Personajes';
+
+  @override
+  String get mediaStaff => 'Staff';
+
+  @override
+  String get mediaViewAll => 'Ver todo';
+
+  @override
+  String get characterRoleMain => 'Principal';
+
+  @override
+  String get characterRoleSupporting => 'Secundario';
+
+  @override
+  String get characterRoleBackground => 'Fondo';
+
+  @override
+  String get characterVoiceActors => 'Actores de voz';
+
+  @override
+  String get characterAppearances => 'Apariciones';
+
+  @override
+  String get characterDescription => 'Descripción';
+
+  @override
+  String get staffRoles => 'Roles de staff';
+
+  @override
+  String get staffCharacterRoles => 'Personajes interpretados';
+
+  @override
+  String get staffOccupations => 'Ocupaciones';
+
+  @override
+  String get staffYearsActive => 'Años activos';
+
+  @override
+  String get staffHomeTown => 'Ciudad natal';
+
+  @override
+  String get staffBloodType => 'Tipo de sangre';
+
+  @override
+  String get staffDateOfBirth => 'Fecha de nacimiento';
+
+  @override
+  String get staffDateOfDeath => 'Fecha de fallecimiento';
+
+  @override
+  String get staffAge => 'Edad';
+
+  @override
+  String get staffGender => 'Género';
+
+  @override
+  String get characterAge => 'Edad';
+
+  @override
+  String get characterGender => 'Género';
+
+  @override
+  String get characterDateOfBirth => 'Fecha de nacimiento';
+
+  @override
+  String get characterBloodType => 'Tipo de sangre';
+
+  @override
+  String get characterAlternativeNames => 'Nombres alternativos';
+
+  @override
+  String get characterAlternativeSpoiler => 'Nombres con spoiler';
 
   @override
   String get mediaScoreDistribution => 'Distribución de notas';

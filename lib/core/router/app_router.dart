@@ -6,6 +6,10 @@ import 'package:cronicle/core/router/profile_route_transition.dart';
 import 'package:cronicle/core/router/shell_nav_tab.dart';
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/media_genre_tag_browse_page.dart';
+import 'package:cronicle/features/anime/presentation/media_characters_page.dart';
+import 'package:cronicle/features/anime/presentation/media_staff_page.dart';
+import 'package:cronicle/features/anime/presentation/character_detail_page.dart';
+import 'package:cronicle/features/anime/presentation/staff_detail_page.dart';
 import 'package:cronicle/features/anime/presentation/forum_media_threads_page.dart';
 import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
@@ -259,6 +263,34 @@ GoRouter appRouter(AppRouterRef ref) {
                 mediaId: id,
                 kind: MediaKind.fromCode(kindCode),
               );
+            },
+          ),
+          GoRoute(
+            path: '/media/:id/characters',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return MediaCharactersPage(mediaId: id);
+            },
+          ),
+          GoRoute(
+            path: '/media/:id/staff',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return MediaStaffPage(mediaId: id);
+            },
+          ),
+          GoRoute(
+            path: '/character/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return CharacterDetailPage(characterId: id);
+            },
+          ),
+          GoRoute(
+            path: '/staff/:id',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return StaffDetailPage(staffId: id);
             },
           ),
           GoRoute(

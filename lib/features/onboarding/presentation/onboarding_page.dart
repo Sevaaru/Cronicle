@@ -91,6 +91,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   final _selected = <String>{};
   int _currentPage = 0;
   bool _googleConnected = false;
+  bool _driveRestored = false;
   bool _syncing = false;
 
   late AnimationController _animCtrl;
@@ -188,7 +189,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     }
 
     // 3) Google Drive restore (after Anilist/Trakt so direct imports take priority)
-    if (_googleConnected) {
+    if (_googleConnected && !_driveRestored) {
       try {
         final repo = ref.read(backupRepositoryProvider);
         final res = await repo.downloadBackup();
@@ -286,6 +287,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                       syncing: _syncing,
                       onGoogleChanged: (v) =>
                           setState(() => _googleConnected = v),
+                      onDriveRestored: () =>
+                          setState(() => _driveRestored = true),
                     ),
                   ],
                 ),
@@ -471,12 +474,14 @@ class _AccountsPage extends ConsumerStatefulWidget {
     required this.onBack,
     required this.syncing,
     required this.onGoogleChanged,
+    required this.onDriveRestored,
   });
 
   final VoidCallback onFinish;
   final VoidCallback onBack;
   final bool syncing;
   final ValueChanged<bool> onGoogleChanged;
+  final VoidCallback onDriveRestored;
 
   @override
   ConsumerState<_AccountsPage> createState() => _AccountsPageState();
@@ -485,6 +490,7 @@ class _AccountsPage extends ConsumerStatefulWidget {
 class _AccountsPageState extends ConsumerState<_AccountsPage> {
   bool _googleConnected = false;
   bool _connectingGoogle = false;
+  bool _restoringFromDrive = false;
   bool _anilistSyncing = false;
   bool _traktSyncing = false;
   bool _anilistSynced = false;
@@ -507,7 +513,12 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
         if (mounted) {
           setState(() => _googleConnected = connected);
           widget.onGoogleChanged(connected);
-          if (connected) unawaited(_syncOtherAccounts());
+          if (connected) {
+            // Restore Drive backup first so previously linked AniList/Trakt
+            // tokens are written to secure storage and their providers
+            // re-emit as connected (green tick) automatically.
+            await _restoreFromDriveAndSync();
+          }
         }
       }
     } catch (_) {
@@ -515,6 +526,35 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
     } finally {
       if (mounted) setState(() => _connectingGoogle = false);
     }
+  }
+
+  Future<void> _restoreFromDriveAndSync() async {
+    if (!mounted) return;
+    setState(() => _restoringFromDrive = true);
+    try {
+      final repo = ref.read(backupRepositoryProvider);
+      final res = await repo.downloadBackup();
+      final bytes = res.fold((_) => null, (b) => b);
+      if (bytes != null && bytes.isNotEmpty) {
+        final json =
+            jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+        await AppBackupBundle.restoreFromJson(
+          json: json,
+          db: ref.read(databaseProvider),
+          prefs: ref.read(sharedPreferencesProvider),
+          secure: const FlutterSecureStorage(),
+          ref: ref,
+        );
+      }
+      if (mounted) widget.onDriveRestored();
+    } catch (_) {
+      // Ignore: no backup yet or transient failure.
+    } finally {
+      if (mounted) setState(() => _restoringFromDrive = false);
+    }
+    // Now import library data using whatever tokens are present
+    // (either pre-existing or just restored from Drive).
+    if (mounted) unawaited(_syncOtherAccounts());
   }
 
   Future<void> _connectAnilist() async {
@@ -668,7 +708,7 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
             title: l10n.onboardingConnectGoogle,
             subtitle: l10n.onboardingConnectGoogleDesc,
             connected: _googleConnected,
-            loading: _connectingGoogle,
+            loading: _connectingGoogle || _restoringFromDrive,
             connectedLabel: l10n.onboardingConnected,
             onConnect: _connectGoogle,
           ),

@@ -328,6 +328,8 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
     final favs = profile['favourites'] as Map<String, dynamic>? ?? {};
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
     final favManga = (favs['manga'] as Map?)?['nodes'] as List? ?? [];
+    final favCharacters = (favs['characters'] as Map?)?['nodes'] as List? ?? [];
+    final favStaff = (favs['staff'] as Map?)?['nodes'] as List? ?? [];
 
     // Misma geometría que [UserProfilePage]: banner 150px + fila avatar (top 105, ~84px alto).
     const bannerH = 150.0;
@@ -606,6 +608,45 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                         count: favBooks.length,
                         thumbs: thumbsFromBookFavorites(favBooks),
                         onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.books.segment}'),
+                      ),
+                    );
+                  }
+
+                  List<ProfileFavPreviewThumb> thumbsFromCharStaff(
+                    List<dynamic> nodes,
+                  ) {
+                    return nodes.take(80).map((raw) {
+                      final m = raw as Map<String, dynamic>;
+                      final u = (m['image'] as Map?)?['large'] as String? ??
+                          (m['image'] as Map?)?['medium'] as String?;
+                      return ProfileFavPreviewThumb(
+                        imageUrl: u,
+                        fallbackIcon: Icons.person,
+                      );
+                    }).toList();
+                  }
+
+                  if (favCharacters.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.face_rounded,
+                        iconColor: Colors.pinkAccent,
+                        title: l10n.sectionFavCharacters,
+                        count: favCharacters.length,
+                        thumbs: thumbsFromCharStaff(favCharacters),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.characters.segment}'),
+                      ),
+                    );
+                  }
+                  if (favStaff.isNotEmpty) {
+                    previewRows.add(
+                      ProfileFavoritesPreviewRow(
+                        icon: Icons.badge_rounded,
+                        iconColor: Colors.indigoAccent,
+                        title: l10n.sectionFavStaff,
+                        count: favStaff.length,
+                        thumbs: thumbsFromCharStaff(favStaff),
+                        onTap: () => context.push('/profile/favorites/${ProfileFavoritesKind.staff.segment}'),
                       ),
                     );
                   }

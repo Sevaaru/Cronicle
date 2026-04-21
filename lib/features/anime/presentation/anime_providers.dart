@@ -71,6 +71,8 @@ class AnilistToken extends _$AnilistToken {
     ref.invalidate(anilistProfileProvider);
     ref.invalidate(anilistMediaDetailProvider);
     ref.invalidate(anilistForumThreadProvider);
+    ref.invalidate(anilistCharacterDetailProvider);
+    ref.invalidate(anilistStaffDetailProvider);
     ref.invalidate(anilistFeedProvider);
     ref.invalidate(anilistFeedFollowingProvider);
     ref.invalidate(anilistFeedByTypeProvider);
@@ -679,6 +681,28 @@ Future<Map<String, dynamic>?> anilistMediaDetail(
   final graphql = ref.read(anilistGraphqlProvider);
   final token = await ref.watch(anilistTokenProvider.future);
   return graphql.fetchMediaDetail(mediaId, token: token);
+}
+
+/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
+@riverpod
+Future<Map<String, dynamic>?> anilistCharacterDetail(
+  AnilistCharacterDetailRef ref,
+  int characterId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.watch(anilistTokenProvider.future);
+  return graphql.fetchCharacterDetail(characterId, token: token);
+}
+
+/// Detalle completo de un miembro del staff Anilist (con personajes y media).
+@riverpod
+Future<Map<String, dynamic>?> anilistStaffDetail(
+  AnilistStaffDetailRef ref,
+  int staffId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.watch(anilistTokenProvider.future);
+  return graphql.fetchStaffDetail(staffId, token: token);
 }
 
 /// Full Anilist user profile with statistics (requires auth).

@@ -708,6 +708,34 @@ class AnilistGraphqlDatasource {
               }
             }
           }
+          characters(sort: [ROLE, RELEVANCE, ID], perPage: 12) {
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+            }
+          }
+          staff(sort: [RELEVANCE, ID], perPage: 8) {
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+            }
+          }
           reviews(sort: RATING_DESC, perPage: 5) {
             nodes {
               id
@@ -753,6 +781,256 @@ class AnilistGraphqlDatasource {
         if (!isAnime) 'mangaId': mediaId,
       },
       token: token,
+    );
+  }
+
+  /// Toggle viewer favourite for a character (requires auth).
+  Future<void> toggleFavouriteCharacter({
+    required int characterId,
+    required String token,
+  }) async {
+    const mutation = r'''
+      mutation ($characterId: Int) {
+        ToggleFavourite(characterId: $characterId) { __typename }
+      }
+    ''';
+    await _post(mutation, variables: {'characterId': characterId}, token: token);
+  }
+
+  /// Toggle viewer favourite for a staff member (requires auth).
+  Future<void> toggleFavouriteStaff({
+    required int staffId,
+    required String token,
+  }) async {
+    const mutation = r'''
+      mutation ($staffId: Int) {
+        ToggleFavourite(staffId: $staffId) { __typename }
+      }
+    ''';
+    await _post(mutation, variables: {'staffId': staffId}, token: token);
+  }
+
+  /// Fetch full character detail with paginated media appearances.
+  Future<Map<String, dynamic>?> fetchCharacterDetail(
+    int id, {
+    String? token,
+    int mediaPage = 1,
+    int mediaPerPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Character(id: $id) {
+          id
+          name { full native alternative alternativeSpoiler userPreferred }
+          image { large medium }
+          description(asHtml: false)
+          gender
+          age
+          bloodType
+          dateOfBirth { year month day }
+          favourites
+          isFavourite
+          siteUrl
+          media(sort: [POPULARITY_DESC], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              characterRole
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+              node {
+                id
+                type
+                format
+                title { romaji english native }
+                coverImage { large }
+                averageScore
+                seasonYear
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': id, 'page': mediaPage, 'perPage': mediaPerPage},
+      token: token,
+    );
+    return data['data']?['Character'] as Map<String, dynamic>?;
+  }
+
+  /// Fetch full staff detail with character roles and staff media credits.
+  Future<Map<String, dynamic>?> fetchStaffDetail(
+    int id, {
+    String? token,
+    int charactersPage = 1,
+    int charactersPerPage = 25,
+    int staffMediaPage = 1,
+    int staffMediaPerPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $cPage: Int, $cPerPage: Int, $sPage: Int, $sPerPage: Int) {
+        Staff(id: $id) {
+          id
+          name { full native userPreferred }
+          image { large medium }
+          description(asHtml: false)
+          languageV2
+          primaryOccupations
+          gender
+          age
+          yearsActive
+          homeTown
+          bloodType
+          dateOfBirth { year month day }
+          dateOfDeath { year month day }
+          favourites
+          isFavourite
+          siteUrl
+          characterMedia(sort: [POPULARITY_DESC], page: $cPage, perPage: $cPerPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              characterRole
+              characters {
+                id
+                name { full native }
+                image { large medium }
+              }
+              node {
+                id
+                type
+                title { romaji english native }
+                coverImage { large }
+                seasonYear
+              }
+            }
+          }
+          staffMedia(sort: [POPULARITY_DESC], page: $sPage, perPage: $sPerPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              staffRole
+              node {
+                id
+                type
+                title { romaji english native }
+                coverImage { large }
+                seasonYear
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {
+        'id': id,
+        'cPage': charactersPage,
+        'cPerPage': charactersPerPage,
+        'sPage': staffMediaPage,
+        'sPerPage': staffMediaPerPage,
+      },
+      token: token,
+    );
+    return data['data']?['Staff'] as Map<String, dynamic>?;
+  }
+
+  /// Paginated characters list for a media (used in "View all").
+  Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
+      fetchMediaCharacters(
+    int mediaId, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Media(id: $id) {
+          characters(sort: [ROLE, RELEVANCE, ID], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+              voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) {
+                id
+                name { full native }
+                image { large medium }
+                languageV2
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': mediaId, 'page': page, 'perPage': perPage},
+    );
+    final container =
+        data['data']?['Media']?['characters'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        <Map<String, dynamic>>[];
+    final pageInfo = container?['pageInfo'] as Map<String, dynamic>? ?? {};
+    return (
+      edges: edges,
+      hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
+      total: jsonInt(pageInfo['total']),
+    );
+  }
+
+  /// Paginated staff list for a media (used in "View all").
+  Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
+      fetchMediaStaff(
+    int mediaId, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Media(id: $id) {
+          staff(sort: [RELEVANCE, ID], page: $page, perPage: $perPage) {
+            pageInfo { total currentPage hasNextPage }
+            edges {
+              id
+              role
+              node {
+                id
+                name { full native }
+                image { large medium }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'id': mediaId, 'page': page, 'perPage': perPage},
+    );
+    final container =
+        data['data']?['Media']?['staff'] as Map<String, dynamic>?;
+    final edges = (container?['edges'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        <Map<String, dynamic>>[];
+    final pageInfo = container?['pageInfo'] as Map<String, dynamic>? ?? {};
+    return (
+      edges: edges,
+      hasNextPage: pageInfo['hasNextPage'] as bool? ?? false,
+      total: jsonInt(pageInfo['total']),
     );
   }
 
@@ -1452,6 +1730,12 @@ class AnilistGraphqlDatasource {
             manga(perPage: 10) {
               nodes { id title { romaji english } coverImage { large } }
             }
+            characters(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
+            staff(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
           }
           statistics {
             anime {
@@ -1683,6 +1967,12 @@ class AnilistGraphqlDatasource {
             }
             manga(perPage: 10) {
               nodes { id title { romaji english } coverImage { large } }
+            }
+            characters(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
+            }
+            staff(perPage: 25) {
+              nodes { id name { full native } image { large medium } }
             }
           }
           statistics {

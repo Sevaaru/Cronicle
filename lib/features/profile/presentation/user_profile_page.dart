@@ -120,6 +120,8 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
     final favs = p['favourites'] as Map<String, dynamic>? ?? {};
     final favAnime = (favs['anime'] as Map?)?['nodes'] as List? ?? [];
     final favManga = (favs['manga'] as Map?)?['nodes'] as List? ?? [];
+    final favCharacters = (favs['characters'] as Map?)?['nodes'] as List? ?? [];
+    final favStaff = (favs['staff'] as Map?)?['nodes'] as List? ?? [];
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -353,6 +355,44 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
+                // Favoritos personajes
+                if (favCharacters.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SectionHeader(l10n.sectionFavCharacters, Icons.face_rounded, Colors.pinkAccent),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: favCharacters.length,
+                      itemBuilder: (context, i) => _FavPersonCard(
+                        node: favCharacters[i] as Map<String, dynamic>,
+                        isCharacter: true,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Favoritos staff
+                if (favStaff.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SectionHeader(l10n.sectionFavStaff, Icons.badge_rounded, Colors.indigoAccent),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      separatorBuilder: (_, _) => const SizedBox(width: 10),
+                      itemCount: favStaff.length,
+                      itemBuilder: (context, i) => _FavPersonCard(
+                        node: favStaff[i] as Map<String, dynamic>,
+                        isCharacter: false,
+                      ),
+                    ),
+                  ),
+                ],
+
                 // Actividad reciente
                 if (_activity.isNotEmpty) ...[
                   const SizedBox(height: 20),
@@ -406,6 +446,56 @@ class _FavCard extends StatelessWidget {
                       height: 130,
                       color: cs.surfaceContainerHighest,
                       child: const Icon(Icons.image),
+                    ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FavPersonCard extends StatelessWidget {
+  const _FavPersonCard({required this.node, required this.isCharacter});
+  final Map<String, dynamic> node;
+  final bool isCharacter;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final id = node['id'] as int?;
+    final name = (node['name'] as Map?)?['full'] as String? ?? '';
+    final img = (node['image'] as Map?)?['large'] as String? ??
+        (node['image'] as Map?)?['medium'] as String?;
+    return GestureDetector(
+      onTap: id != null
+          ? () => context.push(isCharacter ? '/character/$id' : '/staff/$id')
+          : null,
+      child: SizedBox(
+        width: 100,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: img != null
+                  ? CachedNetworkImage(
+                      imageUrl: img,
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 100,
+                      height: 130,
+                      color: cs.surfaceContainerHighest,
+                      child: const Icon(Icons.person),
                     ),
             ),
             const SizedBox(height: 4),

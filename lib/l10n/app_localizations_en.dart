@@ -518,6 +518,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionFavBooks => 'Favourite books';
 
   @override
+  String get sectionFavCharacters => 'Favourite characters';
+
+  @override
+  String get sectionFavStaff => 'Favourite staff';
+
+  @override
+  String get loginRequiredFavoriteCharacter =>
+      'Sign in with Anilist in Settings to favourite characters';
+
+  @override
+  String get loginRequiredFavoriteStaff =>
+      'Sign in with Anilist in Settings to favourite staff';
+
+  @override
   String get tooltipAddFavorite => 'Add to favourites';
 
   @override
@@ -954,6 +968,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaRecommendations => 'Recommendations';
+
+  @override
+  String get mediaCharacters => 'Characters';
+
+  @override
+  String get mediaStaff => 'Staff';
+
+  @override
+  String get mediaViewAll => 'View all';
+
+  @override
+  String get characterRoleMain => 'Main';
+
+  @override
+  String get characterRoleSupporting => 'Supporting';
+
+  @override
+  String get characterRoleBackground => 'Background';
+
+  @override
+  String get characterVoiceActors => 'Voice actors';
+
+  @override
+  String get characterAppearances => 'Appearances';
+
+  @override
+  String get characterDescription => 'Description';
+
+  @override
+  String get staffRoles => 'Staff roles';
+
+  @override
+  String get staffCharacterRoles => 'Character roles';
+
+  @override
+  String get staffOccupations => 'Occupations';
+
+  @override
+  String get staffYearsActive => 'Years active';
+
+  @override
+  String get staffHomeTown => 'Home town';
+
+  @override
+  String get staffBloodType => 'Blood type';
+
+  @override
+  String get staffDateOfBirth => 'Date of birth';
+
+  @override
+  String get staffDateOfDeath => 'Date of death';
+
+  @override
+  String get staffAge => 'Age';
+
+  @override
+  String get staffGender => 'Gender';
+
+  @override
+  String get characterAge => 'Age';
+
+  @override
+  String get characterGender => 'Gender';
+
+  @override
+  String get characterDateOfBirth => 'Date of birth';
+
+  @override
+  String get characterBloodType => 'Blood type';
+
+  @override
+  String get characterAlternativeNames => 'Alternative names';
+
+  @override
+  String get characterAlternativeSpoiler => 'Spoiler names';
 
   @override
   String get mediaScoreDistribution => 'Score distribution';

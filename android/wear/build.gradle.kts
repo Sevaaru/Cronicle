@@ -22,9 +22,11 @@ android {
         // MUST match the phone app's applicationId for Wearable Data Layer pairing.
         applicationId = "com.cronicle.app.cronicle"
         minSdk = 30 // Wear OS 3+
-        targetSdk = 34
-        versionCode = 31
-        versionName = "1.0.2"
+        targetSdk = 35
+        // Mantener sincronizado con `pubspec.yaml` (version: x.y.z+versionCode)
+        // del módulo móvil para que ambas subidas a Play Console avancen juntas.
+        versionCode = 39
+        versionName = "1.0.9"
     }
 
     compileOptions {
@@ -53,6 +55,12 @@ android {
 
     buildTypes {
         release {
+            // R8 desactivado: el módulo Wear es muy pequeño (Kotlin puro) y
+            // R8 estaba removiendo clases que Compose / WearableListenerService /
+            // Tiles / Coil necesitan por reflexión o por referencia desde el
+            // manifest, provocando crash al iniciar la APK release. El warning
+            // de Play Console sobre "archivo de desofuscación" es informativo
+            // y no bloquea publicación.
             isMinifyEnabled = false
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
@@ -75,6 +83,11 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // Excluir la única .so del AAB (prebuilt y stripped en el AAR de
+        // androidx.graphics:graphics-path). Sin código nativo desaparece el
+        // aviso "native debug symbols" en Play Console. La librería tiene
+        // fallback Kotlin puro, así que Compose sigue funcionando.
+        jniLibs.excludes += "**/libandroidx.graphics.path.so"
     }
 }
 

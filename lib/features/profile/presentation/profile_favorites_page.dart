@@ -27,6 +27,8 @@ class ProfileFavoritesPage extends ConsumerWidget {
       ProfileFavoritesKind.movies => l10n.sectionFavTraktMovies,
       ProfileFavoritesKind.tv => l10n.sectionFavTraktShows,
       ProfileFavoritesKind.books => l10n.sectionFavBooks,
+      ProfileFavoritesKind.characters => l10n.sectionFavCharacters,
+      ProfileFavoritesKind.staff => l10n.sectionFavStaff,
     };
 
     final body = switch (kind) {
@@ -81,6 +83,8 @@ class ProfileFavoritesPage extends ConsumerWidget {
             kind,
           ),
       ProfileFavoritesKind.books => _booksBody(context, ref, l10n),
+      ProfileFavoritesKind.characters || ProfileFavoritesKind.staff =>
+        _charStaffBody(context, ref, l10n, kind),
     };
 
     return Scaffold(
@@ -147,6 +151,113 @@ class ProfileFavoritesPage extends ConsumerWidget {
       );
     }
     return _FavoritesTraktGrid(items: list, isShow: kind == ProfileFavoritesKind.tv);
+  }
+
+  Widget _charStaffBody(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+    ProfileFavoritesKind kind,
+  ) {
+    final profileAsync = ref.watch(anilistProfileProvider);
+    final cs = Theme.of(context).colorScheme;
+    return profileAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text(l10n.errorWithMessage('$e'))),
+      data: (profile) {
+        if (profile == null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l10n.profileLibraryEmpty,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: cs.onSurfaceVariant)),
+            ),
+          );
+        }
+        final key = kind == ProfileFavoritesKind.characters ? 'characters' : 'staff';
+        final nodes = (((profile['favourites'] as Map?)?[key] as Map?)?['nodes']
+                as List?)
+                ?.cast<Map<String, dynamic>>() ??
+            const [];
+        if (nodes.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l10n.profileLibraryEmpty,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: cs.onSurfaceVariant)),
+            ),
+          );
+        }
+        return _PersonGrid(
+          nodes: nodes,
+          isCharacter: kind == ProfileFavoritesKind.characters,
+        );
+      },
+    );
+  }
+}
+
+class _PersonGrid extends StatelessWidget {
+  const _PersonGrid({required this.nodes, required this.isCharacter});
+  final List<Map<String, dynamic>> nodes;
+  final bool isCharacter;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.62,
+      ),
+      itemCount: nodes.length,
+      itemBuilder: (context, i) {
+        final n = nodes[i];
+        final id = n['id'] as int?;
+        final name = (n['name'] as Map?)?['full'] as String? ?? '';
+        final img = (n['image'] as Map?)?['large'] as String? ??
+            (n['image'] as Map?)?['medium'] as String?;
+        final cs = Theme.of(context).colorScheme;
+        return GestureDetector(
+          onTap: id == null
+              ? null
+              : () => context.push(isCharacter ? '/character/$id' : '/staff/$id'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: img != null
+                      ? CachedNetworkImage(
+                          imageUrl: img,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        )
+                      : ColoredBox(
+                          color: cs.surfaceContainerHighest,
+                          child: const Icon(Icons.person),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w500, height: 1.2),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

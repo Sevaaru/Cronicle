@@ -92,6 +92,14 @@ android {
             }
         }
     }
+
+    // Incluir símbolos de depuración nativos (Flutter engine, sqlite3, etc.)
+    // en el AAB para que Play Console simbolice ANRs/crashes.
+    buildTypes.getByName("release") {
+        ndk {
+            debugSymbolLevel = "FULL"
+        }
+    }
 }
 
 flutter {

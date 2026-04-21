@@ -1028,6 +1028,30 @@ abstract class AppLocalizations {
   /// **'Libros favoritos'**
   String get sectionFavBooks;
 
+  /// No description provided for @sectionFavCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes favoritos'**
+  String get sectionFavCharacters;
+
+  /// No description provided for @sectionFavStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff favorito'**
+  String get sectionFavStaff;
+
+  /// No description provided for @loginRequiredFavoriteCharacter.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con Anilist en Ajustes para marcar personajes favoritos'**
+  String get loginRequiredFavoriteCharacter;
+
+  /// No description provided for @loginRequiredFavoriteStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con Anilist en Ajustes para marcar staff favorito'**
+  String get loginRequiredFavoriteStaff;
+
   /// No description provided for @tooltipAddFavorite.
   ///
   /// In es, this message translates to:
@@ -1867,6 +1891,156 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Recomendaciones'**
   String get mediaRecommendations;
+
+  /// No description provided for @mediaCharacters.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes'**
+  String get mediaCharacters;
+
+  /// No description provided for @mediaStaff.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff'**
+  String get mediaStaff;
+
+  /// No description provided for @mediaViewAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get mediaViewAll;
+
+  /// No description provided for @characterRoleMain.
+  ///
+  /// In es, this message translates to:
+  /// **'Principal'**
+  String get characterRoleMain;
+
+  /// No description provided for @characterRoleSupporting.
+  ///
+  /// In es, this message translates to:
+  /// **'Secundario'**
+  String get characterRoleSupporting;
+
+  /// No description provided for @characterRoleBackground.
+  ///
+  /// In es, this message translates to:
+  /// **'Fondo'**
+  String get characterRoleBackground;
+
+  /// No description provided for @characterVoiceActors.
+  ///
+  /// In es, this message translates to:
+  /// **'Actores de voz'**
+  String get characterVoiceActors;
+
+  /// No description provided for @characterAppearances.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariciones'**
+  String get characterAppearances;
+
+  /// No description provided for @characterDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get characterDescription;
+
+  /// No description provided for @staffRoles.
+  ///
+  /// In es, this message translates to:
+  /// **'Roles de staff'**
+  String get staffRoles;
+
+  /// No description provided for @staffCharacterRoles.
+  ///
+  /// In es, this message translates to:
+  /// **'Personajes interpretados'**
+  String get staffCharacterRoles;
+
+  /// No description provided for @staffOccupations.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocupaciones'**
+  String get staffOccupations;
+
+  /// No description provided for @staffYearsActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Años activos'**
+  String get staffYearsActive;
+
+  /// No description provided for @staffHomeTown.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciudad natal'**
+  String get staffHomeTown;
+
+  /// No description provided for @staffBloodType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de sangre'**
+  String get staffBloodType;
+
+  /// No description provided for @staffDateOfBirth.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get staffDateOfBirth;
+
+  /// No description provided for @staffDateOfDeath.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de fallecimiento'**
+  String get staffDateOfDeath;
+
+  /// No description provided for @staffAge.
+  ///
+  /// In es, this message translates to:
+  /// **'Edad'**
+  String get staffAge;
+
+  /// No description provided for @staffGender.
+  ///
+  /// In es, this message translates to:
+  /// **'Género'**
+  String get staffGender;
+
+  /// No description provided for @characterAge.
+  ///
+  /// In es, this message translates to:
+  /// **'Edad'**
+  String get characterAge;
+
+  /// No description provided for @characterGender.
+  ///
+  /// In es, this message translates to:
+  /// **'Género'**
+  String get characterGender;
+
+  /// No description provided for @characterDateOfBirth.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get characterDateOfBirth;
+
+  /// No description provided for @characterBloodType.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de sangre'**
+  String get characterBloodType;
+
+  /// No description provided for @characterAlternativeNames.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombres alternativos'**
+  String get characterAlternativeNames;
+
+  /// No description provided for @characterAlternativeSpoiler.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombres con spoiler'**
+  String get characterAlternativeSpoiler;
 
   /// No description provided for @mediaScoreDistribution.
   ///
