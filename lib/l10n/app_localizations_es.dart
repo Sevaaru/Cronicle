@@ -1480,13 +1480,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsStartPage => 'Página de inicio';
 
   @override
-  String get settingsStartFeed => 'Inicio (Feed)';
+  String get settingsStartFeed => 'Inicio';
 
   @override
   String get settingsStartLibrary => 'Biblioteca';
 
   @override
-  String get settingsFeedTab => 'Pestaña del feed por defecto';
+  String get settingsFeedTab => 'Pestaña de inicio por defecto';
 
   @override
   String get settingsFeedActivityScope => 'Vista por defecto del feed';

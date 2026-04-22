@@ -254,7 +254,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
     if (!_statusInitialized) {
       final defaultFilter = ref.read(defaultLibraryFilterProvider);
-      _selectedStatus = defaultFilter;
+      _selectedStatus = defaultFilter == 'ALL' ? null : defaultFilter;
       _statusInitialized = true;
     }
 
@@ -299,27 +299,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         actions: [
           if (_remoteSyncing)
             Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.syncLoading,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: cs.primary.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.only(right: 12),
+              child: _SyncIndicatorPill(
+                label: l10n.syncLoading,
+                cs: cs,
               ),
             ),
         ],
@@ -2228,10 +2211,94 @@ class _SearchEntryTile extends StatelessWidget {
   }
 }
 
+/// A modern Material 3 expressive pill that signals an in-flight library
+/// sync. Uses a soft `primaryContainer` surface, a small wavy circular
+/// progress indicator (M3 expressive, `year2023: false`) and a subtly
+/// breathing animation so it doesn't feel like a static spinner.
+class _SyncIndicatorPill extends StatefulWidget {
+  const _SyncIndicatorPill({required this.label, required this.cs});
+
+  final String label;
+  final ColorScheme cs;
+
+  @override
+  State<_SyncIndicatorPill> createState() => _SyncIndicatorPillState();
+}
+
+class _SyncIndicatorPillState extends State<_SyncIndicatorPill>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breathe;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathe = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _breathe.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+    return AnimatedBuilder(
+      animation: _breathe,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_breathe.value);
+        final bg = Color.lerp(
+          cs.primaryContainer.withAlpha(180),
+          cs.primaryContainer,
+          t,
+        )!;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  // ignore: deprecated_member_use
+                  year2023: false,
+                  strokeWidth: 2.4,
+                  strokeCap: StrokeCap.round,
+                  color: cs.onPrimaryContainer,
+                  backgroundColor:
+                      cs.onPrimaryContainer.withAlpha(40),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                  color: cs.onPrimaryContainer,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _LibrarySearchFab extends StatelessWidget {
   const _LibrarySearchFab({required this.onTap});
   final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;

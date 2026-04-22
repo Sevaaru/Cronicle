@@ -2813,7 +2813,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsStartFeed.
   ///
   /// In es, this message translates to:
-  /// **'Inicio (Feed)'**
+  /// **'Inicio'**
   String get settingsStartFeed;
 
   /// No description provided for @settingsStartLibrary.
@@ -2825,7 +2825,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsFeedTab.
   ///
   /// In es, this message translates to:
-  /// **'Pestaña del feed por defecto'**
+  /// **'Pestaña de inicio por defecto'**
   String get settingsFeedTab;
 
   /// No description provided for @settingsFeedActivityScope.

@@ -12,6 +12,7 @@ import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_home_feed_view.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -236,7 +237,22 @@ class _FeedPageState extends ConsumerState<FeedPage>
     });
 
     if (!_filterInitialized) {
-      _filter = _FeedFilter.summary;
+      final defaultTab = ref.read(defaultFeedTabProvider);
+      final visible = feedLayout.visibleIdSet;
+      _FeedFilter resolved;
+      if (defaultTab == 'summary') {
+        resolved = _FeedFilter.summary;
+      } else {
+        try {
+          final candidate = _FeedFilter.values.byName(defaultTab);
+          resolved = visible.contains(candidate.name)
+              ? candidate
+              : _FeedFilter.summary;
+        } catch (_) {
+          resolved = _FeedFilter.summary;
+        }
+      }
+      _filter = resolved;
       _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
       _filterInitialized = true;
     }

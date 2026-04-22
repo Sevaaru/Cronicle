@@ -75,13 +75,28 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
 
   _CommentSort _sort = _CommentSort.oldest;
 
-  // Pagination
-  int _currentPage = 1;
+  // Pagination. We track the range of pages that has been loaded so we can
+  // page forward (oldest sort) or backward from the last page (newest sort)
+  // without ever loading every page at once — that would melt AniList's
+  // rate limit on long threads.
+  int _minLoadedPage = 1;
+  int _maxLoadedPage = 1;
   int _lastPage = 1;
-  bool _hasNextPage = false;
   bool _loadingMore = false;
-  bool _loadingAll = false;
   static const int _commentsPerPage = 25;
+
+  bool get _hasMoreInDirection {
+    switch (_sort) {
+      case _CommentSort.oldest:
+        return _maxLoadedPage < _lastPage;
+      case _CommentSort.newest:
+        return _minLoadedPage > 1;
+      case _CommentSort.mostLiked:
+        // Sort by likes operates on whatever the user has scrolled through;
+        // we do not auto-fetch in this mode to avoid hammering AniList.
+        return false;
+    }
+  }
 
   ({int id, String name})? _replyTarget;
   final _replyFocusNode = FocusNode();
@@ -110,11 +125,10 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
     if (pos.pixels >= pos.maxScrollExtent - 600 &&
-        _hasNextPage &&
+        _hasMoreInDirection &&
         !_loadingMore &&
-        !_loadingAll &&
         !_loading) {
-      _loadNextPage();
+      _loadMoreInDirection();
     }
   }
 
@@ -140,8 +154,8 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     setState(() {
       _loading = true;
       _error = null;
-      _currentPage = 1;
-      _hasNextPage = false;
+      _minLoadedPage = 1;
+      _maxLoadedPage = 1;
       _comments = [];
     });
     try {
@@ -161,9 +175,9 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
         _comments = comments;
         _threadIsLiked = data?['isLiked'] as bool? ?? false;
         _threadLikeCount = data?['likeCount'] as int? ?? 0;
-        _currentPage = (pageInfo?['currentPage'] as int?) ?? 1;
+        _minLoadedPage = (pageInfo?['currentPage'] as int?) ?? 1;
+        _maxLoadedPage = _minLoadedPage;
         _lastPage = (pageInfo?['lastPage'] as int?) ?? 1;
-        _hasNextPage = (pageInfo?['hasNextPage'] as bool?) ?? false;
         _loading = false;
       });
     } catch (e) {
@@ -172,26 +186,42 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     }
   }
 
-  Future<void> _loadNextPage() async {
-    if (_loadingMore || !_hasNextPage) return;
+  /// Loads the next page in the current sort direction:
+  /// - oldest  → page after `_maxLoadedPage`, appended to the bottom.
+  /// - newest  → page before `_minLoadedPage`, appended (sorting puts it on
+  ///   top anyway so it visually fills downward).
+  Future<void> _loadMoreInDirection() async {
+    if (_loadingMore || !_hasMoreInDirection) return;
+    final int targetPage;
+    final bool reverse;
+    switch (_sort) {
+      case _CommentSort.oldest:
+        targetPage = _maxLoadedPage + 1;
+        reverse = false;
+      case _CommentSort.newest:
+        targetPage = _minLoadedPage - 1;
+        reverse = true;
+      case _CommentSort.mostLiked:
+        return;
+    }
     setState(() => _loadingMore = true);
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final token = await ref.read(anilistTokenProvider.future);
       final result = await graphql
           .fetchForumThreadCommentsPage(widget.threadId,
-              token: token,
-              page: _currentPage + 1,
-              perPage: _commentsPerPage)
+              token: token, page: targetPage, perPage: _commentsPerPage)
           .timeout(const Duration(seconds: 30));
       if (!mounted) return;
       _ingestComments(result.comments);
       setState(() {
         _comments = [..._comments, ...result.comments];
-        _currentPage =
-            (result.pageInfo?['currentPage'] as int?) ?? _currentPage + 1;
         _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
-        _hasNextPage = (result.pageInfo?['hasNextPage'] as bool?) ?? false;
+        if (reverse) {
+          _minLoadedPage = targetPage;
+        } else {
+          _maxLoadedPage = targetPage;
+        }
         _loadingMore = false;
       });
     } catch (_) {
@@ -199,42 +229,59 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
     }
   }
 
-  Future<void> _loadAllRemainingPages() async {
-    if (_loadingAll || !_hasNextPage) return;
-    setState(() => _loadingAll = true);
+  /// Resets the comment list and fetches the first page for the new sort
+  /// direction. For `newest` we jump straight to the last page and let the
+  /// user scroll backwards page-by-page instead of pulling the whole thread.
+  Future<void> _loadInitialForSort(_CommentSort sort) async {
+    final int targetPage;
+    switch (sort) {
+      case _CommentSort.oldest:
+        targetPage = 1;
+      case _CommentSort.newest:
+        targetPage = _lastPage;
+      case _CommentSort.mostLiked:
+        return;
+    }
+    if (_loadingMore) return;
+    setState(() {
+      _loadingMore = true;
+      _comments = [];
+    });
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final token = await ref.read(anilistTokenProvider.future);
-      while (_hasNextPage && mounted) {
-        final result = await graphql
-            .fetchForumThreadCommentsPage(widget.threadId,
-                token: token,
-                page: _currentPage + 1,
-                perPage: _commentsPerPage)
-            .timeout(const Duration(seconds: 30));
-        if (!mounted) return;
-        _ingestComments(result.comments);
-        setState(() {
-          _comments = [..._comments, ...result.comments];
-          _currentPage =
-              (result.pageInfo?['currentPage'] as int?) ?? _currentPage + 1;
-          _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
-          _hasNextPage = (result.pageInfo?['hasNextPage'] as bool?) ?? false;
-        });
-      }
+      final result = await graphql
+          .fetchForumThreadCommentsPage(widget.threadId,
+              token: token, page: targetPage, perPage: _commentsPerPage)
+          .timeout(const Duration(seconds: 30));
+      if (!mounted) return;
+      _ingestComments(result.comments);
+      setState(() {
+        _comments = result.comments;
+        _minLoadedPage = targetPage;
+        _maxLoadedPage = targetPage;
+        _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
+        _loadingMore = false;
+      });
     } catch (_) {
-      // Silent fail; user can retry by changing sort again or scrolling.
-    } finally {
-      if (mounted) setState(() => _loadingAll = false);
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
   void _setSort(_CommentSort sort) {
+    if (sort == _sort) return;
+    final previous = _sort;
     setState(() => _sort = sort);
-    // For sorts that depend on global ordering (newest / mostLiked), pull
-    // every remaining page so the order is correct across the whole thread.
-    if (sort != _CommentSort.oldest && _hasNextPage && !_loadingAll) {
-      _loadAllRemainingPages();
+    // Most-liked sorts the comments already in memory — never trigger a full
+    // load, that would collapse AniList's rate limit on big threads.
+    if (sort == _CommentSort.mostLiked) return;
+    // Oldest/newest each have their own pagination window. Reset and fetch
+    // the appropriate edge page (page 1 for oldest, last page for newest).
+    final needsReload = previous == _CommentSort.mostLiked ||
+        (sort == _CommentSort.oldest && _minLoadedPage != 1) ||
+        (sort == _CommentSort.newest && _maxLoadedPage != _lastPage);
+    if (needsReload) {
+      _loadInitialForSort(sort);
     }
   }
 
@@ -578,9 +625,11 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 15),
                           ),
-                          if (_hasNextPage || _lastPage > 1)
+                          if (_lastPage > 1)
                             Text(
-                              'Page $_currentPage / $_lastPage',
+                              _sort == _CommentSort.newest
+                                  ? 'Pages $_minLoadedPage–$_maxLoadedPage / $_lastPage'
+                                  : 'Page $_maxLoadedPage / $_lastPage',
                               style: TextStyle(
                                   fontSize: 11,
                                   color: cs.onSurfaceVariant,
@@ -621,7 +670,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                     ),
                   ],
                 ),
-                if (_loadingAll) ...[
+                if (_loadingMore && _comments.isEmpty) ...[
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -633,7 +682,9 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Loading all comments to sort...',
+                        _sort == _CommentSort.newest
+                            ? 'Loading newest comments…'
+                            : 'Loading comments…',
                         style: TextStyle(
                             fontSize: 12, color: cs.onSurfaceVariant),
                       ),
@@ -682,7 +733,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                     );
                   });
                 })(),
-                if (_loadingMore && !_loadingAll)
+                if (_loadingMore && _comments.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Center(
@@ -694,7 +745,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ),
                     ),
                   ),
-                if (!_hasNextPage && _comments.isNotEmpty) ...[
+                if (!_hasMoreInDirection && _comments.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Center(
                     child: Container(

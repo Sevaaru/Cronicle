@@ -720,6 +720,7 @@ class _DefaultFilterSection extends ConsumerWidget {
     final current = ref.watch(defaultLibraryFilterProvider);
 
     final options = [
+      ('ALL', l10n.statusAll),
       ('CURRENT', l10n.statusCurrentAnime),
       ('PLANNING', l10n.statusPlanning),
       ('COMPLETED', l10n.statusCompleted),
@@ -821,19 +822,21 @@ class _AppDefaultsSection extends ConsumerWidget {
     final visibleFeedIds = ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
     final startPages = [
-      ('/feed', l10n.settingsStartFeed, Icons.rss_feed_rounded),
+      ('/feed', l10n.settingsStartFeed, Icons.home_rounded),
       ('/library', l10n.settingsStartLibrary, Icons.collections_bookmark_rounded),
     ];
 
     final feedTabOptions = [
+      ('summary', l10n.feedSummary, Icons.auto_awesome_rounded),
       ('anime', l10n.filterAnime, Icons.animation_rounded),
       ('manga', l10n.filterManga, Icons.menu_book_rounded),
       ('movie', l10n.filterMovies, Icons.movie_rounded),
       ('tv', l10n.filterTv, Icons.tv_rounded),
       ('game', l10n.filterGames, Icons.sports_esports_rounded),
+      ('book', l10n.filterBooks, Icons.auto_stories_rounded),
     ];
     final feedTabs = feedTabOptions
-        .where((o) => visibleFeedIds.contains(o.$1))
+        .where((o) => o.$1 == 'summary' || visibleFeedIds.contains(o.$1))
         .toList();
 
     return _SettingsSection(
