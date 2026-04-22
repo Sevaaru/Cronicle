@@ -35,7 +35,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     return DateFormat.yMMMd(locale).format(dt);
   }
 
-  Future<void> _addToLibrary(
+  Future<bool> _addToLibrary(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> item,
@@ -45,7 +45,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     final existing = await db.getLibraryEntryByKindAndExternalId(
       kind.code, item['id'].toString(),
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -53,11 +53,12 @@ class GamesHomeSectionListPage extends ConsumerWidget {
       kind: kind,
       existingEntry: existing,
     );
-    if (!context.mounted || !added) return;
+    if (!context.mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override

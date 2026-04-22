@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class BrowseResultCard extends StatelessWidget {
@@ -18,7 +19,7 @@ class BrowseResultCard extends StatelessWidget {
 
   final Map<String, dynamic> item;
   final MediaKind kind;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final Future<bool> Function(Map<String, dynamic>, MediaKind) onAdd;
 
   final String? releaseDateLine;
 
@@ -202,13 +203,24 @@ class BrowseResultCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: IconButton(
-                icon: Icon(
-                  inLibrary ? Icons.edit : Icons.add_circle_outline,
-                  color: colorScheme.primary,
+              child: Builder(
+                builder: (btnCtx) => IconButton(
+                  icon: Icon(
+                    inLibrary ? Icons.edit : Icons.add_circle_outline,
+                    color: colorScheme.primary,
+                  ),
+                  onPressed: () async {
+                    final added = await onAdd(item, kind);
+                    if (added && !inLibrary && btnCtx.mounted) {
+                      playLibraryInsertAnimation(
+                        sourceContext: btnCtx,
+                        imageUrl: poster,
+                      );
+                    }
+                  },
+                  tooltip:
+                      inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
                 ),
-                onPressed: () => onAdd(item, kind),
-                tooltip: inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
               ),
             ),
           ],

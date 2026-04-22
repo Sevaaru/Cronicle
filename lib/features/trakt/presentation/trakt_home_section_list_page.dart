@@ -72,7 +72,7 @@ class TraktHomeSectionListPage extends ConsumerWidget {
   final MediaKind kind;
   final String slug;
 
-  Future<void> _addToLibrary(
+  Future<bool> _addToLibrary(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> item,
@@ -83,7 +83,7 @@ class TraktHomeSectionListPage extends ConsumerWidget {
       kind.code,
       id,
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -91,11 +91,12 @@ class TraktHomeSectionListPage extends ConsumerWidget {
       kind: kind,
       existingEntry: existing,
     );
-    if (!context.mounted || !added) return;
+    if (!context.mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override

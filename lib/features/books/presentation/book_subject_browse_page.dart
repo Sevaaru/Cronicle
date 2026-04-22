@@ -60,21 +60,22 @@ class _BookSubjectBrowsePageState
     return sorted;
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
     final db = ref.read(databaseProvider);
     final workKey = item['workKey'] as String? ?? item['id'].toString();
     final existing = await db.getLibraryEntryByKindAndExternalId(
       MediaKind.book.code,
       workKey,
     );
-    if (!mounted) return;
-    await showAddToLibrarySheet(
+    if (!mounted) return false;
+    final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: MediaKind.book,
       existingEntry: existing,
     );
+    return added;
   }
 
   @override

@@ -225,7 +225,7 @@ class _SearchBrowseByReleaseDatePageState
     }
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
     final db = ref.read(databaseProvider);
     final externalId = k == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -234,7 +234,7 @@ class _SearchBrowseByReleaseDatePageState
       k.code,
       externalId,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -242,11 +242,12 @@ class _SearchBrowseByReleaseDatePageState
       kind: k,
       existingEntry: existing,
     );
-    if (!mounted || !added) return;
+    if (!mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override

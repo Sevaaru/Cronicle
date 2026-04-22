@@ -210,25 +210,24 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
   Duration _last = Duration.zero;
   double _offset = 0;
   bool _started = false;
-  bool _dragging = false;
-  Timer? _resumeTimer;
   double _cycleWidth = 0;
   double _textWidth = 0;
   double _maxWidth = 0;
+  final GlobalKey _anchorKey = GlobalKey();
+  OverlayEntry? _popupEntry;
+  Timer? _popupTimer;
 
   @override
   void dispose() {
-    _resumeTimer?.cancel();
+    _popupTimer?.cancel();
+    _popupEntry?.remove();
+    _popupEntry = null;
     _ticker?.dispose();
     super.dispose();
   }
 
   void _ensureTicker() {
     _ticker ??= createTicker((elapsed) {
-      if (_dragging) {
-        _last = elapsed;
-        return;
-      }
       if (!_started) {
         if (elapsed >= widget.startDelay) {
           _started = true;
@@ -259,33 +258,81 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
     return tp.size.width;
   }
 
-  void _onDragStart(DragStartDetails _) {
-    _resumeTimer?.cancel();
-    _started = true;
-    setState(() => _dragging = true);
+  void _showPopup() {
+    _popupTimer?.cancel();
+    _hidePopup();
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    final box = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (overlay == null || box == null || !box.hasSize) return;
+    final topLeft = box.localToGlobal(Offset.zero);
+    final size = box.size;
+    final cs = Theme.of(context).colorScheme;
+    final screen = MediaQuery.of(context).size;
+
+    _popupEntry = OverlayEntry(
+      builder: (ctx) {
+        return Stack(
+          children: [
+            // Tap-outside dismiss layer.
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _hidePopup,
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              top: topLeft.dy + size.height + 6,
+              child: Material(
+                color: Colors.transparent,
+                child: Align(
+                  alignment: topLeft.dx < screen.width / 2
+                      ? Alignment.centerLeft
+                      : Alignment.centerRight,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: screen.width - 32),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: cs.inverseSurface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(80),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        widget.text,
+                        style: TextStyle(
+                          color: cs.onInverseSurface,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    overlay.insert(_popupEntry!);
+    _popupTimer = Timer(const Duration(seconds: 4), _hidePopup);
   }
 
-  void _onDragUpdate(DragUpdateDetails d) {
-    if (_cycleWidth <= 0) return;
-    double next = _offset - d.delta.dx;
-    next = next % _cycleWidth;
-    if (next < 0) next += _cycleWidth;
-    setState(() => _offset = next);
-  }
-
-  void _onDragEnd(DragEndDetails _) {
-    _resumeTimer?.cancel();
-    _resumeTimer = Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() => _dragging = false);
-      _last = Duration.zero;
-      _ticker?.stop();
-      _ticker?.start();
-    });
-  }
-
-  void _onDragCancel() {
-    _onDragEnd(DragEndDetails());
+  void _hidePopup() {
+    _popupTimer?.cancel();
+    _popupTimer = null;
+    _popupEntry?.remove();
+    _popupEntry = null;
   }
 
   @override
@@ -318,30 +365,28 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
         final height =
             (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2);
 
-        return SizedBox(
-          height: height,
-          width: _maxWidth,
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (rect) {
-              return LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                stops: const [0, 0.04, 0.96, 1],
-                colors: const [
-                  Colors.transparent,
-                  Colors.black,
-                  Colors.black,
-                  Colors.transparent,
-                ],
-              ).createShader(rect);
-            },
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragStart: _onDragStart,
-              onHorizontalDragUpdate: _onDragUpdate,
-              onHorizontalDragEnd: _onDragEnd,
-              onHorizontalDragCancel: _onDragCancel,
+        return GestureDetector(
+          key: _anchorKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: _showPopup,
+          child: SizedBox(
+            height: height,
+            width: _maxWidth,
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (rect) {
+                return LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  stops: const [0, 0.04, 0.96, 1],
+                  colors: const [
+                    Colors.transparent,
+                    Colors.black,
+                    Colors.black,
+                    Colors.transparent,
+                  ],
+                ).createShader(rect);
+              },
               child: ClipRect(
                 child: OverflowBox(
                   alignment: Alignment.centerLeft,

@@ -196,7 +196,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
     super.dispose();
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
     final db = ref.read(databaseProvider);
     final externalId = kind == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -204,7 +204,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
     final existing = await db.getLibraryEntryByKindAndExternalId(
       kind.code, externalId,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -212,11 +212,12 @@ class _FeedPageState extends ConsumerState<FeedPage>
       kind: kind,
       existingEntry: existing,
     );
-    if (!mounted || !added) return;
+    if (!mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override
@@ -460,7 +461,7 @@ class _AnimeMangaBrowseList extends ConsumerStatefulWidget {
   final String category;
   final MediaKind kind;
   final VoidCallback onRefresh;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final Future<bool> Function(Map<String, dynamic>, MediaKind) onAdd;
   final AppLocalizations l10n;
 
   @override

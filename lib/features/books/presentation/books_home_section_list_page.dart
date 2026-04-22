@@ -15,7 +15,7 @@ class BooksHomeSectionListPage extends ConsumerWidget {
 
   final String slug;
 
-  Future<void> _addToLibrary(
+  Future<bool> _addToLibrary(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> item,
@@ -26,7 +26,7 @@ class BooksHomeSectionListPage extends ConsumerWidget {
       MediaKind.book.code,
       workKey,
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -34,11 +34,12 @@ class BooksHomeSectionListPage extends ConsumerWidget {
       kind: MediaKind.book,
       existingEntry: existing,
     );
-    if (!context.mounted || !added) return;
+    if (!context.mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override

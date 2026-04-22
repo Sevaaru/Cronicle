@@ -88,7 +88,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
     final db = ref.read(databaseProvider);
     final externalId = kind == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -96,7 +96,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final existing = await db.getLibraryEntryByKindAndExternalId(
       kind.code, externalId,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -104,11 +104,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       kind: kind,
       existingEntry: existing,
     );
-    if (!mounted || !added) return;
+    if (!mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override
@@ -316,7 +317,7 @@ class _SearchResultsList extends ConsumerWidget {
 
   final String query;
   final _SearchFilter filter;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final Future<bool> Function(Map<String, dynamic>, MediaKind) onAdd;
   final void Function(_SearchFilter category) onPickCategory;
 
   @override
