@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 
 String? _coverUrl(Map<String, dynamic> item) =>
@@ -67,7 +68,9 @@ class BooksHomeFeedView extends ConsumerWidget {
         ref.invalidate(bookSubjectProvider(BookFeedSection.mystery));
       },
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(
+          bottom: kGlassBottomNavContentHeight + 28,
+        ),
         children: [
           _AsyncSection(
             asyncValue: ref.watch(bookTrendingProvider),

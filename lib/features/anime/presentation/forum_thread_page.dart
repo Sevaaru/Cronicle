@@ -9,6 +9,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgoForum(int? createdAt) {
@@ -899,92 +900,132 @@ class _ReplyInputBar extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    // Total visual height of the floating navbar pill (top pad + content +
+    // bottom pad). When the keyboard is open, the Scaffold resizes its body so
+    // we sit just above the keyboard with a small breathing gap.
+    final navbarReserve = kGlassBottomNavContentHeight +
+        4 +
+        (bottomSafe > 0 ? bottomSafe : 10);
+    final bottomPad =
+        keyboardInset > 0 ? 8.0 : navbarReserve + 6;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        border:
-            Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (replyTarget != null)
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),
+      child: Material(
+        color: isDark
+            ? cs.surfaceContainerHigh
+            : cs.secondaryContainer,
+        elevation: 3,
+        shadowColor: Colors.black.withAlpha(isDark ? 60 : 30),
+        surfaceTintColor: cs.surfaceTint,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(
+            color: cs.outlineVariant.withAlpha(isDark ? 70 : 40),
+            width: 0.6,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (replyTarget != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 10, 0),
+                child: Row(
+                  children: [
+                    Icon(Icons.reply_rounded, size: 14, color: cs.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.forumReplyingTo(replyTarget!.name),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: cs.primary,
+                            fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: onCancelReply,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(Icons.close_rounded,
+                            size: 16, color: cs.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 8, 0),
+              padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Icons.reply_rounded,
-                      size: 14, color: cs.primary),
-                  const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      l10n.forumReplyingTo(replyTarget!.name),
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: cs.primary,
-                          fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      enabled: isLoggedIn && !sending,
+                      maxLines: 4,
+                      minLines: 1,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        hintText: isLoggedIn
+                            ? l10n.writeReplyHint
+                            : l10n.loginRequiredComment,
+                        hintStyle: TextStyle(
+                            fontSize: 14, color: cs.onSurfaceVariant),
+                        border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        isDense: true,
+                      ),
+                      style: TextStyle(fontSize: 14, color: cs.onSurface),
                     ),
                   ),
-                  InkWell(
-                    onTap: onCancelReply,
-                    child: Icon(Icons.close_rounded,
-                        size: 16, color: cs.onSurfaceVariant),
-                  ),
+                  const SizedBox(width: 4),
+                  sending
+                      ? const SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : Material(
+                          color: isLoggedIn
+                              ? cs.primary
+                              : cs.surfaceContainerHighest,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isLoggedIn ? onSend : null,
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Icon(
+                                Icons.send_rounded,
+                                size: 20,
+                                color: isLoggedIn
+                                    ? cs.onPrimary
+                                    : cs.onSurfaceVariant.withAlpha(120),
+                              ),
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enabled: isLoggedIn && !sending,
-                    maxLines: 3,
-                    minLines: 1,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
-                      hintText: isLoggedIn
-                          ? l10n.writeReplyHint
-                          : l10n.loginRequiredComment,
-                      hintStyle:
-                          TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: cs.surfaceContainerHighest,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      isDense: true,
-                    ),
-                    style: TextStyle(fontSize: 13, color: cs.onSurface),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                sending
-                    ? const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        icon: Icon(Icons.send_rounded, color: cs.primary),
-                        onPressed: isLoggedIn ? onSend : null,
-                      ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

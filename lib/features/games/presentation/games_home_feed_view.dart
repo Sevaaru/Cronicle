@@ -10,6 +10,7 @@ import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 
 String? _formatRelDate(BuildContext ctx, Map<String, dynamic> item) {
@@ -102,7 +103,9 @@ class GamesHomeFeedView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => _onRefresh(ref),
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(
+          bottom: kGlassBottomNavContentHeight + 28,
+        ),
         children: [
           popularAsync.when(
             skipLoadingOnRefresh: true,

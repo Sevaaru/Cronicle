@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 
+import 'package:cronicle/core/app/global_messenger.dart';
 import 'package:cronicle/core/utils/json_int.dart';
 
 class AnilistRateLimitException implements Exception {
@@ -114,6 +115,7 @@ class AnilistGraphqlDatasource {
         );
         if (res.statusCode == 429 && attempt < maxAttempts) {
           final retryAfter = _retryDelaySeconds(res, attempt);
+          notifyAnilistRateLimited(retryAfterSeconds: retryAfter);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -121,7 +123,16 @@ class AnilistGraphqlDatasource {
         if (res.statusCode == 429) {
           final hint = int.tryParse(
               res.headers.value('retry-after') ?? '');
+          notifyAnilistRateLimited(retryAfterSeconds: hint);
           throw AnilistRateLimitException(retryAfterSeconds: hint);
+        }
+        // Proactive heads-up: AniList replies with X-RateLimit-Remaining on
+        // every successful call. When it hits 0 we are about to start eating
+        // 429s, so surface the same friendly notice once.
+        final remaining = int.tryParse(
+            res.headers.value('x-ratelimit-remaining') ?? '');
+        if (remaining != null && remaining <= 0) {
+          notifyAnilistRateLimited();
         }
         if (res.data is Map<String, dynamic>) {
           body = res.data as Map<String, dynamic>;
@@ -131,6 +142,7 @@ class AnilistGraphqlDatasource {
       } on DioException catch (e) {
         if (e.response?.statusCode == 429 && attempt < maxAttempts) {
           final retryAfter = _retryDelaySeconds(e.response, attempt);
+          notifyAnilistRateLimited(retryAfterSeconds: retryAfter);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -138,6 +150,7 @@ class AnilistGraphqlDatasource {
         if (e.response?.statusCode == 429) {
           final hint = int.tryParse(
               e.response?.headers.value('retry-after') ?? '');
+          notifyAnilistRateLimited(retryAfterSeconds: hint);
           throw AnilistRateLimitException(retryAfterSeconds: hint);
         }
         final data = e.response?.data;

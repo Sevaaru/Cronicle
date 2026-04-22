@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -37,6 +38,16 @@ enum _FeedFilter {
         _FeedFilter.tv => Icons.tv_rounded,
         _FeedFilter.game => Icons.sports_esports_rounded,
         _FeedFilter.book => Icons.auto_stories_rounded,
+      };
+
+  IconData get outlinedIcon => switch (this) {
+        _FeedFilter.summary => Icons.auto_awesome_outlined,
+        _FeedFilter.anime => Icons.animation_outlined,
+        _FeedFilter.manga => Icons.menu_book_outlined,
+        _FeedFilter.movie => Icons.movie_outlined,
+        _FeedFilter.tv => Icons.tv_outlined,
+        _FeedFilter.game => Icons.sports_esports_outlined,
+        _FeedFilter.book => Icons.auto_stories_outlined,
       };
 }
 
@@ -279,49 +290,30 @@ class _FeedPageState extends ConsumerState<FeedPage>
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemCount: feedFilterChips.length,
-              itemBuilder: (context, i) {
-                final f = feedFilterChips[i];
-                final selected = _filter == f;
-                return FilterChip(
-                  selected: selected,
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(f.icon, size: 15),
-                      const SizedBox(width: 4),
-                      Text(_filterLabel(f, l10n), style: const TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                  onSelected: (_) {
-                    setState(() {
-                      final prev = _filter;
-                      _filter = f;
-                      if (prev != f &&
-                          (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
-                        _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
-                        _browseTabController?.removeListener(_onBrowseTabSwipe);
-                        _browseTabController?.dispose();
-                        _browseTabController = null;
-                      }
-                      if (f != _FeedFilter.anime && f != _FeedFilter.manga) {
-                        _browseTabController?.removeListener(_onBrowseTabSwipe);
-                        _browseTabController?.dispose();
-                        _browseTabController = null;
-                      }
-                    });
-                  },
-                  showCheckmark: false,
-                  visualDensity: VisualDensity.compact,
-                );
-              },
-            ),
+          _FeedFilterRail(
+            filters: feedFilterChips,
+            selected: _filter,
+            labelFor: (f) => _filterLabel(f, l10n),
+            onSelected: (f) {
+              if (_filter == f) return;
+              HapticFeedback.selectionClick();
+              setState(() {
+                final prev = _filter;
+                _filter = f;
+                if (prev != f &&
+                    (f == _FeedFilter.anime || f == _FeedFilter.manga)) {
+                  _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
+                  _browseTabController?.removeListener(_onBrowseTabSwipe);
+                  _browseTabController?.dispose();
+                  _browseTabController = null;
+                }
+                if (f != _FeedFilter.anime && f != _FeedFilter.manga) {
+                  _browseTabController?.removeListener(_onBrowseTabSwipe);
+                  _browseTabController?.dispose();
+                  _browseTabController = null;
+                }
+              });
+            },
           ),
           if (_showAnimeMangaBrowseRail) ...[
             const SizedBox(height: 4),
@@ -574,3 +566,119 @@ class _AnimeMangaBrowseListState extends ConsumerState<_AnimeMangaBrowseList>
     );
   }
 }
+
+class _FeedFilterRail extends StatelessWidget {
+  const _FeedFilterRail({
+    required this.filters,
+    required this.selected,
+    required this.labelFor,
+    required this.onSelected,
+  });
+
+  final List<_FeedFilter> filters;
+  final _FeedFilter selected;
+  final String Function(_FeedFilter) labelFor;
+  final ValueChanged<_FeedFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemCount: filters.length,
+        itemBuilder: (context, i) {
+          final f = filters[i];
+          return _FeedFilterPill(
+            filter: f,
+            selected: selected == f,
+            label: labelFor(f),
+            onTap: () => onSelected(f),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FeedFilterPill extends StatelessWidget {
+  const _FeedFilterPill({
+    required this.filter,
+    required this.selected,
+    required this.label,
+    required this.onTap,
+  });
+
+  final _FeedFilter filter;
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = selected ? cs.primary : cs.surfaceContainerHigh;
+    final fg = selected ? cs.onPrimary : cs.onSurfaceVariant;
+    final radius = selected ? 18.0 : 22.0;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          splashColor: cs.onPrimary.withValues(alpha: selected ? 0.18 : 0.10),
+          highlightColor: Colors.transparent,
+          child: AnimatedPadding(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: selected ? 16 : 14,
+              vertical: 8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: anim,
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+                  child: Icon(
+                    selected ? filter.icon : filter.outlinedIcon,
+                    key: ValueKey<bool>(selected),
+                    size: 18,
+                    color: fg,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: fg,
+                    letterSpacing: 0.1,
+                  ),
+                  child: Text(label),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+

@@ -163,7 +163,7 @@ class _RandomPickCard extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: Card(
         elevation: 0,
         color: cs.primaryContainer.withAlpha(60),
@@ -175,11 +175,11 @@ class _RandomPickCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: () => _pickRandom(context, ref),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.shuffle_rounded, color: cs.primary, size: 28),
-                const SizedBox(width: 16),
+                Icon(Icons.shuffle_rounded, color: cs.primary, size: 24),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

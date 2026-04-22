@@ -40,8 +40,8 @@ import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/core/utils/google_web_button.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -49,6 +49,7 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final googleSignIn = ref.watch(googleSignInProvider);
     return Scaffold(
       appBar: AppBar(
@@ -59,44 +60,73 @@ class SettingsPage extends ConsumerWidget {
         title: Text(l10n.settingsTitle, style: pageTitleStyle()),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          4,
+          16,
+          kGlassBottomNavContentHeight + 24,
+        ),
         children: [
+          // ===== Personalización =====
+          _SettingsCategoryHeader(
+            icon: Icons.palette_rounded,
+            label: l10n.settingsAppearanceTitle,
+            color: cs.primary,
+          ),
           const _AppearanceSection(),
-          const SizedBox(height: 12),
-
-          _DefaultFilterSection(),
           const SizedBox(height: 12),
 
           _AppDefaultsSection(),
           const SizedBox(height: 12),
 
-          const _ScoringSection(),
+          _DefaultFilterSection(),
           const SizedBox(height: 12),
 
+          const _ScoringSection(),
+          const SizedBox(height: 24),
+
+          // ===== Notificaciones / Wear =====
+          _SettingsCategoryHeader(
+            icon: Icons.notifications_active_rounded,
+            label: l10n.settingsNotificationsTitle,
+            color: cs.tertiary,
+          ),
           if (kIsWeb)
-            GlassCard(
-              child: Text(
-                l10n.settingsNotificationsUnavailableWeb,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
+            _SettingsSection(
+              icon: Icons.notifications_off_rounded,
+              title: l10n.settingsNotificationsTitle,
+              subtitle: l10n.settingsNotificationsUnavailableWeb,
+              child: const SizedBox.shrink(),
             )
           else
             const _DeviceNotificationsSection(),
-          const SizedBox(height: 12),
-
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
-            const _WearOsSection(),
             const SizedBox(height: 12),
+            const _WearOsSection(),
           ],
+          const SizedBox(height: 24),
 
-          _AccountsSection(googleSignIn: googleSignIn),
+          // ===== Cuentas y sincronización =====
+          _SettingsCategoryHeader(
+            icon: Icons.sync_alt_rounded,
+            label: l10n.settingsAccountsTitle,
+            color: cs.secondary,
+          ),
+          const _AnilistSection(),
           const SizedBox(height: 12),
+          const _TraktSection(),
+          const SizedBox(height: 12),
+          _GoogleSection(googleSignIn: googleSignIn),
+          const SizedBox(height: 24),
 
+          // ===== Datos =====
+          _SettingsCategoryHeader(
+            icon: Icons.cloud_sync_rounded,
+            label: l10n.backupTitle,
+            color: cs.primary,
+          ),
           _BackupSection(googleSignIn: googleSignIn),
-          const SizedBox(height: 28),
+          const SizedBox(height: 32),
           const _SettingsAboutFooter(),
         ],
       ),
@@ -202,29 +232,14 @@ class _DeviceNotificationsSectionState
     final n = ref.watch(deviceNotificationSettingsProvider);
     final notifier = ref.read(deviceNotificationSettingsProvider.notifier);
 
-    return GlassCard(
+    return _SettingsSection(
+      icon: Icons.notifications_active_rounded,
+      iconColor: cs.tertiary,
+      title: l10n.settingsNotificationsTitle,
+      subtitle: l10n.settingsNotificationsSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.notifications_active_outlined,
-                  size: 22, color: cs.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  l10n.settingsNotificationsTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsNotificationsSubtitle,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const Divider(height: 22),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.settingsNotifMaster),
@@ -292,10 +307,13 @@ class _AppearanceSection extends ConsumerWidget {
       Widget segIcon(int i) {
         final mode = modes[i];
         final selected = themeMode == mode;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         final bg = selected
-            ? cs.primaryContainer
-            : cs.surfaceContainerHighest.withValues(alpha: 0.65);
-        final fg = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+            ? cs.primary
+            : (isDark ? cs.surfaceContainerHighest : cs.surfaceContainerHigh);
+        final fg = selected
+            ? cs.onPrimary
+            : cs.onSurfaceVariant;
         final tip = switch (i) {
           0 => l10n.themeSystem,
           1 => l10n.themeLight,
@@ -346,10 +364,11 @@ class _AppearanceSection extends ConsumerWidget {
 
       Widget segLang(int i) {
         final selected = locale == locales[i];
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         final bg = selected
-            ? cs.primaryContainer
-            : cs.surfaceContainerHighest.withValues(alpha: 0.65);
-        final fg = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+            ? cs.primary
+            : (isDark ? cs.surfaceContainerHighest : cs.surfaceContainerHigh);
+        final fg = selected ? cs.onPrimary : cs.onSurfaceVariant;
         return Expanded(
           child: Tooltip(
             message: tips[i],
@@ -392,20 +411,14 @@ class _AppearanceSection extends ConsumerWidget {
       );
     }
 
-    return GlassCard(
+    return _SettingsSection(
+      icon: Icons.palette_rounded,
+      iconColor: cs.primary,
+      title: l10n.settingsAppearanceTitle,
+      subtitle: l10n.settingsAppearanceSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.settingsAppearanceTitle,
-            style: textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsAppearanceSubtitle,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -502,41 +515,6 @@ class _AppearanceSection extends ConsumerWidget {
   }
 }
 
-class _AccountsSection extends ConsumerWidget {
-  const _AccountsSection({required this.googleSignIn});
-
-  final GoogleSignIn googleSignIn;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
-
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.settingsAccountsTitle,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsAccountsSubtitle,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const Divider(height: 24),
-          const _AnilistSection(),
-          const Divider(height: 24),
-          const _TraktSection(),
-          const Divider(height: 24),
-          _GoogleSection(googleSignIn: googleSignIn),
-        ],
-      ),
-    );
-  }
-}
-
 class _AnilistSection extends ConsumerWidget {
   const _AnilistSection();
 
@@ -544,24 +522,15 @@ class _AnilistSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final tokenAsync = ref.watch(anilistTokenProvider);
-    final cs = Theme.of(context).colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.animation_rounded, size: 20, color: cs.primary),
-            const SizedBox(width: 8),
-            Text(l10n.anilistTitle, style: Theme.of(context).textTheme.titleSmall),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.anilistSubtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 12),
+    return _SettingsSection(
+      icon: Icons.animation_rounded,
+      iconColor: const Color(0xFF02A9FF),
+      title: l10n.anilistTitle,
+      subtitle: l10n.anilistSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         tokenAsync.when(
           loading: () => const LinearProgressIndicator(),
           error: (_, _) => Text(l10n.errorVerifyingToken),
@@ -613,7 +582,8 @@ class _AnilistSection extends ConsumerWidget {
             );
           },
         ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -628,25 +598,16 @@ class _TraktSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final sessionAsync = ref.watch(traktSessionProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.movie_filter_rounded, size: 20, color: cs.primary),
-            const SizedBox(width: 8),
-            Text(l10n.traktTitle, style: Theme.of(context).textTheme.titleSmall),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.traktSubtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 12),
+    return _SettingsSection(
+      icon: Icons.movie_filter_rounded,
+      iconColor: const Color(0xFFED1C24),
+      title: l10n.traktTitle,
+      subtitle: l10n.traktSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         sessionAsync.when(
           loading: () => const LinearProgressIndicator(),
           error: (_, _) => Text(l10n.errorVerifyingToken),
@@ -750,7 +711,8 @@ class _TraktSection extends ConsumerWidget {
             );
           },
         ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -769,33 +731,24 @@ class _DefaultFilterSection extends ConsumerWidget {
       ('DROPPED', l10n.statusDropped),
     ];
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.settingsDefaultFilter,
-              style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsDefaultFilterDesc,
-            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: options.map((o) {
-              final selected = current == o.$1;
-              return ChoiceChip(
-                selected: selected,
-                label: Text(o.$2, style: const TextStyle(fontSize: 12)),
-                onSelected: (_) =>
-                    ref.read(defaultLibraryFilterProvider.notifier).set(o.$1),
-                visualDensity: VisualDensity.compact,
-              );
-            }).toList(),
-          ),
-        ],
+    return _SettingsSection(
+      icon: Icons.filter_alt_rounded,
+      iconColor: Theme.of(context).colorScheme.tertiary,
+      title: l10n.settingsDefaultFilter,
+      subtitle: l10n.settingsDefaultFilterDesc,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: options.map((o) {
+          final selected = current == o.$1;
+          return ChoiceChip(
+            selected: selected,
+            label: Text(o.$2, style: const TextStyle(fontSize: 12)),
+            onSelected: (_) =>
+                ref.read(defaultLibraryFilterProvider.notifier).set(o.$1),
+            visualDensity: VisualDensity.compact,
+          );
+        }).toList(),
       ),
     );
   }
@@ -819,16 +772,14 @@ class _ScoringSection extends ConsumerWidget {
       (ScoringSystem.point3, l10n.scoringPoint3),
     ];
 
-    return GlassCard(
+    return _SettingsSection(
+      icon: Icons.star_rate_rounded,
+      iconColor: cs.primary,
+      title: l10n.settingsScoringTitle,
+      subtitle: l10n.settingsScoringDesc,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.settingsScoringTitle,
-              style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Text(l10n.settingsScoringDesc,
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-          const SizedBox(height: 14),
 
           Wrap(
             spacing: 6,
@@ -889,16 +840,14 @@ class _AppDefaultsSection extends ConsumerWidget {
         .where((o) => visibleFeedIds.contains(o.$1))
         .toList();
 
-    return GlassCard(
+    return _SettingsSection(
+      icon: Icons.tune_rounded,
+      iconColor: cs.secondary,
+      title: l10n.settingsDefaultsTitle,
+      subtitle: l10n.settingsDefaultsDesc,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.settingsDefaultsTitle,
-              style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Text(l10n.settingsDefaultsDesc,
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-          const SizedBox(height: 14),
 
           Text(l10n.settingsStartPage, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
           const SizedBox(height: 6),
@@ -1240,26 +1189,14 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.account_circle_outlined,
-                size: 20, color: cs.primary),
-            const SizedBox(width: 8),
-            Text(
-              l10n.googleAccountTitle,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.googleAccountSubtitle,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 12),
+    return _SettingsSection(
+      icon: Icons.account_circle_rounded,
+      iconColor: const Color(0xFF4285F4),
+      title: l10n.googleAccountTitle,
+      subtitle: l10n.googleAccountSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         if (_missingGoogleServerClientId) ...[
           Text(
             l10n.googleSignInNotConfiguredHint,
@@ -1414,7 +1351,8 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
               label: Text(l10n.googleSignIn),
             ),
           ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1636,24 +1574,12 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.backup_rounded, size: 20, color: cs.primary),
-              const SizedBox(width: 8),
-              Text(l10n.backupTitle, style: Theme.of(context).textTheme.titleSmall),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.backupSectionSubtitle,
-            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          Row(
+    return _SettingsSection(
+      icon: Icons.backup_rounded,
+      iconColor: cs.primary,
+      title: l10n.backupTitle,
+      subtitle: l10n.backupSectionSubtitle,
+      child: Row(
             children: [
               Expanded(
                 child: FilledButton.icon(
@@ -1694,8 +1620,6 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -1812,7 +1736,6 @@ class _WearOsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final statusAsync = ref.watch(wearConnectionStatusProvider);
 
     final status = statusAsync.maybeWhen(
@@ -1846,69 +1769,183 @@ class _WearOsSection extends ConsumerWidget {
       showInstallCta = true;
     }
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return _SettingsSection(
+      icon: leadingIcon,
+      iconColor: leadingColor,
+      title: headline,
+      subtitle: body,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: leadingColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Icon(leadingIcon, size: 20, color: leadingColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      headline,
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      body,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: l10n.settingsWearRefresh,
-                onPressed: loading
-                    ? null
-                    : () => ref.invalidate(wearConnectionStatusProvider),
-                icon: loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 20),
-              ),
-            ],
-          ),
-          if (showInstallCta) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _openPlayStore,
-                icon: const Icon(Icons.shop_rounded, size: 18),
-                label: Text(l10n.settingsWearOpenPlayStore),
-              ),
+          if (showInstallCta)
+            TextButton.icon(
+              onPressed: _openPlayStore,
+              icon: const Icon(Icons.shop_rounded, size: 18),
+              label: Text(l10n.settingsWearOpenPlayStore),
             ),
+          IconButton(
+            tooltip: l10n.settingsWearRefresh,
+            onPressed: loading
+                ? null
+                : () => ref.invalidate(wearConnectionStatusProvider),
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// Material 3 expressive section card used by every settings group.
+///
+/// Renders a colored circular icon, a large title, an optional subtitle, and
+/// the section body inside an elevated, surface-tinted card. Designed to look
+/// vivid in light mode and crisp in dark mode without going grey.
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({
+    this.icon,
+    this.iconColor,
+    this.title,
+    this.subtitle,
+    required this.child,
+  });
+
+  final IconData? icon;
+  final Color? iconColor;
+  final String? title;
+  final String? subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bg = isDark
+        ? cs.surfaceContainerHigh
+        : Color.alphaBlend(
+            cs.primaryContainer.withAlpha(55),
+            cs.surface,
+          );
+    final accent = iconColor ?? cs.primary;
+
+    return Material(
+      color: bg,
+      elevation: 1,
+      shadowColor: cs.shadow.withAlpha(40),
+      surfaceTintColor: cs.surfaceTint,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: cs.outlineVariant.withAlpha(isDark ? 60 : 40),
+          width: 0.6,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (icon != null || title != null) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha(isDark ? 60 : 40),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 22, color: accent),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                  if (title != null)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title!,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          if (subtitle != null && subtitle!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle!,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            child,
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sticky-style category label shown above a group of related settings cards.
+class _SettingsCategoryHeader extends StatelessWidget {
+  const _SettingsCategoryHeader({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              height: 1,
+              color: cs.outlineVariant.withAlpha(70),
+            ),
+          ),
         ],
       ),
     );

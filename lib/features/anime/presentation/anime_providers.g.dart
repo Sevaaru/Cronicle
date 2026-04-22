@@ -968,7 +968,7 @@ final anilistUnreadNotificationCountProvider =
 // ignore: unused_element
 typedef AnilistUnreadNotificationCountRef = AutoDisposeFutureProviderRef<int>;
 String _$anilistNotificationsListHash() =>
-    r'3a11f7d4b7fb503f5447a2447f0474e065ef3d84';
+    r'e52f3d3daf30a728e1a10ae4e987d97dfecc178a';
 
 /// See also [anilistNotificationsList].
 @ProviderFor(anilistNotificationsList)
@@ -987,6 +987,30 @@ final anilistNotificationsListProvider =
 // ignore: unused_element
 typedef AnilistNotificationsListRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
+String _$anilistCachedNotificationsHash() =>
+    r'ab35825ec14a4ada6361b9ceccdaa62dd4a210e2';
+
+/// Synchronous read of the last persisted notifications batch (up to 20).
+/// The notifications page reads this so it can paint instantly on entry
+/// instead of staring at a blank spinner while the live request finishes.
+///
+/// Copied from [anilistCachedNotifications].
+@ProviderFor(anilistCachedNotifications)
+final anilistCachedNotificationsProvider =
+    AutoDisposeProvider<List<Map<String, dynamic>>>.internal(
+      anilistCachedNotifications,
+      name: r'anilistCachedNotificationsProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistCachedNotificationsHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AnilistCachedNotificationsRef =
+    AutoDisposeProviderRef<List<Map<String, dynamic>>>;
 String _$anilistTokenHash() => r'0fb1ddb38edcc98c4599f8f18c19a60716f7ff58';
 
 /// See also [AnilistToken].

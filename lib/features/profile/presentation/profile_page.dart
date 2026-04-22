@@ -620,87 +620,38 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
 
               ProfileStatsSectionHeader(l10n.sectionConnectedAccounts, Icons.link_rounded, cs.tertiary),
               const SizedBox(height: 8),
-              GlassCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
-                    const SizedBox(width: 8),
-                    Text(l10n.anilistTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const Spacer(),
-                    Text(name,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                  ],
-                ),
+              _ConnectedAccountTile(
+                title: l10n.anilistTitle,
+                subtitle: name,
+                connected: true,
+                accent: const Color(0xFF02A9FF),
+                icon: Icons.animation_rounded,
               ),
               const SizedBox(height: 8),
               traktSessionAsync.when(
-                loading: () => GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: cs.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(l10n.traktTitle,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
-                      ],
-                    ),
-                  ),
+                loading: () => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: null,
+                  connected: false,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
+                  loading: true,
                 ),
-                error: (e, st) => GlassCard(
-                  child: Row(
-                    children: [
-                      Icon(Icons.circle_outlined,
-                          color: cs.onSurfaceVariant.withAlpha(100), size: 20),
-                      const SizedBox(width: 8),
-                      Text(l10n.traktTitle,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
-                      const Spacer(),
-                      Text(l10n.profileTraktNotConnected,
-                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                    ],
-                  ),
+                error: (e, st) => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: l10n.profileTraktNotConnected,
+                  connected: false,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
                 ),
-                data: (s) => GlassCard(
-                  child: Row(
-                    children: [
-                      Icon(
-                        s.connected ? Icons.check_circle : Icons.circle_outlined,
-                        color: s.connected
-                            ? Colors.green.shade400
-                            : cs.onSurfaceVariant.withAlpha(100),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.traktTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: s.connected
-                              ? cs.onSurface
-                              : cs.onSurfaceVariant.withAlpha(120),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        s.connected
-                            ? (s.userSlug ?? s.userName ?? '')
-                            : l10n.profileTraktNotConnected,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
+                data: (s) => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: s.connected
+                      ? (s.userSlug ?? s.userName ?? '')
+                      : l10n.profileTraktNotConnected,
+                  connected: s.connected,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
                 ),
               ),
             ],
@@ -1292,49 +1243,196 @@ class _PersonalStatsNavTile extends StatelessWidget {
   final AppLocalizations l10n;
   final ColorScheme colorScheme;
 
-  static const double _radius = 20;
+  static const double _radius = 22;
 
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
     return Material(
-      color: Colors.transparent,
+      color: cs.surfaceContainerHigh,
       borderRadius: BorderRadius.circular(_radius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(_radius),
         onTap: () => context.push('/profile/personal-stats'),
-        splashColor: cs.primary.withValues(alpha: 0.12),
+        splashColor: cs.primary.withValues(alpha: 0.14),
         highlightColor: cs.primary.withValues(alpha: 0.06),
-        child: GlassCard(
-          borderRadius: _radius,
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(Icons.insights_rounded, color: cs.primary, size: 28),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.profilePersonalStatsTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.profilePersonalStatsSubtitle,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.3),
-                      ),
-                    ],
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
-              ],
-            ),
+                child: Icon(
+                  Icons.insights_rounded,
+                  color: cs.onPrimaryContainer,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.profilePersonalStatsTitle,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.profilePersonalStatsSubtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: cs.onSurfaceVariant,
+                  size: 18,
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectedAccountTile extends StatelessWidget {
+  const _ConnectedAccountTile({
+    required this.title,
+    required this.subtitle,
+    required this.connected,
+    required this.accent,
+    required this.icon,
+    this.loading = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool connected;
+  final Color accent;
+  final IconData icon;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: accent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14.5,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (loading)
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: cs.primary,
+                ),
+              )
+            else
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: connected
+                      ? Colors.green.withValues(alpha: 0.18)
+                      : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      connected
+                          ? Icons.check_circle_rounded
+                          : Icons.link_off_rounded,
+                      size: 14,
+                      color: connected
+                          ? Colors.green.shade400
+                          : cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      connected ? 'Linked' : 'Off',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: connected
+                            ? Colors.green.shade400
+                            : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );

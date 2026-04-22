@@ -80,12 +80,67 @@ class _AppShellState extends ConsumerState<AppShell> {
     ];
 
     return Scaffold(
-      body: widget.child,
-      extendBody: false,
+      body: _NavFadeThrough(
+        index: widget.currentIndex,
+        child: widget.child,
+      ),
+      // The navbar is a floating pill: let the body paint behind it so the
+      // surrounding area shows the page background instead of the scaffold
+      // background as opaque rectangles around the rounded corners.
+      extendBody: true,
       bottomNavigationBar: GlassBottomNav(
         currentIndex: widget.currentIndex,
         onTap: widget.onTabChanged,
         items: items,
+      ),
+    );
+  }
+}
+
+/// Material 3 "fade through" page transition used when the user taps a tab in
+/// the bottom navigation bar. The outgoing page fades out quickly while the
+/// incoming page fades in with a subtle scale-up so it feels like distinct
+/// destinations rather than a flat swap.
+class _NavFadeThrough extends StatelessWidget {
+  const _NavFadeThrough({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 280),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        // Outgoing fades faster than the incoming so they don't overlap as
+        // muddy crossfade — true M3 fade-through behaviour.
+        final fade = CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0.35, 1.0, curve: Curves.easeOut),
+          reverseCurve: const Interval(0.0, 0.35, curve: Curves.easeIn),
+        );
+        final scale = Tween<double>(begin: 0.96, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        );
+        return FadeTransition(
+          opacity: fade,
+          child: ScaleTransition(scale: scale, child: child),
+        );
+      },
+      layoutBuilder: (currentChild, previousChildren) {
+        return Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            ...previousChildren,
+            ?currentChild,
+          ],
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey<int>(index),
+        child: child,
       ),
     );
   }

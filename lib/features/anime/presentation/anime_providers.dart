@@ -882,9 +882,50 @@ Future<List<Map<String, dynamic>>> anilistNotificationsList(
     perPage: 30,
     resetNotificationCount: true,
   );
+  // Persist the latest 20 so the next launch shows them instantly while we
+  // refresh in the background.
+  unawaited(_writeNotificationsCache(ref, list));
   await Future<void>.delayed(const Duration(milliseconds: 250));
   ref.invalidate(anilistUnreadNotificationCountProvider);
   return list;
+}
+
+const _notificationsCacheKey = 'anilist_notifications_cache_v1';
+const _notificationsCacheMax = 20;
+
+Future<void> _writeNotificationsCache(
+  AnilistNotificationsListRef ref,
+  List<Map<String, dynamic>> items,
+) async {
+  try {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final trimmed = items.take(_notificationsCacheMax).toList();
+    await prefs.setString(_notificationsCacheKey, jsonEncode(trimmed));
+  } catch (_) {
+    // Cache is best-effort; a write failure shouldn't bubble up.
+  }
+}
+
+/// Synchronous read of the last persisted notifications batch (up to 20).
+/// The notifications page reads this so it can paint instantly on entry
+/// instead of staring at a blank spinner while the live request finishes.
+@riverpod
+List<Map<String, dynamic>> anilistCachedNotifications(
+  AnilistCachedNotificationsRef ref,
+) {
+  try {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final raw = prefs.getString(_notificationsCacheKey);
+    if (raw == null || raw.isEmpty) return const [];
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
 }
 
 

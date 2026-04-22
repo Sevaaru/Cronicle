@@ -9,7 +9,6 @@ import 'package:cronicle/core/utils/anilist_notification_contexts.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
@@ -261,6 +260,7 @@ class AnilistNotificationsPage extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final token = ref.watch(anilistTokenProvider).valueOrNull;
     final listAsync = ref.watch(anilistNotificationsListProvider);
+    final cached = ref.watch(anilistCachedNotificationsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -302,25 +302,49 @@ class AnilistNotificationsPage extends ConsumerWidget {
               ),
             )
           : listAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(l10n.errorWithMessage('$e'),
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () =>
+              loading: () => cached.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildNotificationsList(
+                      context,
+                      ref,
+                      cached,
+                      l10n,
+                      cs,
+                      refreshing: true,
+                    ),
+              error: (e, _) => cached.isNotEmpty
+                  ? _buildNotificationsList(
+                      context,
+                      ref,
+                      cached,
+                      l10n,
+                      cs,
+                      refreshing: false,
+                      banner: _OfflineBanner(
+                        message: l10n.errorWithMessage('$e'),
+                        onRetry: () =>
                             ref.invalidate(anilistNotificationsListProvider),
-                        child: Text(l10n.feedRetry),
+                        retryLabel: l10n.feedRetry,
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                    )
+                  : Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(l10n.errorWithMessage('$e'),
+                                textAlign: TextAlign.center),
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: () => ref.invalidate(
+                                  anilistNotificationsListProvider),
+                              child: Text(l10n.feedRetry),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
               data: (items) {
                 if (items.isEmpty) {
                   return Center(
@@ -330,116 +354,342 @@ class AnilistNotificationsPage extends ConsumerWidget {
                     ),
                   );
                 }
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(anilistNotificationsListProvider);
-                    await ref.read(anilistNotificationsListProvider.future);
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: items.length,
-                    itemBuilder: (context, i) {
-                      final n = items[i];
-                      final created = n['createdAt'] as int?;
-                      final dt = created != null
-                          ? DateTime.fromMillisecondsSinceEpoch(created * 1000)
-                          : null;
-                      final avatar = _avatarUrl(n);
-                      final subtitle = _subtitle(n, l10n);
+                return _buildNotificationsList(
+                  context,
+                  ref,
+                  items,
+                  l10n,
+                  cs,
+                  refreshing: false,
+                );
+              },
+            ),
+    );
+  }
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: GlassCard(
-                          padding: const EdgeInsets.all(10),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () => _openNotification(context, n),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    final uid = _avatarUserId(n);
-                                    if (uid != null) {
-                                      _navigateShellRoute(
-                                          context, '/user/$uid');
-                                    } else {
-                                      _openNotification(context, n);
-                                    }
-                                  },
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: avatar != null
-                                        ? CachedNetworkImage(
-                                            imageUrl: avatar,
-                                            width: 44,
-                                            height: 44,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          width: 44,
-                                          height: 44,
-                                          color: cs.surfaceContainerHighest,
-                                          child: Icon(
-                                            Icons.notifications_rounded,
-                                            color: cs.onSurfaceVariant,
-                                            size: 22,
-                                          ),
-                                        ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _titleLine(n, l10n),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      if (subtitle != null &&
-                                          subtitle.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          subtitle,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: cs.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                      if (dt != null) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _timeAgo(dt, l10n),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: cs.onSurfaceVariant
-                                                .withAlpha(180),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.chevron_right_rounded,
-                                    color: cs.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
+  /// Renders the notifications list with a `RefreshIndicator`. When
+  /// [refreshing] is true a slim linear progress strip is shown above the
+  /// list so the user knows fresher data is on the way; we still let them
+  /// interact with the cached items immediately.
+  Widget _buildNotificationsList(
+    BuildContext context,
+    WidgetRef ref,
+    List<Map<String, dynamic>> items,
+    AppLocalizations l10n,
+    ColorScheme cs, {
+    required bool refreshing,
+    Widget? banner,
+  }) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(anilistNotificationsListProvider);
+        await ref.read(anilistNotificationsListProvider.future);
+      },
+      child: Column(
+        children: [
+          if (refreshing)
+            const SizedBox(
+              height: 2,
+              child: LinearProgressIndicator(),
+            ),
+          if (banner != null) banner,
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+              itemCount: items.length,
+              itemBuilder: (context, i) {
+                final n = items[i];
+                final created = n['createdAt'] as int?;
+                final dt = created != null
+                    ? DateTime.fromMillisecondsSinceEpoch(created * 1000)
+                    : null;
+                final avatar = _avatarUrl(n);
+                final subtitle = _subtitle(n, l10n);
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _NotificationTile(
+                    title: _titleLine(n, l10n),
+                    subtitle: subtitle,
+                    timeLabel: dt != null ? _timeAgo(dt, l10n) : null,
+                    avatarUrl: avatar,
+                    kindIcon: _kindIcon(n),
+                    kindAccent: _kindAccent(n, cs),
+                    onTap: () => _openNotification(context, n),
+                    onAvatarTap: () {
+                      final uid = _avatarUserId(n);
+                      if (uid != null) {
+                        _navigateShellRoute(context, '/user/$uid');
+                      } else {
+                        _openNotification(context, n);
+                      }
                     },
                   ),
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _kindIcon(Map<String, dynamic> n) {
+    final t = n['__typename'] as String? ?? '';
+    return switch (t) {
+      'AiringNotification' => Icons.live_tv_rounded,
+      'FollowingNotification' => Icons.person_add_alt_1_rounded,
+      'ActivityLikeNotification' ||
+      'ActivityReplyLikeNotification' ||
+      'ThreadLikeNotification' ||
+      'ThreadCommentLikeNotification' =>
+        Icons.favorite_rounded,
+      'ActivityReplyNotification' ||
+      'ActivityReplySubscribedNotification' ||
+      'ThreadCommentReplyNotification' =>
+        Icons.reply_rounded,
+      'ActivityMentionNotification' ||
+      'ActivityMessageNotification' ||
+      'ThreadCommentMentionNotification' =>
+        Icons.alternate_email_rounded,
+      'ThreadCommentSubscribedNotification' => Icons.forum_rounded,
+      'RelatedMediaAdditionNotification' ||
+      'MediaDataChangeNotification' ||
+      'MediaMergeNotification' =>
+        Icons.update_rounded,
+      'MediaDeletionNotification' => Icons.delete_outline_rounded,
+      'MediaSubmissionUpdateNotification' ||
+      'StaffSubmissionUpdateNotification' ||
+      'CharacterSubmissionUpdateNotification' =>
+        Icons.assignment_turned_in_rounded,
+      _ => Icons.notifications_rounded,
+    };
+  }
+
+  Color _kindAccent(Map<String, dynamic> n, ColorScheme cs) {
+    final t = n['__typename'] as String? ?? '';
+    return switch (t) {
+      'AiringNotification' => cs.primary,
+      'FollowingNotification' => cs.tertiary,
+      'ActivityLikeNotification' ||
+      'ActivityReplyLikeNotification' ||
+      'ThreadLikeNotification' ||
+      'ThreadCommentLikeNotification' =>
+        cs.error,
+      'ActivityReplyNotification' ||
+      'ActivityReplySubscribedNotification' ||
+      'ThreadCommentReplyNotification' ||
+      'ActivityMentionNotification' ||
+      'ActivityMessageNotification' ||
+      'ThreadCommentMentionNotification' =>
+        cs.secondary,
+      _ => cs.primary,
+    };
+  }
+}
+
+class _NotificationTile extends StatelessWidget {
+  const _NotificationTile({
+    required this.title,
+    required this.subtitle,
+    required this.timeLabel,
+    required this.avatarUrl,
+    required this.kindIcon,
+    required this.kindAccent,
+    required this.onTap,
+    required this.onAvatarTap,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? timeLabel;
+  final String? avatarUrl;
+  final IconData kindIcon;
+  final Color kindAccent;
+  final VoidCallback onTap;
+  final VoidCallback onAvatarTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: kindAccent.withValues(alpha: 0.14),
+        highlightColor: kindAccent.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: onAvatarTap,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: avatarUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: avatarUrl!,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              width: 48,
+                              height: 48,
+                              color: cs.surfaceContainerHighest,
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: cs.onSurfaceVariant,
+                                size: 24,
+                              ),
+                            ),
+                    ),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: kindAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: cs.surfaceContainerLow,
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          kindIcon,
+                          size: 12,
+                          color: cs.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        height: 1.25,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null && subtitle!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.3,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    if (timeLabel != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 12,
+                            color: cs.onSurfaceVariant.withAlpha(160),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            timeLabel!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurfaceVariant.withAlpha(180),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: cs.onSurfaceVariant.withAlpha(150),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Slim banner shown above the cached notifications list when the live fetch
+/// failed (e.g. no network) — surfaces the error and a quick retry button
+/// while still letting the user read what we already have.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({
+    required this.message,
+    required this.onRetry,
+    required this.retryLabel,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final String retryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: cs.errorContainer.withAlpha(140),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 18, color: cs.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+              foregroundColor: cs.onErrorContainer,
+              minimumSize: const Size(0, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            child: Text(retryLabel),
+          ),
+        ],
+      ),
     );
   }
 }
