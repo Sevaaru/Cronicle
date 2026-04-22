@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
@@ -1242,6 +1243,11 @@ class _IncrementButtonState extends State<_IncrementButton>
       } else {
         await db.incrementProgress(widget.entry.id);
       }
+      try {
+        await widget.ref
+            .read(achievementsProvider.notifier)
+            .bumpProgressIncrement();
+      } catch (_) {}
       widget.onUpdated();
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();

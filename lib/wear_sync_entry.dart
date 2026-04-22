@@ -9,8 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/features/trakt/data/datasources/trakt_api_datasource.dart';
 import 'package:cronicle/features/trakt/data/datasources/trakt_auth_datasource.dart';
@@ -83,6 +85,11 @@ Future<void> _drainPendingActions() async {
       } else if (kind == MediaKind.tv || kind == MediaKind.movie) {
         await _pushTrakt(trakt, traktAuth, entry, kind);
       }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await AchievementsCounters.bumpWearUpdate(prefs);
+        await AchievementsCounters.bumpProgressIncrement(prefs);
+      } catch (_) {}
       debugPrint('[Cronicle] wearSync pushed $kind/$externalId');
     } catch (e, st) {
       debugPrint('[Cronicle] wearSync action failed: $e\n$st');

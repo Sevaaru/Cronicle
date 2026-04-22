@@ -12,6 +12,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/utils/json_int.dart';
+import 'package:cronicle/features/achievements/domain/achievement.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
@@ -195,6 +197,11 @@ class _NotLoggedIn extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         const _FavoritesPreviewSection(),
+        const SizedBox(height: 16),
+        _TrophyRoomNavTile(
+          l10n: l10n,
+          colorScheme: cs,
+        ),
       ],
     );
   }
@@ -607,6 +614,8 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
               ],
 
               _PersonalStatsNavTile(l10n: l10n, colorScheme: cs),
+              const SizedBox(height: 12),
+              _TrophyRoomNavTile(l10n: l10n, colorScheme: cs),
               const SizedBox(height: 12),
 
               _FavoritesPreviewSection(
@@ -1290,6 +1299,103 @@ class _PersonalStatsNavTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       l10n.profilePersonalStatsSubtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: cs.onSurfaceVariant,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrophyRoomNavTile extends ConsumerWidget {
+  const _TrophyRoomNavTile({
+    required this.l10n,
+    required this.colorScheme,
+  });
+
+  final AppLocalizations l10n;
+  final ColorScheme colorScheme;
+
+  static const double _radius = 22;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = colorScheme;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final state = ref.watch(achievementsProvider);
+    final unlocked = state.values.where((s) => s.isUnlocked).length;
+    final total = AchievementCatalog.all.length;
+    final earnedPoints = AchievementCatalog.all.fold<int>(0, (sum, a) {
+      final s = state[a.id];
+      return sum + (s?.isUnlocked == true ? a.tier.points : 0);
+    });
+
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_radius),
+        onTap: () => context.push('/profile/trophies'),
+        splashColor: cs.tertiary.withValues(alpha: 0.14),
+        highlightColor: cs.tertiary.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.emoji_events_rounded,
+                  color: cs.onTertiaryContainer,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEs ? 'Sala de Trofeos' : 'Trophy Room',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isEs
+                          ? '$unlocked/$total logros · $earnedPoints pts'
+                          : '$unlocked/$total achievements · $earnedPoints pts',
                       style: TextStyle(
                         fontSize: 12.5,
                         color: cs.onSurfaceVariant,

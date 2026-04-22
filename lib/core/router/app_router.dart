@@ -14,6 +14,7 @@ import 'package:cronicle/features/anime/presentation/forum_media_threads_page.da
 import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/achievements/presentation/trophy_room_page.dart';
 import 'package:cronicle/features/books/presentation/book_detail_page.dart';
 import 'package:cronicle/features/books/presentation/book_subject_browse_page.dart';
 import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
@@ -227,6 +228,10 @@ GoRouter appRouter(AppRouterRef ref) {
           GoRoute(
             path: '/profile/personal-stats',
             builder: (context, state) => const PersonalStatsPage(),
+          ),
+          GoRoute(
+            path: '/profile/trophies',
+            builder: (context, state) => const TrophyRoomPage(),
           ),
           GoRoute(
             path: '/profile/favorites/:kind',

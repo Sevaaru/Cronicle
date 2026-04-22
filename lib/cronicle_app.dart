@@ -11,6 +11,8 @@ import 'package:cronicle/core/notifications/notification_permission_bootstrap.da
 import 'package:cronicle/core/router/app_router.dart';
 import 'package:cronicle/core/theme/app_theme.dart';
 import 'package:cronicle/core/wear/wear_event_listener.dart';
+import 'package:cronicle/features/achievements/presentation/achievement_overlay.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_bootstrap.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -80,7 +82,11 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
       builder: (context, child) {
         final content = NotificationPermissionBootstrap(
           child: NotificationLifecycleSync(
-            child: child ?? const SizedBox.shrink(),
+            child: AchievementsBootstrap(
+              child: AchievementOverlayHost(
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
           ),
         );
         return _webClampViewInsets(content);

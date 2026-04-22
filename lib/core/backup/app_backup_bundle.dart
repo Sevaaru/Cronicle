@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
@@ -225,5 +226,9 @@ abstract final class AppBackupBundle {
     ref.invalidate(traktShowsHomeProvider);
     ref.invalidate(traktSearchMoviesProvider);
     ref.invalidate(traktSearchShowsProvider);
+    // Achievement state lives in SharedPreferences, but the notifier caches it.
+    try {
+      ref.read(achievementsProvider.notifier).reloadFromPrefs();
+    } catch (_) {}
   }
 }
