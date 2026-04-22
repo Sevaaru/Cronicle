@@ -8,10 +8,7 @@ part of 'google_sign_in_provider.dart';
 
 String _$googleSignInHash() => r'51ebfbb1744caa9c238f6029e57cdf6cbbede6a0';
 
-/// Google Sign-In 7.x uses a single [GoogleSignIn.instance]; call
-/// `GoogleSignIn.instance.initialize()` in [main] before [runApp].
-///
-/// Copied from [googleSignIn].
+/// See also [googleSignIn].
 @ProviderFor(googleSignIn)
 final googleSignInProvider = Provider<GoogleSignIn>.internal(
   googleSignIn,

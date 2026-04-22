@@ -166,41 +166,6 @@ class _BookSearchProviderElement
   String get query => (origin as BookSearchProvider).query;
 }
 
-String _$booksHomeFeedHash() => r'6ff6ae879f67a6e1f544f7e69623483c2633061f';
-
-/// See also [booksHomeFeed].
-@ProviderFor(booksHomeFeed)
-final booksHomeFeedProvider = FutureProvider<BooksHomeFeedData>.internal(
-  booksHomeFeed,
-  name: r'booksHomeFeedProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$booksHomeFeedHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef BooksHomeFeedRef = FutureProviderRef<BooksHomeFeedData>;
-String _$bookTrendingHash() => r'53630f8d632c1324aeff4aa9e7cb8972c2f8e58c';
-
-/// See also [bookTrending].
-@ProviderFor(bookTrending)
-final bookTrendingProvider =
-    FutureProvider<List<Map<String, dynamic>>>.internal(
-      bookTrending,
-      name: r'bookTrendingProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$bookTrendingHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef BookTrendingRef = FutureProviderRef<List<Map<String, dynamic>>>;
 String _$bookSubjectHash() => r'367bf95d8e79048c067c65cd1c8d83bfa4e46cdd';
 
 /// See also [bookSubject].
@@ -948,6 +913,38 @@ class _BookWorkEditionModelsProviderElement
   String get workKey => (origin as BookWorkEditionModelsProvider).workKey;
 }
 
+String _$booksHomeFeedHash() => r'2c6fc9dfd8253a476618cbe76fc607c926be2a9e';
+
+/// See also [BooksHomeFeed].
+@ProviderFor(BooksHomeFeed)
+final booksHomeFeedProvider =
+    AsyncNotifierProvider<BooksHomeFeed, BooksHomeFeedData>.internal(
+      BooksHomeFeed.new,
+      name: r'booksHomeFeedProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$booksHomeFeedHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$BooksHomeFeed = AsyncNotifier<BooksHomeFeedData>;
+String _$bookTrendingHash() => r'b8a320c5fa5ad7517e5db90fc2f40a9a6aeaeaf2';
+
+/// See also [BookTrending].
+@ProviderFor(BookTrending)
+final bookTrendingProvider =
+    AsyncNotifierProvider<BookTrending, List<Map<String, dynamic>>>.internal(
+      BookTrending.new,
+      name: r'bookTrendingProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$bookTrendingHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$BookTrending = AsyncNotifier<List<Map<String, dynamic>>>;
 String _$favoriteBooksHash() => r'812d75a957f75b2b5701c83e9a5fbb6ac17f02b2';
 
 /// See also [FavoriteBooks].

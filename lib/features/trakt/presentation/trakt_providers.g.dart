@@ -40,42 +40,6 @@ final traktApiProvider = Provider<TraktApiDatasource>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TraktApiRef = ProviderRef<TraktApiDatasource>;
-String _$traktMoviesHomeHash() => r'11cfb443b8143cd3c9da2d424cc510e3237b4b27';
-
-/// See also [traktMoviesHome].
-@ProviderFor(traktMoviesHome)
-final traktMoviesHomeProvider =
-    AutoDisposeFutureProvider<TraktMoviesHomeData>.internal(
-      traktMoviesHome,
-      name: r'traktMoviesHomeProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$traktMoviesHomeHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TraktMoviesHomeRef = AutoDisposeFutureProviderRef<TraktMoviesHomeData>;
-String _$traktShowsHomeHash() => r'4ff2dfffbac5d91ecdc1fd55ae4bd48347071e3b';
-
-/// See also [traktShowsHome].
-@ProviderFor(traktShowsHome)
-final traktShowsHomeProvider =
-    AutoDisposeFutureProvider<TraktShowsHomeData>.internal(
-      traktShowsHome,
-      name: r'traktShowsHomeProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$traktShowsHomeHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TraktShowsHomeRef = AutoDisposeFutureProviderRef<TraktShowsHomeData>;
 String _$traktSearchMoviesHash() => r'38c87805a839d4a9de4e5e065ace479ab44117aa';
 
 /// Copied from Dart SDK
@@ -591,11 +555,9 @@ class _TraktShowDetailProviderElement
   int get traktId => (origin as TraktShowDetailProvider).traktId;
 }
 
-String _$traktSessionHash() => r'aa44d26fac4377a52d4cf3b0516161f9bd23ee8e';
+String _$traktSessionHash() => r'2f8b701deeeb81e6405bd06cfbe6652daed92bb0';
 
-/// Sesión Trakt (OAuth opcional).
-///
-/// Copied from [TraktSession].
+/// See also [TraktSession].
 @ProviderFor(TraktSession)
 final traktSessionProvider =
     AsyncNotifierProvider<TraktSession, TraktSessionState>.internal(
@@ -609,12 +571,42 @@ final traktSessionProvider =
     );
 
 typedef _$TraktSession = AsyncNotifier<TraktSessionState>;
+String _$traktMoviesHomeHash() => r'8cad3f92bb2d43472cd308b1e1eb23eafc0cb6b1';
+
+/// See also [TraktMoviesHome].
+@ProviderFor(TraktMoviesHome)
+final traktMoviesHomeProvider =
+    AsyncNotifierProvider<TraktMoviesHome, TraktMoviesHomeData>.internal(
+      TraktMoviesHome.new,
+      name: r'traktMoviesHomeProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$traktMoviesHomeHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$TraktMoviesHome = AsyncNotifier<TraktMoviesHomeData>;
+String _$traktShowsHomeHash() => r'922ec7abbe712ac05dc44cb5c486cd009755a816';
+
+/// See also [TraktShowsHome].
+@ProviderFor(TraktShowsHome)
+final traktShowsHomeProvider =
+    AsyncNotifierProvider<TraktShowsHome, TraktShowsHomeData>.internal(
+      TraktShowsHome.new,
+      name: r'traktShowsHomeProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$traktShowsHomeHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$TraktShowsHome = AsyncNotifier<TraktShowsHomeData>;
 String _$favoriteTraktTitlesHash() =>
     r'93edd6043d7f3ba75036de3f18dff5041c128f5a';
 
-/// Películas y series Trakt marcadas como favoritas (solo local, SharedPreferences).
-///
-/// Copied from [FavoriteTraktTitles].
+/// See also [FavoriteTraktTitles].
 @ProviderFor(FavoriteTraktTitles)
 final favoriteTraktTitlesProvider =
     NotifierProvider<FavoriteTraktTitles, List<Map<String, dynamic>>>.internal(

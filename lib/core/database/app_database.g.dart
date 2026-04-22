@@ -819,17 +819,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
   final int? userTotalPagesOverride;
   final int? userTotalChaptersOverride;
   final int? currentChapter;
-
-  /// "pages" | "percentage" | "chapters" — defaults to pages.
   final String? bookTrackingMode;
-
-  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
   final String? animeMediaStatus;
-
-  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
   final int? releasedEpisodes;
-
-  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
   final int? nextEpisodeAirsAt;
   final int updatedAt;
   const LibraryEntry({

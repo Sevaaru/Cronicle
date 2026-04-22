@@ -79,6 +79,7 @@ Future<bool> runGoogleDriveAutoBackupTask() async {
         graphql: graphql,
         db: db,
         auth: AnilistAuthDatasource(secure),
+        prefs: prefs,
       );
     } catch (_) {}
     try {

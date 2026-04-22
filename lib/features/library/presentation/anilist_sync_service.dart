@@ -2,6 +2,7 @@ import 'dart:math' show max;
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
@@ -9,6 +10,15 @@ import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasou
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+
+/// SharedPreferences key holding the last successful AniList library sync
+/// timestamp (UNIX seconds). Used to enable delta sync via `updatedAt`.
+const String anilistLibraryLastSyncSecondsKey =
+    'anilist_library_last_sync_s';
+
+/// Minimum interval between automatic background AniList library syncs.
+/// Manual user-triggered import/merge dialogs always force a sync.
+const Duration anilistAutoSyncMinInterval = Duration(hours: 1);
 
 int? _mediaListUpdatedAtMs(Map<String, dynamic> entry) {
   final raw = entry['updatedAt'];
@@ -32,11 +42,52 @@ Future<int> importAnilistToLocal({
   final manga = await graphql
       .fetchUserMediaList(token, userName, type: 'MANGA')
       .catchError((Object _) => <Map<String, dynamic>>[]);
+  final count = await _writeAnilistEntriesToDb(
+    db: db,
+    entries: [...anime, ...manga],
+  );
+  return count;
+}
 
+/// Incrementally syncs AniList list changes since [sinceEpochSeconds].
+/// Returns the number of entries written.
+Future<int> deltaSyncAnilistToLocal({
+  required AnilistGraphqlDatasource graphql,
+  required AppDatabase db,
+  required String token,
+  required int userId,
+  required int sinceEpochSeconds,
+}) async {
+  final anime = await graphql
+      .fetchUserMediaListUpdatedSince(
+        token,
+        userId,
+        type: 'ANIME',
+        sinceEpochSeconds: sinceEpochSeconds,
+      )
+      .catchError((Object _) => <Map<String, dynamic>>[]);
+  final manga = await graphql
+      .fetchUserMediaListUpdatedSince(
+        token,
+        userId,
+        type: 'MANGA',
+        sinceEpochSeconds: sinceEpochSeconds,
+      )
+      .catchError((Object _) => <Map<String, dynamic>>[]);
+  return _writeAnilistEntriesToDb(
+    db: db,
+    entries: [...anime, ...manga],
+  );
+}
+
+Future<int> _writeAnilistEntriesToDb({
+  required AppDatabase db,
+  required List<Map<String, dynamic>> entries,
+}) async {
   final seen = <String>{};
   int count = 0;
 
-  for (final entry in [...anime, ...manga]) {
+  for (final entry in entries) {
     try {
       final media = entry['media'] as Map<String, dynamic>? ?? {};
       final mediaId = media['id']?.toString();
@@ -119,16 +170,53 @@ Future<void> mergeAnilistLibraryIntoLocalIfSignedIn({
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,
   required AnilistAuthDatasource auth,
+  SharedPreferences? prefs,
+  bool force = false,
 }) async {
   final token = await auth.getToken();
   if (token == null || token.isEmpty) return;
 
   var userName = await auth.getUserName();
+  Map<String, dynamic>? viewer;
   if (userName == null || userName.isEmpty) {
-    final viewer = await graphql.fetchViewer(token);
+    viewer = await graphql.fetchViewer(token);
     userName = viewer?['name'] as String? ?? '';
     if (userName.isEmpty) return;
     await auth.saveUserName(userName);
+  }
+
+  final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  final lastSyncSeconds =
+      prefs?.getInt(anilistLibraryLastSyncSecondsKey) ?? 0;
+
+  // Skip background sync if a recent sync just happened, unless forced.
+  if (!force && lastSyncSeconds > 0) {
+    final age = Duration(seconds: nowSeconds - lastSyncSeconds);
+    if (age < anilistAutoSyncMinInterval) return;
+  }
+
+  // If we have a previous sync timestamp, perform an incremental delta sync.
+  if (lastSyncSeconds > 0) {
+    viewer ??= await graphql.fetchViewer(token);
+    final userId = (viewer?['id'] as num?)?.toInt() ?? 0;
+    if (userId > 0) {
+      try {
+        // Subtract a small overlap so concurrent edits don't get missed.
+        const overlapSeconds = 60;
+        final since = (lastSyncSeconds - overlapSeconds).clamp(0, nowSeconds);
+        await deltaSyncAnilistToLocal(
+          graphql: graphql,
+          db: db,
+          token: token,
+          userId: userId,
+          sinceEpochSeconds: since,
+        );
+        await prefs?.setInt(anilistLibraryLastSyncSecondsKey, nowSeconds);
+        return;
+      } catch (_) {
+        // Fallback to full import on delta failure.
+      }
+    }
   }
 
   await importAnilistToLocal(
@@ -137,6 +225,7 @@ Future<void> mergeAnilistLibraryIntoLocalIfSignedIn({
     token: token,
     userName: userName,
   );
+  await prefs?.setInt(anilistLibraryLastSyncSecondsKey, nowSeconds);
 }
 
 Future<bool> showAnilistSyncDialog({
@@ -144,6 +233,7 @@ Future<bool> showAnilistSyncDialog({
   required AnilistGraphqlDatasource graphql,
   required AppDatabase db,
   required String token,
+  SharedPreferences? prefs,
 }) async {
   final l10n = AppLocalizations.of(context)!;
 
@@ -238,6 +328,8 @@ Future<bool> showAnilistSyncDialog({
       token: token,
       userName: userName,
     );
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await prefs?.setInt(anilistLibraryLastSyncSecondsKey, nowSeconds);
 
     if (nav.mounted) {
       nav.pop();

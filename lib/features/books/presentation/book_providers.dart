@@ -2,12 +2,16 @@ import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/features/books/domain/models/book_edition.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/books/data/datasources/google_books_api_datasource.dart';
 
 part 'book_providers.g.dart';
+
+const String _booksHomeFeedCacheKey = 'books_home_feed';
+const String _bookTrendingCacheKey = 'books_trending';
 
 
 @Riverpod(keepAlive: true)
@@ -43,11 +47,31 @@ class BooksHomeFeedData {
   final List<Map<String, dynamic>> scienceFiction;
   final List<Map<String, dynamic>> classics;
   final List<Map<String, dynamic>> mystery;
+
+  Map<String, dynamic> toJson() => {
+        'trending': trending,
+        'love': love,
+        'fantasy': fantasy,
+        'scienceFiction': scienceFiction,
+        'classics': classics,
+        'mystery': mystery,
+      };
+
+  factory BooksHomeFeedData.fromJson(Map<String, dynamic> json) {
+    return BooksHomeFeedData(
+      trending: jsonListAsMaps(json['trending']),
+      love: jsonListAsMaps(json['love']),
+      fantasy: jsonListAsMaps(json['fantasy']),
+      scienceFiction: jsonListAsMaps(json['scienceFiction']),
+      classics: jsonListAsMaps(json['classics']),
+      mystery: jsonListAsMaps(json['mystery']),
+    );
+  }
 }
 
-@Riverpod(keepAlive: true)
-Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
-  final api = ref.watch(googleBooksApiProvider);
+Future<BooksHomeFeedData> _fetchBooksHomeFeed(
+  GoogleBooksApiDatasource api,
+) async {
   const delay = Duration(milliseconds: 350);
 
   Future<List<Map<String, dynamic>>> safe(
@@ -83,12 +107,56 @@ Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
 }
 
 @Riverpod(keepAlive: true)
-Future<List<Map<String, dynamic>>> bookTrending(BookTrendingRef ref) async {
-  try {
+class BooksHomeFeed extends _$BooksHomeFeed {
+  @override
+  Future<BooksHomeFeedData> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_booksHomeFeedCacheKey);
     final api = ref.watch(googleBooksApiProvider);
-    return await api.fetchTrending(limit: 20);
-  } catch (_) {
-    return [];
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchBooksHomeFeed(api);
+          await cache.write(_booksHomeFeedCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {}
+      });
+      return BooksHomeFeedData.fromJson(cached.data);
+    }
+
+    final data = await _fetchBooksHomeFeed(api);
+    await cache.write(_booksHomeFeedCacheKey, data.toJson());
+    return data;
+  }
+}
+
+@Riverpod(keepAlive: true)
+class BookTrending extends _$BookTrending {
+  @override
+  Future<List<Map<String, dynamic>>> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_bookTrendingCacheKey);
+    final api = ref.watch(googleBooksApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final fresh = await api.fetchTrending(limit: 20);
+          await cache.write(_bookTrendingCacheKey, {'items': fresh});
+          state = AsyncData(fresh);
+        } catch (_) {}
+      });
+      return jsonListAsMaps(cached.data['items']);
+    }
+
+    try {
+      final fresh = await api.fetchTrending(limit: 20);
+      await cache.write(_bookTrendingCacheKey, {'items': fresh});
+      return fresh;
+    } catch (_) {
+      return const [];
+    }
   }
 }
 

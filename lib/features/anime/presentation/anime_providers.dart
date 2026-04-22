@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
@@ -18,6 +19,10 @@ import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
 part 'anime_providers.g.dart';
+
+String _anilistPopularCacheKey(String type) =>
+    'anilist_popular_${type.toUpperCase()}';
+const String _anilistProfileCacheKey = 'anilist_profile';
 
 @Riverpod(keepAlive: true)
 AnilistAuthDatasource anilistAuth(AnilistAuthRef ref) {
@@ -176,12 +181,29 @@ Future<List<Map<String, dynamic>>> anilistSearch(
 }
 
 @Riverpod(keepAlive: true)
-Future<List<Map<String, dynamic>>> anilistPopular(
-  AnilistPopularRef ref,
-  String type,
-) async {
-  final graphql = ref.read(anilistGraphqlProvider);
-  return graphql.fetchPopular(type: type);
+class AnilistPopular extends _$AnilistPopular {
+  @override
+  Future<List<Map<String, dynamic>>> build(String type) async {
+    final cache = ref.read(jsonCacheProvider);
+    final cacheKey = _anilistPopularCacheKey(type);
+    final cached = cache.read(cacheKey);
+    final graphql = ref.read(anilistGraphqlProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final fresh = await graphql.fetchPopular(type: type);
+          await cache.write(cacheKey, {'items': fresh});
+          state = AsyncData(fresh);
+        } catch (_) {}
+      });
+      return jsonListAsMaps(cached.data['items']);
+    }
+
+    final fresh = await graphql.fetchPopular(type: type);
+    await cache.write(cacheKey, {'items': fresh});
+    return fresh;
+  }
 }
 
 @riverpod
@@ -764,12 +786,58 @@ Future<Map<String, dynamic>?> anilistStaffDetail(
   return graphql.fetchStaffDetail(staffId, token: token);
 }
 
-@riverpod
-Future<Map<String, dynamic>?> anilistProfile(AnilistProfileRef ref) async {
-  final token = await ref.watch(anilistTokenProvider.future);
-  if (token == null) return null;
-  final graphql = ref.read(anilistGraphqlProvider);
-  return graphql.fetchViewerProfile(token);
+@Riverpod(keepAlive: true)
+class AnilistProfile extends _$AnilistProfile {
+  @override
+  Future<Map<String, dynamic>?> build() async {
+    final token = await ref.watch(anilistTokenProvider.future);
+    final cache = ref.read(jsonCacheProvider);
+
+    if (token == null) {
+      // Logged out: drop any persisted profile snapshot.
+      await cache.clear(_anilistProfileCacheKey);
+      return null;
+    }
+
+    final cached = cache.read(_anilistProfileCacheKey);
+    final graphql = ref.read(anilistGraphqlProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final fresh = await graphql.fetchViewerProfile(token);
+          if (fresh != null) {
+            await cache.write(_anilistProfileCacheKey, fresh);
+            state = AsyncData(fresh);
+          }
+        } catch (_) {}
+      });
+      return cached.data;
+    }
+
+    final fresh = await graphql.fetchViewerProfile(token);
+    if (fresh != null) {
+      await cache.write(_anilistProfileCacheKey, fresh);
+    }
+    return fresh;
+  }
+
+  /// Forces a network refetch ignoring cache. Used by pull-to-refresh.
+  Future<void> refresh() async {
+    final token = await ref.read(anilistTokenProvider.future);
+    if (token == null) return;
+    final graphql = ref.read(anilistGraphqlProvider);
+    final cache = ref.read(jsonCacheProvider);
+    try {
+      final fresh = await graphql.fetchViewerProfile(token);
+      if (fresh != null) {
+        await cache.write(_anilistProfileCacheKey, fresh);
+        state = AsyncData(fresh);
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
 }
 
 @riverpod

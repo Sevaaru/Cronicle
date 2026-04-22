@@ -415,9 +415,7 @@ class _LibraryFilteredProviderElement
 String _$defaultLibraryFilterHash() =>
     r'3927bc801ac465380f89278b6c30d96e5844f810';
 
-/// Default status filter for the library (stored in SharedPreferences).
-///
-/// Copied from [DefaultLibraryFilter].
+/// See also [DefaultLibraryFilter].
 @ProviderFor(DefaultLibraryFilter)
 final defaultLibraryFilterProvider =
     AutoDisposeNotifierProvider<DefaultLibraryFilter, String>.internal(

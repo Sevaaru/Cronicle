@@ -181,25 +181,6 @@ class _IgdbSearchProviderElement
   String get query => (origin as IgdbSearchProvider).query;
 }
 
-String _$igdbPopularHash() => r'9bc7223bded62419f913a461ce4c5d6185bf8236';
-
-/// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
-///
-/// Copied from [igdbPopular].
-@ProviderFor(igdbPopular)
-final igdbPopularProvider = FutureProvider<List<Map<String, dynamic>>>.internal(
-  igdbPopular,
-  name: r'igdbPopularProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$igdbPopularHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef IgdbPopularRef = FutureProviderRef<List<Map<String, dynamic>>>;
 String _$igdbGameDetailHash() => r'9b69004832c56422fd93b0280465d42917485448';
 
 /// See also [igdbGameDetail].
@@ -321,29 +302,6 @@ class _IgdbGameDetailProviderElement
   int get gameId => (origin as IgdbGameDetailProvider).gameId;
 }
 
-String _$igdbGamesHomeFeedHash() => r'4c8f4b013746dc46edd4036f402b0550dac9d47b';
-
-/// Aside: un único POST a /multiquery trae los 9 carruseles de juegos (= 1 req
-/// contra el rate-limit de IGDB). Las reseñas van en 2 llamadas adicionales.
-/// Si algún sub-query falla la sección simplemente queda vacía; si el POST
-/// completo falla se propaga el error y la UI muestra el botón "Reintentar".
-///
-/// Copied from [igdbGamesHomeFeed].
-@ProviderFor(igdbGamesHomeFeed)
-final igdbGamesHomeFeedProvider =
-    FutureProvider<IgdbGamesHomeFeedData>.internal(
-      igdbGamesHomeFeed,
-      name: r'igdbGamesHomeFeedProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$igdbGamesHomeFeedHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef IgdbGamesHomeFeedRef = FutureProviderRef<IgdbGamesHomeFeedData>;
 String _$igdbReviewByIdHash() => r'27406cd579ea483b124241346a5d521a7d513ebb';
 
 /// See also [igdbReviewById].
@@ -468,25 +426,17 @@ class _IgdbReviewByIdProviderElement
 String _$igdbGamesSectionListHash() =>
     r'637872dbb9a267b49e39ec7113c85942f511510b';
 
-/// Listado extendido para `/games/section/:slug`.
-///
-/// Copied from [igdbGamesSectionList].
+/// See also [igdbGamesSectionList].
 @ProviderFor(igdbGamesSectionList)
 const igdbGamesSectionListProvider = IgdbGamesSectionListFamily();
 
-/// Listado extendido para `/games/section/:slug`.
-///
-/// Copied from [igdbGamesSectionList].
+/// See also [igdbGamesSectionList].
 class IgdbGamesSectionListFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Listado extendido para `/games/section/:slug`.
-  ///
-  /// Copied from [igdbGamesSectionList].
+  /// See also [igdbGamesSectionList].
   const IgdbGamesSectionListFamily();
 
-  /// Listado extendido para `/games/section/:slug`.
-  ///
-  /// Copied from [igdbGamesSectionList].
+  /// See also [igdbGamesSectionList].
   IgdbGamesSectionListProvider call(String slug) {
     return IgdbGamesSectionListProvider(slug);
   }
@@ -513,14 +463,10 @@ class IgdbGamesSectionListFamily
   String? get name => r'igdbGamesSectionListProvider';
 }
 
-/// Listado extendido para `/games/section/:slug`.
-///
-/// Copied from [igdbGamesSectionList].
+/// See also [igdbGamesSectionList].
 class IgdbGamesSectionListProvider
     extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
-  /// Listado extendido para `/games/section/:slug`.
-  ///
-  /// Copied from [igdbGamesSectionList].
+  /// See also [igdbGamesSectionList].
   IgdbGamesSectionListProvider(String slug)
     : this._internal(
         (ref) => igdbGamesSectionList(ref as IgdbGamesSectionListRef, slug),
@@ -604,11 +550,41 @@ class _IgdbGamesSectionListProviderElement
   String get slug => (origin as IgdbGamesSectionListProvider).slug;
 }
 
+String _$igdbPopularHash() => r'088bfa10bfe316d34765f26c079586f884159fdd';
+
+/// See also [IgdbPopular].
+@ProviderFor(IgdbPopular)
+final igdbPopularProvider =
+    AsyncNotifierProvider<IgdbPopular, List<Map<String, dynamic>>>.internal(
+      IgdbPopular.new,
+      name: r'igdbPopularProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$igdbPopularHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$IgdbPopular = AsyncNotifier<List<Map<String, dynamic>>>;
+String _$igdbGamesHomeFeedHash() => r'ef18ee0c8022ceb2a2d033b29c4f401c2fdc6149';
+
+/// See also [IgdbGamesHomeFeed].
+@ProviderFor(IgdbGamesHomeFeed)
+final igdbGamesHomeFeedProvider =
+    AsyncNotifierProvider<IgdbGamesHomeFeed, IgdbGamesHomeFeedData>.internal(
+      IgdbGamesHomeFeed.new,
+      name: r'igdbGamesHomeFeedProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$igdbGamesHomeFeedHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$IgdbGamesHomeFeed = AsyncNotifier<IgdbGamesHomeFeedData>;
 String _$favoriteGamesHash() => r'96ace829105b3d07cdda862470dea07b4784e682';
 
-/// Juegos marcados como favoritos (solo local, SharedPreferences).
-///
-/// Copied from [FavoriteGames].
+/// See also [FavoriteGames].
 @ProviderFor(FavoriteGames)
 final favoriteGamesProvider =
     NotifierProvider<FavoriteGames, List<Map<String, dynamic>>>.internal(

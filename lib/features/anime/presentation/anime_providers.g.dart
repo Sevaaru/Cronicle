@@ -319,129 +319,6 @@ class _AnilistSearchProviderElement
   String get type => (origin as AnilistSearchProvider).type;
 }
 
-String _$anilistPopularHash() => r'826a57452f2eb04036eb7332ccb7b8bef546f60f';
-
-/// See also [anilistPopular].
-@ProviderFor(anilistPopular)
-const anilistPopularProvider = AnilistPopularFamily();
-
-/// See also [anilistPopular].
-class AnilistPopularFamily
-    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// See also [anilistPopular].
-  const AnilistPopularFamily();
-
-  /// See also [anilistPopular].
-  AnilistPopularProvider call(String type) {
-    return AnilistPopularProvider(type);
-  }
-
-  @override
-  AnilistPopularProvider getProviderOverride(
-    covariant AnilistPopularProvider provider,
-  ) {
-    return call(provider.type);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'anilistPopularProvider';
-}
-
-/// See also [anilistPopular].
-class AnilistPopularProvider
-    extends FutureProvider<List<Map<String, dynamic>>> {
-  /// See also [anilistPopular].
-  AnilistPopularProvider(String type)
-    : this._internal(
-        (ref) => anilistPopular(ref as AnilistPopularRef, type),
-        from: anilistPopularProvider,
-        name: r'anilistPopularProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$anilistPopularHash,
-        dependencies: AnilistPopularFamily._dependencies,
-        allTransitiveDependencies:
-            AnilistPopularFamily._allTransitiveDependencies,
-        type: type,
-      );
-
-  AnilistPopularProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.type,
-  }) : super.internal();
-
-  final String type;
-
-  @override
-  Override overrideWith(
-    FutureOr<List<Map<String, dynamic>>> Function(AnilistPopularRef provider)
-    create,
-  ) {
-    return ProviderOverride(
-      origin: this,
-      override: AnilistPopularProvider._internal(
-        (ref) => create(ref as AnilistPopularRef),
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        type: type,
-      ),
-    );
-  }
-
-  @override
-  FutureProviderElement<List<Map<String, dynamic>>> createElement() {
-    return _AnilistPopularProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is AnilistPopularProvider && other.type == type;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, type.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin AnilistPopularRef on FutureProviderRef<List<Map<String, dynamic>>> {
-  /// The parameter `type` of this provider.
-  String get type;
-}
-
-class _AnilistPopularProviderElement
-    extends FutureProviderElement<List<Map<String, dynamic>>>
-    with AnilistPopularRef {
-  _AnilistPopularProviderElement(super.provider);
-
-  @override
-  String get type => (origin as AnilistPopularProvider).type;
-}
-
 String _$anilistMediaDetailHash() =>
     r'a8ddcfd22e60e5fc9e3a305b002fb2b2da212f03';
 
@@ -568,25 +445,17 @@ class _AnilistMediaDetailProviderElement
 String _$anilistCharacterDetailHash() =>
     r'52b4cc682ca3f47544da9f56412fc37468f91418';
 
-/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-///
-/// Copied from [anilistCharacterDetail].
+/// See also [anilistCharacterDetail].
 @ProviderFor(anilistCharacterDetail)
 const anilistCharacterDetailProvider = AnilistCharacterDetailFamily();
 
-/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-///
-/// Copied from [anilistCharacterDetail].
+/// See also [anilistCharacterDetail].
 class AnilistCharacterDetailFamily
     extends Family<AsyncValue<Map<String, dynamic>?>> {
-  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-  ///
-  /// Copied from [anilistCharacterDetail].
+  /// See also [anilistCharacterDetail].
   const AnilistCharacterDetailFamily();
 
-  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-  ///
-  /// Copied from [anilistCharacterDetail].
+  /// See also [anilistCharacterDetail].
   AnilistCharacterDetailProvider call(int characterId) {
     return AnilistCharacterDetailProvider(characterId);
   }
@@ -613,14 +482,10 @@ class AnilistCharacterDetailFamily
   String? get name => r'anilistCharacterDetailProvider';
 }
 
-/// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-///
-/// Copied from [anilistCharacterDetail].
+/// See also [anilistCharacterDetail].
 class AnilistCharacterDetailProvider
     extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
-  /// Detalle completo de un personaje Anilist (incluye apariciones paginadas).
-  ///
-  /// Copied from [anilistCharacterDetail].
+  /// See also [anilistCharacterDetail].
   AnilistCharacterDetailProvider(int characterId)
     : this._internal(
         (ref) => anilistCharacterDetail(
@@ -709,25 +574,17 @@ class _AnilistCharacterDetailProviderElement
 String _$anilistStaffDetailHash() =>
     r'86fe1250e986cf41ba613a12310d3f043bf11cc2';
 
-/// Detalle completo de un miembro del staff Anilist (con personajes y media).
-///
-/// Copied from [anilistStaffDetail].
+/// See also [anilistStaffDetail].
 @ProviderFor(anilistStaffDetail)
 const anilistStaffDetailProvider = AnilistStaffDetailFamily();
 
-/// Detalle completo de un miembro del staff Anilist (con personajes y media).
-///
-/// Copied from [anilistStaffDetail].
+/// See also [anilistStaffDetail].
 class AnilistStaffDetailFamily
     extends Family<AsyncValue<Map<String, dynamic>?>> {
-  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
-  ///
-  /// Copied from [anilistStaffDetail].
+  /// See also [anilistStaffDetail].
   const AnilistStaffDetailFamily();
 
-  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
-  ///
-  /// Copied from [anilistStaffDetail].
+  /// See also [anilistStaffDetail].
   AnilistStaffDetailProvider call(int staffId) {
     return AnilistStaffDetailProvider(staffId);
   }
@@ -754,14 +611,10 @@ class AnilistStaffDetailFamily
   String? get name => r'anilistStaffDetailProvider';
 }
 
-/// Detalle completo de un miembro del staff Anilist (con personajes y media).
-///
-/// Copied from [anilistStaffDetail].
+/// See also [anilistStaffDetail].
 class AnilistStaffDetailProvider
     extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
-  /// Detalle completo de un miembro del staff Anilist (con personajes y media).
-  ///
-  /// Copied from [anilistStaffDetail].
+  /// See also [anilistStaffDetail].
   AnilistStaffDetailProvider(int staffId)
     : this._internal(
         (ref) => anilistStaffDetail(ref as AnilistStaffDetailRef, staffId),
@@ -843,26 +696,6 @@ class _AnilistStaffDetailProviderElement
   int get staffId => (origin as AnilistStaffDetailProvider).staffId;
 }
 
-String _$anilistProfileHash() => r'5db6478c90720d03d1a8f9d9dec4c26f09733e9c';
-
-/// Full Anilist user profile with statistics (requires auth).
-///
-/// Copied from [anilistProfile].
-@ProviderFor(anilistProfile)
-final anilistProfileProvider =
-    AutoDisposeFutureProvider<Map<String, dynamic>?>.internal(
-      anilistProfile,
-      name: r'anilistProfileProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$anilistProfileHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef AnilistProfileRef = AutoDisposeFutureProviderRef<Map<String, dynamic>?>;
 String _$anilistMediaThreadsHash() =>
     r'9f78937dc5c0476e31a07c38b67be2721eca1194';
 
@@ -1118,9 +951,7 @@ class _AnilistForumThreadProviderElement
 String _$anilistUnreadNotificationCountHash() =>
     r'cdbb49ad2a1a7302397663a5190b7950278a241a';
 
-/// Unread Anilist notification count (0 if not logged in).
-///
-/// Copied from [anilistUnreadNotificationCount].
+/// See also [anilistUnreadNotificationCount].
 @ProviderFor(anilistUnreadNotificationCount)
 final anilistUnreadNotificationCountProvider =
     AutoDisposeFutureProvider<int>.internal(
@@ -1139,9 +970,7 @@ typedef AnilistUnreadNotificationCountRef = AutoDisposeFutureProviderRef<int>;
 String _$anilistNotificationsListHash() =>
     r'3a11f7d4b7fb503f5447a2447f0474e065ef3d84';
 
-/// First page of Anilist notifications; [resetNotificationCount] clears unread on Anilist.
-///
-/// Copied from [anilistNotificationsList].
+/// See also [anilistNotificationsList].
 @ProviderFor(anilistNotificationsList)
 final anilistNotificationsListProvider =
     AutoDisposeFutureProvider<List<Map<String, dynamic>>>.internal(
@@ -1174,6 +1003,144 @@ final anilistTokenProvider =
     );
 
 typedef _$AnilistToken = AutoDisposeAsyncNotifier<String?>;
+String _$anilistPopularHash() => r'e5211588e369ab837bc426c8b4d23a02dd979dc3';
+
+abstract class _$AnilistPopular
+    extends BuildlessAsyncNotifier<List<Map<String, dynamic>>> {
+  late final String type;
+
+  FutureOr<List<Map<String, dynamic>>> build(String type);
+}
+
+/// See also [AnilistPopular].
+@ProviderFor(AnilistPopular)
+const anilistPopularProvider = AnilistPopularFamily();
+
+/// See also [AnilistPopular].
+class AnilistPopularFamily
+    extends Family<AsyncValue<List<Map<String, dynamic>>>> {
+  /// See also [AnilistPopular].
+  const AnilistPopularFamily();
+
+  /// See also [AnilistPopular].
+  AnilistPopularProvider call(String type) {
+    return AnilistPopularProvider(type);
+  }
+
+  @override
+  AnilistPopularProvider getProviderOverride(
+    covariant AnilistPopularProvider provider,
+  ) {
+    return call(provider.type);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'anilistPopularProvider';
+}
+
+/// See also [AnilistPopular].
+class AnilistPopularProvider
+    extends
+        AsyncNotifierProviderImpl<AnilistPopular, List<Map<String, dynamic>>> {
+  /// See also [AnilistPopular].
+  AnilistPopularProvider(String type)
+    : this._internal(
+        () => AnilistPopular()..type = type,
+        from: anilistPopularProvider,
+        name: r'anilistPopularProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$anilistPopularHash,
+        dependencies: AnilistPopularFamily._dependencies,
+        allTransitiveDependencies:
+            AnilistPopularFamily._allTransitiveDependencies,
+        type: type,
+      );
+
+  AnilistPopularProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.type,
+  }) : super.internal();
+
+  final String type;
+
+  @override
+  FutureOr<List<Map<String, dynamic>>> runNotifierBuild(
+    covariant AnilistPopular notifier,
+  ) {
+    return notifier.build(type);
+  }
+
+  @override
+  Override overrideWith(AnilistPopular Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: AnilistPopularProvider._internal(
+        () => create()..type = type,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        type: type,
+      ),
+    );
+  }
+
+  @override
+  AsyncNotifierProviderElement<AnilistPopular, List<Map<String, dynamic>>>
+  createElement() {
+    return _AnilistPopularProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AnilistPopularProvider && other.type == type;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, type.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AnilistPopularRef
+    on AsyncNotifierProviderRef<List<Map<String, dynamic>>> {
+  /// The parameter `type` of this provider.
+  String get type;
+}
+
+class _AnilistPopularProviderElement
+    extends
+        AsyncNotifierProviderElement<AnilistPopular, List<Map<String, dynamic>>>
+    with AnilistPopularRef {
+  _AnilistPopularProviderElement(super.provider);
+
+  @override
+  String get type => (origin as AnilistPopularProvider).type;
+}
+
 String _$anilistBrowseMediaHash() =>
     r'a9eaa53a209dc6798351219a108da239f1efb41f';
 
@@ -1185,29 +1152,17 @@ abstract class _$AnilistBrowseMedia
   FutureOr<List<Map<String, dynamic>>> build(String type, String category);
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-///
-/// Copied from [AnilistBrowseMedia].
+/// See also [AnilistBrowseMedia].
 @ProviderFor(AnilistBrowseMedia)
 const anilistBrowseMediaProvider = AnilistBrowseMediaFamily();
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-///
-/// Copied from [AnilistBrowseMedia].
+/// See also [AnilistBrowseMedia].
 class AnilistBrowseMediaFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-  ///
-  /// Copied from [AnilistBrowseMedia].
+  /// See also [AnilistBrowseMedia].
   const AnilistBrowseMediaFamily();
 
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-  ///
-  /// Copied from [AnilistBrowseMedia].
+  /// See also [AnilistBrowseMedia].
   AnilistBrowseMediaProvider call(String type, String category) {
     return AnilistBrowseMediaProvider(type, category);
   }
@@ -1234,20 +1189,14 @@ class AnilistBrowseMediaFamily
   String? get name => r'anilistBrowseMediaProvider';
 }
 
-/// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-/// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-///
-/// Copied from [AnilistBrowseMedia].
+/// See also [AnilistBrowseMedia].
 class AnilistBrowseMediaProvider
     extends
         AutoDisposeAsyncNotifierProviderImpl<
           AnilistBrowseMedia,
           List<Map<String, dynamic>>
         > {
-  /// Anilist home browse: [type] `ANIME`/`MANGA`, [category]
-  /// `seasonal`/`trending`/`top_rated`/`upcoming`/`recently_released`/`popularity`/`start_date`.
-  ///
-  /// Copied from [AnilistBrowseMedia].
+  /// See also [AnilistBrowseMedia].
   AnilistBrowseMediaProvider(String type, String category)
     : this._internal(
         () => AnilistBrowseMedia()
@@ -1707,25 +1656,17 @@ abstract class _$AnilistGenreTagBrowse
   );
 }
 
-/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-///
-/// Copied from [AnilistGenreTagBrowse].
+/// See also [AnilistGenreTagBrowse].
 @ProviderFor(AnilistGenreTagBrowse)
 const anilistGenreTagBrowseProvider = AnilistGenreTagBrowseFamily();
 
-/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-///
-/// Copied from [AnilistGenreTagBrowse].
+/// See also [AnilistGenreTagBrowse].
 class AnilistGenreTagBrowseFamily
     extends Family<AsyncValue<List<Map<String, dynamic>>>> {
-  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-  ///
-  /// Copied from [AnilistGenreTagBrowse].
+  /// See also [AnilistGenreTagBrowse].
   const AnilistGenreTagBrowseFamily();
 
-  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-  ///
-  /// Copied from [AnilistGenreTagBrowse].
+  /// See also [AnilistGenreTagBrowse].
   AnilistGenreTagBrowseProvider call(
     String mediaType,
     String sortKey,
@@ -1767,18 +1708,14 @@ class AnilistGenreTagBrowseFamily
   String? get name => r'anilistGenreTagBrowseProvider';
 }
 
-/// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-///
-/// Copied from [AnilistGenreTagBrowse].
+/// See also [AnilistGenreTagBrowse].
 class AnilistGenreTagBrowseProvider
     extends
         AutoDisposeAsyncNotifierProviderImpl<
           AnilistGenreTagBrowse,
           List<Map<String, dynamic>>
         > {
-  /// Listado por género o etiqueta (Anilist); [genrePart] / [tagPart] vacíos = sin filtro.
-  ///
-  /// Copied from [AnilistGenreTagBrowse].
+  /// See also [AnilistGenreTagBrowse].
   AnilistGenreTagBrowseProvider(
     String mediaType,
     String sortKey,
@@ -1918,6 +1855,22 @@ class _AnilistGenreTagBrowseProviderElement
   String get tagPart => (origin as AnilistGenreTagBrowseProvider).tagPart;
 }
 
+String _$anilistProfileHash() => r'b4675e001e67c13983b5ffbd42206bac77884217';
+
+/// See also [AnilistProfile].
+@ProviderFor(AnilistProfile)
+final anilistProfileProvider =
+    AsyncNotifierProvider<AnilistProfile, Map<String, dynamic>?>.internal(
+      AnilistProfile.new,
+      name: r'anilistProfileProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$anilistProfileHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$AnilistProfile = AsyncNotifier<Map<String, dynamic>?>;
 String _$favoriteAnilistMediaHash() =>
     r'cf7a2beb54344775fa98163f39a9c759c1cc6d8f';
 

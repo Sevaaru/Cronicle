@@ -165,6 +165,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
             userName: userName,
           );
           await db.setKeyValue('anilist_library_synced', 'true');
+          await ref.read(sharedPreferencesProvider).setInt(
+                anilistLibraryLastSyncSecondsKey,
+                DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              );
         }
       } catch (_) {}
     }
@@ -580,6 +584,10 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
             userName: userName,
           );
           await db.setKeyValue('anilist_library_synced', 'true');
+          await ref.read(sharedPreferencesProvider).setInt(
+                anilistLibraryLastSyncSecondsKey,
+                DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              );
         }
         if (mounted) setState(() { _anilistSyncing = false; _anilistSynced = true; });
       } catch (_) {

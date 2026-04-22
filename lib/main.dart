@@ -13,6 +13,7 @@ import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
 import 'package:cronicle/core/notifications/notification_work_scheduler.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/core/storage/fresh_install_guard.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
@@ -39,6 +40,10 @@ Future<void> _migrateUnifiedFeedPreferences(SharedPreferences p) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Detect fresh install / cloud-restored install and wipe stale credentials
+  // BEFORE anything reads from secure storage (including the OAuth callback).
+  await ensureFreshInstallCleanup();
 
   await _handleAnilistOAuthCallback();
 

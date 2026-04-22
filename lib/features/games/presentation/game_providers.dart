@@ -7,6 +7,7 @@ import 'package:riverpod/riverpod.dart' show AsyncData, Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -15,6 +16,9 @@ import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.da
 import 'package:cronicle/features/games/data/games_feed_section.dart';
 
 part 'game_providers.g.dart';
+
+const String _igdbHomeFeedCacheKey = 'igdb_games_home_feed';
+const String _igdbPopularCacheKey = 'igdb_games_popular';
 
 List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
   final out = <Map<String, dynamic>>[];
@@ -122,6 +126,36 @@ class IgdbGamesHomeFeedData {
   final List<Map<String, dynamic>> multiplayer;
   final List<Map<String, dynamic>> rpg;
   final List<Map<String, dynamic>> sports;
+
+  Map<String, dynamic> toJson() => {
+        'anticipated': anticipated,
+        'recentlyReleased': recentlyReleased,
+        'reviewsRecent': reviewsRecent,
+        'comingSoon': comingSoon,
+        'bestRated': bestRated,
+        'reviewsCritics': reviewsCritics,
+        'indie': indie,
+        'horror': horror,
+        'multiplayer': multiplayer,
+        'rpg': rpg,
+        'sports': sports,
+      };
+
+  factory IgdbGamesHomeFeedData.fromJson(Map<String, dynamic> json) {
+    return IgdbGamesHomeFeedData(
+      anticipated: jsonListAsMaps(json['anticipated']),
+      recentlyReleased: jsonListAsMaps(json['recentlyReleased']),
+      reviewsRecent: jsonListAsMaps(json['reviewsRecent']),
+      comingSoon: jsonListAsMaps(json['comingSoon']),
+      bestRated: jsonListAsMaps(json['bestRated']),
+      reviewsCritics: jsonListAsMaps(json['reviewsCritics']),
+      indie: jsonListAsMaps(json['indie']),
+      horror: jsonListAsMaps(json['horror']),
+      multiplayer: jsonListAsMaps(json['multiplayer']),
+      rpg: jsonListAsMaps(json['rpg']),
+      sports: jsonListAsMaps(json['sports']),
+    );
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -146,10 +180,30 @@ Future<List<Map<String, dynamic>>> igdbSearch(
 }
 
 @Riverpod(keepAlive: true)
-Future<List<Map<String, dynamic>>> igdbPopular(IgdbPopularRef ref) async {
-  final api = ref.read(igdbApiProvider);
-  final raw = await api.fetchPopularGames(limit: 24);
-  return _normalizeGamesSafe(raw);
+class IgdbPopular extends _$IgdbPopular {
+  @override
+  Future<List<Map<String, dynamic>>> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_igdbPopularCacheKey);
+    final api = ref.read(igdbApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final raw = await api.fetchPopularGames(limit: 24);
+          final norm = _normalizeGamesSafe(raw);
+          await cache.write(_igdbPopularCacheKey, {'items': norm});
+          state = AsyncData(norm);
+        } catch (_) {}
+      });
+      return jsonListAsMaps(cached.data['items']);
+    }
+
+    final raw = await api.fetchPopularGames(limit: 24);
+    final norm = _normalizeGamesSafe(raw);
+    await cache.write(_igdbPopularCacheKey, {'items': norm});
+    return norm;
+  }
 }
 
 @riverpod
@@ -169,10 +223,9 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-@Riverpod(keepAlive: true)
-Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
-  final api = ref.read(igdbApiProvider);
-
+Future<IgdbGamesHomeFeedData> _fetchIgdbGamesHomeFeed(
+  IgdbApiDatasource api,
+) async {
   final results = await Future.wait([
     api.fetchHomeFeedGames(),
     _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: 36)),
@@ -199,6 +252,31 @@ Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async 
     reviewsRecent: _sortReviewsByCreatedDesc(reviewsRecent),
     reviewsCritics: _sortReviewsByScoreDesc(reviewsCritics),
   );
+}
+
+@Riverpod(keepAlive: true)
+class IgdbGamesHomeFeed extends _$IgdbGamesHomeFeed {
+  @override
+  Future<IgdbGamesHomeFeedData> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_igdbHomeFeedCacheKey);
+    final api = ref.read(igdbApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchIgdbGamesHomeFeed(api);
+          await cache.write(_igdbHomeFeedCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {}
+      });
+      return IgdbGamesHomeFeedData.fromJson(cached.data);
+    }
+
+    final data = await _fetchIgdbGamesHomeFeed(api);
+    await cache.write(_igdbHomeFeedCacheKey, data.toJson());
+    return data;
+  }
 }
 
 @riverpod

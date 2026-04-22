@@ -1131,6 +1131,8 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
           graphql: ref.read(anilistGraphqlProvider),
           db: db,
           auth: ref.read(anilistAuthProvider),
+          prefs: prefs,
+          force: true,
         );
         ref.invalidate(paginatedLibraryProvider);
       } catch (e) {
@@ -1456,6 +1458,8 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
           graphql: ref.read(anilistGraphqlProvider),
           db: db,
           auth: ref.read(anilistAuthProvider),
+          prefs: prefs,
+          force: true,
         );
         ref.invalidate(paginatedLibraryProvider);
       } catch (e) {

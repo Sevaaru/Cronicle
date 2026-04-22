@@ -47,25 +47,17 @@ class _SystemHash {
   }
 }
 
-/// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-///
-/// Copied from [openCriticGameInsights].
+/// See also [openCriticGameInsights].
 @ProviderFor(openCriticGameInsights)
 const openCriticGameInsightsProvider = OpenCriticGameInsightsFamily();
 
-/// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-///
-/// Copied from [openCriticGameInsights].
+/// See also [openCriticGameInsights].
 class OpenCriticGameInsightsFamily
     extends Family<AsyncValue<OpenCriticGameInsights?>> {
-  /// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-  ///
-  /// Copied from [openCriticGameInsights].
+  /// See also [openCriticGameInsights].
   const OpenCriticGameInsightsFamily();
 
-  /// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-  ///
-  /// Copied from [openCriticGameInsights].
+  /// See also [openCriticGameInsights].
   OpenCriticGameInsightsProvider call(int igdbGameId) {
     return OpenCriticGameInsightsProvider(igdbGameId);
   }
@@ -92,14 +84,10 @@ class OpenCriticGameInsightsFamily
   String? get name => r'openCriticGameInsightsProvider';
 }
 
-/// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-///
-/// Copied from [openCriticGameInsights].
+/// See also [openCriticGameInsights].
 class OpenCriticGameInsightsProvider
     extends AutoDisposeFutureProvider<OpenCriticGameInsights?> {
-  /// Críticos OpenCritic alineados al título IGDB cargado en [igdbGameDetail].
-  ///
-  /// Copied from [openCriticGameInsights].
+  /// See also [openCriticGameInsights].
   OpenCriticGameInsightsProvider(int igdbGameId)
     : this._internal(
         (ref) => openCriticGameInsights(

@@ -1499,6 +1499,84 @@ class AnilistGraphqlDatasource {
     };
   }
 
+  /// Fetches AniList user list entries that have been updated since
+  /// [sinceEpochSeconds] (UNIX seconds, AniList native format). Pages are
+  /// requested sorted by `UPDATED_TIME_DESC` and iteration stops as soon as
+  /// an entry older than [sinceEpochSeconds] is encountered, so usually only
+  /// 1 page is needed for incremental syncs.
+  ///
+  /// Returns the same shape as [fetchUserMediaList] but the entries also
+  /// expose `progressVolumes`, `notes`, `media.format`, etc.
+  Future<List<Map<String, dynamic>>> fetchUserMediaListUpdatedSince(
+    String token,
+    int userId, {
+    required String type,
+    required int sinceEpochSeconds,
+    int perPage = 50,
+    int maxPages = 20,
+  }) async {
+    const query = r'''
+      query ($userId: Int, $type: MediaType, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { hasNextPage }
+          mediaList(userId: $userId, type: $type, sort: UPDATED_TIME_DESC) {
+            id
+            status
+            score(format: POINT_100)
+            progress
+            progressVolumes
+            notes
+            updatedAt
+            media {
+              id
+              type
+              title { romaji english }
+              coverImage { large }
+              episodes
+              chapters
+              volumes
+              format
+              status
+              nextAiringEpisode { episode }
+            }
+          }
+        }
+      }
+    ''';
+    final out = <Map<String, dynamic>>[];
+    var page = 1;
+    while (page <= maxPages) {
+      final data = await _post(
+        query,
+        variables: {
+          'userId': userId,
+          'type': type,
+          'page': page,
+          'perPage': perPage,
+        },
+        token: token,
+      );
+      final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+      final entries = (pageData?['mediaList'] as List?) ?? const [];
+      var sawOlder = false;
+      for (final raw in entries) {
+        if (raw is! Map) continue;
+        final entry = Map<String, dynamic>.from(raw);
+        final updatedAt = (entry['updatedAt'] as num?)?.toInt() ?? 0;
+        if (updatedAt <= sinceEpochSeconds) {
+          sawOlder = true;
+          break;
+        }
+        out.add(entry);
+      }
+      final hasNext =
+          pageData?['pageInfo']?['hasNextPage'] as bool? ?? false;
+      if (sawOlder || !hasNext || entries.isEmpty) break;
+      page++;
+    }
+    return out;
+  }
+
   Future<List<Map<String, dynamic>>> fetchUserMediaList(
     String token,
     String userName, {

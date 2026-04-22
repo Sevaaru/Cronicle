@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
@@ -381,49 +382,64 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               error: (e, _) => Center(child: Text(l10n.errorWithMessage(e))),
               data: (entries) {
                 if (entries.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                  return RefreshIndicator(
+                    onRefresh: _pullToRefresh,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        Icon(Icons.inbox_rounded, size: 48,
-                            color: cs.onSurfaceVariant.withAlpha(80)),
-                        const SizedBox(height: 12),
-                        Text(l10n.libraryNoResults,
-                            style: TextStyle(color: cs.onSurfaceVariant)),
-                        const SizedBox(height: 4),
-                        Text(
-                          _selectedStatus != null
-                              ? l10n.libraryNoStatusResults
-                              : l10n.librarySearchAndAdd,
-                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withAlpha(150)),
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.inbox_rounded, size: 48,
+                                    color: cs.onSurfaceVariant.withAlpha(80)),
+                                const SizedBox(height: 12),
+                                Text(l10n.libraryNoResults,
+                                    style: TextStyle(color: cs.onSurfaceVariant)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _selectedStatus != null
+                                      ? l10n.libraryNoStatusResults
+                                      : l10n.librarySearchAndAdd,
+                                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withAlpha(150)),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                  addAutomaticKeepAlives: false,
-                  itemCount: entries.length + (hasMore ? 1 : 0),
-                  itemBuilder: (context, i) {
-                    if (i >= entries.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                return RefreshIndicator(
+                  onRefresh: _pullToRefresh,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                    addAutomaticKeepAlives: false,
+                    itemCount: entries.length + (hasMore ? 1 : 0),
+                    itemBuilder: (context, i) {
+                      if (i >= entries.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
+                      return _EntryCard(
+                        key: ValueKey(entries[i].id),
+                        entry: entries[i],
+                        ref: ref,
+                        selectedKind: _selectedKind,
+                        onEdit: () => _openEditSheet(context, entries[i]),
+                        onProgressUpdated: () {
+                          ref.invalidate(paginatedLibraryProvider(_params));
+                        },
                       );
-                    }
-                    return _EntryCard(
-                      key: ValueKey(entries[i].id),
-                      entry: entries[i],
-                      ref: ref,
-                      selectedKind: _selectedKind,
-                      onEdit: () => _openEditSheet(context, entries[i]),
-                      onProgressUpdated: () {
-                        ref.invalidate(paginatedLibraryProvider(_params));
-                      },
-                    );
-                  },
+                    },
+                  ),
                 );
               },
             ),
@@ -447,6 +463,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
+  Future<void> _pullToRefresh() async {
+    // User-initiated refresh: forces remote sync (delta if available) and
+    // refreshes paginated query so any new/updated entries appear.
+    await _silentRemoteMerge();
+    if (!mounted) return;
+    ref.invalidate(paginatedLibraryProvider(_params));
+  }
+
   Future<void> _silentRemoteMerge() async {
     if (mounted) setState(() => _remoteSyncing = true);
     final db = ref.read(databaseProvider);
@@ -458,6 +482,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         graphql: graphql,
         db: db,
         auth: auth,
+        prefs: ref.read(sharedPreferencesProvider),
+        force: true,
       );
       changed = true;
     } catch (_) {}
@@ -498,6 +524,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         graphql: graphql,
         db: db,
         token: token,
+        prefs: ref.read(sharedPreferencesProvider),
       );
 
       if (didSync && mounted) {
