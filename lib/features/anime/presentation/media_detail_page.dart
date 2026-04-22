@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,7 +13,6 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
 class MediaDetailPage extends ConsumerWidget {
@@ -127,11 +127,6 @@ class _DetailContentState extends State<_DetailContent> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const bannerHeight = 170.0;
-    const posterHeight = 130.0;
-    const posterWidth = 90.0;
-    const overlapAmount = 50.0;
-    const headerOverflowAllowance = 10.0;
     final endDateLabel = _formatDate(endDate);
     final isReleasing = status == 'RELEASING';
 
@@ -143,144 +138,16 @@ class _DetailContentState extends State<_DetailContent> {
       child: CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: Column(
-            children: [
-              SizedBox(
-                height: bannerHeight + posterHeight - overlapAmount + headerOverflowAllowance,
-                child: Stack(
-                children: [
-                  GestureDetector(
-                    onTap: banner != null ? () => showFullscreenImage(context, banner) : null,
-                    child: Container(
-                      height: bannerHeight,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        image: banner != null
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(banner),
-                                fit: BoxFit.cover,
-                                colorFilter: ColorFilter.mode(
-                                    Colors.black.withAlpha(60), BlendMode.darken),
-                              )
-                            : null,
-                        color: banner == null ? colorScheme.surfaceContainerHighest : null,
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
-                              style: IconButton.styleFrom(backgroundColor: Colors.black26),
-                              onPressed: () => Navigator.of(context).maybePop(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    left: 16,
-                    right: 16,
-                    top: bannerHeight - overlapAmount,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (poster != null)
-                          GestureDetector(
-                            onTap: () => showFullscreenImage(context, poster),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: colorScheme.surface, width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(60),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(9),
-                                child: CachedNetworkImage(
-                                  imageUrl: poster,
-                                  width: posterWidth,
-                                  height: posterHeight,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surface.withAlpha(210),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (romajiTitle != null && romajiTitle != name)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8, top: 2),
-                                    child: Text(
-                                      romajiTitle,
-                                      style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                if (nativeTitle != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8, top: 1),
-                                    child: Text(
-                                      nativeTitle,
-                                      style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (format != null) _Tag(_formatMediaStatus(format, false, l10n), colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
-                    if (status != null) _Tag(_formatMediaStatus(status, true, l10n), colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
-                    if (isAdult) _Tag('18+', colorScheme.errorContainer, colorScheme.onErrorContainer),
-                  ],
-                ),
-              ),
-            ],
+          child: _MediaHeroHeader(
+            name: name,
+            romajiTitle: romajiTitle,
+            nativeTitle: nativeTitle,
+            banner: banner,
+            poster: poster,
+            format: format,
+            status: status,
+            isAdult: isAdult,
+            l10n: l10n,
           ),
         ),
 
@@ -305,9 +172,13 @@ class _DetailContentState extends State<_DetailContent> {
                 const SizedBox(height: 12),
 
                 if (score != null || meanScore != null)
-                  GlassCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  Container(
                     margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -323,20 +194,31 @@ class _DetailContentState extends State<_DetailContent> {
                     ),
                   ),
 
-                SizedBox(
+                Container(
                   width: double.infinity,
-                  child: GlassCard(
-                    padding: const EdgeInsets.all(14),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.mediaInfo, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 24,
-                          runSpacing: 6,
-                          children: [
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.mediaInfo,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 0.2,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 22,
+                        runSpacing: 8,
+                        children: [
                             if (!isManga && episodes != null) _InfoPill(l10n.mediaEpisodes, '$episodes'),
                             if (isManga && chapters != null) _InfoPill(l10n.mediaChapters, '$chapters'),
                             if (isManga && volumes != null) _InfoPill(l10n.mediaVolumes, '$volumes'),
@@ -344,12 +226,11 @@ class _DetailContentState extends State<_DetailContent> {
                             if (season != null && seasonYear != null) _InfoPill(l10n.mediaSeason, '$season $seasonYear'),
                             if (source != null) _InfoPill(l10n.mediaSource, source.replaceAll('_', ' ')),
                             if (startDate != null) _InfoPill(l10n.mediaStart, _formatDate(startDate)),
-                            if (endDateLabel.isNotEmpty || isReleasing)
-                              _InfoPill(l10n.mediaEnd, endDateLabel.isNotEmpty ? endDateLabel : 'Releasing'),
-                          ],
-                        ),
-                      ],
-                    ),
+                          if (endDateLabel.isNotEmpty || isReleasing)
+                            _InfoPill(l10n.mediaEnd, endDateLabel.isNotEmpty ? endDateLabel : 'Releasing'),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
 
@@ -357,50 +238,44 @@ class _DetailContentState extends State<_DetailContent> {
                   _buildAiringCard(media['nextAiringEpisode'] as Map<String, dynamic>, colorScheme, l10n),
 
                 if (genres.isNotEmpty) ...[
-                  Text(
-                    l10n.mediaGenresSection,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
+                  _SectionHeader(label: l10n.mediaGenresSection),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       for (final g in (_genresExpanded ||
                               genres.length <= _kCollapsedChipCount)
                           ? genres
                           : genres.take(_kCollapsedChipCount))
-                        ActionChip(
-                          label: Text(g, style: const TextStyle(fontSize: 12)),
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          onPressed: () => _openBrowseByGenre(g),
+                        _M3PillChip(
+                          label: g,
+                          bg: colorScheme.secondaryContainer,
+                          fg: colorScheme.onSecondaryContainer,
+                          onTap: () => _openBrowseByGenre(g),
+                        ),
+                      if (genres.length > _kCollapsedChipCount)
+                        _M3PillChip(
+                          label: _genresExpanded
+                              ? l10n.mediaDetailChipsShowLess
+                              : l10n.mediaDetailChipsShowMore,
+                          bg: colorScheme.surfaceContainerHigh,
+                          fg: colorScheme.onSurface,
+                          icon: _genresExpanded
+                              ? Icons.expand_less_rounded
+                              : Icons.expand_more_rounded,
+                          onTap: () => setState(
+                            () => _genresExpanded = !_genresExpanded,
+                          ),
                         ),
                     ],
                   ),
-                  if (genres.length > _kCollapsedChipCount)
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: TextButton(
-                        onPressed: () => setState(
-                          () => _genresExpanded = !_genresExpanded,
-                        ),
-                        child: Text(
-                          _genresExpanded
-                              ? l10n.mediaDetailChipsShowLess
-                              : l10n.mediaDetailChipsShowMore,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                 ],
 
                 if (browseTags.isNotEmpty) ...[
-                  Text(
-                    l10n.mediaTagsSection,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
+                  _SectionHeader(label: l10n.mediaTagsSection),
+                  const SizedBox(height: 8),
                   Builder(
                     builder: (context) {
                       final namedTags = browseTags
@@ -416,45 +291,37 @@ class _DetailContentState extends State<_DetailContent> {
                               : namedTags
                                   .take(_kCollapsedChipCount)
                                   .toList();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              for (final t in visible)
-                                ActionChip(
-                                  label: Text(
-                                    t['name'] as String,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  padding: EdgeInsets.zero,
-                                  onPressed: () =>
-                                      _openBrowseByTag(t['name'] as String),
-                                ),
-                            ],
-                          ),
+                          for (final t in visible)
+                            _M3PillChip(
+                              label: t['name'] as String,
+                              bg: colorScheme.surfaceContainerHigh,
+                              fg: colorScheme.onSurface,
+                              onTap: () =>
+                                  _openBrowseByTag(t['name'] as String),
+                            ),
                           if (namedTags.length > _kCollapsedChipCount)
-                            Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: TextButton(
-                                onPressed: () => setState(
-                                  () => _tagsExpanded = !_tagsExpanded,
-                                ),
-                                child: Text(
-                                  _tagsExpanded
-                                      ? l10n.mediaDetailChipsShowLess
-                                      : l10n.mediaDetailChipsShowMore,
-                                ),
+                            _M3PillChip(
+                              label: _tagsExpanded
+                                  ? l10n.mediaDetailChipsShowLess
+                                  : l10n.mediaDetailChipsShowMore,
+                              bg: colorScheme.tertiaryContainer,
+                              fg: colorScheme.onTertiaryContainer,
+                              icon: _tagsExpanded
+                                  ? Icons.expand_less_rounded
+                                  : Icons.expand_more_rounded,
+                              onTap: () => setState(
+                                () => _tagsExpanded = !_tagsExpanded,
                               ),
                             ),
                         ],
                       );
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                 ],
 
                 if (description != null && description.isNotEmpty) ...[
@@ -503,16 +370,27 @@ class _DetailContentState extends State<_DetailContent> {
     final days = timeUntil ~/ 86400;
     final hours = (timeUntil % 86400) ~/ 3600;
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
+    return Container(
+      padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withAlpha(140),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         children: [
-          Icon(Icons.schedule, color: cs.primary, size: 20),
+          Icon(Icons.schedule_rounded, color: cs.onPrimaryContainer, size: 20),
           const SizedBox(width: 10),
-          Text(
-            l10n.mediaNextEp(episode, days, hours),
-            style: TextStyle(fontWeight: FontWeight.w600, color: cs.primary),
+          Expanded(
+            child: Text(
+              l10n.mediaNextEp(episode, days, hours),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: cs.onPrimaryContainer,
+                fontSize: 13,
+                letterSpacing: 0.1,
+              ),
+            ),
           ),
         ],
       ),
@@ -975,9 +853,13 @@ class _DetailContentState extends State<_DetailContent> {
             onTap: reviewId != null
                 ? () => context.push('/review/$reviewId', extra: review)
                 : null,
-            child: GlassCard(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1093,9 +975,13 @@ class _DetailContentState extends State<_DetailContent> {
       children: [
         Text(l10n.mediaScoreDistribution, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
         const SizedBox(height: 8),
-        GlassCard(
+        Container(
           padding: const EdgeInsets.all(14),
           margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(22),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1179,28 +1065,6 @@ String _formatMediaStatus(String raw, bool isStatus, AppLocalizations l10n) {
     'HIATUS' => l10n.mediaStatusHiatus,
     _ => raw,
   };
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag(this.text, this.bg, this.fg);
-  final String text;
-  final Color bg;
-  final Color fg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
 }
 
 class _StatColumn extends StatelessWidget {
@@ -1348,25 +1212,59 @@ class _MediaFavoriteToggleState extends ConsumerState<_MediaFavoriteToggle> {
     final l10n = AppLocalizations.of(context)!;
     final isFav = _combinedFavourite();
 
+    final cs = Theme.of(context).colorScheme;
+    final bg = isFav
+        ? cs.errorContainer.withAlpha(220)
+        : cs.surfaceContainerHigh;
+    final fg = isFav ? cs.onErrorContainer : cs.onSurfaceVariant;
+
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Tooltip(
         message:
             isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
-        child: IconButton.filledTonal(
-          onPressed: _busy ? null : _onPressed,
-          icon: _busy
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(
-                  isFav
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  color: isFav ? Colors.redAccent : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(isFav ? 18 : 14),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: _busy ? null : _onPressed,
+              child: SizedBox(
+                width: 52,
+                height: 52,
+                child: Center(
+                  child: _busy
+                      ? SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: fg,
+                          ),
+                        )
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          transitionBuilder: (c, a) =>
+                              ScaleTransition(scale: a, child: c),
+                          child: Icon(
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            key: ValueKey(isFav),
+                            color: fg,
+                            size: 24,
+                          ),
+                        ),
                 ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -1409,30 +1307,89 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final isEdit = _existing != null;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: _loaded
-          ? FilledButton.icon(
-              icon: Icon(isEdit ? Icons.edit : Icons.add),
-              label: Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
-              onPressed: () async {
-                final saved = await showAddToLibrarySheet(
-                  context: context,
-                  ref: ref,
-                  item: widget.media,
-                  kind: widget.kind,
-                  existingEntry: _existing,
-                );
-                if (!context.mounted || !saved) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(isEdit ? l10n.entryUpdated : l10n.addedToLibrary)),
-                );
-                _checkExisting();
-              },
+          ? AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              height: 52,
+              decoration: BoxDecoration(
+                color: isEdit
+                    ? cs.tertiaryContainer
+                    : cs.primary,
+                borderRadius: BorderRadius.circular(isEdit ? 16 : 18),
+                boxShadow: isEdit
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: cs.primary.withAlpha(60),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(isEdit ? 16 : 18),
+                  onTap: () async {
+                    final saved = await showAddToLibrarySheet(
+                      context: context,
+                      ref: ref,
+                      item: widget.media,
+                      kind: widget.kind,
+                      existingEntry: _existing,
+                    );
+                    if (!context.mounted || !saved) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isEdit
+                            ? l10n.entryUpdated
+                            : l10n.addedToLibrary),
+                      ),
+                    );
+                    _checkExisting();
+                  },
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isEdit
+                              ? Icons.edit_rounded
+                              : Icons.add_rounded,
+                          color: isEdit
+                              ? cs.onTertiaryContainer
+                              : cs.onPrimary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isEdit
+                              ? l10n.editLibraryEntry
+                              : l10n.addToLibrary,
+                          style: TextStyle(
+                            color: isEdit
+                                ? cs.onTertiaryContainer
+                                : cs.onPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             )
-          : const SizedBox.shrink(),
+          : const SizedBox(
+              height: 52,
+            ),
     );
   }
 }
@@ -1471,59 +1428,564 @@ class _ForumThreadTile extends StatelessWidget {
       }
     }
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: id == null
             ? null
             : () => context.push('/forum/thread/$id',
                 extra: thread),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                if (avatar != null)
-                  ClipOval(
-                    child: Image.network(avatar,
-                        width: 16, height: 16, fit: BoxFit.cover),
-                  ),
-                if (avatar != null) const SizedBox(width: 4),
-                Text(userName,
-                    style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant)),
-                if (timeAgo.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Text('· $timeAgo',
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  if (avatar != null)
+                    ClipOval(
+                      child: Image.network(avatar,
+                          width: 16, height: 16, fit: BoxFit.cover),
+                    ),
+                  if (avatar != null) const SizedBox(width: 4),
+                  Text(userName,
+                      style: TextStyle(
+                          fontSize: 11, color: cs.onSurfaceVariant)),
+                  if (timeAgo.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text('· $timeAgo',
+                        style: TextStyle(
+                            fontSize: 11, color: cs.onSurfaceVariant)),
+                  ],
+                  const Spacer(),
+                  Icon(Icons.comment_outlined,
+                      size: 13, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 3),
+                  Text('$replyCount',
+                      style: TextStyle(
+                          fontSize: 11, color: cs.onSurfaceVariant)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.visibility_outlined,
+                      size: 13, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 3),
+                  Text('$viewCount',
                       style: TextStyle(
                           fontSize: 11, color: cs.onSurfaceVariant)),
                 ],
-                const Spacer(),
-                Icon(Icons.comment_outlined,
-                    size: 13, color: cs.onSurfaceVariant),
-                const SizedBox(width: 3),
-                Text('$replyCount',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hero header for the media detail page.
+///
+/// Replaces the old positioned-stack layout. Shows banner with a soft scrim,
+/// a poster overlapping into the surface area, and a column of titles +
+/// inline tag chips so the right-hand side never has empty wasted space.
+class _MediaHeroHeader extends StatelessWidget {
+  const _MediaHeroHeader({
+    required this.name,
+    required this.romajiTitle,
+    required this.nativeTitle,
+    required this.banner,
+    required this.poster,
+    required this.format,
+    required this.status,
+    required this.isAdult,
+    required this.l10n,
+  });
+
+  final String name;
+  final String? romajiTitle;
+  final String? nativeTitle;
+  final String? banner;
+  final String? poster;
+  final String? format;
+  final String? status;
+  final bool isAdult;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    const bannerHeight = 180.0;
+    const posterHeight = 150.0;
+    const posterWidth = 100.0;
+    const overlap = 60.0;
+    // Total height: banner stops at bannerHeight; poster bottom sits at
+    // bannerHeight - overlap + posterHeight. Add a small bottom buffer so
+    // the chip wrap has breathing room before the action row.
+    const totalHeight = bannerHeight - overlap + posterHeight + 8;
+
+    return SizedBox(
+      height: totalHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Banner.
+          GestureDetector(
+            onTap: banner != null
+                ? () => showFullscreenImage(context, banner!)
+                : null,
+            child: Container(
+              height: bannerHeight,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                image: banner != null
+                    ? DecorationImage(
+                        image: CachedNetworkImageProvider(banner!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                color: banner == null ? cs.surfaceContainerHighest : null,
+              ),
+              foregroundDecoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(30),
+                    Colors.transparent,
+                    Colors.black.withAlpha(120),
+                  ],
+                  stops: const [0, 0.45, 1],
+                ),
+              ),
+            ),
+          ),
+          // Back button.
+          Positioned(
+            left: 4,
+            top: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withAlpha(70),
+                  ),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+            ),
+          ),
+          // Poster overlapping into surface.
+          Positioned(
+            left: 16,
+            top: bannerHeight - overlap,
+            child: poster != null
+                ? GestureDetector(
+                    onTap: () => showFullscreenImage(context, poster!),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: cs.surface, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(70),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: CachedNetworkImage(
+                          imageUrl: poster!,
+                          width: posterWidth,
+                          height: posterHeight,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: posterWidth,
+                    height: posterHeight,
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: cs.surface, width: 3),
+                    ),
+                    child: Icon(
+                      Icons.image_not_supported_outlined,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+          ),
+          // Title column to the right of poster, anchored to align roughly
+          // with the bottom half of the poster so the banner top reads clean.
+          Positioned(
+            left: 16 + posterWidth + 14,
+            right: 16,
+            top: bannerHeight + 4,
+            bottom: 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MarqueeText(
+                  text: name,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                    letterSpacing: -0.2,
+                    color: cs.onSurface,
+                  ),
+                ),
+                if (romajiTitle != null && romajiTitle != name) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    romajiTitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant)),
-                const SizedBox(width: 8),
-                Icon(Icons.visibility_outlined,
-                    size: 13, color: cs.onSurfaceVariant),
-                const SizedBox(width: 3),
-                Text('$viewCount',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (nativeTitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    nativeTitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant)),
+                      fontSize: 11.5,
+                      color: cs.onSurfaceVariant.withAlpha(200),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (format != null)
+                      _PillTag(
+                        _formatMediaStatus(format!, false, l10n),
+                        bg: cs.tertiaryContainer,
+                        fg: cs.onTertiaryContainer,
+                      ),
+                    if (status != null)
+                      _PillTag(
+                        _formatMediaStatus(status!, true, l10n),
+                        bg: cs.secondaryContainer,
+                        fg: cs.onSecondaryContainer,
+                      ),
+                    if (isAdult)
+                      _PillTag(
+                        '18+',
+                        bg: cs.errorContainer,
+                        fg: cs.onErrorContainer,
+                      ),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// M3 expressive pill tag (rounded 999) used inside the hero header.
+class _PillTag extends StatelessWidget {
+  const _PillTag(this.text, {required this.bg, required this.fg});
+  final String text;
+  final Color bg;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          color: fg,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Text that scrolls horizontally Hollywood-marquee-style when it overflows
+/// its available width. When the text fits, it renders as a static [Text].
+class _MarqueeText extends StatefulWidget {
+  const _MarqueeText({
+    required this.text,
+    required this.style,
+    // ignore: unused_element_parameter
+    this.gap = 48,
+    // ignore: unused_element_parameter
+    this.pixelsPerSecond = 30,
+    // ignore: unused_element_parameter
+    this.startDelay = const Duration(seconds: 2),
+  });
+
+  final String text;
+  final TextStyle style;
+  final double gap;
+  final double pixelsPerSecond;
+  final Duration startDelay;
+
+  @override
+  State<_MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<_MarqueeText>
+    with SingleTickerProviderStateMixin {
+  final ScrollController _scroll = ScrollController();
+  Ticker? _ticker;
+  Duration _last = Duration.zero;
+  double _offset = 0;
+  bool _started = false;
+  bool _userInteracting = false;
+  double _cycleWidth = 0;
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _ensureTicker(double cycleWidth) {
+    _cycleWidth = cycleWidth;
+    _ticker ??= createTicker((elapsed) {
+      if (_userInteracting) {
+        // Sync offset with user-driven scroll so auto-scroll resumes from
+        // wherever the user left it.
+        if (_scroll.hasClients) {
+          _offset = _scroll.offset % _cycleWidth;
+          if (_offset < 0) _offset += _cycleWidth;
+        }
+        _last = elapsed;
+        return;
+      }
+      if (!_started) {
+        if (elapsed >= widget.startDelay) {
+          _started = true;
+          _last = elapsed;
+        }
+        return;
+      }
+      final dt = (elapsed - _last).inMicroseconds / 1e6;
+      _last = elapsed;
+      _offset += widget.pixelsPerSecond * dt;
+      if (_offset >= _cycleWidth) {
+        _offset -= _cycleWidth;
+      }
+      if (_scroll.hasClients) {
+        _scroll.jumpTo(_offset);
+      }
+    });
+    if (!_ticker!.isActive) _ticker!.start();
+  }
+
+  double _measureText(double maxWidth) {
+    final tp = TextPainter(
+      text: TextSpan(text: widget.text, style: widget.style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: double.infinity);
+    return tp.size.width;
+  }
+
+  bool _onScrollNotification(ScrollNotification n) {
+    if (n is ScrollStartNotification &&
+        n.dragDetails != null) {
+      _userInteracting = true;
+      _started = true; // skip initial delay after interaction
+    } else if (n is ScrollEndNotification) {
+      // Keep paused briefly after user releases so it doesn't snap back.
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        _userInteracting = false;
+      });
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final textWidth = _measureText(maxWidth);
+        // Tolerance: only marquee when clearly overflowing.
+        if (textWidth <= maxWidth + 0.5) {
+          // Stop ticker if a previous overflowing text shrank.
+          _ticker?.stop();
+          _started = false;
+          _offset = 0;
+          return Text(
+            widget.text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: widget.style,
+          );
+        }
+
+        final cycleWidth = textWidth + widget.gap;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _ensureTicker(cycleWidth);
+        });
+
+        return SizedBox(
+          height: (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2),
+          child: ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (rect) {
+              return LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                stops: const [0, 0.04, 0.96, 1],
+                colors: const [
+                  Colors.transparent,
+                  Colors.black,
+                  Colors.black,
+                  Colors.transparent,
+                ],
+              ).createShader(rect);
+            },
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScrollNotification,
+              child: ListView.builder(
+                controller: _scroll,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemBuilder: (_, _) {
+                  return Padding(
+                    padding: EdgeInsets.only(right: widget.gap),
+                    child: Text(
+                      widget.text,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: widget.style,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// M3 expressive section header (used for Genres / Tags / etc).
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: cs.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 13.5,
+            letterSpacing: 0.2,
+            color: cs.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Tappable expressive M3 pill chip (used for genres, tags, "show more").
+class _M3PillChip extends StatelessWidget {
+  const _M3PillChip({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    this.icon,
+    this.onTap,
+  });
+
+  final String label;
+  final Color bg;
+  final Color fg;
+  final IconData? icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: icon != null ? 12 : 14,
+            vertical: 7,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 16, color: fg),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

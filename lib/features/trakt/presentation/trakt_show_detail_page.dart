@@ -5,7 +5,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_detail_widgets.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 class TraktShowDetailPage extends ConsumerWidget {
   const TraktShowDetailPage({super.key, required this.traktId});
@@ -117,9 +117,8 @@ class _TraktShowDetailBody extends ConsumerWidget {
                 const SizedBox(height: 12),
                 TraktTvEpisodeProgressCard(traktId: traktId, item: item),
                 if (score != null || (votes != null && votes > 0))
-                  GlassCard(
+                  M3SurfaceCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    margin: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -140,17 +139,12 @@ class _TraktShowDetailBody extends ConsumerWidget {
                       ],
                     ),
                   ),
-                GlassCard(
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 12),
+                M3SurfaceCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        l10n.mediaInfo,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                      ),
-                      const SizedBox(height: 8),
+                      M3SectionHeader(label: l10n.mediaInfo),
+                      const SizedBox(height: 12),
                       Wrap(
                         spacing: 24,
                         runSpacing: 6,
@@ -175,41 +169,35 @@ class _TraktShowDetailBody extends ConsumerWidget {
                   ),
                 ),
                 if (subgenres.isNotEmpty) ...[
-                  Text(
-                    l10n.traktDetailSubgenres,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  const SizedBox(height: 6),
+                  M3SectionHeader(label: l10n.traktDetailSubgenres),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: subgenres
                         .map(
-                          (g) => TraktTag(
-                            traktFormatGenreLabel(g),
-                            cs.surfaceContainerHighest,
-                            cs.onSurfaceVariant,
+                          (g) => M3PillChip(
+                            label: traktFormatGenreLabel(g),
+                            bg: cs.surfaceContainerHigh,
+                            fg: cs.onSurface,
                           ),
                         )
                         .toList(),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                 ],
                 if (overview != null && overview.isNotEmpty) ...[
-                  Text(
-                    l10n.mediaSynopsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  ),
-                  const SizedBox(height: 6),
+                  M3SectionHeader(label: l10n.mediaSynopsis),
+                  const SizedBox(height: 10),
                   Text(
                     overview,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       color: cs.onSurfaceVariant,
-                      height: 1.5,
+                      height: 1.55,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                 ],
                 ...traktExternalLinkChips(context, l10n, item, isMovie: false),
                 const SizedBox(height: 80),

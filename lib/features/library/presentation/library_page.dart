@@ -124,6 +124,44 @@ String _sortLabel(_SortField f, AppLocalizations l10n) => switch (f) {
   _SortField.progress => l10n.sortProgress,
 };
 
+/// Returns a small "behind N" or "next ep in Xd Yh" label for an airing
+/// anime entry, or null when not applicable.
+({String text, bool behind})? _animeAiringLabel(
+  LibraryEntry entry,
+  AppLocalizations l10n,
+) {
+  if (MediaKind.fromCode(entry.kind) != MediaKind.anime) return null;
+  final behind = AnimeAiringProgress.episodesBehind(
+    mediaKindCode: entry.kind,
+    animeMediaStatus: entry.animeMediaStatus,
+    releasedEpisodes: entry.releasedEpisodes,
+    progress: entry.progress,
+  );
+  if (behind != null) {
+    return (text: l10n.libraryAnimeAiringBehind(behind), behind: true);
+  }
+  if (!AnimeAiringProgress.isAnimeCaughtUpWithAiring(
+    mediaKindCode: entry.kind,
+    animeMediaStatus: entry.animeMediaStatus,
+    releasedEpisodes: entry.releasedEpisodes,
+    progress: entry.progress,
+  )) {
+    return null;
+  }
+  final secs = AnimeAiringProgress.secondsUntilNextEpisodeAiring(
+    entry.nextEpisodeAirsAt,
+  );
+  if (secs == null) return null;
+  final days = secs ~/ 86400;
+  final hours = days == 0 ? (secs + 3599) ~/ 3600 : (secs % 86400) ~/ 3600;
+  final ep = AnimeAiringProgress.nextEpisodeLabelNumber(
+    mediaKindCode: entry.kind,
+    releasedEpisodes: entry.releasedEpisodes,
+  );
+  if (ep == null) return null;
+  return (text: l10n.mediaNextEp(ep, days, hours), behind: false);
+}
+
 enum _ViewMode { list, grid }
 
 class LibraryPage extends ConsumerStatefulWidget {
@@ -1075,6 +1113,7 @@ class _EntryMetaLine extends StatelessWidget {
     final progress = _progressText();
     final statusLabel = _currentStatusLabel(entry.status, kind, l10n);
     final hasScore = entry.score != null && entry.score! > 0;
+    final airing = _animeAiringLabel(entry, l10n);
 
     return Row(
       children: [
@@ -1099,6 +1138,23 @@ class _EntryMetaLine extends StatelessWidget {
             ),
           ),
         ),
+        if (airing != null) ...[
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              airing.text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: airing.behind
+                    ? cs.tertiary
+                    : cs.primary.withAlpha(220),
+              ),
+            ),
+          ),
+        ],
         if (hasScore) ...[
           const SizedBox(width: 8),
           Icon(Icons.star_rounded, size: 13, color: Colors.amber.shade600),
@@ -1745,6 +1801,8 @@ class _GridEntryTile extends StatelessWidget {
     final accent = _kindColor(kind, cs);
     final canNavigate = _libraryEntryHasDetailPage(entry);
     final progress = _progressFraction(entry, kind);
+    final l10n = AppLocalizations.of(context)!;
+    final airing = _animeAiringLabel(entry, l10n);
     final showIncrement =
         (kind == MediaKind.anime ||
                 kind == MediaKind.manga ||
@@ -1842,6 +1900,52 @@ class _GridEntryTile extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // Top-right next-episode airing badge for currently airing
+              // anime. Shows either "Ep N • Xd Yh" or "N atrasados".
+              if (airing != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: airing.behind
+                          ? cs.tertiaryContainer.withAlpha(235)
+                          : cs.primaryContainer.withAlpha(235),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          airing.behind
+                              ? Icons.notifications_active_rounded
+                              : Icons.schedule_rounded,
+                          size: 11,
+                          color: airing.behind
+                              ? cs.onTertiaryContainer
+                              : cs.onPrimaryContainer,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          airing.text,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.1,
+                            color: airing.behind
+                                ? cs.onTertiaryContainer
+                                : cs.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // Bottom-right increment button when applicable. Forced to a
               // white-on-translucent style so it stays visible regardless of

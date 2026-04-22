@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -13,8 +12,7 @@ import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
-import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 class BookDetailPage extends ConsumerWidget {
   const BookDetailPage({super.key, required this.workKey});
@@ -222,7 +220,6 @@ class _DetailContent extends StatelessWidget {
     const posterHeight = 130.0;
     const posterWidth = 90.0;
     const overlapAmount = 50.0;
-    const headerOverflowAllowance = 10.0;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -236,141 +233,16 @@ class _DetailContent extends StatelessWidget {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                SizedBox(
-                  height: bannerHeight +
-                      posterHeight -
-                      overlapAmount +
-                      headerOverflowAllowance,
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: poster != null
-                            ? () => showFullscreenImage(context, poster)
-                            : null,
-                        child: Container(
-                          height: bannerHeight,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            image: poster != null
-                                ? DecorationImage(
-                                    image:
-                                        CachedNetworkImageProvider(poster),
-                                    fit: BoxFit.cover,
-                                    colorFilter: ColorFilter.mode(
-                                        Colors.black.withAlpha(60),
-                                        BlendMode.darken),
-                                  )
-                                : null,
-                            color: poster == null
-                                ? cs.surfaceContainerHighest
-                                : null,
-                          ),
-                          child: SafeArea(
-                            bottom: false,
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: IconButton(
-                                  icon: const Icon(Icons.arrow_back,
-                                      color: Colors.white),
-                                  style: IconButton.styleFrom(
-                                      backgroundColor: Colors.black26),
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        top: bannerHeight - overlapAmount,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (poster != null)
-                              GestureDetector(
-                                onTap: () =>
-                                    showFullscreenImage(context, poster),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: cs.surface, width: 3),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(60),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(9),
-                                    child: CachedNetworkImage(
-                                      imageUrl: poster,
-                                      width: posterWidth,
-                                      height: posterHeight,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: cs.surface.withAlpha(210),
-                                        borderRadius:
-                                            BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        name,
-                                        style: const TextStyle(
-                                            fontSize: 17,
-                                            fontWeight: FontWeight.w700),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (authors.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                            left: 8, top: 2),
-                                        child: Text(
-                                          authors.join(', '),
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color:
-                                                  cs.onSurfaceVariant),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                M3DetailHero(
+                  title: name,
+                  subtitleLines: authors.isNotEmpty ? [authors.join(', ')] : const [],
+                  banner: poster,
+                  poster: poster,
+                  bannerHeight: bannerHeight,
+                  posterHeight: posterHeight,
+                  posterWidth: posterWidth,
+                  overlap: overlapAmount,
                 ),
-
-                const SizedBox(height: 12),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -378,18 +250,20 @@ class _DetailContent extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _Tag(_prettyPrintType(printType),
-                          cs.tertiaryContainer, cs.onTertiaryContainer),
+                      M3HeroPill(_prettyPrintType(printType),
+                          bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
                       if (isEbook)
-                        _Tag('eBook', cs.primaryContainer, cs.onPrimaryContainer),
+                        M3HeroPill('eBook',
+                            bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
                       if (publicDomain)
-                        _Tag('Public domain',
-                            Colors.green.shade100, Colors.green.shade900),
+                        M3HeroPill('Public domain',
+                            bg: Colors.green.shade100, fg: Colors.green.shade900),
                       if (maturityRating == 'MATURE')
-                        _Tag('Mature', Colors.red.shade100, Colors.red.shade900),
+                        M3HeroPill('Mature',
+                            bg: Colors.red.shade100, fg: Colors.red.shade900),
                       if (language != null && language.isNotEmpty)
-                        _Tag(language.toUpperCase(),
-                            cs.secondaryContainer, cs.onSecondaryContainer),
+                        M3HeroPill(language.toUpperCase(),
+                            bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
                     ],
                   ),
                 ),
@@ -435,10 +309,9 @@ class _DetailContent extends StatelessWidget {
                       ratingsCount != null ||
                       (pages != null && pages > 0) ||
                       book['year'] != null)
-                    GlassCard(
+                    M3SurfaceCard(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
-                      margin: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         children: [
                           Row(
@@ -520,17 +393,12 @@ class _DetailContent extends StatelessWidget {
 
                   SizedBox(
                     width: double.infinity,
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
+                    child: M3SurfaceCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l10n.mediaInfo,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15)),
-                          const SizedBox(height: 8),
+                          M3SectionHeader(label: l10n.mediaInfo),
+                          const SizedBox(height: 12),
                           Wrap(
                             spacing: 24,
                             runSpacing: 6,
@@ -578,17 +446,12 @@ class _DetailContent extends StatelessWidget {
                   if (isbn10 != null || isbn13 != null)
                     SizedBox(
                       width: double.infinity,
-                      child: GlassCard(
-                        padding: const EdgeInsets.all(14),
-                        margin: const EdgeInsets.only(bottom: 12),
+                      child: M3SurfaceCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l10n.bookDetailIdentifiers,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15)),
-                            const SizedBox(height: 8),
+                            M3SectionHeader(label: l10n.bookDetailIdentifiers),
+                            const SizedBox(height: 10),
                             if (isbn13 != null)
                               _CopyableRow(label: 'ISBN-13', value: isbn13),
                             if (isbn10 != null)
@@ -599,42 +462,34 @@ class _DetailContent extends StatelessWidget {
                     ),
 
                   if (genres.isNotEmpty) ...[
-                    Text(
-                      l10n.bookDetailSubjects,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
-                    const SizedBox(height: 6),
+                    M3SectionHeader(label: l10n.bookDetailSubjects),
+                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: genres
-                          .map((g) => ActionChip(
-                                label: Text(g,
-                                    style: const TextStyle(fontSize: 12)),
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                onPressed: () => context.push(
+                          .map((g) => M3PillChip(
+                                label: g,
+                                bg: cs.surfaceContainerHigh,
+                                fg: cs.onSurface,
+                                onTap: () => context.push(
                                   '/books/subject?subject=${Uri.encodeQueryComponent(g.toLowerCase())}&sort=popularity',
                                 ),
                               ))
                           .toList(),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                   ],
 
                   if (description != null && description.isNotEmpty) ...[
-                    Text(l10n.bookDetailDescription,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 6),
-                    GlassCard(
-                      padding: const EdgeInsets.all(14),
+                    M3SectionHeader(label: l10n.bookDetailDescription),
+                    const SizedBox(height: 10),
+                    M3SurfaceCard(
                       child: Text(
                         description,
                         style: TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
+                            fontSize: 13.5,
+                            height: 1.55,
                             color: cs.onSurfaceVariant),
                       ),
                     ),
@@ -851,28 +706,6 @@ class _CopyableRow extends StatelessWidget {
 }
 
 
-class _Tag extends StatelessWidget {
-  const _Tag(this.text, this.bg, this.fg);
-  final String text;
-  final Color bg;
-  final Color fg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
 class _StatColumn extends StatelessWidget {
   const _StatColumn(this.icon, this.color, this.value, this.label);
   final IconData icon;
@@ -952,9 +785,7 @@ class _BookProgressCard extends ConsumerWidget {
           BookTrackingMode.chapters => l10n.bookTrackingModeChapters,
         };
 
-        return GlassCard(
-          padding: const EdgeInsets.all(14),
-          margin: const EdgeInsets.only(bottom: 12),
+        return M3SurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1033,25 +864,14 @@ class _BookFavoriteButton extends ConsumerWidget {
     final isFav =
         workKey.isNotEmpty && list.any((e) => e['workKey'] == workKey);
 
-    return Tooltip(
-        message:
-            isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
-        child: IconButton.filledTonal(
-          style: IconButton.styleFrom(
-            fixedSize: const Size(48, 48),
-            minimumSize: const Size(48, 48),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: workKey.isEmpty
-              ? null
-              : () => ref
-                  .read(favoriteBooksProvider.notifier)
-                  .toggleFavorite(book),
-          icon: Icon(
-            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            color: isFav ? Colors.redAccent : null,
-          ),
-        ),
+    return M3FavoriteIconButton(
+      isFavorite: isFav,
+      tooltip: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
+      onPressed: workKey.isEmpty
+          ? null
+          : () => ref
+              .read(favoriteBooksProvider.notifier)
+              .toggleFavorite(book),
     );
   }
 }
@@ -1101,16 +921,11 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
     final isEdit = _existing != null;
 
     return _loaded
-          ? SizedBox(
-              height: 48,
-              width: double.infinity,
-              child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              icon: Icon(isEdit ? Icons.edit : Icons.add),
-              label:
-                  Text(isEdit ? l10n.editLibraryEntry : l10n.addToLibrary),
+        ? SizedBox(
+            width: double.infinity,
+            child: M3AddToLibraryButton(
+              isEdit: isEdit,
+              label: isEdit ? l10n.editLibraryEntry : l10n.addToLibrary,
               onPressed: () async {
                 final saved = await showAddToLibrarySheet(
                   context: context,
@@ -1129,7 +944,7 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
                 _checkExisting();
               },
             ),
-            )
-          : const SizedBox.shrink();
+          )
+        : const SizedBox.shrink();
   }
 }

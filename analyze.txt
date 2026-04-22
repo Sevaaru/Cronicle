@@ -1,0 +1,141 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 85.0.0 (99.0.0 available)
+  analyzer 7.6.0 (12.1.0 available)
+  analyzer_plugin 0.13.4 (0.14.8 available)
+  build 2.5.4 (4.0.5 available)
+  build_config 1.1.2 (1.3.0 available)
+  build_resolvers 2.5.4 (3.0.4 available)
+  build_runner 2.5.4 (2.14.0 available)
+  build_runner_core 9.1.2 (9.3.2 available)
+  cli_util 0.4.2 (0.5.0 available)
+  connectivity_plus 6.1.5 (7.1.1 available)
+  custom_lint_core 0.7.5 (0.8.2 available)
+  custom_lint_visitor 1.0.0+7.7.0 (1.0.0+9.0.0 available)
+  dart_style 3.1.1 (3.1.8 available)
+  device_info_plus 12.4.0 (13.1.0 available)
+  device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+  drift 2.28.2 (2.32.1 available)
+  drift_dev 2.28.0 (2.32.1 available)
+  drift_flutter 0.2.7 (0.3.0 available)
+  flutter_local_notifications 19.5.0 (21.0.0 available)
+  flutter_local_notifications_linux 6.0.0 (8.0.0 available)
+  flutter_local_notifications_platform_interface 9.1.0 (11.0.0 available)
+  flutter_local_notifications_windows 1.0.3 (3.0.0 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  flutter_secure_storage 9.2.4 (10.0.0 available)
+  flutter_secure_storage_linux 1.2.3 (3.0.0 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.0 available)
+  flutter_secure_storage_windows 3.1.2 (4.1.0 available)
+  flutter_web_auth_2 4.1.0 (5.0.2 available)
+  flutter_web_auth_2_platform_interface 4.1.0 (5.0.0 available)
+  freezed 2.5.8 (3.2.5 available)
+  freezed_annotation 2.4.4 (3.1.0 available)
+  go_router 14.8.1 (17.2.2 available)
+  googleapis 13.2.0 (16.0.0 available)
+  googleapis_auth 2.0.0 (2.3.0 available)
+  gql_dedupe_link 2.0.4-alpha+1715521079596 (4.0.0 available)
+  hooks 1.0.2 (1.0.3 available)
+  hooks_riverpod 2.6.1 (3.3.1 available)
+  js 0.6.7 (0.7.2 available)
+  json_annotation 4.9.0 (4.11.0 available)
+  json_serializable 6.9.5 (6.13.1 available)
+  meta 1.17.0 (1.18.2 available)
+  native_toolchain_c 0.17.6 (0.18.0 available)
+  riverpod 2.6.1 (3.2.1 available)
+  riverpod_analyzer_utils 0.5.9 (0.5.10 available)
+  riverpod_annotation 2.6.1 (4.0.2 available)
+  riverpod_generator 2.6.4 (4.0.3 available)
+  share_plus 12.0.2 (13.1.0 available)
+  share_plus_platform_interface 6.1.0 (7.1.0 available)
+  source_gen 2.0.0 (4.2.2 available)
+  source_helper 1.3.7 (1.3.11 available)
+  sqflite 2.4.2 (2.4.2+1 available)
+  sqflite_common 2.5.6 (2.5.6+1 available)
+  sqlite3 2.9.4 (3.3.1 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.41.2 (0.44.3 available)
+  synchronized 3.4.0 (3.4.0+1 available)
+  test_api 0.7.10 (0.7.11 available)
+  timezone 0.10.1 (0.11.0 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 5.15.0 (6.0.1 available)
+  win32_registry 2.1.0 (3.0.3 available)
+Got dependencies!
+63 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing Cronicle...                                           
+
+   info - 'isInDebugMode' is deprecated and shouldn't be used. Use WorkmanagerDebug handlers instead. This parameter has no effect - lib\core\notifications\notification_background.dart:22:5 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\anime\data\datasources\anilist_graphql_datasource.dart:1320:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\anime\data\datasources\anilist_graphql_datasource.dart:2215:7 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\anime\data\datasources\anilist_graphql_datasource.dart:2244:7 - use_null_aware_elements
+warning - The value of the field '_lastFetchedAt' isn't used - lib\features\anime\presentation\anime_providers.dart:554:13 - unused_field
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:60:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:62:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:65:5 - avoid_init_to_null
+   info - Parameters ''_value' and '_then'' could be super parameters - lib\features\books\domain\models\book_edition.freezed.dart:132:3 - use_super_parameters
+   info - The local variable '_value' starts with an underscore - lib\features\books\domain\models\book_edition.freezed.dart:133:23 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_then' starts with an underscore - lib\features\books\domain\models\book_edition.freezed.dart:134:38 - no_leading_underscores_for_local_identifiers
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:140:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:142:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\features\books\domain\models\book_edition.freezed.dart:145:5 - avoid_init_to_null
+warning - Unused import: 'package:cached_network_image/cached_network_image.dart' - lib\features\books\presentation\book_detail_page.dart:1:8 - unused_import
+warning - The value of the local variable 'headerOverflowAllowance' isn't used - lib\features\books\presentation\book_detail_page.dart:224:11 - unused_local_variable
+warning - The declaration '_Tag' isn't referenced - lib\features\books\presentation\book_detail_page.dart:711:7 - unused_element
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\feed\presentation\activity_feed_widgets.dart:4:8 - unnecessary_import
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\feed\presentation\anilist_notifications_page.dart:395:11 - use_null_aware_elements
+warning - The declaration '_anilistBrowseCategories' isn't referenced - lib\features\feed\presentation\feed_page.dart:72:7 - unused_element
+warning - The declaration '_mangaBrowseCategories' isn't referenced - lib\features\feed\presentation\feed_page.dart:80:7 - unused_element
+warning - The value of the local variable 'id' isn't used - lib\features\feed\presentation\summary_feed_view.dart:823:11 - unused_local_variable
+warning - The value of the local variable 'id' isn't used - lib\features\feed\presentation\summary_feed_view.dart:959:11 - unused_local_variable
+warning - The value of the local variable 'id' isn't used - lib\features\feed\presentation\summary_feed_view.dart:1058:11 - unused_local_variable
+warning - The declaration '_Tag' isn't referenced - lib\features\games\presentation\game_detail_page.dart:1083:7 - unused_element
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\library\presentation\library_page.dart:491:24 - use_build_context_synchronously
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\onboarding\presentation\onboarding_page.dart:503:19 - unnecessary_null_comparison
+   info - Statements in an if should be enclosed in a block - lib\features\onboarding\presentation\onboarding_page.dart:557:45 - curly_braces_in_flow_control_structures
+warning - The declaration '_FavoriteAnilistMediaCard' isn't referenced - lib\features\profile\presentation\profile_page.dart:1466:7 - unused_element
+warning - The declaration '_FavoriteGameCard' isn't referenced - lib\features\profile\presentation\profile_page.dart:1523:7 - unused_element
+warning - Unused import: 'package:cronicle/wear_sync_entry.dart' - lib\main.dart:21:8 - unused_import
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:72:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:73:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:74:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:77:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:78:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:81:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:82:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:83:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:84:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:85:5 - avoid_init_to_null
+   info - Parameters ''_value' and '_then'' could be super parameters - lib\shared\models\feed_activity.freezed.dart:180:3 - use_super_parameters
+   info - The local variable '_value' starts with an underscore - lib\shared\models\feed_activity.freezed.dart:181:24 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_then' starts with an underscore - lib\shared\models\feed_activity.freezed.dart:182:39 - no_leading_underscores_for_local_identifiers
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:188:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:189:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:190:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:193:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:194:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:197:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:198:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:199:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:200:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\feed_activity.freezed.dart:201:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:65:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:66:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:67:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:69:5 - avoid_init_to_null
+   info - Parameters ''_value' and '_then'' could be super parameters - lib\shared\models\media_item.freezed.dart:154:3 - use_super_parameters
+   info - The local variable '_value' starts with an underscore - lib\shared\models\media_item.freezed.dart:155:21 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_then' starts with an underscore - lib\shared\models\media_item.freezed.dart:156:36 - no_leading_underscores_for_local_identifiers
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:163:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:164:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:165:5 - avoid_init_to_null
+   info - Redundant initialization to 'null' - lib\shared\models\media_item.freezed.dart:167:5 - avoid_init_to_null
+   info - 'translate' is deprecated and shouldn't be used. Use translateByVector3, translateByVector4, or translateByDouble instead - lib\shared\widgets\fullscreen_image_viewer.dart:191:11 - deprecated_member_use
+   info - 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead - lib\shared\widgets\fullscreen_image_viewer.dart:192:11 - deprecated_member_use
+   info - 'dart:html' is deprecated and shouldn't be used. Use package:web and dart:js_interop instead - lib\shared\widgets\remote_network_image_web.dart:2:1 - deprecated_member_use
+   info - Don't use web-only libraries outside Flutter web plugins - lib\shared\widgets\remote_network_image_web.dart:2:1 - avoid_web_libraries_in_flutter
+   info - The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/widgets.dart' - lib\wear_sync_entry.dart:7:8 - unnecessary_import
+

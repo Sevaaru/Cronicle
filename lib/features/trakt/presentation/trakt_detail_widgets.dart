@@ -1,7 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,9 +11,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
-import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
-import 'package:cronicle/shared/widgets/remote_network_image.dart';
+import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 String traktFormatApiStatus(String? raw) {
   if (raw == null || raw.isEmpty) return '';
@@ -37,19 +34,13 @@ class TraktTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
-      ),
-    );
+    return M3HeroPill(text, bg: bg, fg: fg);
   }
 }
 
 class TraktStatColumn extends StatelessWidget {
-  const TraktStatColumn(this.icon, this.iconColor, this.value, this.label, {super.key});
+  const TraktStatColumn(this.icon, this.iconColor, this.value, this.label,
+      {super.key});
   final IconData icon;
   final Color iconColor;
   final String value;
@@ -62,7 +53,8 @@ class TraktStatColumn extends StatelessWidget {
       children: [
         Icon(icon, color: iconColor, size: 22),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        Text(value,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         Text(
           label,
           style: TextStyle(
@@ -116,161 +108,14 @@ class TraktDetailHeroHeader extends StatelessWidget {
   final String? poster;
   final String? fanart;
 
-  static const _bannerH = 200.0;
-  static const _posterH = 140.0;
-  static const _posterW = 95.0;
-  static const _overlap = 50.0;
-
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarIconBrightness:
-            (fanart != null || isDark) ? Brightness.light : Brightness.dark,
-        statusBarBrightness:
-            (fanart != null || isDark) ? Brightness.dark : Brightness.light,
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: _bannerH + _posterH - _overlap + 10,
-            child: Stack(
-              children: [
-                GestureDetector(
-                  onTap: fanart != null ? () => showFullscreenImage(context, fanart!) : null,
-                  child: Container(
-                    height: _bannerH,
-                    width: double.infinity,
-                    color: fanart == null ? cs.surfaceContainerHighest : null,
-                    child: fanart != null
-                        ? ClipRect(
-                            child: RemoteNetworkImage(
-                              imageUrl: fanart!,
-                              width: double.infinity,
-                              height: _bannerH,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: _bannerH,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withAlpha(fanart != null ? 40 : 0),
-                          Colors.black.withAlpha(fanart != null ? 80 : 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                SafeArea(
-                  bottom: false,
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        style: IconButton.styleFrom(backgroundColor: Colors.black26),
-                        onPressed: () => Navigator.of(context).maybePop(),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  top: _bannerH - _overlap,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (poster != null)
-                        GestureDetector(
-                          onTap: () => showFullscreenImage(context, poster!),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: cs.surface, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(60),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(9),
-                              child: RemoteNetworkImage(
-                                imageUrl: poster!,
-                                width: _posterW,
-                                height: _posterH,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: cs.surface.withAlpha(210),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (subtitle != null && subtitle!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8, top: 4),
-                                  child: Text(
-                                    subtitle!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                    maxLines: 4,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
+    return M3DetailHero(
+      title: title,
+      subtitleLines:
+          subtitle != null && subtitle!.isNotEmpty ? [subtitle!] : const [],
+      banner: fanart,
+      poster: poster,
     );
   }
 }
@@ -293,21 +138,14 @@ class TraktFavoriteButton extends ConsumerWidget {
           return eid == id && et == type;
         });
 
-    return Tooltip(
-      message: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
-      child: IconButton.filledTonal(
-        style: IconButton.styleFrom(
-          fixedSize: const Size(48, 48),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        onPressed: id == 0
-            ? null
-            : () => ref.read(favoriteTraktTitlesProvider.notifier).toggleFavorite(item),
-        icon: Icon(
-          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: isFav ? Colors.redAccent : null,
-        ),
-      ),
+    return M3FavoriteIconButton(
+      isFavorite: isFav,
+      tooltip: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
+      onPressed: id == 0
+          ? null
+          : () => ref
+              .read(favoriteTraktTitlesProvider.notifier)
+              .toggleFavorite(item),
     );
   }
 }
@@ -344,7 +182,6 @@ class _TraktAddToLibraryButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final db = ref.watch(databaseProvider);
     final extId = '${item['id'] ?? ''}';
 
@@ -360,15 +197,9 @@ class _TraktAddToLibraryButton extends ConsumerWidget {
         final inLibrary = existing != null;
         return SizedBox(
           width: double.infinity,
-          height: 48,
-          child: FilledButton.icon(
-            icon: Icon(inLibrary ? Icons.edit : Icons.library_add_check_rounded),
-            label: Text(inLibrary ? l10n.editLibraryEntry : l10n.addToListTitle),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, 48),
-              backgroundColor: inLibrary ? cs.secondaryContainer : null,
-              foregroundColor: inLibrary ? cs.onSecondaryContainer : null,
-            ),
+          child: M3AddToLibraryButton(
+            isEdit: inLibrary,
+            label: inLibrary ? l10n.editLibraryEntry : l10n.addToListTitle,
             onPressed: () async {
               final added = await showAddToLibrarySheet(
                 context: context,
@@ -421,25 +252,31 @@ List<Widget> traktExternalLinkChips(
   Map<String, dynamic> item, {
   required bool isMovie,
 }) {
+  final cs = Theme.of(context).colorScheme;
   final chips = <Widget>[];
 
-  void add(String label, String? url) {
+  void add(String label, String? url, {Color? bg, Color? fg, IconData? icon}) {
     if (url == null || url.isEmpty) return;
     chips.add(
-      ActionChip(
-        label: Text(label, style: const TextStyle(fontSize: 12)),
-        visualDensity: VisualDensity.compact,
-        onPressed: () => traktLaunchUrl(context, url),
+      M3PillChip(
+        label: label,
+        bg: bg ?? cs.surfaceContainerHigh,
+        fg: fg ?? cs.onSurface,
+        icon: icon,
+        onTap: () => traktLaunchUrl(context, url),
       ),
     );
   }
 
-  add(l10n.traktLinkTrailer, item['trailer'] as String?);
-  add(l10n.traktLinkHomepage, item['homepage'] as String?);
+  add(l10n.traktLinkTrailer, item['trailer'] as String?,
+      icon: Icons.play_circle_outline_rounded);
+  add(l10n.traktLinkHomepage, item['homepage'] as String?,
+      icon: Icons.public_rounded);
 
   final imdb = item['imdb_id'] as String?;
   if (imdb != null && imdb.isNotEmpty) {
-    add('IMDb', 'https://www.imdb.com/title/$imdb');
+    add('IMDb', 'https://www.imdb.com/title/$imdb',
+        bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer);
   }
   final tmdb = item['tmdb_id'];
   final tmdbInt = tmdb is int ? tmdb : int.tryParse('$tmdb');
@@ -449,24 +286,24 @@ List<Widget> traktExternalLinkChips(
       isMovie
           ? 'https://www.themoviedb.org/movie/$tmdbInt'
           : 'https://www.themoviedb.org/tv/$tmdbInt',
+      bg: cs.tertiaryContainer,
+      fg: cs.onTertiaryContainer,
     );
   }
   final slug = item['trakt_slug'] as String?;
   final type = isMovie ? 'movies' : 'shows';
   if (slug != null && slug.isNotEmpty) {
-    add(l10n.traktDetailOnTrakt, 'https://trakt.tv/$type/$slug');
+    add(l10n.traktDetailOnTrakt, 'https://trakt.tv/$type/$slug',
+        bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer);
   }
 
   if (chips.isEmpty) return [];
 
   return [
-    Text(
-      l10n.traktDetailLinks,
-      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-    ),
-    const SizedBox(height: 8),
+    M3SectionHeader(label: l10n.traktDetailLinks),
+    const SizedBox(height: 10),
     Wrap(spacing: 8, runSpacing: 8, children: chips),
-    SizedBox(height: chips.isNotEmpty ? 12 : 0),
+    const SizedBox(height: 12),
   ];
 }
 
@@ -500,12 +337,11 @@ class TraktTvEpisodeProgressCard extends ConsumerWidget {
           }
         }
         if (found == null) {
-          return GlassCard(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 12),
+          return M3SurfaceCard(
             child: Text(
               l10n.traktEpisodeProgressHint,
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.35),
+              style: TextStyle(
+                  fontSize: 13, color: cs.onSurfaceVariant, height: 1.35),
             ),
           );
         }
@@ -533,22 +369,17 @@ class TraktTvEpisodeProgressCard extends ConsumerWidget {
           unawaited(syncTraktEntryFromLocalDatabase(ref, MediaKind.tv, traktId));
         }
 
-        return GlassCard(
-          padding: const EdgeInsets.all(14),
-          margin: const EdgeInsets.only(bottom: 12),
+        return M3SurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                l10n.traktEpisodeProgressTitle,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              const SizedBox(height: 8),
+              M3SectionHeader(label: l10n.traktEpisodeProgressTitle),
+              const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: maxE > 0 ? ratio : 0,
-                  minHeight: 6,
+                  minHeight: 8,
                 ),
               ),
               const SizedBox(height: 10),
@@ -563,12 +394,14 @@ class TraktTvEpisodeProgressCard extends ConsumerWidget {
                     child: Text(
                       maxE > 0 ? '$prog / $maxE' : '$prog',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16),
                     ),
                   ),
                   IconButton(
                     tooltip: l10n.traktEpisodePlusOne,
-                    onPressed: maxE <= 0 || prog < maxE ? () => bump(1) : null,
+                    onPressed:
+                        maxE <= 0 || prog < maxE ? () => bump(1) : null,
                     icon: const Icon(Icons.add_circle_outline),
                   ),
                 ],

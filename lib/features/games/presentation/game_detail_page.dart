@@ -18,7 +18,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 typedef _GameDetailLinkRow = ({
   String label,
@@ -235,113 +235,14 @@ class _GameDetailContent extends StatelessWidget {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                SizedBox(
-                  height: bannerHeight + posterHeight - overlapAmount + 10,
-                  child: Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: banner != null
-                            ? () => showFullscreenImage(context, banner)
-                            : null,
-                        child: Container(
-                          height: bannerHeight,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            image: banner != null
-                                ? DecorationImage(
-                                    image:
-                                        CachedNetworkImageProvider(banner),
-                                    fit: BoxFit.cover,
-                                    colorFilter: ColorFilter.mode(
-                                        Colors.black.withAlpha(60),
-                                        BlendMode.darken),
-                                  )
-                                : null,
-                            color: banner == null
-                                ? cs.surfaceContainerHighest
-                                : null,
-                          ),
-                          child: SafeArea(
-                            bottom: false,
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: IconButton(
-                                  icon: const Icon(Icons.arrow_back,
-                                      color: Colors.white),
-                                  style: IconButton.styleFrom(
-                                      backgroundColor: Colors.black26),
-                                  onPressed: () =>
-                                      Navigator.of(context).maybePop(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        top: bannerHeight - overlapAmount,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (poster != null)
-                              GestureDetector(
-                                onTap: () =>
-                                    showFullscreenImage(context, poster),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: cs.surface, width: 3),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(60),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(9),
-                                    child: CachedNetworkImage(
-                                      imageUrl: poster,
-                                      width: posterWidth,
-                                      height: posterHeight,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: cs.surface.withAlpha(210),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    name,
-                                    style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w700),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                M3DetailHero(
+                  title: name,
+                  banner: banner,
+                  poster: poster,
+                  bannerHeight: bannerHeight,
+                  posterHeight: posterHeight,
+                  posterWidth: posterWidth,
+                  overlap: overlapAmount,
                 ),
                 const SizedBox(height: 8),
                 Padding(
@@ -351,10 +252,10 @@ class _GameDetailContent extends StatelessWidget {
                     runSpacing: 4,
                     children: [
                       if (format != null)
-                        _Tag(format, cs.tertiaryContainer,
-                            cs.onTertiaryContainer),
-                      ...genres.take(4).map((g) => _Tag(
-                          g, cs.secondaryContainer, cs.onSecondaryContainer)),
+                        M3HeroPill(format,
+                            bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
+                      ...genres.take(4).map((g) => M3HeroPill(g,
+                          bg: cs.secondaryContainer, fg: cs.onSecondaryContainer)),
                     ],
                   ),
                 ),
@@ -379,10 +280,8 @@ class _GameDetailContent extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   if (hasLinkSection) ...[
-                    Text(l10n.gameDetailLinksSection,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 8),
+                    M3SectionHeader(label: l10n.gameDetailLinksSection),
+                    const SizedBox(height: 10),
                     _ExpandableGameLinkChips(
                       rows: linkRows,
                       l10n: l10n,
@@ -390,17 +289,13 @@ class _GameDetailContent extends StatelessWidget {
                       colorScheme: cs,
                       onOpenUrl: (url) => _launchGameLink(context, l10n, url),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                   ],
 
                   if (hasTtb) ...[
-                    Text(l10n.gameDetailTimeToBeatSection,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 6),
-                    GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
+                    M3SectionHeader(label: l10n.gameDetailTimeToBeatSection),
+                    const SizedBox(height: 10),
+                    M3SurfaceCard(
                       child: Column(
                         children: [
                           if (ttbHastily != null)
@@ -423,10 +318,9 @@ class _GameDetailContent extends StatelessWidget {
                     ),
                   ],
 
-                  if (reviews.isNotEmpty) ...[                    Text(l10n.gameDetailReviewsSection,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 6),
+                  if (reviews.isNotEmpty) ...[
+                    M3SectionHeader(label: l10n.gameDetailReviewsSection),
+                    const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Column(
@@ -435,8 +329,8 @@ class _GameDetailContent extends StatelessWidget {
                           for (final raw in reviews)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(14),
+                              child: M3SurfaceCard(
+                                margin: EdgeInsets.zero,
                                 child: _IgdbReviewTile(
                                   review: raw as Map<String, dynamic>,
                                   l10n: l10n,
@@ -459,10 +353,9 @@ class _GameDetailContent extends StatelessWidget {
                       releaseDate != null)
                     SizedBox(
                       width: double.infinity,
-                      child: GlassCard(
+                      child: M3SurfaceCard(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
-                        margin: const EdgeInsets.only(bottom: 12),
                       child: Wrap(
                         spacing: 20,
                         runSpacing: 12,
@@ -509,17 +402,12 @@ class _GameDetailContent extends StatelessWidget {
 
                   SizedBox(
                     width: double.infinity,
-                    child: GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
+                    child: M3SurfaceCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(l10n.mediaInfo,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15)),
-                          const SizedBox(height: 8),
+                          M3SectionHeader(label: l10n.mediaInfo),
+                          const SizedBox(height: 12),
                           Wrap(
                             spacing: 24,
                             runSpacing: 6,
@@ -550,24 +438,20 @@ class _GameDetailContent extends StatelessWidget {
                   ),
 
                   if (summary != null) ...[
-                    Text(l10n.gameDetailSynopsis,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 6),
-                    GlassCard(
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 12),
+                    M3SectionHeader(label: l10n.gameDetailSynopsis),
+                    const SizedBox(height: 10),
+                    M3SurfaceCard(
                       child: Text(summary,
                           style: TextStyle(
-                              fontSize: 13, color: cs.onSurfaceVariant)),
+                              fontSize: 13.5,
+                              height: 1.55,
+                              color: cs.onSurfaceVariant)),
                     ),
                   ],
 
                   if (screenshots != null && screenshots.isNotEmpty) ...[
-                    Text(l10n.gameDetailScreenshots,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 8),
+                    M3SectionHeader(label: l10n.gameDetailScreenshots),
+                    const SizedBox(height: 10),
                     SizedBox(
                       height: 120,
                       child: ListView.separated(
@@ -602,10 +486,8 @@ class _GameDetailContent extends StatelessWidget {
 
                   if (similarGames != null &&
                       similarGames.isNotEmpty) ...[
-                    Text(l10n.gameDetailSimilarGames,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 8),
+                    M3SectionHeader(label: l10n.gameDetailSimilarGames),
+                    const SizedBox(height: 10),
                     SizedBox(
                       height: 180,
                       child: ListView.separated(
@@ -705,15 +587,10 @@ class _OpenCriticSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.gameDetailOpenCriticSection,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-        ),
-        const SizedBox(height: 6),
+        M3SectionHeader(label: l10n.gameDetailOpenCriticSection),
+        const SizedBox(height: 10),
         async.when(
-          loading: () => GlassCard(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 12),
+          loading: () => M3SurfaceCard(
             child: Row(
               children: [
                 SizedBox(
@@ -732,9 +609,7 @@ class _OpenCriticSection extends ConsumerWidget {
               ],
             ),
           ),
-          error: (_, _) => GlassCard(
-            padding: const EdgeInsets.all(14),
-            margin: const EdgeInsets.only(bottom: 12),
+          error: (_, _) => M3SurfaceCard(
             child: Text(
               l10n.gameDetailOpenCriticNoMatch,
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
@@ -742,9 +617,7 @@ class _OpenCriticSection extends ConsumerWidget {
           ),
           data: (insights) {
             if (insights == null) {
-              return GlassCard(
-                padding: const EdgeInsets.all(14),
-                margin: const EdgeInsets.only(bottom: 12),
+              return M3SurfaceCard(
                 child: Text(
                   l10n.gameDetailOpenCriticNoMatch,
                   style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
@@ -793,8 +666,7 @@ class _OpenCriticInsightsBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GlassCard(
-          padding: const EdgeInsets.all(14),
+        M3SurfaceCard(
           margin: const EdgeInsets.only(bottom: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,8 +688,8 @@ class _OpenCriticInsightsBody extends StatelessWidget {
           ),
         ),
         if (insights.reviews.isEmpty && insights.numReviews == 0)
-          GlassCard(
-            padding: const EdgeInsets.all(14),
+          M3SurfaceCard(
+            margin: EdgeInsets.zero,
             child: Text(
               l10n.gameDetailOpenCriticNoMatch,
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
@@ -827,8 +699,8 @@ class _OpenCriticInsightsBody extends StatelessWidget {
           for (final r in insights.reviews)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.all(14),
+              child: M3SurfaceCard(
+                margin: EdgeInsets.zero,
                 child: _OpenCriticReviewTile(
                   review: r,
                   l10n: l10n,
@@ -1121,16 +993,15 @@ class _ExpandableGameLinkChipsState extends State<_ExpandableGameLinkChips> {
         labelColor = accent;
       }
     }
+    final accentBg = (accent ?? cs.primary).withAlpha(40);
     return Tooltip(
       message: '${row.label}\n${row.url}',
-      child: ActionChip(
-        avatar: Icon(icon, size: 16, color: labelColor),
-        label: Text(
-          gameDetailLinkChipTitle(row.label),
-          style: TextStyle(fontSize: 12, color: labelColor),
-        ),
-        onPressed: () => widget.onOpenUrl(row.url),
-        visualDensity: VisualDensity.compact,
+      child: M3PillChip(
+        label: gameDetailLinkChipTitle(row.label),
+        bg: accentBg,
+        fg: labelColor,
+        icon: icon,
+        onTap: () => widget.onOpenUrl(row.url),
       ),
     );
   }
@@ -1148,23 +1019,14 @@ class _GameFavoriteButton extends ConsumerWidget {
     final isFav =
         id != 0 && list.any((e) => (e['id'] as num?)?.toInt() == id);
 
-    return Tooltip(
-      message: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
-      child: IconButton.filledTonal(
-        style: IconButton.styleFrom(
-          fixedSize: const Size(48, 48),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        onPressed: id == 0
-            ? null
-            : () => ref
-                .read(favoriteGamesProvider.notifier)
-                .toggleFavorite(game),
-        icon: Icon(
-          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          color: isFav ? Colors.redAccent : null,
-        ),
-      ),
+    return M3FavoriteIconButton(
+      isFavorite: isFav,
+      tooltip: isFav ? l10n.tooltipRemoveFavorite : l10n.tooltipAddFavorite,
+      onPressed: id == 0
+          ? null
+          : () => ref
+              .read(favoriteGamesProvider.notifier)
+              .toggleFavorite(game),
     );
   }
 }
@@ -1176,7 +1038,6 @@ class _AddToLibraryButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final cs = Theme.of(context).colorScheme;
     final db = ref.watch(databaseProvider);
     final gameId = game['id']?.toString() ?? '';
 
@@ -1190,51 +1051,31 @@ class _AddToLibraryButton extends ConsumerWidget {
       builder: (context, snap) {
         final existing = snap.data;
         final inLibrary = existing != null;
-        return FilledButton.icon(
-          icon: Icon(inLibrary ? Icons.edit : Icons.add),
-          label: Text(inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, 48),
-            backgroundColor: inLibrary ? cs.secondaryContainer : null,
-            foregroundColor: inLibrary ? cs.onSecondaryContainer : null,
-          ),
-          onPressed: () async {
-            final added = await showAddToLibrarySheet(
-              context: context,
-              ref: ref,
-              item: game,
-              kind: MediaKind.game,
-              existingEntry: existing,
-            );
-            if (context.mounted && added) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(inLibrary
-                        ? l10n.entryUpdated
-                        : l10n.addedToLibrary)),
+        return SizedBox(
+          width: double.infinity,
+          child: M3AddToLibraryButton(
+            isEdit: inLibrary,
+            label: inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
+            onPressed: () async {
+              final added = await showAddToLibrarySheet(
+                context: context,
+                ref: ref,
+                item: game,
+                kind: MediaKind.game,
+                existingEntry: existing,
               );
-            }
-          },
+              if (context.mounted && added) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(inLibrary
+                          ? l10n.entryUpdated
+                          : l10n.addedToLibrary)),
+                );
+              }
+            },
+          ),
         );
       },
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag(this.text, this.bg, this.fg);
-  final String text;
-  final Color bg;
-  final Color fg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
-      child: Text(text,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
     );
   }
 }
