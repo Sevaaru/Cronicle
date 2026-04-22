@@ -48,7 +48,7 @@ Anime · Manga · Movies · TV · Games · Books — with offline-first storage 
 ##  Features
 
 ###  Track everything in one library
-- Unified offline-first library backed by Drift (SQLite) — works fully without an internet connection.
+- Unified offline library backed by Drift (SQLite) — downloaded library elements works fully without an internet connection.
 - Six media kinds: **anime, manga, movies, TV, games, books**.
 - Per-item progress: episode/chapter/page counters, scores, status, dates, custom notes.
 - Custom categories, advanced sorting and filtering, batch editing.
