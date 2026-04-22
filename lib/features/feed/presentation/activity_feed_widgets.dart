@@ -718,9 +718,13 @@ class ActivityCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(22),
+      ),
       child: Column(
         children: [
           InkWell(
@@ -739,7 +743,7 @@ class ActivityCard extends ConsumerWidget {
                       ? () => context.push('/user/${activity.userId}')
                       : null,
                   child: CircleAvatar(
-                    radius: 16,
+                    radius: 22,
                     backgroundColor:
                         colorScheme.surfaceContainerHighest,
                     backgroundImage: activity.userAvatarUrl != null
@@ -752,14 +756,15 @@ class ActivityCard extends ConsumerWidget {
                                 ? activity.userName[0].toUpperCase()
                                 : '?',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                               color: colorScheme.onSurface,
                             ),
                           )
                         : null,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -774,41 +779,56 @@ class ActivityCard extends ConsumerWidget {
                                   : null,
                               child: Text(
                                 activity.userName,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                  fontSize: 14.5,
+                                  color: colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            activity.isTextActivity
-                                ? Icons.edit_note_rounded
-                                : _sourceIcon(activity.source),
-                            size: 13,
-                            color: activity.isTextActivity
-                                ? colorScheme.onSurfaceVariant
-                                : _sourceColor(
-                                    activity.source, colorScheme),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (activity.isTextActivity
+                                      ? colorScheme.onSurfaceVariant
+                                      : _sourceColor(
+                                          activity.source, colorScheme))
+                                  .withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              activity.isTextActivity
+                                  ? Icons.edit_note_rounded
+                                  : _sourceIcon(activity.source),
+                              size: 13,
+                              color: activity.isTextActivity
+                                  ? colorScheme.onSurfaceVariant
+                                  : _sourceColor(
+                                      activity.source, colorScheme),
+                            ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
                             activityTimeAgo(activity.createdAt, l10n),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 6),
                       if (activity.isTextActivity)
                         ExpandableText(
                           text: activity.mediaTitle,
                           style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
+                              height: 1.4,
                               color: colorScheme.onSurface),
                         )
                       else
@@ -817,7 +837,8 @@ class ActivityCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           text: TextSpan(
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
+                              height: 1.35,
                               color: colorScheme.onSurface,
                             ),
                             children: [
@@ -840,13 +861,13 @@ class ActivityCard extends ConsumerWidget {
                   ),
                 ),
                 if (activity.mediaPosterUrl != null) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: CachedNetworkImage(
                       imageUrl: activity.mediaPosterUrl!,
-                      width: 45,
-                      height: 64,
+                      width: 52,
+                      height: 74,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -854,44 +875,68 @@ class ActivityCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Row(
             children: [
-              const SizedBox(width: 42),
               AnimatedLikeButton(
                 isLiked: activity.isLiked,
                 likeCount: activity.likeCount,
                 onToggle: () => _handleLike(context, ref),
               ),
-              const SizedBox(width: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 8),
+              _CommentButton(
+                count: activity.replyCount,
                 onTap: () => context
                     .push('/activity/${activity.id}/replies'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline,
-                          size: 15,
-                          color: colorScheme.onSurfaceVariant),
-                      if (activity.replyCount > 0) ...[
-                        const SizedBox(width: 4),
-                        Text('${activity.replyCount}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    colorScheme.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CommentButton extends StatelessWidget {
+  const _CommentButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: cs.primary.withValues(alpha: 0.14),
+        highlightColor: cs.primary.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.mode_comment_outlined,
+                size: 19,
+                color: cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                count > 0 ? '$count' : 'Reply',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

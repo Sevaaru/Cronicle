@@ -156,16 +156,24 @@ class _SocialPageState extends ConsumerState<SocialPage>
         leadingWidth: kProfileLeadingWidth,
         titleSpacing: 0,
         title: Text(l10n.socialTitle, style: pageTitleStyle()),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: l10n.socialFeedTab),
-            Tab(text: l10n.socialForumTab),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: _SocialSegmentedTabs(
+              controller: _tabController,
+              labels: [l10n.socialFeedTab, l10n.socialForumTab],
+              icons: const [
+                Icons.dynamic_feed_rounded,
+                Icons.forum_rounded,
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
           _isFollowing
               ? FollowingFeedGuard(
@@ -284,5 +292,111 @@ class _ActivityTypeDropdown extends StatelessWidget {
         );
       }).toList(),
     );
+  }
+}
+
+/// Material 3 expressive segmented control for the Feed/Forum switcher.
+/// Uses an animated sliding pill instead of the default TabBar underline,
+/// and only changes tab on tap (swipe is disabled at the TabBarView level).
+class _SocialSegmentedTabs extends StatefulWidget {
+  const _SocialSegmentedTabs({
+    required this.controller,
+    required this.labels,
+    required this.icons,
+  });
+
+  final TabController controller;
+  final List<String> labels;
+  final List<IconData> icons;
+
+  @override
+  State<_SocialSegmentedTabs> createState() => _SocialSegmentedTabsState();
+}
+
+class _SocialSegmentedTabsState extends State<_SocialSegmentedTabs> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.animation?.addListener(_onTick);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.animation?.removeListener(_onTick);
+    super.dispose();
+  }
+
+  void _onTick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final value = widget.controller.animation?.value ?? 0.0;
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final segWidth = constraints.maxWidth / widget.labels.length;
+      return Container(
+        height: 46,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+              left: value.clamp(0.0, widget.labels.length - 1.0) * segWidth + 4,
+              top: 4,
+              bottom: 4,
+              width: segWidth - 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+            Row(
+              children: List.generate(widget.labels.length, (i) {
+                final t = (1.0 - (value - i).abs()).clamp(0.0, 1.0);
+                final fg = Color.lerp(cs.onSurfaceVariant, cs.onPrimary, t)!;
+                return Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => widget.controller.animateTo(i),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(widget.icons[i], size: 18, color: fg),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.labels[i],
+                              style: TextStyle(
+                                color: fg,
+                                fontSize: 14,
+                                fontWeight: t > 0.5
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      );
+    });
   }
 }

@@ -542,7 +542,37 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     final title = widget.item['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
+        (widget.item['name'] as String?) ??
         '';
+    final coverImage = widget.item['coverImage'] as Map<String, dynamic>? ?? {};
+    final posterUrl = (coverImage['extraLarge'] as String?) ??
+        (coverImage['large'] as String?) ??
+        (coverImage['medium'] as String?) ??
+        widget.existingEntry?.posterUrl;
+    final kindLabel = switch (widget.kind) {
+      MediaKind.anime => l10n.mediaKindAnime,
+      MediaKind.manga => l10n.mediaKindManga,
+      MediaKind.movie => l10n.mediaKindMovie,
+      MediaKind.tv => l10n.mediaKindTv,
+      MediaKind.game => l10n.mediaKindGame,
+      MediaKind.book => l10n.mediaKindBook,
+    };
+    final kindAccent = switch (widget.kind) {
+      MediaKind.anime => cs.primary,
+      MediaKind.manga => cs.secondary,
+      MediaKind.movie => cs.tertiary,
+      MediaKind.tv => cs.tertiary,
+      MediaKind.game => cs.primary,
+      MediaKind.book => cs.secondary,
+    };
+    final kindIcon = switch (widget.kind) {
+      MediaKind.anime => Icons.animation_rounded,
+      MediaKind.manga => Icons.menu_book_rounded,
+      MediaKind.movie => Icons.movie_rounded,
+      MediaKind.tv => Icons.live_tv_rounded,
+      MediaKind.game => Icons.sports_esports_rounded,
+      MediaKind.book => Icons.auto_stories_rounded,
+    };
     final countLabel = _isGame
         ? l10n.addToListHoursPlayed
         : _isBook
@@ -569,25 +599,19 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           return SingleChildScrollView(
             controller: scrollController,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomPad),
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + bottomPad),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              Text(
-                isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                name,
-                style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              _SheetHeroHeader(
+                posterUrl: posterUrl,
+                title: name,
+                kindLabel: kindLabel,
+                kindIcon: kindIcon,
+                kindAccent: kindAccent,
+                isEdit: isEdit,
+                titleLabel: isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
               ),
               if (_isBook && workKey != null && workKey.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -657,66 +681,95 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
               ],
               const SizedBox(height: 20),
 
-              Text(l10n.addToListStatus, style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              )),
-              const SizedBox(height: 8),
+              _SectionLabel(text: l10n.addToListStatus),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: _statusData.map((s) {
                   final selected = _status == s.$1;
-                  return ChoiceChip(
+                  return _StatusChip(
+                    icon: s.$2,
+                    label: _statusLabel(l10n, s.$1, widget.kind),
                     selected: selected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(s.$2, size: 16),
-                        const SizedBox(width: 4),
-                        Text(_statusLabel(l10n, s.$1, widget.kind)),
-                      ],
-                    ),
-                    onSelected: (_) => setState(() => _status = s.$1),
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
+                    accent: kindAccent,
+                    onTap: () => setState(() => _status = s.$1),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 20),
 
-              Row(
-                children: [
-                  Text(l10n.addToListScore, style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  )),
-                  const Spacer(),
-                  Text(
-                    ref.watch(scoringSystemSettingProvider).formatScore(_score),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _score > 0 ? Colors.amber.shade600 : cs.onSurfaceVariant,
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.star_rounded,
+                            size: 18,
+                            color: _score > 0
+                                ? Colors.amber.shade600
+                                : cs.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(l10n.addToListScore,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            )),
+                        const Spacer(),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Container(
+                            key: ValueKey(_score > 0),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _score > 0
+                                  ? Colors.amber.shade600.withValues(alpha: 0.18)
+                                  : cs.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              _score > 0
+                                  ? ref
+                                      .watch(scoringSystemSettingProvider)
+                                      .formatScore(_score)
+                                  : l10n.addToListNoScore,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _score > 0
+                                    ? Colors.amber.shade700
+                                    : cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              SliderTheme(
-                data: _m3ScoreSliderTheme(context),
-                child: Slider(
-                  value: _score,
-                  min: 0,
-                  max: ref.watch(scoringSystemSettingProvider).max,
-                  divisions: ref.watch(scoringSystemSettingProvider).divisions,
-                  label: _score == 0
-                      ? l10n.addToListNoScore
-                      : ref
-                          .watch(scoringSystemSettingProvider)
-                          .formatScore(_score),
-                  onChanged: (v) => setState(() => _score = v),
+                    SliderTheme(
+                      data: _m3ScoreSliderTheme(context),
+                      child: Slider(
+                        value: _score,
+                        min: 0,
+                        max: ref.watch(scoringSystemSettingProvider).max,
+                        divisions:
+                            ref.watch(scoringSystemSettingProvider).divisions,
+                        label: _score == 0
+                            ? l10n.addToListNoScore
+                            : ref
+                                .watch(scoringSystemSettingProvider)
+                                .formatScore(_score),
+                        onChanged: (v) => setState(() => _score = v),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -823,66 +876,21 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 const SizedBox(height: 12),
               ],
 
-              Row(
-                children: [
-                  Text(countLabel, style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  )),
-                  const Spacer(),
-                  if (_totalCount != null)
-                    Text(
-                      l10n.addToListOf(_totalCount!),
-                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: () {
-                      final current = int.tryParse(_progressCtrl.text) ?? 0;
-                      if (current > 0) {
-                        _progressCtrl.text = '${current - 1}';
-                      }
-                    },
-                  ),
-                  SizedBox(
-                    width: 60,
-                    child: TextField(
-                      controller: _progressCtrl,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      final current = int.tryParse(_progressCtrl.text) ?? 0;
-                      final max = _totalCount;
-                      if (max == null || current < max) {
-                        _progressCtrl.text = '${current + 1}';
-                      }
-                    },
-                  ),
-                  if (_totalCount != null) ...[
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
+              _ProgressStepper(
+                label: countLabel,
+                controller: _progressCtrl,
+                totalCount: _totalCount,
+                ofLabel: _totalCount != null
+                    ? l10n.addToListOf(_totalCount!)
+                    : null,
+                maxLabel: l10n.addToListMax,
+                accent: kindAccent,
+                onMaxTapped: _totalCount == null
+                    ? null
+                    : () {
                         _progressCtrl.text = '$_totalCount';
                         setState(() => _status = 'COMPLETED');
                       },
-                      child: Text(l10n.addToListMax, style: const TextStyle(fontSize: 12)),
-                    ),
-                  ],
-                ],
               ),
               if (_isBook && _bookTrackingMode == BookTrackingMode.pages && _totalCount != null)
                 Builder(builder: (_) {
@@ -902,47 +910,14 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
 
               if (_isBook && _bookTrackingMode == BookTrackingMode.chapters) ...[
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(l10n.bookChapterProgress, style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurfaceVariant,
-                    )),
-                    const Spacer(),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () {
-                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
-                        if (c > 0) _chapterCtrl.text = '${c - 1}';
-                      },
-                    ),
-                    SizedBox(
-                      width: 60,
-                      child: TextField(
-                        controller: _chapterCtrl,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () {
-                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
-                        final max = int.tryParse(_totalChaptersOverrideCtrl.text);
-                        if (max == null || c < max) _chapterCtrl.text = '${c + 1}';
-                      },
-                    ),
-                  ],
+                _ProgressStepper(
+                  label: l10n.bookChapterProgress,
+                  controller: _chapterCtrl,
+                  totalCount: int.tryParse(_totalChaptersOverrideCtrl.text),
+                  ofLabel: null,
+                  maxLabel: l10n.addToListMax,
+                  accent: kindAccent,
+                  onMaxTapped: null,
                 ),
               ],
 
@@ -989,28 +964,44 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ],
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              Text(l10n.addToListNotes, style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              )),
+              _SectionLabel(text: l10n.addToListNotes),
               const SizedBox(height: 8),
-              TextField(
-                controller: _notesCtrl,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: l10n.addToListNotesHint,
-                  isDense: true,
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: TextField(
+                  controller: _notesCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: l10n.addToListNotesHint,
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: FilledButton.icon(
-                  icon: const Icon(Icons.check),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  icon: Icon(isEdit ? Icons.save_rounded : Icons.check_rounded),
                   label: Text(l10n.addToListSave),
                   onPressed: () {
                     var progress = int.tryParse(_progressCtrl.text);
@@ -1053,13 +1044,24 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ),
               if (isEdit) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.delete_outline, color: cs.error),
-                    label: Text(l10n.removeFromLibrary, style: TextStyle(color: cs.error)),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error.withAlpha(120))),
+                  height: 48,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor: cs.errorContainer.withValues(alpha: 0.5),
+                      foregroundColor: cs.onErrorContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    label: Text(l10n.removeFromLibrary),
                     onPressed: () => Navigator.of(context).pop(_AddResult.remove),
                   ),
                 ),
@@ -1069,6 +1071,380 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SheetHeroHeader extends StatelessWidget {
+  const _SheetHeroHeader({
+    required this.posterUrl,
+    required this.title,
+    required this.kindLabel,
+    required this.kindIcon,
+    required this.kindAccent,
+    required this.isEdit,
+    required this.titleLabel,
+  });
+
+  final String? posterUrl;
+  final String title;
+  final String kindLabel;
+  final IconData kindIcon;
+  final Color kindAccent;
+  final bool isEdit;
+  final String titleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 56,
+              height: 78,
+              child: posterUrl != null
+                  ? Image.network(
+                      posterUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        color: cs.surfaceContainerHigh,
+                        child: Icon(kindIcon,
+                            color: cs.onSurfaceVariant, size: 28),
+                      ),
+                    )
+                  : Container(
+                      color: cs.surfaceContainerHigh,
+                      child: Icon(kindIcon,
+                          color: cs.onSurfaceVariant, size: 28),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kindAccent.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(kindIcon, size: 12, color: kindAccent),
+                          const SizedBox(width: 4),
+                          Text(
+                            kindLabel,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: kindAccent,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    if (isEdit)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cs.tertiaryContainer
+                              .withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'EDIT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: cs.onTertiaryContainer,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title.isNotEmpty ? title : titleLabel,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                    color: cs.onSurface,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: cs.onSurface,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = selected ? accent : cs.surfaceContainerHigh;
+    final fg = selected ? cs.onPrimary : cs.onSurfaceVariant;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(selected ? 14 : 18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: (selected ? cs.onPrimary : accent)
+              .withValues(alpha: 0.16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: fg),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: fg,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressStepper extends StatelessWidget {
+  const _ProgressStepper({
+    required this.label,
+    required this.controller,
+    required this.totalCount,
+    required this.ofLabel,
+    required this.maxLabel,
+    required this.accent,
+    required this.onMaxTapped,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final int? totalCount;
+  final String? ofLabel;
+  final String maxLabel;
+  final Color accent;
+  final VoidCallback? onMaxTapped;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const Spacer(),
+              if (ofLabel != null)
+                Text(
+                  ofLabel!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _StepperButton(
+                icon: Icons.remove_rounded,
+                onTap: () {
+                  final c = int.tryParse(controller.text) ?? 0;
+                  if (c > 0) controller.text = '${c - 1}';
+                },
+                cs: cs,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StepperButton(
+                icon: Icons.add_rounded,
+                onTap: () {
+                  final c = int.tryParse(controller.text) ?? 0;
+                  if (totalCount == null || c < totalCount!) {
+                    controller.text = '${c + 1}';
+                  }
+                },
+                cs: cs,
+                accent: accent,
+                filled: true,
+              ),
+            ],
+          ),
+          if (onMaxTapped != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onMaxTapped,
+                icon: const Icon(Icons.flag_rounded, size: 16),
+                label: Text(maxLabel),
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  textStyle: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({
+    required this.icon,
+    required this.onTap,
+    required this.cs,
+    this.accent,
+    this.filled = false,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final ColorScheme cs;
+  final Color? accent;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = filled
+        ? (accent ?? cs.primary)
+        : cs.surfaceContainerHighest;
+    final fg = filled ? cs.onPrimary : cs.onSurfaceVariant;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(child: Icon(icon, size: 22, color: fg)),
+        ),
       ),
     );
   }

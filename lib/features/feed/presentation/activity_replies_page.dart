@@ -507,6 +507,7 @@ class _OriginalActivityLikeRow extends ConsumerWidget {
           isLiked: activityMap['isLiked'] as bool? ?? false,
           likeCount: activityMap['likeCount'] as int? ?? 0,
           onToggle: () => _handleLike(ref, context),
+          compact: true,
         ),
       ],
     );
@@ -573,9 +574,12 @@ class _ReplyInputBar extends ConsumerWidget {
                         : AppLocalizations.of(context)!.loginRequiredLike,
                     hintStyle:
                         TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+                    filled: false,
+                    fillColor: Colors.transparent,
                     border: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     enabledBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     isDense: true,
@@ -704,6 +708,7 @@ class _ReplyCard extends ConsumerWidget {
             likeCount: reply['likeCount'] as int? ?? 0,
             iconSize: 15,
             onToggle: () => _handleLike(ref, context),
+            compact: true,
           ),
         ],
       ),

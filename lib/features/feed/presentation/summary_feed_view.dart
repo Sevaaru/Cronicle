@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -514,7 +515,7 @@ class _GamesCarouselSection extends ConsumerWidget {
 }
 
 
-class _HeroSection extends StatelessWidget {
+class _HeroSection extends StatefulWidget {
   const _HeroSection({
     required this.title,
     required this.icon,
@@ -530,7 +531,40 @@ class _HeroSection extends StatelessWidget {
   final VoidCallback onSeeAll;
 
   @override
+  State<_HeroSection> createState() => _HeroSectionState();
+}
+
+class _HeroSectionState extends State<_HeroSection> {
+  // Layout constants for the morphing carousel.
+  static const double _normalW = 110;
+  static const double _normalH = 158;
+  static const double _heroW = 170;
+  static const double _heroH = 200;
+  static const double _gap = 10;
+  // Pitch == width by which the leftmost slot advances when one item shifts
+  // out: regardless of the current morph state, swapping a hero for a normal
+  // changes total width by (heroW - normalW), but a single full slot shift
+  // moves the scroll offset by (normalW + gap). So pitch == normalW + gap
+  // keeps the leftmost item perfectly aligned with the morph progress.
+  static const double _pitch = _normalW + _gap;
+
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final items = widget.items;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 0, 0),
       child: Column(
@@ -538,25 +572,49 @@ class _HeroSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _SectionHeader(title: title, icon: icon, onSeeAll: onSeeAll),
+            child: _SectionHeader(
+              title: widget.title,
+              icon: widget.icon,
+              onSeeAll: widget.onSeeAll,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 220,
-            child: ListView.separated(
+            height: _heroH + 38,
+            child: ListView.builder(
+              controller: _controller,
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(right: 16),
               itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (_, i) {
-                if (i == 0) {
-                  return _HeroCard(item: items[0], kind: kind);
-                }
-                return _CarouselCard(
-                  item: items[i],
-                  kind: kind,
-                  width: 100,
-                  height: 145,
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, _) {
+                    final offset = _controller.hasClients
+                        ? _controller.offset
+                        : 0.0;
+                    final f = (offset / _pitch).clamp(
+                      0.0,
+                      (items.length - 1).toDouble(),
+                    );
+                    // Triangular peak: item closest to leftmost gets t=1.
+                    final t = max(0.0, 1 - (i - f).abs()).toDouble();
+                    final w = lerpDouble(_normalW, _heroW, t)!;
+                    final h = lerpDouble(_normalH, _heroH, t)!;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        right: i == items.length - 1 ? 0 : _gap,
+                      ),
+                      child: _MorphingHeroCard(
+                        item: items[i],
+                        kind: widget.kind,
+                        width: w,
+                        height: h,
+                        t: t,
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -567,11 +625,21 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.item, required this.kind});
+class _MorphingHeroCard extends StatelessWidget {
+  const _MorphingHeroCard({
+    required this.item,
+    required this.kind,
+    required this.width,
+    required this.height,
+    required this.t,
+  });
 
   final Map<String, dynamic> item;
   final MediaKind kind;
+  final double width;
+  final double height;
+  // t in [0, 1]: 0 == normal carousel card, 1 == hero card.
+  final double t;
 
   @override
   Widget build(BuildContext context) {
@@ -579,44 +647,47 @@ class _HeroCard extends StatelessWidget {
     final url = _coverUrl(item);
     final name = _itemTitle(item);
     final score = _itemScore(item);
-    final id = item['id'] as int?;
+    final radius = lerpDouble(10, 16, t)!;
+    final fontSize = lerpDouble(11, 13, t)!;
+    final maxLines = t > 0.55 ? 1 : 2;
 
     return GestureDetector(
       onTap: () => _navigateToItem(context, kind, item),
       child: SizedBox(
-        width: 155,
+        width: width,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(radius),
                   child: url != null
                       ? RemoteNetworkImage(
                           imageUrl: url,
-                          width: 155,
-                          height: 190,
+                          width: width,
+                          height: height,
                           fit: BoxFit.cover,
                         )
-                      : _PosterPlaceholder(width: 155, height: 190),
+                      : _PosterPlaceholder(width: width, height: height),
                 ),
                 if (score != null)
                   Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _ScoreBadge(score: score, large: true),
+                    top: lerpDouble(6, 8, t)!,
+                    right: lerpDouble(6, 8, t)!,
+                    child: _ScoreBadge(score: score, large: t > 0.55),
                   ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
             Text(
               name,
-              maxLines: 1,
+              maxLines: maxLines,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontSize: fontSize,
+                fontWeight: t > 0.55 ? FontWeight.w700 : FontWeight.w600,
+                height: 1.25,
                 color: cs.onSurface,
               ),
             ),

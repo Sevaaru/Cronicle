@@ -660,6 +660,7 @@ class _UserActivityCard extends ConsumerWidget {
                   isLiked: activity['isLiked'] as bool? ?? false,
                   likeCount: activity['likeCount'] as int? ?? 0,
                   onToggle: () => _handleLike(ref, context),
+                  compact: true,
                 ),
                 const SizedBox(width: 12),
                 if (actId != null)

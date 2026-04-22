@@ -412,10 +412,6 @@ class _AppearanceSection extends ConsumerWidget {
     }
 
     return _SettingsSection(
-      icon: Icons.palette_rounded,
-      iconColor: cs.primary,
-      title: l10n.settingsAppearanceTitle,
-      subtitle: l10n.settingsAppearanceSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -2104,16 +2104,22 @@ class AnilistGraphqlDatasource {
     return threads?.cast<Map<String, dynamic>>() ?? [];
   }
 
-  Future<Map<String, dynamic>?> fetchForumThread(int threadId, {String? token}) async {
+  Future<Map<String, dynamic>?> fetchForumThread(
+    int threadId, {
+    String? token,
+    int page = 1,
+    int perPage = 25,
+  }) async {
     const query = r'''
-      query ($id: Int, $perPage: Int) {
+      query ($id: Int, $page: Int, $perPage: Int) {
         Thread(id: $id) {
           id title body createdAt updatedAt replyCount viewCount isLiked likeCount
           user { id name avatar { medium } }
           categories { id name }
           mediaCategories { id type title { romaji english } coverImage { large } }
         }
-        Page(perPage: $perPage) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { total perPage currentPage lastPage hasNextPage }
           threadComments(threadId: $id) {
             id comment createdAt isLiked likeCount isLocked
             user { id name avatar { medium } }
@@ -2122,20 +2128,69 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'id': threadId, 'perPage': 25}, token: token);
+    final data = await _post(query,
+        variables: {'id': threadId, 'page': page, 'perPage': perPage},
+        token: token);
     final thread = data['data']?['Thread'] as Map<String, dynamic>?;
     if (thread == null) return null;
-    final commentsRaw = (data['data']?['Page']?['threadComments'] as List?)
-        ?.cast<Map<String, dynamic>>() ??
-      [];
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final commentsRaw = (pageData?['threadComments'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
     final comments = commentsRaw
-      .map((c) {
-        final mapped = Map<String, dynamic>.from(c);
-        mapped['childComments'] = _normalizeThreadChildComments(c['childComments']);
-        return mapped;
-      })
-      .toList();
-    return {...thread, 'comments': comments};
+        .map((c) {
+          final mapped = Map<String, dynamic>.from(c);
+          mapped['childComments'] =
+              _normalizeThreadChildComments(c['childComments']);
+          return mapped;
+        })
+        .toList();
+    final pageInfo = pageData?['pageInfo'] as Map<String, dynamic>?;
+    return {
+      ...thread,
+      'comments': comments,
+      'pageInfo': pageInfo,
+    };
+  }
+
+  Future<({List<Map<String, dynamic>> comments, Map<String, dynamic>? pageInfo})>
+      fetchForumThreadCommentsPage(
+    int threadId, {
+    String? token,
+    required int page,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { total perPage currentPage lastPage hasNextPage }
+          threadComments(threadId: $id) {
+            id comment createdAt isLiked likeCount isLocked
+            user { id name avatar { medium } }
+            childComments
+          }
+        }
+      }
+    ''';
+    final data = await _post(query,
+        variables: {'id': threadId, 'page': page, 'perPage': perPage},
+        token: token);
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final commentsRaw = (pageData?['threadComments'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+    final comments = commentsRaw
+        .map((c) {
+          final mapped = Map<String, dynamic>.from(c);
+          mapped['childComments'] =
+              _normalizeThreadChildComments(c['childComments']);
+          return mapped;
+        })
+        .toList();
+    return (
+      comments: comments,
+      pageInfo: pageData?['pageInfo'] as Map<String, dynamic>?,
+    );
   }
 
   Future<List<Map<String, dynamic>>> fetchForumThreads({

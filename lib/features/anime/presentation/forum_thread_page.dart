@@ -10,7 +10,6 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgoForum(int? createdAt) {
   if (createdAt == null) return '';
@@ -76,6 +75,14 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
 
   _CommentSort _sort = _CommentSort.oldest;
 
+  // Pagination
+  int _currentPage = 1;
+  int _lastPage = 1;
+  bool _hasNextPage = false;
+  bool _loadingMore = false;
+  bool _loadingAll = false;
+  static const int _commentsPerPage = 25;
+
   ({int id, String name})? _replyTarget;
   final _replyFocusNode = FocusNode();
 
@@ -86,53 +93,148 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _replyFocusNode.dispose();
     _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 600 &&
+        _hasNextPage &&
+        !_loadingMore &&
+        !_loadingAll &&
+        !_loading) {
+      _loadNextPage();
+    }
+  }
+
+  void _ingestComments(List<Map<String, dynamic>> comments) {
+    for (final c in comments) {
+      final id = c['id'] as int?;
+      if (id != null) {
+        _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
+        _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
+      }
+      final children = _parseChildComments(c['childComments']);
+      for (final child in children) {
+        final childId = child['id'] as int?;
+        if (childId != null) {
+          _commentIsLiked[childId] = child['isLiked'] as bool? ?? false;
+          _commentLikeCount[childId] = child['likeCount'] as int? ?? 0;
+        }
+      }
+    }
+  }
+
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+      _currentPage = 1;
+      _hasNextPage = false;
+      _comments = [];
+    });
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final token = await ref.read(anilistTokenProvider.future);
-        final data = await graphql
-          .fetchForumThread(widget.threadId, token: token)
+      final data = await graphql
+          .fetchForumThread(widget.threadId,
+              token: token, page: 1, perPage: _commentsPerPage)
           .timeout(const Duration(seconds: 30));
       if (!mounted) return;
       final comments =
           (data?['comments'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final pageInfo = data?['pageInfo'] as Map<String, dynamic>?;
+      _ingestComments(comments);
       setState(() {
         _thread = data;
         _comments = comments;
         _threadIsLiked = data?['isLiked'] as bool? ?? false;
         _threadLikeCount = data?['likeCount'] as int? ?? 0;
-        for (final c in comments) {
-          final id = c['id'] as int?;
-          if (id != null) {
-            _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
-            _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
-          }
-          final children = _parseChildComments(c['childComments']);
-          for (final child in children) {
-            final childId = child['id'] as int?;
-            if (childId != null) {
-              _commentIsLiked[childId] = child['isLiked'] as bool? ?? false;
-              _commentLikeCount[childId] = child['likeCount'] as int? ?? 0;
-            }
-          }
-        }
+        _currentPage = (pageInfo?['currentPage'] as int?) ?? 1;
+        _lastPage = (pageInfo?['lastPage'] as int?) ?? 1;
+        _hasNextPage = (pageInfo?['hasNextPage'] as bool?) ?? false;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = '$e'; });
+    }
+  }
+
+  Future<void> _loadNextPage() async {
+    if (_loadingMore || !_hasNextPage) return;
+    setState(() => _loadingMore = true);
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final token = await ref.read(anilistTokenProvider.future);
+      final result = await graphql
+          .fetchForumThreadCommentsPage(widget.threadId,
+              token: token,
+              page: _currentPage + 1,
+              perPage: _commentsPerPage)
+          .timeout(const Duration(seconds: 30));
+      if (!mounted) return;
+      _ingestComments(result.comments);
+      setState(() {
+        _comments = [..._comments, ...result.comments];
+        _currentPage =
+            (result.pageInfo?['currentPage'] as int?) ?? _currentPage + 1;
+        _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
+        _hasNextPage = (result.pageInfo?['hasNextPage'] as bool?) ?? false;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  Future<void> _loadAllRemainingPages() async {
+    if (_loadingAll || !_hasNextPage) return;
+    setState(() => _loadingAll = true);
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final token = await ref.read(anilistTokenProvider.future);
+      while (_hasNextPage && mounted) {
+        final result = await graphql
+            .fetchForumThreadCommentsPage(widget.threadId,
+                token: token,
+                page: _currentPage + 1,
+                perPage: _commentsPerPage)
+            .timeout(const Duration(seconds: 30));
+        if (!mounted) return;
+        _ingestComments(result.comments);
+        setState(() {
+          _comments = [..._comments, ...result.comments];
+          _currentPage =
+              (result.pageInfo?['currentPage'] as int?) ?? _currentPage + 1;
+          _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
+          _hasNextPage = (result.pageInfo?['hasNextPage'] as bool?) ?? false;
+        });
+      }
+    } catch (_) {
+      // Silent fail; user can retry by changing sort again or scrolling.
+    } finally {
+      if (mounted) setState(() => _loadingAll = false);
+    }
+  }
+
+  void _setSort(_CommentSort sort) {
+    setState(() => _sort = sort);
+    // For sorts that depend on global ordering (newest / mostLiked), pull
+    // every remaining page so the order is correct across the whole thread.
+    if (sort != _CommentSort.oldest && _hasNextPage && !_loadingAll) {
+      _loadAllRemainingPages();
     }
   }
 
@@ -339,94 +441,152 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-
-              if (categories.isNotEmpty) ...[
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: categories.map((c) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(c['name'] as String? ?? '',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onPrimaryContainer,
-                              fontWeight: FontWeight.w600)),
-                    );
-                  }).toList(),
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                const SizedBox(height: 8),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                            color: cs.onSurface)),
+                    const SizedBox(height: 10),
 
-              Row(
-                children: [
-                  if (avatar != null)
-                    GestureDetector(
-                      onTap: userId != null ? () => context.push('/user/$userId') : null,
-                      child: ClipOval(
-                        child: CachedNetworkImage(
-                            imageUrl: avatar,
-                            width: 24,
-                            height: 24,
-                            fit: BoxFit.cover),
+                    if (categories.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: categories.map((c) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: cs.secondaryContainer
+                                  .withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(c['name'] as String? ?? '',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: cs.onSecondaryContainer,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2)),
+                          );
+                        }).toList(),
                       ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    Row(
+                      children: [
+                        if (avatar != null)
+                          GestureDetector(
+                            onTap: userId != null
+                                ? () => context.push('/user/$userId')
+                                : null,
+                            child: ClipOval(
+                              child: CachedNetworkImage(
+                                  imageUrl: avatar,
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.cover),
+                            ),
+                          ),
+                        if (avatar != null) const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: userId != null
+                                    ? () => context.push('/user/$userId')
+                                    : null,
+                                child: Text(userName,
+                                    style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: cs.onSurface)),
+                              ),
+                              Text(_timeAgoForum(createdAt),
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: cs.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.visibility_outlined,
+                                  size: 13, color: cs.onSurfaceVariant),
+                              const SizedBox(width: 5),
+                              Text('$viewCount',
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: cs.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  if (avatar != null) const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: userId != null ? () => context.push('/user/$userId') : null,
-                    child: Text(userName,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('Â· ${_timeAgoForum(createdAt)}',
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
-                  const Spacer(),
-                  Icon(Icons.visibility_outlined,
-                      size: 14, color: cs.onSurfaceVariant),
-                  const SizedBox(width: 3),
-                  Text('$viewCount',
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
-                ],
+
+                    if (body != null && body.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      AnilistMarkdown(body,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: cs.onSurface,
+                              height: 1.55)),
+                    ],
+
+                    const SizedBox(height: 12),
+                    AnimatedLikeButton(
+                      isLiked: _threadIsLiked,
+                      likeCount: _threadLikeCount,
+                      onToggle: _toggleThreadLike,
+                    ),
+                  ],
+                ),
               ),
-
-              if (body != null && body.isNotEmpty) ...[
-                const Divider(height: 24),
-                AnilistMarkdown(body,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: cs.onSurface,
-                        height: 1.55)),
-              ],
-
-              const SizedBox(height: 8),
-              AnimatedLikeButton(
-                isLiked: _threadIsLiked,
-                likeCount: _threadLikeCount,
-                onToggle: _toggleThreadLike,
-              ),
-
-              const Divider(height: 32),
+              const SizedBox(height: 18),
 
               if (_comments.isNotEmpty) ...[
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        l10n.forumReplies(_comments.length),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.forumReplies(_comments.length),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 15),
+                          ),
+                          if (_hasNextPage || _lastPage > 1)
+                            Text(
+                              'Page $_currentPage / $_lastPage',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: cs.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                        ],
                       ),
                     ),
                     SegmentedButton<_CommentSort>(
@@ -455,12 +615,31 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ],
                       selected: {_sort},
                       onSelectionChanged: (s) {
-                        if (s.isNotEmpty) setState(() => _sort = s.first);
+                        if (s.isNotEmpty) _setSort(s.first);
                       },
                       showSelectedIcon: false,
                     ),
                   ],
                 ),
+                if (_loadingAll) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: cs.primary),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Loading all comments to sort...',
+                        style: TextStyle(
+                            fontSize: 12, color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 ...(() {
                   final sorted = [..._comments];
@@ -503,6 +682,40 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                     );
                   });
                 })(),
+                if (_loadingMore && !_loadingAll)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: cs.primary),
+                      ),
+                    ),
+                  ),
+                if (!_hasNextPage && _comments.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest
+                            .withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '· End of thread ·',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4),
+                      ),
+                    ),
+                  ),
+                ],
               ] else
                 Center(
                   child: Padding(
@@ -564,9 +777,13 @@ class _CommentTileState extends State<_CommentTile> {
     final children = _parseChildComments(widget.comment['childComments']);
     final hasChildren = children.isNotEmpty;
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -578,12 +795,12 @@ class _CommentTileState extends State<_CommentTile> {
             cs: cs,
           ),
           if (body != null && body.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             AnilistMarkdown(body,
                 style: TextStyle(
-                    fontSize: 13, color: cs.onSurface, height: 1.5)),
+                    fontSize: 13.5, color: cs.onSurface, height: 1.5)),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               if (widget.onLike != null)
@@ -591,6 +808,7 @@ class _CommentTileState extends State<_CommentTile> {
                   isLiked: widget.isLiked,
                   likeCount: widget.likeCount,
                   onToggle: widget.onLike!,
+                  compact: true,
                 ),
               const SizedBox(width: 12),
               if (commentId != null)
@@ -606,13 +824,13 @@ class _CommentTileState extends State<_CommentTile> {
             const SizedBox(height: 10),
             InkWell(
               onTap: () => setState(() => _collapsed = !_collapsed),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(999),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withAlpha(180),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: cs.outlineVariant.withAlpha(80)),
+                  color: cs.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -621,7 +839,7 @@ class _CommentTileState extends State<_CommentTile> {
                       turns: _collapsed ? -0.25 : 0,
                       duration: const Duration(milliseconds: 200),
                       child: Icon(Icons.expand_more_rounded,
-                          size: 14, color: cs.primary),
+                          size: 16, color: cs.onPrimaryContainer),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -629,8 +847,8 @@ class _CommentTileState extends State<_CommentTile> {
                           ? '${children.length} respuesta${children.length == 1 ? '' : 's'}'
                           : 'Ocultar respuestas',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: cs.primary,
+                          fontSize: 12,
+                          color: cs.onPrimaryContainer,
                           fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -732,23 +950,30 @@ class _ReplyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.reply_rounded,
-                size: small ? 14.0 : 16.0,
-                color: cs.onSurfaceVariant),
-            const SizedBox(width: 4),
-            Text(l10n.forumReplyButton,
-                style: TextStyle(
-                    fontSize: small ? 11.0 : 12.0,
-                    color: cs.onSurfaceVariant)),
-          ],
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(999),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: cs.primary.withValues(alpha: 0.14),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: small ? 10 : 12, vertical: small ? 5 : 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.reply_rounded,
+                  size: small ? 14.0 : 17.0,
+                  color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(l10n.forumReplyButton,
+                  style: TextStyle(
+                      fontSize: small ? 11.0 : 12.5,
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
@@ -763,29 +988,26 @@ class _LockedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Este comentario está bloqueado y no acepta respuestas.'),
-          duration: Duration(seconds: 3),
-        ),
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: small ? 10 : 12, vertical: small ? 5 : 7),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(999),
       ),
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_rounded,
-                size: small ? 13.0 : 15.0,
-                color: cs.onSurfaceVariant.withAlpha(160)),
-            const SizedBox(width: 4),
-            Text('Bloqueado',
-                style: TextStyle(
-                    fontSize: small ? 11.0 : 12.0,
-                    color: cs.onSurfaceVariant.withAlpha(160))),
-          ],
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_rounded,
+              size: small ? 13.0 : 15.0,
+              color: cs.onSurfaceVariant.withAlpha(180)),
+          const SizedBox(width: 6),
+          Text('Bloqueado',
+              style: TextStyle(
+                  fontSize: small ? 11.0 : 12.0,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant.withAlpha(180))),
+        ],
       ),
     );
   }
@@ -859,6 +1081,7 @@ class _ChildCommentTile extends StatelessWidget {
                           onToggle: onLike!,
                           iconSize: 14,
                           fontSize: 11,
+                          compact: true,
                         ),
                       const SizedBox(width: 10),
                       if (isLocked)
@@ -980,9 +1203,12 @@ class _ReplyInputBar extends ConsumerWidget {
                             : l10n.loginRequiredComment,
                         hintStyle: TextStyle(
                             fontSize: 14, color: cs.onSurfaceVariant),
+                        filled: false,
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         enabledBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
                         isDense: true,
