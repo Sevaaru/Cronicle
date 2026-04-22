@@ -18,6 +18,7 @@ Anime · Manga · Movies · TV · Games · Books — with offline-first storage 
 **Current version:** `v1.1.2` (build 44) — Stable
 **Platforms:** Android phone & tablet · Wear OS companion (paired)
 **Min. Android:** 8.0 (API 26) · **Wear OS:** 3.0+ (API 30)
+**Languages:** Spanish and English.
 
 </div>
 
