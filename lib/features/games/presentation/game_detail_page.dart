@@ -18,6 +18,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 typedef _GameDetailLinkRow = ({
@@ -1065,6 +1066,15 @@ class _AddToLibraryButton extends ConsumerWidget {
                 existingEntry: existing,
               );
               if (context.mounted && added) {
+                if (!inLibrary) {
+                  final cover = game['coverImage'] as Map<String, dynamic>? ?? const {};
+                  final coverUrl = (cover['extraLarge'] as String?) ??
+                      (cover['large'] as String?);
+                  playLibraryInsertAnimation(
+                    sourceContext: context,
+                    imageUrl: coverUrl,
+                  );
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                       content: Text(inLibrary

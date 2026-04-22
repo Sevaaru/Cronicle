@@ -126,6 +126,7 @@ class _NavItem extends StatelessWidget {
     final fgColor = selected ? cs.onSecondaryContainer : cs.onSurfaceVariant;
 
     return Padding(
+      key: item.itemKey,
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: Material(
         color: Colors.transparent,
@@ -208,9 +209,14 @@ class GlassNavItem {
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.itemKey,
   });
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
+
+  /// Optional key attached to the rendered nav item so external code can
+  /// measure its on-screen rect (used e.g. by the library-insert animation).
+  final Key? itemKey;
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -204,29 +206,26 @@ class M3MarqueeText extends StatefulWidget {
 
 class _M3MarqueeTextState extends State<M3MarqueeText>
     with SingleTickerProviderStateMixin {
-  final ScrollController _scroll = ScrollController();
   Ticker? _ticker;
   Duration _last = Duration.zero;
   double _offset = 0;
   bool _started = false;
-  bool _userInteracting = false;
+  bool _dragging = false;
+  Timer? _resumeTimer;
   double _cycleWidth = 0;
+  double _textWidth = 0;
+  double _maxWidth = 0;
 
   @override
   void dispose() {
+    _resumeTimer?.cancel();
     _ticker?.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
-  void _ensureTicker(double cycleWidth) {
-    _cycleWidth = cycleWidth;
+  void _ensureTicker() {
     _ticker ??= createTicker((elapsed) {
-      if (_userInteracting) {
-        if (_scroll.hasClients) {
-          _offset = _scroll.offset % _cycleWidth;
-          if (_offset < 0) _offset += _cycleWidth;
-        }
+      if (_dragging) {
         _last = elapsed;
         return;
       }
@@ -239,12 +238,13 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
       }
       final dt = (elapsed - _last).inMicroseconds / 1e6;
       _last = elapsed;
-      _offset += widget.pixelsPerSecond * dt;
-      if (_offset >= _cycleWidth) {
-        _offset -= _cycleWidth;
+      double next = _offset + widget.pixelsPerSecond * dt;
+      if (_cycleWidth > 0) {
+        next = next % _cycleWidth;
+        if (next < 0) next += _cycleWidth;
       }
-      if (_scroll.hasClients) {
-        _scroll.jumpTo(_offset);
+      if (next != _offset) {
+        setState(() => _offset = next);
       }
     });
     if (!_ticker!.isActive) _ticker!.start();
@@ -259,26 +259,42 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
     return tp.size.width;
   }
 
-  bool _onScrollNotification(ScrollNotification n) {
-    if (n is ScrollStartNotification && n.dragDetails != null) {
-      _userInteracting = true;
-      _started = true;
-    } else if (n is ScrollEndNotification) {
-      Future.delayed(const Duration(seconds: 1), () {
-        if (!mounted) return;
-        _userInteracting = false;
-      });
-    }
-    return false;
+  void _onDragStart(DragStartDetails _) {
+    _resumeTimer?.cancel();
+    _started = true;
+    setState(() => _dragging = true);
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_cycleWidth <= 0) return;
+    double next = _offset - d.delta.dx;
+    next = next % _cycleWidth;
+    if (next < 0) next += _cycleWidth;
+    setState(() => _offset = next);
+  }
+
+  void _onDragEnd(DragEndDetails _) {
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() => _dragging = false);
+      _last = Duration.zero;
+      _ticker?.stop();
+      _ticker?.start();
+    });
+  }
+
+  void _onDragCancel() {
+    _onDragEnd(DragEndDetails());
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        final textWidth = _measureText();
-        if (textWidth <= maxWidth + 0.5) {
+        _maxWidth = constraints.maxWidth;
+        _textWidth = _measureText();
+        if (_textWidth <= _maxWidth + 0.5) {
           _ticker?.stop();
           _started = false;
           _offset = 0;
@@ -290,14 +306,21 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
           );
         }
 
-        final cycleWidth = textWidth + widget.gap;
+        _cycleWidth = _textWidth + widget.gap;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          _ensureTicker(cycleWidth);
+          _ensureTicker();
         });
 
+        // Render enough copies to always cover [maxWidth] starting from
+        // the wrapped offset.
+        final copies = (_maxWidth / _cycleWidth).ceil() + 1;
+        final height =
+            (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2);
+
         return SizedBox(
-          height: (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2),
+          height: height,
+          width: _maxWidth,
           child: ShaderMask(
             blendMode: BlendMode.dstIn,
             shaderCallback: (rect) {
@@ -313,23 +336,36 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
                 ],
               ).createShader(rect);
             },
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: ListView.builder(
-                controller: _scroll,
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemBuilder: (_, _) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: widget.gap),
-                    child: Text(
-                      widget.text,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: widget.style,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragStart: _onDragStart,
+              onHorizontalDragUpdate: _onDragUpdate,
+              onHorizontalDragEnd: _onDragEnd,
+              onHorizontalDragCancel: _onDragCancel,
+              child: ClipRect(
+                child: OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  minWidth: 0,
+                  maxWidth: double.infinity,
+                  child: Transform.translate(
+                    offset: Offset(-_offset, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int i = 0; i < copies; i++)
+                          Padding(
+                            padding: EdgeInsets.only(right: widget.gap),
+                            child: Text(
+                              widget.text,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: widget.style,
+                            ),
+                          ),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),

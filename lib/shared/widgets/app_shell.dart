@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 TextStyle pageTitleStyle() => GoogleFonts.inter(
@@ -61,6 +62,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         icon: Icons.collections_bookmark_outlined,
         activeIcon: Icons.collections_bookmark_rounded,
         label: l10n.navLibrary,
+        itemKey: libraryNavTabKey,
       ),
       GlassNavItem(
         icon: Icons.search_outlined,

@@ -14,6 +14,7 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 
 class MediaDetailPage extends ConsumerWidget {
   const MediaDetailPage({
@@ -1345,6 +1346,17 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
                       existingEntry: _existing,
                     );
                     if (!context.mounted || !saved) return;
+                    if (!isEdit) {
+                      final cover = widget.media['coverImage']
+                              as Map<String, dynamic>? ??
+                          const {};
+                      final coverUrl = (cover['extraLarge'] as String?) ??
+                          (cover['large'] as String?);
+                      playLibraryInsertAnimation(
+                        sourceContext: context,
+                        imageUrl: coverUrl,
+                      );
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(isEdit

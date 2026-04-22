@@ -11,6 +11,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 String traktFormatApiStatus(String? raw) {
@@ -209,6 +210,14 @@ class _TraktAddToLibraryButton extends ConsumerWidget {
                 existingEntry: existing,
               );
               if (context.mounted && added) {
+                if (!inLibrary) {
+                  final coverUrl = (item['poster'] as String?) ??
+                      (item['fanart'] as String?);
+                  playLibraryInsertAnimation(
+                    sourceContext: context,
+                    imageUrl: coverUrl,
+                  );
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

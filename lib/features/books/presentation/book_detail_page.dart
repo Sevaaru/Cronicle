@@ -12,6 +12,7 @@ import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 class BookDetailPage extends ConsumerWidget {
@@ -935,6 +936,15 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
                   existingEntry: _existing,
                 );
                 if (!context.mounted || !saved) return;
+                if (!isEdit) {
+                  final cover = widget.book['coverImage'] as Map<String, dynamic>? ?? const {};
+                  final coverUrl = (cover['extraLarge'] as String?) ??
+                      (cover['large'] as String?);
+                  playLibraryInsertAnimation(
+                    sourceContext: context,
+                    imageUrl: coverUrl,
+                  );
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                       content: Text(isEdit
