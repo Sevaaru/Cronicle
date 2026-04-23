@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/settings/domain/layout_slot.dart';
+import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/library_kind_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
@@ -43,6 +44,17 @@ class OnboardingCompleted extends _$OnboardingCompleted {
     }).toList();
     final searchState = SearchFilterLayoutState(searchSlots);
     await ref.read(searchFilterLayoutProvider.notifier).set(searchState);
+
+    // Force the landing tab to Discover after onboarding regardless of any
+    // implicit defaults written elsewhere. The user can still change it
+    // afterwards from Settings; this guarantees first-launch lands on
+    // Discover even if the layout notifier or a backup restore touched the
+    // default tab key.
+    await ref.read(defaultFeedTabProvider.notifier).set('summary');
+
+    // Signal a one-shot “cartridge” intro the next time the app shell
+    // mounts (post-setup transition). The shell consumes & clears it.
+    await prefs.setBool('pending_post_setup_intro_v1', true);
 
     await prefs.setBool(_key, true);
     state = true;

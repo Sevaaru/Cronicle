@@ -2160,6 +2160,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingSyncing => 'Sincronizando tus datos…';
 
   @override
+  String get onboardingSyncingAllAccounts => 'Sincronizando todas tus cuentas…';
+
+  @override
+  String get onboardingWelcomeReadyTitle => 'Bienvenido a Cronicle';
+
+  @override
+  String get onboardingWelcomeReadySubtitle => 'Tu crónica empieza ahora';
+
+  @override
   String get settingsCustomizeSearchFilters => 'Filtros de búsqueda';
 
   @override

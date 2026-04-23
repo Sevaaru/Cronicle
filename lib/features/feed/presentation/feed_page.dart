@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
@@ -136,6 +137,31 @@ class _FeedPageState extends ConsumerState<FeedPage>
   _AnimeMangaBrowseTab _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
   TabController? _browseTabController;
 
+  // Cold-start intro: stagger the AppBar, filter rail and body into the
+  // screen with a Material 3 + a touch of Nintendo bounce. Plays only the
+  // first time Discover mounts in a given app session — when the user taps
+  // Home in the navbar to come back here it shouldn't replay.
+  static bool _introPlayedThisSession = false;
+  AnimationController? _introCtrl;
+  bool _introInitialized = false;
+  bool _introActive = false;
+
+  void _maybeStartIntro() {
+    if (_introInitialized) return;
+    _introInitialized = true;
+    if (_introPlayedThisSession) return;
+    _introPlayedThisSession = true;
+    _introActive = true;
+    _introCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _introCtrl?.forward();
+    });
+  }
+
   void _invalidateFeed() {
     switch (_filter) {
       case _FeedFilter.summary:
@@ -194,6 +220,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
   void dispose() {
     _browseTabController?.removeListener(_onBrowseTabSwipe);
     _browseTabController?.dispose();
+    _introCtrl?.dispose();
     super.dispose();
   }
 
@@ -254,6 +281,13 @@ class _FeedPageState extends ConsumerState<FeedPage>
       _filter = resolved;
       _animeMangaBrowseTab = _AnimeMangaBrowseTab.trending;
       _filterInitialized = true;
+      // Only attempt to play the intro on the very first build for the
+      // Discover destination — that's the M3+Nintendo welcome moment.
+      if (_filter == _FeedFilter.summary) {
+        _maybeStartIntro();
+      } else {
+        _introInitialized = true;
+      }
     }
 
     final feedFilterChips = <_FeedFilter>[
@@ -262,7 +296,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
           .map((id) => _FeedFilter.values.byName(id)),
     ];
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
@@ -440,6 +474,14 @@ class _FeedPageState extends ConsumerState<FeedPage>
           ),
         ],
       ),
+    );
+
+    if (!_introActive || _introCtrl == null) {
+      return scaffold;
+    }
+    return _FeedIntroOverlay(
+      controller: _introCtrl!,
+      child: scaffold,
     );
   }
 }
@@ -697,3 +739,80 @@ class _FeedFilterPill extends StatelessWidget {
 }
 
 
+
+
+/// Plays a one-shot, staggered, Material 3 + slightly bouncy entrance over
+/// the entire feed Scaffold the first time the Discover destination is
+/// shown. The whole frame slides in from below while internal layers
+/// (status bar area, app bar row and the body) cascade in with their own
+/// timing so it feels charismatic rather than a flat fade.
+class _FeedIntroOverlay extends StatelessWidget {
+  const _FeedIntroOverlay({required this.controller, required this.child});
+
+  final AnimationController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final shellFade = CurvedAnimation(
+      parent: controller,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+    );
+    final shellSlide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutCubic),
+      ),
+    );
+    final shellScale = Tween<double>(begin: 0.985, end: 1.0).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: const Interval(0.05, 0.85,
+            curve: Cubic(0.2, 0.0, 0.0, 1.0)),
+      ),
+    );
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            FadeTransition(
+              opacity: shellFade,
+              child: SlideTransition(
+                position: shellSlide,
+                child: ScaleTransition(
+                  scale: shellScale,
+                  alignment: Alignment.topCenter,
+                  child: child,
+                ),
+              ),
+            ),
+            // Soft top-down "Nintendo charm" sheen that washes over the
+            // chrome as the page settles in.
+            IgnorePointer(
+              child: Opacity(
+                opacity: (1.0 - controller.value).clamp(0.0, 1.0) * 0.18,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}

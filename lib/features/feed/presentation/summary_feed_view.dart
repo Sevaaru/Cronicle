@@ -87,7 +87,7 @@ class SummaryFeedView extends ConsumerWidget {
     if (visible.contains('game')) {
       sections.add(
         _GamesCarouselSection(
-          titlePopular: l10n.summaryPopularGames,
+          titlePopular: l10n.gamesHomeBestRated,
           titleAnticipated: l10n.summaryAnticipatedGames,
           onSeeAll: () => onSwitchCategory('game'),
         ),
@@ -413,10 +413,10 @@ class _TraktCarouselSection extends ConsumerWidget {
         data: (data) => Column(
           children: [
             if (data.trending.isNotEmpty)
-              _WideCarouselSection(
+              _PosterCarouselSection(
                 title: titleTrending,
                 icon: icon,
-                items: data.trending.take(10).toList(),
+                items: data.trending.take(12).toList(),
                 kind: kind,
                 onSeeAll: onSeeAll,
               ),
@@ -440,10 +440,10 @@ class _TraktCarouselSection extends ConsumerWidget {
       data: (data) => Column(
         children: [
           if (data.trending.isNotEmpty)
-            _WideCarouselSection(
+            _PosterCarouselSection(
               title: titleTrending,
               icon: icon,
-              items: data.trending.take(10).toList(),
+              items: data.trending.take(12).toList(),
               kind: kind,
               onSeeAll: onSeeAll,
             ),
@@ -474,23 +474,26 @@ class _GamesCarouselSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final popular = ref.watch(igdbPopularProvider);
     final homeFeed = ref.watch(igdbGamesHomeFeedProvider);
 
     return Column(
       children: [
-        popular.when(
+        homeFeed.when(
           loading: () => _SectionShimmer(
             title: titlePopular,
             icon: Icons.sports_esports_rounded,
           ),
           error: (_, _) => const SizedBox.shrink(),
-          data: (items) {
-            if (items.isEmpty) return const SizedBox.shrink();
+          data: (data) {
+            // Mirrors IGDB's "Top 100 / Best Games" board
+            // (https://www.igdb.com/top-100/games): high total_rating with a
+            // meaningful rating-count threshold so obscure 100/100 entries
+            // don't dominate.
+            if (data.bestRated.isEmpty) return const SizedBox.shrink();
             return _PosterCarouselSection(
               title: titlePopular,
               icon: Icons.sports_esports_rounded,
-              items: items.take(12).toList(),
+              items: data.bestRated.take(12).toList(),
               kind: MediaKind.game,
               onSeeAll: onSeeAll,
             );
@@ -669,6 +672,17 @@ class _MorphingHeroCard extends StatelessWidget {
                           width: width,
                           height: height,
                           fit: BoxFit.cover,
+                          // Pin the decode size to the hero (max) size so
+                          // the morphing scroll doesn't re-decode every
+                          // frame and cause a flicker.
+                          memCacheWidth:
+                              (_HeroSectionState._heroW *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
+                          memCacheHeight:
+                              (_HeroSectionState._heroH *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
                         )
                       : _PosterPlaceholder(width: width, height: height),
                 ),
@@ -755,152 +769,6 @@ class _PosterCarouselSection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-
-class _WideCarouselSection extends StatelessWidget {
-  const _WideCarouselSection({
-    required this.title,
-    required this.icon,
-    required this.items,
-    required this.kind,
-    required this.onSeeAll,
-  });
-
-  final String title;
-  final IconData icon;
-  final List<Map<String, dynamic>> items;
-  final MediaKind kind;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    const cardW = 200.0;
-    const cardH = 120.0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _SectionHeader(title: title, icon: icon, onSeeAll: onSeeAll),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: cardH + 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 16),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => _WideCard(
-                item: items[i],
-                kind: kind,
-                width: cardW,
-                height: cardH,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WideCard extends StatelessWidget {
-  const _WideCard({
-    required this.item,
-    required this.kind,
-    required this.width,
-    required this.height,
-  });
-
-  final Map<String, dynamic> item;
-  final MediaKind kind;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = _coverUrl(item);
-    final name = _itemTitle(item);
-    final score = _itemScore(item);
-    final id = item['id'] as int?;
-
-    return GestureDetector(
-      onTap: () => _navigateToItem(context, kind, item),
-      child: SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: url != null
-                      ? RemoteNetworkImage(
-                          imageUrl: url,
-                          width: width,
-                          height: height,
-                          fit: BoxFit.cover,
-                        )
-                      : _PosterPlaceholder(width: width, height: height),
-                ),
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withAlpha(160),
-                          ],
-                          stops: const [0.4, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 8,
-                  left: 10,
-                  right: 10,
-                  child: Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                if (score != null)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _ScoreBadge(score: score),
-                  ),
-                Positioned(
-                  bottom: 6,
-                  right: 6,
-                  child: LibraryAddBadge(item: item, kind: kind),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

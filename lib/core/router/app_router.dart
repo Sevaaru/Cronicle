@@ -136,6 +136,14 @@ GoRouter appRouter(AppRouterRef ref) {
         return done ? startPage : '/onboarding';
       }
       final path = state.uri.path;
+      // Defensive: malformed deep links (e.g. an Android intent that lost
+      // its scheme/host) can reach the router as bare `/`, `/?`, or empty.
+      // Send those to the configured start page so the app never lands on
+      // an unknown route.
+      if (path.isEmpty || path == '/' || path == '/?') {
+        final done = ref.read(onboardingCompletedProvider);
+        return done ? startPage : '/onboarding';
+      }
       if (path.length > 1 && path.endsWith('/')) {
         return state.uri.replace(path: path.substring(0, path.length - 1)).toString();
       }

@@ -120,7 +120,12 @@ class FeedFilterLayout extends _$FeedFilterLayout {
     state = next;
     final visible = next.visibleIdSet;
     final def = ref.read(defaultFeedTabProvider);
-    if (!visible.contains(def)) {
+    // 'summary' (Discover) is the synthetic top tab and never appears in
+    // the feed filter layout, so it's always valid and must NOT be
+    // overwritten when categories change. Only fall back to the first
+    // visible category when the saved default is a category that became
+    // hidden.
+    if (def != 'summary' && !visible.contains(def)) {
       await ref.read(defaultFeedTabProvider.notifier).set(next.firstVisibleId);
     }
   }

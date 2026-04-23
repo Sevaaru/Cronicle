@@ -244,11 +244,12 @@ open class LibraryWidgetProvider : AppWidgetProvider() {
         views.setViewVisibility(R.id.widget_title, View.VISIBLE)
         views.setViewVisibility(R.id.widget_refresh, View.VISIBLE)
 
-        // Cabecera: pulsar el título abre la app.
+        // Cabecera: pulsar el título abre la app. Lanzamos MainActivity
+        // sin ACTION_VIEW + data: así Flutter no procesa esto como un deep
+        // link (que terminaba llegando a GoRouter como `/?` y rompiendo el
+        // routing) y abre directamente en su startPage.
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_VIEW
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            data = Uri.parse("cronicle://library")
         }
         views.setOnClickPendingIntent(
             R.id.widget_title,

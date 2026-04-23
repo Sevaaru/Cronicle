@@ -188,10 +188,7 @@ class _TrophyRoomPageState extends ConsumerState<TrophyRoomPage> {
             final s = state[a.id] ?? const AchievementState();
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _StaggeredEntry(
-                index: i,
-                child: _AchievementTile(achievement: a, state: s),
-              ),
+              child: _AchievementTile(achievement: a, state: s),
             );
           }),
         ],
@@ -643,59 +640,6 @@ class _DashboardCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: child,
       ),
-    );
-  }
-}
-
-/// Wraps an `_AchievementTile` (or any widget) so it slides up + fades in
-/// with a staggered delay based on its index — gives the list a snappy
-/// "channels rolling onto the dashboard" entrance.
-class _StaggeredEntry extends StatefulWidget {
-  const _StaggeredEntry({required this.index, required this.child});
-  final int index;
-  final Widget child;
-
-  @override
-  State<_StaggeredEntry> createState() => _StaggeredEntryState();
-}
-
-class _StaggeredEntryState extends State<_StaggeredEntry>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ac = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 420),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    final delay = Duration(milliseconds: 40 * widget.index);
-    Future.delayed(delay, () {
-      if (mounted) _ac.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ac.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ac,
-      builder: (context, child) {
-        final t = Curves.easeOutCubic.transform(_ac.value);
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, 18 * (1 - t)),
-            child: child,
-          ),
-        );
-      },
-      child: widget.child,
     );
   }
 }

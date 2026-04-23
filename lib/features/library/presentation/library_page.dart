@@ -829,6 +829,7 @@ class _EntryCard extends StatelessWidget {
                         imageUrl: entry.posterUrl!,
                         fit: BoxFit.cover,
                         memCacheWidth: 160,
+                        memCacheHeight: 240,
                       )
                     : ColoredBox(
                         color: _kindColor(kind, cs).withAlpha(40),
@@ -1807,16 +1808,17 @@ class _GridEntryTile extends StatelessWidget {
 
     return AspectRatio(
       aspectRatio: 1 / ratio,
-      child: Material(
-        color: cs.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: canNavigate
-              ? () => _openLibraryEntryDetail(context, entry)
-              : null,
+      child: RepaintBoundary(
+        child: Material(
+          color: cs.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: canNavigate
+                ? () => _openLibraryEntryDetail(context, entry)
+                : null,
           onLongPress: onEdit,
           child: Stack(
             fit: StackFit.expand,
@@ -1827,6 +1829,7 @@ class _GridEntryTile extends StatelessWidget {
                   imageUrl: entry.posterUrl!,
                   fit: BoxFit.cover,
                   memCacheWidth: 360,
+                  memCacheHeight: 540,
                   placeholder: (_, _) =>
                       ColoredBox(color: accent.withAlpha(30)),
                   errorWidget: (_, _, _) => ColoredBox(
@@ -1973,6 +1976,7 @@ class _GridEntryTile extends StatelessWidget {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );

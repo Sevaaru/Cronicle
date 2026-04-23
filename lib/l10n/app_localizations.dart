@@ -4058,6 +4058,24 @@ abstract class AppLocalizations {
   /// **'Sincronizando tus datos…'**
   String get onboardingSyncing;
 
+  /// No description provided for @onboardingSyncingAllAccounts.
+  ///
+  /// In es, this message translates to:
+  /// **'Sincronizando todas tus cuentas…'**
+  String get onboardingSyncingAllAccounts;
+
+  /// No description provided for @onboardingWelcomeReadyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenido a Cronicle'**
+  String get onboardingWelcomeReadyTitle;
+
+  /// No description provided for @onboardingWelcomeReadySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu crónica empieza ahora'**
+  String get onboardingWelcomeReadySubtitle;
+
   /// No description provided for @settingsCustomizeSearchFilters.
   ///
   /// In es, this message translates to:

@@ -563,26 +563,49 @@ class _ExpandableTextState extends State<ExpandableText> {
       );
     }
 
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Use a Stack with a gradient overlay instead of ShaderMask.
+        // ShaderMask saves a layer, allocates a shader and re-blends on
+        // every paint — which is expensive while scrolling. A simple
+        // DecoratedBox painted on top is virtually free and visually
+        // equivalent.
         SizedBox(
           height: 100,
           child: ClipRect(
-            child: ShaderMask(
-              shaderCallback: (rect) => LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.white, Colors.white.withAlpha(0)],
-                stops: const [0.6, 1.0],
-              ).createShader(rect),
-              blendMode: BlendMode.dstIn,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child:
-                    AnilistMarkdown(widget.text, style: widget.style),
-              ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    maxHeight: double.infinity,
+                    child: AnilistMarkdown(widget.text, style: widget.style),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 40,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            cs.surface.withAlpha(0),
+                            cs.surface,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

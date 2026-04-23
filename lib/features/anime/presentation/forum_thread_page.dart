@@ -83,7 +83,12 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   int _maxLoadedPage = 1;
   int _lastPage = 1;
   bool _loadingMore = false;
-  static const int _commentsPerPage = 25;
+  // Gate so a single scroll-to-bottom triggers exactly one page load. We
+  // only re-arm once the user has scrolled back up past the trigger zone,
+  // so users explicitly scroll again to pull the next page instead of the
+  // listener auto-firing while they're still hovering near the bottom.
+  bool _canTriggerMoreLoad = true;
+  static const int _commentsPerPage = 15;
 
   bool get _hasMoreInDirection {
     switch (_sort) {
@@ -124,12 +129,21 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 600 &&
-        _hasMoreInDirection &&
-        !_loadingMore &&
-        !_loading) {
-      _loadMoreInDirection();
+    final nearBottom = pos.extentAfter < 600;
+    if (!nearBottom) {
+      // User scrolled away from the end — re-arm the trigger so the next
+      // approach to the bottom can load the next page.
+      _canTriggerMoreLoad = true;
+      return;
     }
+    if (!_canTriggerMoreLoad ||
+        _loadingMore ||
+        _loading ||
+        !_hasMoreInDirection) {
+      return;
+    }
+    _canTriggerMoreLoad = false;
+    _loadMoreInDirection();
   }
 
   void _ingestComments(List<Map<String, dynamic>> comments) {
@@ -398,7 +412,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
         l10n.forumThread;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: cs.surface,
       extendBody: true,
       body: Stack(
         children: [
@@ -1158,7 +1172,7 @@ class _ChildCommentTile extends StatelessWidget {
   }
 }
 
-class _ReplyInputBar extends ConsumerWidget {
+class _ReplyInputBar extends ConsumerStatefulWidget {
   const _ReplyInputBar({
     required this.controller,
     required this.focusNode,
@@ -1176,14 +1190,50 @@ class _ReplyInputBar extends ConsumerWidget {
   final VoidCallback onCancelReply;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReplyInputBar> createState() => _ReplyInputBarState();
+}
+
+class _ReplyInputBarState extends ConsumerState<_ReplyInputBar>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Scaffold consumes MediaQuery.viewInsets, so the bar can't rebuild via
+    // the usual MediaQuery dependency when the IME shows/hides. Listen to
+    // raw window metrics instead so the bar repositions both ways.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final controller = widget.controller;
+    final focusNode = widget.focusNode;
+    final sending = widget.sending;
+    final onSend = widget.onSend;
+    final replyTarget = widget.replyTarget;
+    final onCancelReply = widget.onCancelReply;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    // Scaffold consumes MediaQuery.viewInsets when resizing, so read raw
+    // insets from the root View to detect the IME and dock above it.
+    final view = View.of(context);
+    final keyboardInset = view.viewInsets.bottom / view.devicePixelRatio;
     // Sit above the floating navbar pill from AppShell. The navbar uses
     // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
     final navbarTotal = 4 +

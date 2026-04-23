@@ -756,6 +756,9 @@
   "onboardingConnected": "Connected",
   "onboardingAccountSynced": "Synced",
   "onboardingSyncing": "Syncing your data…",
+  "onboardingSyncingAllAccounts": "Syncing all your accounts…",
+  "onboardingWelcomeReadyTitle": "Welcome to Cronicle",
+  "onboardingWelcomeReadySubtitle": "Your chronicle starts now",
 
   "settingsCustomizeSearchFilters": "Search filters",
   "settingsCustomizeSearchFiltersDesc": "Reorder or hide filters in the search tab",

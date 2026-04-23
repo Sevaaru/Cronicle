@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -514,12 +514,18 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
   bool _googleConnected = false;
   bool _connectingGoogle = false;
   bool _restoringFromDrive = false;
+  // True from the moment the user signs into Google with an account that
+  // has cloud data: we mark the local accounts as connected (because the
+  // backup restore brings their tokens back) and show the syncing bar at
+  // the bottom immediately, with the â€œsyncing all your accountsâ€ label.
+  bool _restoringAll = false;
   bool _anilistSyncing = false;
   bool _traktSyncing = false;
   bool _anilistSynced = false;
   bool _traktSynced = false;
 
-  bool get _isSyncing => _anilistSyncing || _traktSyncing;
+  bool get _isSyncing =>
+      _anilistSyncing || _traktSyncing || _restoringFromDrive || _restoringAll;
 
   Future<void> _connectGoogle() async {
     setState(() => _connectingGoogle = true);
@@ -547,7 +553,13 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
   Future<void> _restoreFromDriveAndSync() async {
     if (!mounted) return;
-    setState(() => _restoringFromDrive = true);
+    // Flip the global â€œrestoring allâ€ flag immediately so the bottom
+    // sync bar appears the moment the user finishes the Google sign-in
+    // dialog, even before the backup download finishes.
+    setState(() {
+      _restoringFromDrive = true;
+      _restoringAll = true;
+    });
     try {
       final repo = ref.read(backupRepositoryProvider);
       final res = await repo.downloadBackup();
@@ -568,7 +580,13 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
     } finally {
       if (mounted) setState(() => _restoringFromDrive = false);
     }
-    if (mounted) unawaited(_syncOtherAccounts());
+    if (mounted) {
+      try {
+        await _syncOtherAccounts();
+      } finally {
+        if (mounted) setState(() => _restoringAll = false);
+      }
+    }
   }
 
   Future<void> _connectAnilist() async {
@@ -736,43 +754,59 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
           SizedBox(
             width: double.infinity,
-            height: (widget.syncing || _isSyncing) ? 78 : 52,
+            height: (widget.syncing || _isSyncing) ? 72 : 52,
             child: FilledButton(
               onPressed: (widget.syncing || _isSyncing) ? null : widget.onFinish,
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
+                // FilledButton fades both background and content when
+                // disabled. While syncing we keep the button visually
+                // active so the progress bar and label remain legible
+                // (especially in dark mode).
+                disabledBackgroundColor: (widget.syncing || _isSyncing)
+                    ? cs.primary
+                    : null,
+                disabledForegroundColor: (widget.syncing || _isSyncing)
+                    ? cs.onPrimary
+                    : null,
               ),
               child: (widget.syncing || _isSyncing)
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              l10n.onboardingSyncing,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${(widget.syncProgress * 100).round()}%',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: cs.onPrimary.withValues(alpha: 0.85),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          _restoringAll
+                              ? (Localizations.localeOf(context)
+                                          .languageCode ==
+                                      'es'
+                                  ? 'Sincronizando todas tus cuentas\u2026'
+                                  : 'Syncing all your accounts\u2026')
+                              : l10n.onboardingSyncing,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.2,
+                            color: cs.onPrimary.withValues(alpha: 0.78),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        _WavySyncProgressBar(
-                          value: widget.syncProgress,
-                          color: cs.onPrimary,
+                        const SizedBox(height: 10),
+                        // Material 3 progress track: rounded, generous
+                        // height, soft on-primary backdrop with a vivid
+                        // sky-blue indicator that stays expressive on
+                        // any primary color across light/dark themes.
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: SizedBox(
+                            height: 8,
+                            child: _M3SyncProgressBar(
+                              value: widget.syncProgress,
+                              trackColor:
+                                  cs.onPrimary.withValues(alpha: 0.22),
+                              indicatorColor: const Color(0xFF82B1FF),
+                            ),
+                          ),
                         ),
                       ],
                     )
@@ -808,8 +842,15 @@ class _WavySyncProgressBar extends StatefulWidget {
 }
 
 class _WavySyncProgressBarState extends State<_WavySyncProgressBar>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _waveCtrl;
+  // Fake asymptotic progress: real sync tasks only report between discrete
+  // steps, so a single long task would leave the bar stuck at 0 until it
+  // finishes. We animate a synthetic value that eases toward 0.95, and
+  // whatever the real `value` reports acts as a lower bound. The final
+  // jump to 1.0 still comes from the parent when everything is done.
+  late final AnimationController _fakeCtrl;
+  double _fake = 0.0;
 
   @override
   void initState() {
@@ -818,17 +859,44 @@ class _WavySyncProgressBarState extends State<_WavySyncProgressBar>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
+    _fakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 16),
+    );
+    // Drive the fake progress on every frame. Using `addListener` with an
+    // always-repeating controller keeps the pump cheap (one setState per
+    // frame while syncing is active).
+    _fakeCtrl.addListener(_tickFake);
+    _fakeCtrl.repeat();
   }
 
   @override
   void dispose() {
+    _fakeCtrl.removeListener(_tickFake);
+    _fakeCtrl.dispose();
     _waveCtrl.dispose();
     super.dispose();
   }
 
+  void _tickFake() {
+    // Ease toward 0.95 asymptotically. Coefficient tuned so that the bar
+    // reaches ~40% in ~1s, ~70% in ~3s and creeps into the 90s over ~10s
+    // regardless of how long the real sync takes.
+    const ceiling = 0.95;
+    final remaining = ceiling - _fake;
+    if (remaining > 0.0005) {
+      setState(() => _fake = _fake + remaining * 0.012);
+    } else if (_fake != ceiling) {
+      setState(() => _fake = ceiling);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final value = widget.value.clamp(0.0, 1.0);
+    final real = widget.value.clamp(0.0, 1.0);
+    // Real progress wins when it's greater than the fake floor, and when the
+    // parent reports completion (1.0) we snap to it immediately.
+    final display = real >= 1.0 ? 1.0 : math.max(real, _fake);
     return SizedBox(
       width: double.infinity,
       height: 10,
@@ -837,7 +905,7 @@ class _WavySyncProgressBarState extends State<_WavySyncProgressBar>
         builder: (context, _) {
           return CustomPaint(
             painter: _WavySyncProgressPainter(
-              value: value,
+              value: display,
               phase: _waveCtrl.value * 2 * math.pi,
               color: widget.color,
             ),
@@ -865,8 +933,10 @@ class _WavySyncProgressPainter extends CustomPainter {
     final fullRect = Offset.zero & size;
     final fullRRect = RRect.fromRectAndRadius(fullRect, radius);
 
+    // Much higher-contrast track so the bar reads clearly on both the
+    // primary-filled button background (dark and light themes).
     final trackPaint = Paint()
-      ..color = color.withValues(alpha: 0.22)
+      ..color = color.withValues(alpha: 0.38)
       ..style = PaintingStyle.fill;
     canvas.drawRRect(fullRRect, trackPaint);
 
@@ -876,18 +946,18 @@ class _WavySyncProgressPainter extends CustomPainter {
     final fillRect = Rect.fromLTWH(0, 0, filledWidth, size.height);
     final fillRRect = RRect.fromRectAndRadius(fillRect, radius);
     final fillPaint = Paint()
-      ..color = color.withValues(alpha: 0.88)
+      ..color = color
       ..style = PaintingStyle.fill;
     canvas.drawRRect(fillRRect, fillPaint);
 
-    // Onda sutil estilo Material dentro del tramo completado.
+    // Material 3 "wavy" accent drawn only inside the filled portion.
     final wavePaint = Paint()
-      ..color = color.withValues(alpha: 0.95)
+      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
     final path = Path();
-    final amp = size.height * 0.18;
+    final amp = size.height * 0.22;
     final baseline = size.height * 0.5;
 
     path.moveTo(0, baseline);
@@ -1086,6 +1156,68 @@ class _InterestBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+
+class _M3SyncProgressBar extends StatefulWidget {
+  const _M3SyncProgressBar({
+    required this.value,
+    required this.trackColor,
+    required this.indicatorColor,
+  });
+
+  final double value;
+  final Color trackColor;
+  final Color indicatorColor;
+
+  @override
+  State<_M3SyncProgressBar> createState() => _M3SyncProgressBarState();
+}
+
+class _M3SyncProgressBarState extends State<_M3SyncProgressBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  double _displayed = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 16),
+    )..addListener(_tick);
+    _ctrl.repeat();
+  }
+
+  void _tick() {
+    final target = widget.value.clamp(0.0, 1.0).toDouble();
+    // Smooth easing toward target so the bar always looks alive even
+    // when upstream progress only updates between coarse steps.
+    final next = _displayed + (target - _displayed) * 0.06 + 0.0015;
+    final clamped = next.clamp(0.0, target == 1.0 ? 1.0 : 0.97);
+    if ((clamped - _displayed).abs() > 0.0005) {
+      setState(() => _displayed = clamped);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl
+      ..removeListener(_tick)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LinearProgressIndicator(
+      value: _displayed,
+      minHeight: 8,
+      backgroundColor: widget.trackColor,
+      valueColor: AlwaysStoppedAnimation<Color>(widget.indicatorColor),
     );
   }
 }

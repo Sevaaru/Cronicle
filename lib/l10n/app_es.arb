@@ -770,6 +770,9 @@
   "onboardingConnected": "Conectado",
   "onboardingAccountSynced": "Sincronizado",
   "onboardingSyncing": "Sincronizando tus datos…",
+  "onboardingSyncingAllAccounts": "Sincronizando todas tus cuentas…",
+  "onboardingWelcomeReadyTitle": "Bienvenido a Cronicle",
+  "onboardingWelcomeReadySubtitle": "Tu crónica empieza ahora",
 
   "settingsCustomizeSearchFilters": "Filtros de búsqueda",
   "settingsCustomizeSearchFiltersDesc": "Reordena u oculta los filtros en la pestaña de búsqueda",

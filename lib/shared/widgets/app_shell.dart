@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
@@ -32,8 +33,34 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell>
+    with SingleTickerProviderStateMixin {
   int _prevIndex = -1;
+
+  // Cold-start "cartridge" intro for the floating navbar. Plays once per
+  // app launch (i.e. every time the user opens the app from a fully closed
+  // state) so the navbar feels like it clicks into place each session.
+  AnimationController? _cartridgeCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _cartridgeCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1300),
+      );
+      setState(() {});
+      _cartridgeCtrl!.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cartridgeCtrl?.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(covariant AppShell oldWidget) {
@@ -81,6 +108,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       ),
     ];
 
+    final navBar = GlassBottomNav(
+      currentIndex: widget.currentIndex,
+      onTap: widget.onTabChanged,
+      items: items,
+    );
+
     return Scaffold(
       body: _NavFadeThrough(
         index: widget.currentIndex,
@@ -90,11 +123,86 @@ class _AppShellState extends ConsumerState<AppShell> {
       // surrounding area shows the page background instead of the scaffold
       // background as opaque rectangles around the rounded corners.
       extendBody: true,
-      bottomNavigationBar: GlassBottomNav(
-        currentIndex: widget.currentIndex,
-        onTap: widget.onTabChanged,
-        items: items,
+      bottomNavigationBar: _cartridgeCtrl == null
+          ? navBar
+          : _NavCartridgeIntro(
+              controller: _cartridgeCtrl!,
+              child: navBar,
+            ),
+    );
+  }
+}
+
+/// One-shot Material 3 + Nintendo "cartridge" entrance for the floating
+/// navbar after the onboarding completes. The bar slides up from below the
+/// screen, briefly squashes wider than its rest size and then settles into
+/// place with an emphasized easing curve. A soft primary glow underlines
+/// the snap as the cartridge "clicks" home.
+class _NavCartridgeIntro extends StatelessWidget {
+  const _NavCartridgeIntro({required this.controller, required this.child});
+
+  final AnimationController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    // Slide from below the screen into place.
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 1.4),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: controller,
+        curve: const Interval(0.0, 0.7, curve: Cubic(0.2, 0.0, 0.0, 1.0)),
       ),
+    );
+    // Slight squash & stretch so it lands like a cartridge clicking in:
+    // wider for a beat, then snaps to 1:1.
+    final scaleX = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.55, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 65,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.08, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 35,
+      ),
+    ]).animate(controller);
+    final scaleY = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.7, end: 0.92)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 65,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.92, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 35,
+      ),
+    ]).animate(controller);
+    final fade = CurvedAnimation(
+      parent: controller,
+      curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
+    );
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return FadeTransition(
+          opacity: fade,
+          child: SlideTransition(
+            position: slide,
+            child: Transform(
+              alignment: Alignment.bottomCenter,
+              transform: Matrix4.identity()
+                ..scale(scaleX.value, scaleY.value),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -2154,6 +2154,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSyncing => 'Syncing your data…';
 
   @override
+  String get onboardingSyncingAllAccounts => 'Syncing all your accounts…';
+
+  @override
+  String get onboardingWelcomeReadyTitle => 'Welcome to Cronicle';
+
+  @override
+  String get onboardingWelcomeReadySubtitle => 'Your chronicle starts now';
+
+  @override
   String get settingsCustomizeSearchFilters => 'Search filters';
 
   @override

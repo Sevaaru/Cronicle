@@ -173,14 +173,18 @@ class DefaultStartPage extends _$DefaultStartPage {
 
 @riverpod
 class DefaultFeedTab extends _$DefaultFeedTab {
-  static const _key = 'default_feed_tab';
+  // v2: bumped because the default landing tab changed from 'anime' to
+  // 'summary' (Discover). Renaming the key forces installs that had the
+  // old implicit default to land on Discover; the user can change it
+  // afterwards from settings.
+  static const _key = 'default_feed_tab_v2';
 
   @override
   String build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     final raw = prefs.getString(_key);
-    if (raw == null || raw.isEmpty) return 'anime';
-    if (raw == 'following' || raw == 'all' || raw == 'feed') return 'anime';
+    if (raw == null || raw.isEmpty) return 'summary';
+    if (raw == 'following' || raw == 'all' || raw == 'feed') return 'summary';
     return raw;
   }
 

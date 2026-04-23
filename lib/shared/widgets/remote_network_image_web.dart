@@ -23,6 +23,8 @@ class RemoteNetworkImage extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.placeholder,
     this.error,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   final String imageUrl;
@@ -32,6 +34,11 @@ class RemoteNetworkImage extends StatefulWidget {
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? error;
+
+  /// Ignored on web (browser handles decode sizing). Kept for API parity
+  /// with the io implementation.
+  final int? memCacheWidth;
+  final int? memCacheHeight;
 
   @override
   State<RemoteNetworkImage> createState() => _RemoteNetworkImageState();
