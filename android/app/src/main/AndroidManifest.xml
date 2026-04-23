@@ -20,6 +20,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:fullBackupContent="false"
+        android:enableOnBackInvokedCallback="true"
         tools:replace="android:allowBackup,android:fullBackupContent">
         <activity
             android:name=".MainActivity"

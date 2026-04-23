@@ -447,35 +447,42 @@ class _GameDetailContent extends StatelessWidget {
                   if (screenshots != null && screenshots.isNotEmpty) ...[
                     M3SectionHeader(label: l10n.gameDetailScreenshots),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(width: 8),
-                        itemCount: screenshots.length,
-                        itemBuilder: (context, i) {
-                          final imgId =
-                              (screenshots[i] as Map<String, dynamic>)['image_id']
-                                  as String?;
-                          if (imgId == null) return const SizedBox.shrink();
-                          final url = IgdbApiDatasource.screenshotUrl(imgId);
-                          return GestureDetector(
-                            onTap: () =>
-                                showFullscreenImage(context, url),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: CachedNetworkImage(
-                                imageUrl: url,
-                                height: 120,
-                                width: 213,
-                                fit: BoxFit.cover,
+                    Builder(builder: (context) {
+                      final urls = <String>[
+                        for (final s in screenshots)
+                          if (s is Map<String, dynamic> &&
+                              s['image_id'] is String)
+                            IgdbApiDatasource.screenshotUrl(
+                                s['image_id'] as String),
+                      ];
+                      return SizedBox(
+                        height: 120,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(width: 8),
+                          itemCount: urls.length,
+                          itemBuilder: (context, i) {
+                            return GestureDetector(
+                              onTap: () => showFullscreenGallery(
+                                context,
+                                urls,
+                                initialIndex: i,
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: CachedNetworkImage(
+                                  imageUrl: urls[i],
+                                  height: 120,
+                                  width: 213,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 16),
                   ],
 

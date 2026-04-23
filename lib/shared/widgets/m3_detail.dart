@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 
@@ -209,169 +206,56 @@ class M3DetailHero extends StatelessWidget {
   }
 }
 
-/// Marquee scrolling text. Renders normally if it fits; otherwise auto-scrolls
-/// horizontally and lets the user manually drag to peek.
+/// Title text that collapses to a single line when it overflows. The user
+/// can tap it to expand the full title with a soft animated reveal.
+/// Displays a small chevron affordance (Material 3 expressive) when collapsed
+/// and overflowing, so users discover the interaction.
 class M3MarqueeText extends StatefulWidget {
   const M3MarqueeText({
     super.key,
     required this.text,
     required this.style,
-    this.gap = 48,
-    this.pixelsPerSecond = 30,
-    this.startDelay = const Duration(seconds: 2),
   });
 
   final String text;
   final TextStyle style;
-  final double gap;
-  final double pixelsPerSecond;
-  final Duration startDelay;
 
   @override
   State<M3MarqueeText> createState() => _M3MarqueeTextState();
 }
 
-class _M3MarqueeTextState extends State<M3MarqueeText>
-    with SingleTickerProviderStateMixin {
-  Ticker? _ticker;
-  Duration _last = Duration.zero;
-  double _offset = 0;
-  bool _started = false;
-  double _cycleWidth = 0;
-  double _textWidth = 0;
-  double _maxWidth = 0;
-  final GlobalKey _anchorKey = GlobalKey();
-  OverlayEntry? _popupEntry;
-  Timer? _popupTimer;
+class _M3MarqueeTextState extends State<M3MarqueeText> {
+  bool _expanded = false;
 
   @override
-  void dispose() {
-    _popupTimer?.cancel();
-    _popupEntry?.remove();
-    _popupEntry = null;
-    _ticker?.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant M3MarqueeText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) _expanded = false;
   }
 
-  void _ensureTicker() {
-    _ticker ??= createTicker((elapsed) {
-      if (!_started) {
-        if (elapsed >= widget.startDelay) {
-          _started = true;
-          _last = elapsed;
-        }
-        return;
-      }
-      final dt = (elapsed - _last).inMicroseconds / 1e6;
-      _last = elapsed;
-      double next = _offset + widget.pixelsPerSecond * dt;
-      if (_cycleWidth > 0) {
-        next = next % _cycleWidth;
-        if (next < 0) next += _cycleWidth;
-      }
-      if (next != _offset) {
-        setState(() => _offset = next);
-      }
-    });
-    if (!_ticker!.isActive) _ticker!.start();
-  }
-
-  double _measureText() {
+  bool _overflows(double maxWidth) {
     final tp = TextPainter(
       text: TextSpan(text: widget.text, style: widget.style),
       maxLines: 1,
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
     )..layout(maxWidth: double.infinity);
-    return tp.size.width;
-  }
-
-  void _showPopup() {
-    _popupTimer?.cancel();
-    _hidePopup();
-    final overlay = Overlay.maybeOf(context, rootOverlay: true);
-    final box = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
-    if (overlay == null || box == null || !box.hasSize) return;
-    final topLeft = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    final cs = Theme.of(context).colorScheme;
-    final screen = MediaQuery.of(context).size;
-
-    _popupEntry = OverlayEntry(
-      builder: (ctx) {
-        return Stack(
-          children: [
-            // Tap-outside dismiss layer.
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _hidePopup,
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              top: topLeft.dy + size.height + 6,
-              child: Material(
-                color: Colors.transparent,
-                child: Align(
-                  alignment: topLeft.dx < screen.width / 2
-                      ? Alignment.centerLeft
-                      : Alignment.centerRight,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: screen.width - 32),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: cs.inverseSurface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(80),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        widget.text,
-                        style: TextStyle(
-                          color: cs.onInverseSurface,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-    overlay.insert(_popupEntry!);
-    _popupTimer = Timer(const Duration(seconds: 4), _hidePopup);
-  }
-
-  void _hidePopup() {
-    _popupTimer?.cancel();
-    _popupTimer = null;
-    _popupEntry?.remove();
-    _popupEntry = null;
+    return tp.size.width > maxWidth + 0.5;
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
-        _maxWidth = constraints.maxWidth;
-        _textWidth = _measureText();
-        if (_textWidth <= _maxWidth + 0.5) {
-          _ticker?.stop();
-          _started = false;
-          _offset = 0;
+        // Reserve space for the chevron when overflow is detected.
+        const chevronSize = 22.0;
+        const chevronGap = 4.0;
+        final available = constraints.maxWidth;
+        final overflowsCollapsed =
+            _overflows(available - chevronSize - chevronGap);
+
+        if (!overflowsCollapsed) {
+          // Fits in a single line — render plain text, no interactivity.
           return Text(
             widget.text,
             maxLines: 1,
@@ -380,63 +264,54 @@ class _M3MarqueeTextState extends State<M3MarqueeText>
           );
         }
 
-        _cycleWidth = _textWidth + widget.gap;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _ensureTicker();
-        });
-
-        // Render enough copies to always cover [maxWidth] starting from
-        // the wrapped offset.
-        final copies = (_maxWidth / _cycleWidth).ceil() + 1;
-        final height =
-            (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2);
-
-        return GestureDetector(
-          key: _anchorKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: _showPopup,
-          child: SizedBox(
-            height: height,
-            width: _maxWidth,
-            child: ShaderMask(
-              blendMode: BlendMode.dstIn,
-              shaderCallback: (rect) {
-                return LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  stops: const [0, 0.04, 0.96, 1],
-                  colors: const [
-                    Colors.transparent,
-                    Colors.black,
-                    Colors.black,
-                    Colors.transparent,
-                  ],
-                ).createShader(rect);
-              },
-              child: ClipRect(
-                child: OverflowBox(
-                  alignment: Alignment.centerLeft,
-                  minWidth: 0,
-                  maxWidth: double.infinity,
-                  child: Transform.translate(
-                    offset: Offset(-_offset, 0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (int i = 0; i < copies; i++)
-                          Padding(
-                            padding: EdgeInsets.only(right: widget.gap),
-                            child: Text(
-                              widget.text,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: widget.style,
-                            ),
-                          ),
-                      ],
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.text,
+                        maxLines: _expanded ? null : 1,
+                        overflow: _expanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
+                        softWrap: _expanded,
+                        style: widget.style,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: chevronGap),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: AnimatedRotation(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        turns: _expanded ? 0.5 : 0,
+                        child: Container(
+                          width: chevronSize,
+                          height: chevronSize,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

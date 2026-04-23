@@ -498,26 +498,6 @@ GoRouter appRouter(AppRouterRef ref) {
         path: '/auth',
         builder: (context, state) => const AuthPage(),
       ),
-      GoRoute(
-        path: '/full-image',
-        parentNavigatorKey: cronicleRootNavigatorKey,
-        pageBuilder: (context, state) {
-          final url = state.extra as String? ?? '';
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            name: state.name,
-            fullscreenDialog: true,
-            opaque: false,
-            barrierDismissible: false,
-            barrierColor: null,
-            transitionDuration: const Duration(milliseconds: 280),
-            transitionsBuilder: (context, animation, _, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: FullscreenImagePage(imageUrl: url),
-          );
-        },
-      ),
     ],
   );
 }

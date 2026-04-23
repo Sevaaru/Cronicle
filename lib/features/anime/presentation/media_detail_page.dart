@@ -1535,185 +1535,204 @@ class _MediaHeroHeader extends StatelessWidget {
     const posterHeight = 150.0;
     const posterWidth = 100.0;
     const overlap = 60.0;
-    // Total height: banner stops at bannerHeight; poster bottom sits at
-    // bannerHeight - overlap + posterHeight. Add a small bottom buffer so
-    // the chip wrap has breathing room before the action row.
-    const totalHeight = bannerHeight - overlap + posterHeight + 8;
+    final posterBelow = (posterHeight - overlap).clamp(0.0, posterHeight);
 
-    return SizedBox(
-      height: totalHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Banner.
-          GestureDetector(
-            onTap: banner != null
-                ? () => showFullscreenImage(context, banner!)
-                : null,
+    final posterWidget = poster != null
+        ? GestureDetector(
+            onTap: () => showFullscreenImage(context, poster!),
             child: Container(
-              height: bannerHeight,
-              width: double.infinity,
               decoration: BoxDecoration(
-                image: banner != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(banner!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                color: banner == null ? cs.surfaceContainerHighest : null,
-              ),
-              foregroundDecoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withAlpha(30),
-                    Colors.transparent,
-                    Colors.black.withAlpha(120),
-                  ],
-                  stops: const [0, 0.45, 1],
-                ),
-              ),
-            ),
-          ),
-          // Back button.
-          Positioned(
-            left: 4,
-            top: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withAlpha(70),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cs.surface, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(70),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () => Navigator.of(context).maybePop(),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: CachedNetworkImage(
+                  imageUrl: poster!,
+                  width: posterWidth,
+                  height: posterHeight,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-          ),
-          // Poster overlapping into surface.
-          Positioned(
-            left: 16,
-            top: bannerHeight - overlap,
-            child: poster != null
-                ? GestureDetector(
-                    onTap: () => showFullscreenImage(context, poster!),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: cs.surface, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(70),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+          )
+        : Container(
+            width: posterWidth,
+            height: posterHeight,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: cs.surface, width: 3),
+            ),
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              color: cs.onSurfaceVariant,
+            ),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Banner + back button
+        SizedBox(
+          height: bannerHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onTap: banner != null
+                    ? () => showFullscreenImage(context, banner!)
+                    : null,
+                child: Container(
+                  height: bannerHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    image: banner != null
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(banner!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    color:
+                        banner == null ? cs.surfaceContainerHighest : null,
+                  ),
+                  foregroundDecoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withAlpha(30),
+                        Colors.transparent,
+                        Colors.black.withAlpha(120),
+                      ],
+                      stops: const [0, 0.45, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 4,
+                top: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.arrow_back, color: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withAlpha(70),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: CachedNetworkImage(
-                          imageUrl: poster!,
-                          width: posterWidth,
-                          height: posterHeight,
-                          fit: BoxFit.cover,
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Poster (overlapping the banner) + title/subtitle column
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: posterWidth,
+                height: posterBelow,
+                child: OverflowBox(
+                  minHeight: 0,
+                  maxHeight: posterHeight,
+                  alignment: Alignment.bottomCenter,
+                  child: posterWidget,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _MarqueeText(
+                        text: name,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                          letterSpacing: -0.2,
+                          color: cs.onSurface,
                         ),
                       ),
-                    ),
-                  )
-                : Container(
-                    width: posterWidth,
-                    height: posterHeight,
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cs.surface, width: 3),
-                    ),
-                    child: Icon(
-                      Icons.image_not_supported_outlined,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-          ),
-          // Title column to the right of poster, anchored to align roughly
-          // with the bottom half of the poster so the banner top reads clean.
-          Positioned(
-            left: 16 + posterWidth + 14,
-            right: 16,
-            top: bannerHeight + 4,
-            bottom: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _MarqueeText(
-                  text: name,
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    letterSpacing: -0.2,
-                    color: cs.onSurface,
+                      if (romajiTitle != null && romajiTitle != name) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          romajiTitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      if (nativeTitle != null) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          nativeTitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: cs.onSurfaceVariant.withAlpha(200),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (romajiTitle != null && romajiTitle != name) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    romajiTitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                if (nativeTitle != null) ...[
-                  const SizedBox(height: 1),
-                  Text(
-                    nativeTitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: cs.onSurfaceVariant.withAlpha(200),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (format != null)
-                      _PillTag(
-                        _formatMediaStatus(format!, false, l10n),
-                        bg: cs.tertiaryContainer,
-                        fg: cs.onTertiaryContainer,
-                      ),
-                    if (status != null)
-                      _PillTag(
-                        _formatMediaStatus(status!, true, l10n),
-                        bg: cs.secondaryContainer,
-                        fg: cs.onSecondaryContainer,
-                      ),
-                    if (isAdult)
-                      _PillTag(
-                        '18+',
-                        bg: cs.errorContainer,
-                        fg: cs.onErrorContainer,
-                      ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (format != null)
+                _PillTag(
+                  _formatMediaStatus(format!, false, l10n),
+                  bg: cs.tertiaryContainer,
+                  fg: cs.onTertiaryContainer,
+                ),
+              if (status != null)
+                _PillTag(
+                  _formatMediaStatus(status!, true, l10n),
+                  bg: cs.secondaryContainer,
+                  fg: cs.onSecondaryContainer,
+                ),
+              if (isAdult)
+                _PillTag(
+                  '18+',
+                  bg: cs.errorContainer,
+                  fg: cs.onErrorContainer,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1746,116 +1765,51 @@ class _PillTag extends StatelessWidget {
   }
 }
 
-/// Text that scrolls horizontally Hollywood-marquee-style when it overflows
-/// its available width. When the text fits, it renders as a static [Text].
+/// Title text that collapses to a single line when it overflows. Tap to
+/// expand and reveal the full title with a smooth animated reveal.
+/// Material 3 expressive: shows a small chevron affordance when collapsed.
 class _MarqueeText extends StatefulWidget {
   const _MarqueeText({
     required this.text,
     required this.style,
-    // ignore: unused_element_parameter
-    this.gap = 48,
-    // ignore: unused_element_parameter
-    this.pixelsPerSecond = 30,
-    // ignore: unused_element_parameter
-    this.startDelay = const Duration(seconds: 2),
   });
 
   final String text;
   final TextStyle style;
-  final double gap;
-  final double pixelsPerSecond;
-  final Duration startDelay;
 
   @override
   State<_MarqueeText> createState() => _MarqueeTextState();
 }
 
-class _MarqueeTextState extends State<_MarqueeText>
-    with SingleTickerProviderStateMixin {
-  final ScrollController _scroll = ScrollController();
-  Ticker? _ticker;
-  Duration _last = Duration.zero;
-  double _offset = 0;
-  bool _started = false;
-  bool _userInteracting = false;
-  double _cycleWidth = 0;
+class _MarqueeTextState extends State<_MarqueeText> {
+  bool _expanded = false;
 
   @override
-  void dispose() {
-    _ticker?.dispose();
-    _scroll.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant _MarqueeText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) _expanded = false;
   }
 
-  void _ensureTicker(double cycleWidth) {
-    _cycleWidth = cycleWidth;
-    _ticker ??= createTicker((elapsed) {
-      if (_userInteracting) {
-        // Sync offset with user-driven scroll so auto-scroll resumes from
-        // wherever the user left it.
-        if (_scroll.hasClients) {
-          _offset = _scroll.offset % _cycleWidth;
-          if (_offset < 0) _offset += _cycleWidth;
-        }
-        _last = elapsed;
-        return;
-      }
-      if (!_started) {
-        if (elapsed >= widget.startDelay) {
-          _started = true;
-          _last = elapsed;
-        }
-        return;
-      }
-      final dt = (elapsed - _last).inMicroseconds / 1e6;
-      _last = elapsed;
-      _offset += widget.pixelsPerSecond * dt;
-      if (_offset >= _cycleWidth) {
-        _offset -= _cycleWidth;
-      }
-      if (_scroll.hasClients) {
-        _scroll.jumpTo(_offset);
-      }
-    });
-    if (!_ticker!.isActive) _ticker!.start();
-  }
-
-  double _measureText(double maxWidth) {
+  bool _overflows(double maxWidth) {
     final tp = TextPainter(
       text: TextSpan(text: widget.text, style: widget.style),
       maxLines: 1,
-      textDirection: TextDirection.ltr,
+      textDirection: Directionality.of(context),
     )..layout(maxWidth: double.infinity);
-    return tp.size.width;
-  }
-
-  bool _onScrollNotification(ScrollNotification n) {
-    if (n is ScrollStartNotification &&
-        n.dragDetails != null) {
-      _userInteracting = true;
-      _started = true; // skip initial delay after interaction
-    } else if (n is ScrollEndNotification) {
-      // Keep paused briefly after user releases so it doesn't snap back.
-      Future.delayed(const Duration(seconds: 1), () {
-        if (!mounted) return;
-        _userInteracting = false;
-      });
-    }
-    return false;
+    return tp.size.width > maxWidth + 0.5;
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        final textWidth = _measureText(maxWidth);
-        // Tolerance: only marquee when clearly overflowing.
-        if (textWidth <= maxWidth + 0.5) {
-          // Stop ticker if a previous overflowing text shrank.
-          _ticker?.stop();
-          _started = false;
-          _offset = 0;
+        const chevronSize = 22.0;
+        const chevronGap = 4.0;
+        final overflows =
+            _overflows(constraints.maxWidth - chevronSize - chevronGap);
+
+        if (!overflows) {
           return Text(
             widget.text,
             maxLines: 1,
@@ -1864,46 +1818,55 @@ class _MarqueeTextState extends State<_MarqueeText>
           );
         }
 
-        final cycleWidth = textWidth + widget.gap;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _ensureTicker(cycleWidth);
-        });
-
-        return SizedBox(
-          height: (widget.style.fontSize ?? 14) * (widget.style.height ?? 1.2),
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (rect) {
-              return LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                stops: const [0, 0.04, 0.96, 1],
-                colors: const [
-                  Colors.transparent,
-                  Colors.black,
-                  Colors.black,
-                  Colors.transparent,
-                ],
-              ).createShader(rect);
-            },
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScrollNotification,
-              child: ListView.builder(
-                controller: _scroll,
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemBuilder: (_, _) {
-                  return Padding(
-                    padding: EdgeInsets.only(right: widget.gap),
-                    child: Text(
-                      widget.text,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: widget.style,
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.text,
+                        maxLines: _expanded ? null : 1,
+                        overflow: _expanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
+                        softWrap: _expanded,
+                        style: widget.style,
+                      ),
                     ),
-                  );
-                },
+                    const SizedBox(width: chevronGap),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: AnimatedRotation(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        turns: _expanded ? 0.5 : 0,
+                        child: Container(
+                          width: chevronSize,
+                          height: chevronSize,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
