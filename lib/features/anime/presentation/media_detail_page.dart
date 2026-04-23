@@ -12,6 +12,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/library_insert_animation.dart';
@@ -1357,13 +1358,7 @@ class _AddToLibraryButtonState extends ConsumerState<_AddToLibraryButton> {
                         imageUrl: coverUrl,
                       );
                     }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(isEdit
-                            ? l10n.entryUpdated
-                            : l10n.addedToLibrary),
-                      ),
-                    );
+                    showLibrarySnackbar(context, wasEdit: isEdit);
                     _checkExisting();
                   },
                   child: Center(

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cronicle library widget — Material 3 fallbacks for Android <12. -->
+    <color name="widget_surface">#FFF7F2FA</color>
+    <color name="widget_surface_container">#FFEDE7F0</color>
+    <color name="widget_on_surface">#FF1C1B1F</color>
+    <color name="widget_on_surface_variant">#FF49454F</color>
+    <color name="widget_primary">#FF6750A4</color>
+    <color name="widget_on_primary">#FFFFFFFF</color>
+    <color name="widget_outline">#FFCAC4D0</color>
+    <color name="widget_progress_track">#22000000</color>
+</resources>

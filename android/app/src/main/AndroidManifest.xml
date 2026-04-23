@@ -90,6 +90,62 @@
             android:name="com.cronicle.app.cronicle.wear.WearRemoteSyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Cronicle Library home-screen widget (Material 3, resizable) -->
+        <receiver
+            android:name="com.cronicle.app.cronicle.widget.LibraryWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_library_label_medium">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_REFRESH" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_DATA_CHANGED" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_TEMPLATE" />
+                <action android:name="com.cronicle.app.cronicle.WEAR_LIBRARY_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_library_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.cronicle.app.cronicle.widget.LibraryWidgetProviderSmall"
+            android:exported="true"
+            android:label="@string/widget_library_label_small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_REFRESH" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_DATA_CHANGED" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_TEMPLATE" />
+                <action android:name="com.cronicle.app.cronicle.WEAR_LIBRARY_CHANGED" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_PREV_SMALL" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_NEXT_SMALL" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_library_info_small" />
+        </receiver>
+
+        <receiver
+            android:name="com.cronicle.app.cronicle.widget.LibraryWidgetProviderLarge"
+            android:exported="true"
+            android:label="@string/widget_library_label_large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_REFRESH" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_DATA_CHANGED" />
+                <action android:name="com.cronicle.app.cronicle.widget.ACTION_TEMPLATE" />
+                <action android:name="com.cronicle.app.cronicle.WEAR_LIBRARY_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_library_info_large" />
+        </receiver>
+
+        <service
+            android:name="com.cronicle.app.cronicle.widget.LibraryWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

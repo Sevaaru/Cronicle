@@ -84,6 +84,18 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
+/// Converts a widget deep-link (cronicle://library/{kind}/{externalId}) to
+/// the matching GoRouter path. Kinds mirror [MediaKind]: 0=anime, 1=movie,
+/// 2=tv, 3=game, 4=manga, 5=book.
+String _widgetLibraryRoute(int kind, String externalId) =>
+    switch (kind) {
+      1 => '/trakt-movie/$externalId',
+      2 => '/trakt-show/$externalId',
+      3 => '/game/$externalId',
+      5 => '/book/$externalId',
+      _ => '/media/$externalId?kind=$kind',
+    };
+
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
   final startPage = ref.read(defaultStartPageProvider);
@@ -94,9 +106,32 @@ GoRouter appRouter(AppRouterRef ref) {
     initialLocation: onboardingDone ? startPage : '/onboarding',
     redirect: (context, state) {
       if (state.uri.scheme == 'cronicle') {
-        final current =
-            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
-        if (current.isNotEmpty && current != '/') return current;
+        final host = state.uri.host;
+        // Widget / app deep link into a specific library entry.
+        if (host == 'library') {
+          final segs = state.uri.pathSegments;
+          if (segs.length >= 2) {
+            final kind = int.tryParse(segs[0]) ?? -1;
+            final externalId = segs[1];
+            return _widgetLibraryRoute(kind, externalId);
+          }
+          return '/library';
+        }
+        // OAuth callbacks and other cronicle:// URIs: stay on the current
+        // page (warm start) or navigate to the start page (cold start).
+        // Use cronicleRootNavigatorKey to avoid calling GoRouter.of(context)
+        // inside the redirect (which fails during cold start).
+        final ctx = cronicleRootNavigatorKey.currentContext;
+        if (ctx != null) {
+          try {
+            final current = GoRouter.of(ctx)
+                .routerDelegate
+                .currentConfiguration
+                .uri
+                .path;
+            if (current.isNotEmpty && current != '/') return current;
+          } catch (_) {}
+        }
         final done = ref.read(onboardingCompletedProvider);
         return done ? startPage : '/onboarding';
       }

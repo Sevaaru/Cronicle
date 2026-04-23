@@ -15,6 +15,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -89,6 +90,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    // Drop focus from the search field so the keyboard does not pop back
+    // open when the bottom sheet closes.
+    FocusManager.instance.primaryFocus?.unfocus();
     final db = ref.read(databaseProvider);
     final externalId = kind == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -104,11 +108,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       kind: kind,
       existingEntry: existing,
     );
-    if (!mounted || !added) return added;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    if (!mounted) return added;
+    // Defensive: ensure the search field doesn't grab focus after the sheet
+    // dismiss animation completes.
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (!added) return added;
+    showLibrarySnackbar(context, wasEdit: existing != null);
     return added;
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/app/cronicle_quick_actions.dart';
 import 'package:cronicle/core/app/global_messenger.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_lifecycle_sync.dart';
@@ -56,9 +57,11 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
     ref.read(wearEventListenerProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      CronicleLocalNotifications.consumePendingLaunchRoute(
-        ref.read(appRouterProvider),
-      );
+      final router = ref.read(appRouterProvider);
+      CronicleLocalNotifications.consumePendingLaunchRoute(router);
+      // Conecta el router a los Quick Actions y consume cualquier
+      // shortcut pendiente del cold start.
+      CronicleQuickActions.bindRouter(router);
     });
   }
 

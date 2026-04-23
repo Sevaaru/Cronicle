@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/widget/home_widget_bridge.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
@@ -162,6 +163,7 @@ Future<bool> showAddToLibrarySheet({
       }
     }
     ref.invalidate(paginatedLibraryProvider);
+    unawaited(HomeWidgetBridge.refresh());
     return true;
   }
 
@@ -242,6 +244,7 @@ Future<bool> showAddToLibrarySheet({
   }
 
   ref.invalidate(paginatedLibraryProvider);
+  unawaited(HomeWidgetBridge.refresh());
   return true;
 }
 

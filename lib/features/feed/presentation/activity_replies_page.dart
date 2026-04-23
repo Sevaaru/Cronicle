@@ -127,10 +127,12 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
       appBar: AppBar(title: Text(l10n.commentsTitle)),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
+          Positioned.fill(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
@@ -232,7 +234,7 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                           else
                             SliverPadding(
                               padding:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                                  const EdgeInsets.fromLTRB(16, 0, 16, 160),
                               sliver: SliverList(
                                 delegate: SliverChildBuilderDelegate(
                                   (context, i) => _ReplyCard(
@@ -246,10 +248,15 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                         ],
                       ),
           ),
-          _ReplyInputBar(
-            controller: _replyController,
-            sending: _sending,
-            onSend: _sendReply,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _ReplyInputBar(
+              controller: _replyController,
+              sending: _sending,
+              onSend: _sendReply,
+            ),
           ),
         ],
       ),
@@ -533,11 +540,12 @@ class _ReplyInputBar extends ConsumerWidget {
 
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    final navbarReserve = kGlassBottomNavContentHeight +
-        4 +
+    // Sit above the floating navbar pill from AppShell. The navbar uses
+    // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
+    final navbarTotal = 4 +
+        kGlassBottomNavContentHeight +
         (bottomSafe > 0 ? bottomSafe : 10);
-    final bottomPad =
-        keyboardInset > 0 ? 8.0 : navbarReserve + 6;
+    final bottomPad = keyboardInset > 0 ? 8.0 : navbarTotal + 6;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),

@@ -165,8 +165,8 @@ class AchievementCatalog {
       icon: Icons.watch_rounded,
       title: L10nPair('Maestro del Tiempo', 'Time Master'),
       description: L10nPair(
-        'Actualiza un progreso desde tu Wear OS.',
-        'Update progress from your Wear OS watch.',
+        'Actualiza un progreso desde tu Wear OS o desde un widget.',
+        'Update progress from your Wear OS watch or from a widget.',
       ),
       target: 1,
       evaluate: (c) => c.wearUpdatesTotal.clamp(0, 1),

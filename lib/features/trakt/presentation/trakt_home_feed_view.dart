@@ -7,6 +7,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class TraktHomeFeedView extends ConsumerWidget {
@@ -549,6 +550,11 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -818,6 +824,12 @@ class _HeroSection extends StatelessWidget {
                             right: 4,
                             child: _ScoreBadge(score: score, small: true),
                           ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: LibraryAddBadge(
+                              item: it, kind: kind, size: 26),
+                        ),
                       ],
                     ),
                   );
@@ -867,24 +879,33 @@ class _HeroCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                bottomLeft: Radius.circular(14),
-              ),
-              child: url != null
-                  ? RemoteNetworkImage(
-                      imageUrl: url,
-                      width: 88,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    )
-                  : _PosterPlaceholder(
-                      width: 88,
-                      height: 120,
-                      radius: 0,
-                      isShow: kind == MediaKind.tv,
-                    ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    bottomLeft: Radius.circular(14),
+                  ),
+                  child: url != null
+                      ? RemoteNetworkImage(
+                          imageUrl: url,
+                          width: 88,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        )
+                      : _PosterPlaceholder(
+                          width: 88,
+                          height: 120,
+                          radius: 0,
+                          isShow: kind == MediaKind.tv,
+                        ),
+                ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind, size: 34),
+                ),
+              ],
             ),
             Expanded(
               child: Padding(
@@ -1020,26 +1041,36 @@ class _MoodBandSection extends StatelessWidget {
                   return GestureDetector(
                     onTap:
                         id != null ? () => ctx.push(_route(kind, id)) : null,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: url != null
-                          ? RemoteNetworkImage(
-                              imageUrl: url,
-                              width: 108,
-                              height: 148,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              width: 108,
-                              height: 148,
-                              color: accent.withValues(alpha: 0.15),
-                              child: Icon(
-                                kind == MediaKind.tv
-                                    ? Icons.tv_rounded
-                                    : Icons.movie_rounded,
-                                color: Colors.white24,
-                              ),
-                            ),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: url != null
+                              ? RemoteNetworkImage(
+                                  imageUrl: url,
+                                  width: 108,
+                                  height: 148,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: 108,
+                                  height: 148,
+                                  color: accent.withValues(alpha: 0.15),
+                                  child: Icon(
+                                    kind == MediaKind.tv
+                                        ? Icons.tv_rounded
+                                        : Icons.movie_rounded,
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          right: 6,
+                          child:
+                              LibraryAddBadge(item: it, kind: kind),
+                        ),
+                      ],
                     ),
                   );
                 },

@@ -66,17 +66,35 @@ class _TraktMovieDetailBody extends ConsumerWidget {
     final subtitleParts = <String>[];
     if (year != null) subtitleParts.add('$year');
     if (runtime != null) subtitleParts.add('$runtime min');
-    final lines = <String>[];
-    if (subtitleParts.isNotEmpty) lines.add(subtitleParts.join(' · '));
-    if (tagline != null && tagline.isNotEmpty) lines.add(tagline);
-    final heroSubtitle = lines.isEmpty ? null : lines.join('\n');
+    final heroLines = <String>[];
+    if (subtitleParts.isNotEmpty) heroLines.add(subtitleParts.join(' · '));
+    if (tagline != null && tagline.isNotEmpty) heroLines.add(tagline);
+
+    final heroPills = <Widget>[
+      if (certification != null && certification.isNotEmpty)
+        TraktTag(certification, cs.errorContainer, cs.onErrorContainer),
+      if (traktStatus != null && traktStatus.isNotEmpty)
+        TraktTag(
+          traktFormatApiStatus(traktStatus),
+          cs.secondaryContainer,
+          cs.onSecondaryContainer,
+        ),
+      ...genres.take(4).map(
+            (g) => TraktTag(
+              traktFormatGenreLabel(g),
+              cs.tertiaryContainer,
+              cs.onTertiaryContainer,
+            ),
+          ),
+    ];
 
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
           child: TraktDetailHeroHeader(
             title: name,
-            subtitle: heroSubtitle,
+            subtitleLines: heroLines,
+            pills: heroPills,
             poster: poster,
             fanart: fanart ?? poster,
           ),
@@ -87,27 +105,6 @@ class _TraktMovieDetailBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (certification != null && certification.isNotEmpty)
-                      TraktTag(certification, cs.errorContainer, cs.onErrorContainer),
-                    if (traktStatus != null && traktStatus.isNotEmpty)
-                      TraktTag(
-                        traktFormatApiStatus(traktStatus),
-                        cs.secondaryContainer,
-                        cs.onSecondaryContainer,
-                      ),
-                    ...genres.take(6).map(
-                          (g) => TraktTag(
-                            traktFormatGenreLabel(g),
-                            cs.tertiaryContainer,
-                            cs.onTertiaryContainer,
-                          ),
-                        ),
-                  ],
-                ),
                 const SizedBox(height: 12),
                 TraktAddToLibraryRow(item: item, kind: MediaKind.movie),
                 const SizedBox(height: 12),
@@ -151,7 +148,7 @@ class _TraktMovieDetailBody extends ConsumerWidget {
                           if (language != null && language.isNotEmpty)
                             TraktInfoPill(l10n.traktDetailLanguage, language.toUpperCase()),
                           if (released != null && released.toString().isNotEmpty)
-                            TraktInfoPill(l10n.mediaStart, released.toString()),
+                            TraktInfoPill(l10n.mediaStart, traktFormatDate(context, released)),
                           if (original != null && original.isNotEmpty && original != name)
                             TraktInfoPill(l10n.traktDetailOriginalTitle, original),
                         ],

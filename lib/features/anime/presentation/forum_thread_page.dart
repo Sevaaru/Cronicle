@@ -398,9 +398,11 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
         l10n.forumThread;
 
     return Scaffold(
-      body: Column(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
         children: [
-          Expanded(
+          Positioned.fill(
             child: _loading
                 ? CustomScrollView(slivers: [
                     SliverAppBar(
@@ -444,13 +446,18 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ])
                     : _buildContent(context, cs, l10n, title),
           ),
-          _ReplyInputBar(
-            controller: _commentController,
-            focusNode: _replyFocusNode,
-            sending: _sending,
-            onSend: _sendComment,
-            replyTarget: _replyTarget,
-            onCancelReply: _clearReplyTarget,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _ReplyInputBar(
+              controller: _commentController,
+              focusNode: _replyFocusNode,
+              sending: _sending,
+              onSend: _sendComment,
+              replyTarget: _replyTarget,
+              onCancelReply: _clearReplyTarget,
+            ),
           ),
         ],
       ),
@@ -485,7 +492,7 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
               overflow: TextOverflow.ellipsis),
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               Container(
@@ -1177,14 +1184,12 @@ class _ReplyInputBar extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    // Total visual height of the floating navbar pill (top pad + content +
-    // bottom pad). When the keyboard is open, the Scaffold resizes its body so
-    // we sit just above the keyboard with a small breathing gap.
-    final navbarReserve = kGlassBottomNavContentHeight +
-        4 +
+    // Sit above the floating navbar pill from AppShell. The navbar uses
+    // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
+    final navbarTotal = 4 +
+        kGlassBottomNavContentHeight +
         (bottomSafe > 0 ? bottomSafe : 10);
-    final bottomPad =
-        keyboardInset > 0 ? 8.0 : navbarReserve + 6;
+    final bottomPad = keyboardInset > 0 ? 8.0 : navbarTotal + 6;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),

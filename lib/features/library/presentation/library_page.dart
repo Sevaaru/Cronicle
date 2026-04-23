@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
+import 'package:cronicle/core/widget/home_widget_bridge.dart';
 import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
@@ -27,6 +28,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
 
@@ -465,7 +467,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       ? ListView.builder(
                           controller: _scrollController,
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                          padding: EdgeInsets.fromLTRB(16, 4, 16,
+                              MediaQuery.paddingOf(context).bottom),
                           addAutomaticKeepAlives: false,
                           itemCount: entries.length + (hasMore ? 1 : 0),
                           itemBuilder: (context, i) {
@@ -1248,6 +1251,7 @@ class _IncrementButtonState extends State<_IncrementButton>
             .read(achievementsProvider.notifier)
             .bumpProgressIncrement();
       } catch (_) {}
+      unawaited(HomeWidgetBridge.refresh());
       widget.onUpdated();
       if (kind == MediaKind.anime || kind == MediaKind.manga) {
         _syncProgressToAnilist();
@@ -1717,11 +1721,11 @@ class _LibraryMasonryGrid extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 horizontalPadding,
                 4,
                 horizontalPadding,
-                20,
+                MediaQuery.paddingOf(context).bottom,
               ),
               sliver: SliverToBoxAdapter(
                 child: Row(

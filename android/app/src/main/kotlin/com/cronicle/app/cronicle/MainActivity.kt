@@ -11,11 +11,13 @@ import com.google.android.gms.wearable.Wearable
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.cronicle.app.cronicle.widget.LibraryWidgetProvider
 
 class MainActivity : FlutterActivity() {
 
     private var wearChannel: MethodChannel? = null
     private var wearStatusChannel: MethodChannel? = null
+    private var widgetChannel: MethodChannel? = null
     private var wearReceiver: BroadcastReceiver? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -46,6 +48,9 @@ class MainActivity : FlutterActivity() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action != ACTION_LIBRARY_CHANGED) return
                 wearChannel?.invokeMethod("libraryChanged", null)
+                try {
+                    LibraryWidgetProvider.requestRefresh(applicationContext)
+                } catch (_: Throwable) {}
             }
         }
         val filter = IntentFilter(ACTION_LIBRARY_CHANGED)
@@ -54,6 +59,25 @@ class MainActivity : FlutterActivity() {
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(wearReceiver, filter)
+        }
+
+        widgetChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CHANNEL_WIDGET,
+        ).also { ch ->
+            ch.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "refresh" -> {
+                        try {
+                            LibraryWidgetProvider.requestRefresh(applicationContext)
+                            result.success(true)
+                        } catch (t: Throwable) {
+                            result.error("refresh_failed", t.message, null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         }
     }
 
@@ -85,12 +109,15 @@ class MainActivity : FlutterActivity() {
         wearChannel = null
         wearStatusChannel?.setMethodCallHandler(null)
         wearStatusChannel = null
+        widgetChannel?.setMethodCallHandler(null)
+        widgetChannel = null
         super.onDestroy()
     }
 
     companion object {
         const val CHANNEL_WEAR_EVENTS = "cronicle.wear.events"
         const val CHANNEL_WEAR_STATUS = "cronicle.wear.status"
+        const val CHANNEL_WIDGET = "cronicle.widget"
         const val ACTION_LIBRARY_CHANGED = "com.cronicle.app.cronicle.WEAR_LIBRARY_CHANGED"
         private const val WEAR_CAPABILITY = "cronicle_wear_companion"
     }

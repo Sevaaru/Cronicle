@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_library_title">Cronicle · In progress</string>
+    <string name="widget_library_description">Your in-progress library: anime, series, movies, games, manga and books.</string>
+    <string name="widget_library_description_small">Cronicle Library — small (2×2): featured in-progress entry.</string>
+    <string name="widget_library_description_medium">Cronicle Library — medium (4×2): list of in-progress entries.</string>
+    <string name="widget_library_description_large">Cronicle Library — large (4×4): full in-progress list.</string>
+    <string name="widget_library_label_small">Cronicle · Library (small)</string>
+    <string name="widget_library_label_medium">Cronicle · Library (medium)</string>
+    <string name="widget_library_label_large">Cronicle · Library (large)</string>
+    <string name="widget_library_empty">Nothing in progress yet. Add something to your library!</string>
+    <string name="widget_library_refresh">Refresh</string>
+    <string name="widget_library_increment">Add one</string>
+    <string name="widget_prev_content_desc">Previous</string>
+    <string name="widget_next_content_desc">Next</string>
+</resources>

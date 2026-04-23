@@ -5,7 +5,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 
 
 String? _coverUrl(Map<String, dynamic> item) =>
@@ -414,6 +416,12 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score, small: true),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.book),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -508,6 +516,12 @@ class _HeroSection extends StatelessWidget {
                             right: 4,
                             child: _ScoreBadge(score: score, small: true),
                           ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: LibraryAddBadge(
+                              item: it, kind: MediaKind.book, size: 26),
+                        ),
                       ],
                     ),
                   );
@@ -550,19 +564,29 @@ class _HeroCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                bottomLeft: Radius.circular(14),
-              ),
-              child: url != null
-                  ? CachedNetworkImage(
-                      imageUrl: url,
-                      width: 88,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    )
-                  : _PosterPlaceholder(width: 88, height: 120, radius: 0),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    bottomLeft: Radius.circular(14),
+                  ),
+                  child: url != null
+                      ? CachedNetworkImage(
+                          imageUrl: url,
+                          width: 88,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        )
+                      : _PosterPlaceholder(width: 88, height: 120, radius: 0),
+                ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.book, size: 34),
+                ),
+              ],
             ),
             Expanded(
               child: Padding(

@@ -14,6 +14,7 @@ import 'package:cronicle/features/settings/presentation/feed_filter_layout_notif
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
 class SummaryFeedView extends ConsumerWidget {
@@ -677,6 +678,15 @@ class _MorphingHeroCard extends StatelessWidget {
                     right: lerpDouble(6, 8, t)!,
                     child: _ScoreBadge(score: score, large: t > 0.55),
                   ),
+                Positioned(
+                  bottom: lerpDouble(6, 8, t)!,
+                  right: lerpDouble(6, 8, t)!,
+                  child: LibraryAddBadge(
+                    item: item,
+                    kind: kind,
+                    size: lerpDouble(30, 36, t)!,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -882,6 +892,11 @@ class _WideCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind),
+                ),
               ],
             ),
           ],
@@ -1083,6 +1098,11 @@ class _CarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind, size: 30),
+                ),
               ],
             ),
             const SizedBox(height: 5),

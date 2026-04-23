@@ -39,145 +39,172 @@ class M3DetailHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final totalHeight = bannerHeight - overlap + posterHeight + 8;
+    // Vertical space the poster occupies *below* the banner.
+    final posterBelow = (posterHeight - overlap).clamp(0.0, posterHeight);
 
-    return SizedBox(
-      height: totalHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          GestureDetector(
-            onTap: banner != null
-                ? () => showFullscreenImage(context, banner!)
-                : null,
+    Widget posterWidget = poster != null
+        ? GestureDetector(
+            onTap: () => showFullscreenImage(context, poster!),
             child: Container(
-              height: bannerHeight,
-              width: double.infinity,
               decoration: BoxDecoration(
-                image: banner != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(banner!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                color: banner == null ? cs.surfaceContainerHighest : null,
-              ),
-              foregroundDecoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withAlpha(30),
-                    Colors.transparent,
-                    Colors.black.withAlpha(120),
-                  ],
-                  stops: const [0, 0.45, 1],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            top: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withAlpha(70),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cs.surface, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(70),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () => Navigator.of(context).maybePop(),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: CachedNetworkImage(
+                  imageUrl: poster!,
+                  width: posterWidth,
+                  height: posterHeight,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: 16,
-            top: bannerHeight - overlap,
-            child: poster != null
-                ? GestureDetector(
-                    onTap: () => showFullscreenImage(context, poster!),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: cs.surface, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(70),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+          )
+        : Container(
+            width: posterWidth,
+            height: posterHeight,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: cs.surface, width: 3),
+            ),
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              color: cs.onSurfaceVariant,
+            ),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Banner + back button
+        SizedBox(
+          height: bannerHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              GestureDetector(
+                onTap: banner != null
+                    ? () => showFullscreenImage(context, banner!)
+                    : null,
+                child: Container(
+                  height: bannerHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    image: banner != null
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(banner!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    color:
+                        banner == null ? cs.surfaceContainerHighest : null,
+                  ),
+                  foregroundDecoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withAlpha(30),
+                        Colors.transparent,
+                        Colors.black.withAlpha(120),
+                      ],
+                      stops: const [0, 0.45, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 4,
+                top: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withAlpha(70),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: CachedNetworkImage(
-                          imageUrl: poster!,
-                          width: posterWidth,
-                          height: posterHeight,
-                          fit: BoxFit.cover,
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Poster (overlapping the banner) + title/subtitle column
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: posterWidth,
+                height: posterBelow,
+                child: OverflowBox(
+                  minHeight: 0,
+                  maxHeight: posterHeight,
+                  alignment: Alignment.bottomCenter,
+                  child: posterWidget,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      M3MarqueeText(
+                        text: title,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                          letterSpacing: -0.2,
+                          color: cs.onSurface,
                         ),
                       ),
-                    ),
-                  )
-                : Container(
-                    width: posterWidth,
-                    height: posterHeight,
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: cs.surface, width: 3),
-                    ),
-                    child: Icon(
-                      Icons.image_not_supported_outlined,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-          ),
-          Positioned(
-            left: 16 + posterWidth + 14,
-            right: 16,
-            top: bannerHeight + 4,
-            bottom: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                M3MarqueeText(
-                  text: title,
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    letterSpacing: -0.2,
-                    color: cs.onSurface,
+                      for (final line in subtitleLines)
+                        if (line.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            line,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: cs.onSurfaceVariant,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                    ],
                   ),
                 ),
-                for (final line in subtitleLines)
-                  if (line.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      line,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                if (pills.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(spacing: 6, runSpacing: 6, children: pills),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        if (pills.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Wrap(spacing: 6, runSpacing: 6, children: pills),
+          ),
+      ],
     );
   }
 }

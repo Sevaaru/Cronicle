@@ -7,6 +7,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
 
@@ -92,10 +93,7 @@ class TraktHomeSectionListPage extends ConsumerWidget {
       existingEntry: existing,
     );
     if (!context.mounted || !added) return added;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    showLibrarySnackbar(context, wasEdit: existing != null);
     return added;
   }
 

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
@@ -11,6 +12,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
@@ -25,6 +27,17 @@ String traktFormatVoteCount(int n) {
   if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
   if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
   return '$n';
+}
+
+/// Formats a Trakt ISO-8601 date/datetime string (e.g. `2019-07-25` or
+/// `2019-07-25T07:00:00.000Z`) into a human-readable, locale-aware date.
+/// Returns the raw string as a safe fallback if parsing fails.
+String traktFormatDate(BuildContext context, String? raw) {
+  if (raw == null || raw.isEmpty) return '';
+  final dt = DateTime.tryParse(raw);
+  if (dt == null) return raw;
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  return DateFormat.yMMMd(locale).format(dt.toLocal());
 }
 
 class TraktTag extends StatelessWidget {
@@ -100,21 +113,29 @@ class TraktDetailHeroHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.subtitleLines,
+    this.pills = const [],
     this.poster,
     this.fanart,
   });
 
   final String title;
   final String? subtitle;
+  final List<String>? subtitleLines;
+  final List<Widget> pills;
   final String? poster;
   final String? fanart;
 
   @override
   Widget build(BuildContext context) {
+    final lines = subtitleLines ??
+        (subtitle != null && subtitle!.isNotEmpty
+            ? subtitle!.split('\n').where((l) => l.isNotEmpty).toList()
+            : const <String>[]);
     return M3DetailHero(
       title: title,
-      subtitleLines:
-          subtitle != null && subtitle!.isNotEmpty ? [subtitle!] : const [],
+      subtitleLines: lines,
+      pills: pills,
       banner: fanart,
       poster: poster,
     );
@@ -218,13 +239,7 @@ class _TraktAddToLibraryButton extends ConsumerWidget {
                     imageUrl: coverUrl,
                   );
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      inLibrary ? l10n.entryUpdated : l10n.addedToLibrary,
-                    ),
-                  ),
-                );
+                showLibrarySnackbar(context, wasEdit: inLibrary);
               }
             },
           ),

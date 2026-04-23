@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -91,6 +92,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   bool _googleConnected = false;
   bool _driveRestored = false;
   bool _syncing = false;
+  double _syncProgress = 0;
 
   late AnimationController _animCtrl;
   late Animation<double> _fadeIn;
@@ -128,7 +130,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         (ref.read(traktSessionProvider).valueOrNull?.connected ?? false);
 
     if (hasAnyAccount) {
-      setState(() => _syncing = true);
+      setState(() {
+        _syncing = true;
+        _syncProgress = 0;
+      });
     }
 
     await ref
@@ -138,6 +143,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
 
     await _syncConnectedAccounts();
 
+    if (hasAnyAccount && mounted) {
+      setState(() => _syncProgress = 1);
+    }
+
     if (!mounted) return;
     context.go('/feed');
   }
@@ -145,66 +154,82 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   Future<void> _syncConnectedAccounts() async {
     // Esta pasada trae datos de cuentas conectadas y los deja en local.
     final db = ref.read(databaseProvider);
+    final tasks = <Future<void> Function()>[];
 
     final anilistToken = await ref.read(anilistTokenProvider.future);
     if (anilistToken != null && anilistToken.isNotEmpty) {
-      try {
-        final auth = ref.read(anilistAuthProvider);
-        var userName = await auth.getUserName();
-        if (userName == null || userName.isEmpty) {
-          final graphql = ref.read(anilistGraphqlProvider);
-          final viewer = await graphql.fetchViewer(anilistToken);
-          userName = viewer?['name'] as String?;
-          if (userName != null) await auth.saveUserName(userName);
-        }
-        if (userName != null && userName.isNotEmpty) {
-          await importAnilistToLocal(
-            graphql: ref.read(anilistGraphqlProvider),
-            db: db,
-            token: anilistToken,
-            userName: userName,
-          );
-          await db.setKeyValue('anilist_library_synced', 'true');
-          await ref.read(sharedPreferencesProvider).setInt(
-                anilistLibraryLastSyncSecondsKey,
-                DateTime.now().millisecondsSinceEpoch ~/ 1000,
-              );
-        }
-      } catch (_) {}
+      tasks.add(() async {
+        try {
+          final auth = ref.read(anilistAuthProvider);
+          var userName = await auth.getUserName();
+          if (userName == null || userName.isEmpty) {
+            final graphql = ref.read(anilistGraphqlProvider);
+            final viewer = await graphql.fetchViewer(anilistToken);
+            userName = viewer?['name'] as String?;
+            if (userName != null) await auth.saveUserName(userName);
+          }
+          if (userName != null && userName.isNotEmpty) {
+            await importAnilistToLocal(
+              graphql: ref.read(anilistGraphqlProvider),
+              db: db,
+              token: anilistToken,
+              userName: userName,
+            );
+            await db.setKeyValue('anilist_library_synced', 'true');
+            await ref.read(sharedPreferencesProvider).setInt(
+                  anilistLibraryLastSyncSecondsKey,
+                  DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                );
+          }
+        } catch (_) {}
+      });
     }
 
     final traktState = ref.read(traktSessionProvider).valueOrNull;
     if (traktState != null && traktState.connected) {
-      try {
-        final token =
-            await ref.read(traktAuthProvider).getValidAccessToken();
-        if (token != null && token.isNotEmpty) {
-          await importTraktWatchedToLocal(
-            api: ref.read(traktApiProvider),
-            db: db,
-            accessToken: token,
-          );
-        }
-      } catch (_) {}
+      tasks.add(() async {
+        try {
+          final token =
+              await ref.read(traktAuthProvider).getValidAccessToken();
+          if (token != null && token.isNotEmpty) {
+            await importTraktWatchedToLocal(
+              api: ref.read(traktApiProvider),
+              db: db,
+              accessToken: token,
+            );
+          }
+        } catch (_) {}
+      });
     }
 
     if (_googleConnected && !_driveRestored) {
-      try {
-        final repo = ref.read(backupRepositoryProvider);
-        final res = await repo.downloadBackup();
-        final bytes = res.fold((_) => null, (b) => b);
-        if (bytes != null && bytes.isNotEmpty) {
-          final json =
-              jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-          await AppBackupBundle.restoreFromJson(
-            json: json,
-            db: db,
-            prefs: ref.read(sharedPreferencesProvider),
-            secure: const FlutterSecureStorage(),
-            ref: ref,
-          );
-        }
-      } catch (_) {}
+      tasks.add(() async {
+        try {
+          final repo = ref.read(backupRepositoryProvider);
+          final res = await repo.downloadBackup();
+          final bytes = res.fold((_) => null, (b) => b);
+          if (bytes != null && bytes.isNotEmpty) {
+            final json =
+                jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+            await AppBackupBundle.restoreFromJson(
+              json: json,
+              db: db,
+              prefs: ref.read(sharedPreferencesProvider),
+              secure: const FlutterSecureStorage(),
+              ref: ref,
+            );
+          }
+        } catch (_) {}
+      });
+    }
+
+    if (tasks.isEmpty) return;
+
+    for (var i = 0; i < tasks.length; i++) {
+      await tasks[i]();
+      if (mounted) {
+        setState(() => _syncProgress = (i + 1) / tasks.length);
+      }
     }
   }
 
@@ -283,6 +308,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                       onFinish: _finishSetup,
                       onBack: () => _goToPage(1),
                       syncing: _syncing,
+                      syncProgress: _syncProgress,
                       onGoogleChanged: (v) =>
                           setState(() => _googleConnected = v),
                       onDriveRestored: () =>
@@ -468,6 +494,7 @@ class _AccountsPage extends ConsumerStatefulWidget {
     required this.onFinish,
     required this.onBack,
     required this.syncing,
+    required this.syncProgress,
     required this.onGoogleChanged,
     required this.onDriveRestored,
   });
@@ -475,6 +502,7 @@ class _AccountsPage extends ConsumerStatefulWidget {
   final VoidCallback onFinish;
   final VoidCallback onBack;
   final bool syncing;
+  final double syncProgress;
   final ValueChanged<bool> onGoogleChanged;
   final VoidCallback onDriveRestored;
 
@@ -500,17 +528,15 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
       final account = await googleSignIn.authenticate(
         scopeHint: const ['https://www.googleapis.com/auth/drive.appdata'],
       );
-      if (account != null) {
-        final auth = await account.authorizationClient
-            .authorizationForScopes(
-                ['https://www.googleapis.com/auth/drive.appdata']);
-        final connected = auth != null;
-        if (mounted) {
-          setState(() => _googleConnected = connected);
-          widget.onGoogleChanged(connected);
-          if (connected) {
-            await _restoreFromDriveAndSync();
-          }
+      await account.authorizationClient.authorizationForScopes(
+        ['https://www.googleapis.com/auth/drive.appdata'],
+      );
+      const connected = true;
+      if (mounted) {
+        setState(() => _googleConnected = connected);
+        widget.onGoogleChanged(connected);
+        if (connected) {
+          await _restoreFromDriveAndSync();
         }
       }
     } catch (_) {
@@ -554,7 +580,9 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
     if (kIsWeb) return;
     if (EnvConfig.traktClientId.isEmpty ||
         EnvConfig.traktClientSecret.isEmpty ||
-        EnvConfig.traktRedirectUri.isEmpty) return;
+        EnvConfig.traktRedirectUri.isEmpty) {
+      return;
+    }
     try {
       await ref.read(traktSessionProvider.notifier).connectOAuth();
     } catch (_) {
@@ -566,7 +594,9 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
     final anilistToken = await ref.read(anilistTokenProvider.future);
     if (anilistToken != null && anilistToken.isNotEmpty) {
-      if (mounted) setState(() => _anilistSyncing = true);
+      if (mounted) {
+        setState(() => _anilistSyncing = true);
+      }
       try {
         final auth = ref.read(anilistAuthProvider);
         var userName = await auth.getUserName();
@@ -597,7 +627,9 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
     final traktState = ref.read(traktSessionProvider).valueOrNull;
     if (traktState != null && traktState.connected) {
-      if (mounted) setState(() => _traktSyncing = true);
+      if (mounted) {
+        setState(() => _traktSyncing = true);
+      }
       try {
         final token =
             await ref.read(traktAuthProvider).getValidAccessToken();
@@ -704,7 +736,7 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: (widget.syncing || _isSyncing) ? 78 : 52,
             child: FilledButton(
               onPressed: (widget.syncing || _isSyncing) ? null : widget.onFinish,
               style: FilledButton.styleFrom(
@@ -713,24 +745,34 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
                 ),
               ),
               child: (widget.syncing || _isSyncing)
-                  ? Row(
+                  ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: cs.onPrimary,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              l10n.onboardingSyncing,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '${(widget.syncProgress * 100).round()}%',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: cs.onPrimary.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.onboardingSyncing,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: 8),
+                        _WavySyncProgressBar(
+                          value: widget.syncProgress,
+                          color: cs.onPrimary,
                         ),
                       ],
                     )
@@ -749,6 +791,122 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
         ],
       ),
     );
+  }
+}
+
+class _WavySyncProgressBar extends StatefulWidget {
+  const _WavySyncProgressBar({
+    required this.value,
+    required this.color,
+  });
+
+  final double value;
+  final Color color;
+
+  @override
+  State<_WavySyncProgressBar> createState() => _WavySyncProgressBarState();
+}
+
+class _WavySyncProgressBarState extends State<_WavySyncProgressBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _waveCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _waveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _waveCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = widget.value.clamp(0.0, 1.0);
+    return SizedBox(
+      width: double.infinity,
+      height: 10,
+      child: AnimatedBuilder(
+        animation: _waveCtrl,
+        builder: (context, _) {
+          return CustomPaint(
+            painter: _WavySyncProgressPainter(
+              value: value,
+              phase: _waveCtrl.value * 2 * math.pi,
+              color: widget.color,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WavySyncProgressPainter extends CustomPainter {
+  _WavySyncProgressPainter({
+    required this.value,
+    required this.phase,
+    required this.color,
+  });
+
+  final double value;
+  final double phase;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const radius = Radius.circular(999);
+    final fullRect = Offset.zero & size;
+    final fullRRect = RRect.fromRectAndRadius(fullRect, radius);
+
+    final trackPaint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(fullRRect, trackPaint);
+
+    final filledWidth = size.width * value;
+    if (filledWidth <= 0) return;
+
+    final fillRect = Rect.fromLTWH(0, 0, filledWidth, size.height);
+    final fillRRect = RRect.fromRectAndRadius(fillRect, radius);
+    final fillPaint = Paint()
+      ..color = color.withValues(alpha: 0.88)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(fillRRect, fillPaint);
+
+    // Onda sutil estilo Material dentro del tramo completado.
+    final wavePaint = Paint()
+      ..color = color.withValues(alpha: 0.95)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+    final path = Path();
+    final amp = size.height * 0.18;
+    final baseline = size.height * 0.5;
+
+    path.moveTo(0, baseline);
+    for (double x = 0; x <= filledWidth; x += 1) {
+      final y = baseline + math.sin((x / 9.0) + phase) * amp;
+      path.lineTo(x, y);
+    }
+
+    canvas.save();
+    canvas.clipRRect(fillRRect);
+    canvas.drawPath(path, wavePaint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavySyncProgressPainter oldDelegate) {
+    return oldDelegate.value != value ||
+        oldDelegate.phase != phase ||
+        oldDelegate.color != color;
   }
 }
 

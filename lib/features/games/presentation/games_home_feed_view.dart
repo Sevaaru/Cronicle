@@ -10,7 +10,9 @@ import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 
 
 String? _formatRelDate(BuildContext ctx, Map<String, dynamic> item) {
@@ -466,6 +468,12 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.game),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -612,6 +620,12 @@ class _DateCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child:
+                    LibraryAddBadge(item: item, kind: MediaKind.game),
               ),
             ],
           ),

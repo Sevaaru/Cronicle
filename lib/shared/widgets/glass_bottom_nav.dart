@@ -140,6 +140,7 @@ class _NavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
+            clipBehavior: Clip.hardEdge,
             padding: EdgeInsets.symmetric(
               horizontal: selected ? 12 : 10,
               vertical: 10,

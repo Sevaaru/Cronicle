@@ -244,21 +244,15 @@ class _GameDetailContent extends StatelessWidget {
                   posterHeight: posterHeight,
                   posterWidth: posterWidth,
                   overlap: overlapAmount,
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      if (format != null)
-                        M3HeroPill(format,
-                            bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
-                      ...genres.take(4).map((g) => M3HeroPill(g,
-                          bg: cs.secondaryContainer, fg: cs.onSecondaryContainer)),
-                    ],
-                  ),
+                  pills: [
+                    if (format != null)
+                      M3HeroPill(format,
+                          bg: cs.tertiaryContainer,
+                          fg: cs.onTertiaryContainer),
+                    ...genres.take(4).map((g) => M3HeroPill(g,
+                        bg: cs.secondaryContainer,
+                        fg: cs.onSecondaryContainer)),
+                  ],
                 ),
               ],
             ),

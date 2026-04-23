@@ -70,17 +70,35 @@ class _TraktShowDetailBody extends ConsumerWidget {
     if (year != null) subtitleParts.add('$year');
     if (eps != null) subtitleParts.add('$eps ep');
     if (network != null && network.isNotEmpty) subtitleParts.add(network);
-    final lines = <String>[];
-    if (subtitleParts.isNotEmpty) lines.add(subtitleParts.join(' · '));
-    if (tagline != null && tagline.isNotEmpty) lines.add(tagline);
-    final heroSubtitle = lines.join('\n');
+    final heroLines = <String>[];
+    if (subtitleParts.isNotEmpty) heroLines.add(subtitleParts.join(' · '));
+    if (tagline != null && tagline.isNotEmpty) heroLines.add(tagline);
+
+    final heroPills = <Widget>[
+      if (certification != null && certification.isNotEmpty)
+        TraktTag(certification, cs.errorContainer, cs.onErrorContainer),
+      if (traktStatus != null && traktStatus.isNotEmpty)
+        TraktTag(
+          traktFormatApiStatus(traktStatus),
+          cs.secondaryContainer,
+          cs.onSecondaryContainer,
+        ),
+      ...genres.take(4).map(
+            (g) => TraktTag(
+              traktFormatGenreLabel(g),
+              cs.tertiaryContainer,
+              cs.onTertiaryContainer,
+            ),
+          ),
+    ];
 
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
           child: TraktDetailHeroHeader(
             title: name,
-            subtitle: heroSubtitle.isEmpty ? null : heroSubtitle,
+            subtitleLines: heroLines,
+            pills: heroPills,
             poster: poster,
             fanart: fanart ?? poster,
           ),
@@ -91,27 +109,6 @@ class _TraktShowDetailBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (certification != null && certification.isNotEmpty)
-                      TraktTag(certification, cs.errorContainer, cs.onErrorContainer),
-                    if (traktStatus != null && traktStatus.isNotEmpty)
-                      TraktTag(
-                        traktFormatApiStatus(traktStatus),
-                        cs.secondaryContainer,
-                        cs.onSecondaryContainer,
-                      ),
-                    ...genres.take(6).map(
-                          (g) => TraktTag(
-                            traktFormatGenreLabel(g),
-                            cs.tertiaryContainer,
-                            cs.onTertiaryContainer,
-                          ),
-                        ),
-                  ],
-                ),
                 const SizedBox(height: 12),
                 TraktAddToLibraryRow(item: item, kind: MediaKind.tv),
                 const SizedBox(height: 12),
@@ -160,7 +157,7 @@ class _TraktShowDetailBody extends ConsumerWidget {
                           if (language != null && language.isNotEmpty)
                             TraktInfoPill(l10n.traktDetailLanguage, language.toUpperCase()),
                           if (released != null && released.toString().isNotEmpty)
-                            TraktInfoPill(l10n.mediaStart, released.toString()),
+                            TraktInfoPill(l10n.mediaStart, traktFormatDate(context, released)),
                           if (original != null && original.isNotEmpty && original != name)
                             TraktInfoPill(l10n.traktDetailOriginalTitle, original),
                         ],

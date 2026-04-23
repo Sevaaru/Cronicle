@@ -236,37 +236,37 @@ class _DetailContent extends StatelessWidget {
               children: [
                 M3DetailHero(
                   title: name,
-                  subtitleLines: authors.isNotEmpty ? [authors.join(', ')] : const [],
+                  subtitleLines: [
+                    if (authors.isNotEmpty) authors.join(', '),
+                    if (subtitle != null && subtitle.isNotEmpty) subtitle,
+                  ],
                   banner: poster,
                   poster: poster,
                   bannerHeight: bannerHeight,
                   posterHeight: posterHeight,
                   posterWidth: posterWidth,
                   overlap: overlapAmount,
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      M3HeroPill(_prettyPrintType(printType),
-                          bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
-                      if (isEbook)
-                        M3HeroPill('eBook',
-                            bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
-                      if (publicDomain)
-                        M3HeroPill('Public domain',
-                            bg: Colors.green.shade100, fg: Colors.green.shade900),
-                      if (maturityRating == 'MATURE')
-                        M3HeroPill('Mature',
-                            bg: Colors.red.shade100, fg: Colors.red.shade900),
-                      if (language != null && language.isNotEmpty)
-                        M3HeroPill(language.toUpperCase(),
-                            bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
-                    ],
-                  ),
+                  pills: [
+                    M3HeroPill(_prettyPrintType(printType),
+                        bg: cs.tertiaryContainer,
+                        fg: cs.onTertiaryContainer),
+                    if (isEbook)
+                      M3HeroPill('eBook',
+                          bg: cs.primaryContainer,
+                          fg: cs.onPrimaryContainer),
+                    if (publicDomain)
+                      M3HeroPill('Public domain',
+                          bg: Colors.green.shade100,
+                          fg: Colors.green.shade900),
+                    if (maturityRating == 'MATURE')
+                      M3HeroPill('Mature',
+                          bg: Colors.red.shade100,
+                          fg: Colors.red.shade900),
+                    if (language != null && language.isNotEmpty)
+                      M3HeroPill(language.toUpperCase(),
+                          bg: cs.secondaryContainer,
+                          fg: cs.onSecondaryContainer),
+                  ],
                 ),
               ],
             ),
@@ -294,17 +294,6 @@ class _DetailContent extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   _BookProgressCard(workKey: workKey),
-
-                  if (subtitle != null && subtitle.isNotEmpty) ...[
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: cs.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
 
                   if (score != null ||
                       ratingsCount != null ||

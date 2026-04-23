@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cronicle/core/app/cronicle_quick_actions.dart';
 import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
@@ -83,6 +84,8 @@ Future<void> main() async {
     await ensureNotificationWorkmanagerInitialized();
     await NotificationWorkScheduler.applyFromPrefs(prefs);
     await GoogleDriveBackupScheduler.applyFromPrefs(prefs);
+    // Registra los App Shortcuts (Quick Actions) del lanzador. Idempotente.
+    await CronicleQuickActions.init();
   }
 
   try {
