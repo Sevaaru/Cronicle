@@ -36,12 +36,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
   }
 
   Future<void> _loadAll() async {
-    final graphql = ref.read(anilistGraphqlProvider);
-    final token = await ref.read(anilistTokenProvider.future);
-
     final results = await Future.wait([
-      graphql.fetchUserProfile(widget.userId, token: token),
-      graphql.fetchUserActivity(widget.userId, token: token),
+      ref.read(anilistUserProfileProvider(widget.userId).future),
+      ref.read(anilistUserActivityProvider(widget.userId).future),
     ]);
 
     if (!mounted) return;

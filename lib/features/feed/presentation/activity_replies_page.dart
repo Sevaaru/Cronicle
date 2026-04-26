@@ -81,11 +81,11 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
     const maxTries = 3;
     for (var attempt = 0; attempt < maxTries; attempt++) {
       try {
-        final graphql = ref.read(anilistGraphqlProvider);
-        final token = await ref.read(anilistTokenProvider.future);
-        final data = await graphql.fetchActivityRepliesPageData(
-          widget.activityId,
-          token: token,
+        // Goes through anilistActivityRepliesProvider which is jsonCache-backed
+        // (5 min stale-while-revalidate) so re-entering a comments thread
+        // within minutes serves from cache instead of hitting AniList.
+        final data = await ref.read(
+          anilistActivityRepliesProvider(widget.activityId).future,
         );
         if (!mounted) return;
         setState(() {

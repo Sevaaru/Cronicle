@@ -183,6 +183,19 @@ Future<bool> runNotificationSyncTask() async {
       return true;
     }
 
+    // Throttle: WorkManager / boot retries can fire this multiple times in
+    // quick succession. Each run does at minimum 2 AniList GraphQL calls
+    // (airing + inbox). Skip if we ran less than 10 minutes ago to keep the
+    // rate-limit footprint small while still being responsive enough.
+    const _minSyncIntervalMs = 10 * 60 * 1000;
+    const _lastRunPrefsKey = 'notification_sync_last_run_ms';
+    final lastRun = prefs.getInt(_lastRunPrefsKey) ?? 0;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (nowMs - lastRun < _minSyncIntervalMs) {
+      return true;
+    }
+    await prefs.setInt(_lastRunPrefsKey, nowMs);
+
     final airingOn =
         prefs.getBool(DeviceNotificationPrefs.airingEnabled) ?? true;
     final anilistOn =
@@ -252,18 +265,10 @@ Future<void> _syncAiringReleases(
   SharedPreferences prefs,
   bool isEs,
 ) async {
-  final entries = [
-    ...await gql.fetchCurrentListWithAiringSchedule(
-      token: token,
-      userName: userName,
-      type: 'ANIME',
-    ),
-    ...await gql.fetchCurrentListWithAiringSchedule(
-      token: token,
-      userName: userName,
-      type: 'MANGA',
-    ),
-  ];
+  final entries = await gql.fetchCurrentListsWithAiringSchedule(
+    token: token,
+    userName: userName,
+  );
 
   final now = DateTime.now().millisecondsSinceEpoch;
 

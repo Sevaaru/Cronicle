@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -462,12 +463,10 @@ class _AppearanceSection extends ConsumerWidget {
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                fullscreenDialog: false,
-                builder: (_) => const FeedFilterLayoutEditorPage(),
-              ),
-            ),
+            // Empujamos vía GoRouter (en vez de Navigator.push imperativo)
+            // para que el botón atrás del sistema y el cambio de pestaña
+            // en la navbar inferior cierren correctamente la subpágina.
+            onTap: () => context.push('/settings/feed-filters'),
           ),
           const Divider(height: 20),
           ListTile(
@@ -479,12 +478,7 @@ class _AppearanceSection extends ConsumerWidget {
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                fullscreenDialog: false,
-                builder: (_) => const LibraryKindLayoutEditorPage(),
-              ),
-            ),
+            onTap: () => context.push('/settings/library-kinds'),
           ),
           const Divider(height: 20),
           ListTile(
@@ -496,12 +490,7 @@ class _AppearanceSection extends ConsumerWidget {
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                fullscreenDialog: false,
-                builder: (_) => const SearchFilterLayoutEditorPage(),
-              ),
-            ),
+            onTap: () => context.push('/settings/search-filters'),
           ),
           const Divider(height: 20),
           const _InterestsQuickEditor(),

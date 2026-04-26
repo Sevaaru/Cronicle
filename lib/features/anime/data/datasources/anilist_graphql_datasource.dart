@@ -1681,6 +1681,66 @@ class AnilistGraphqlDatasource {
     return entries;
   }
 
+  /// Like [fetchCurrentListWithAiringSchedule] but pulls ANIME + MANGA in a
+  /// single GraphQL request using two aliased queries. Halves the number of
+  /// AniList calls required by the background airing-notification sync,
+  /// which is one of the most frequently scheduled background tasks.
+  Future<List<Map<String, dynamic>>> fetchCurrentListsWithAiringSchedule({
+    required String token,
+    required String userName,
+  }) async {
+    const query = r'''
+      query ($userName: String) {
+        anime: MediaListCollection(userName: $userName, type: ANIME, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                id
+                type
+                status
+                title { romaji english native }
+                coverImage { large }
+                nextAiringEpisode { airingAt episode }
+              }
+            }
+          }
+        }
+        manga: MediaListCollection(userName: $userName, type: MANGA, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                id
+                type
+                status
+                title { romaji english native }
+                coverImage { large }
+                nextAiringEpisode { airingAt episode }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'userName': userName},
+      token: token,
+    );
+    final entries = <Map<String, dynamic>>[];
+    for (final key in ['anime', 'manga']) {
+      final lists =
+          (data['data']?[key]?['lists'] as List?) ?? const [];
+      for (final list in lists) {
+        for (final entry in (list['entries'] as List? ?? const [])) {
+          entries.add(entry as Map<String, dynamic>);
+        }
+      }
+    }
+    return entries;
+  }
+
   Future<Map<String, dynamic>?> fetchViewer(String token) async {
     const query = r'''
       query {

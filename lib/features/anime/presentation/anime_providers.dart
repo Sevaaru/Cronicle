@@ -23,6 +23,86 @@ part 'anime_providers.g.dart';
 String _anilistPopularCacheKey(String type) =>
     'anilist_popular_${type.toUpperCase()}';
 const String _anilistProfileCacheKey = 'anilist_profile';
+String _anilistMediaDetailCacheKey(int id) => 'anilist_media_$id';
+String _anilistCharacterDetailCacheKey(int id) => 'anilist_character_$id';
+String _anilistStaffDetailCacheKey(int id) => 'anilist_staff_$id';
+String _anilistMediaThreadsCacheKey(int id) => 'anilist_media_threads_$id';
+String _anilistForumThreadCacheKey(int id) => 'anilist_forum_thread_$id';
+String _anilistBrowseMediaCacheKey(String type, String category) =>
+    'anilist_browse_${type}_$category';
+
+// Stale-while-revalidate freshness windows. Anilist data for a single
+// media/character/staff entity changes very rarely (cover art, description,
+// favorite count) so we can serve cached copies aggressively to slash the
+// rate-limit footprint of opening detail pages over and over.
+const Duration _anilistMediaDetailFreshness = Duration(hours: 2);
+const Duration _anilistCharacterDetailFreshness = Duration(hours: 24);
+const Duration _anilistStaffDetailFreshness = Duration(hours: 24);
+const Duration _anilistMediaThreadsFreshness = Duration(hours: 6);
+const Duration _anilistForumThreadFreshness = Duration(minutes: 10);
+const Duration _anilistBrowseMediaFreshness = Duration(hours: 6);
+
+/// Stale-while-revalidate helper for `Map<String, dynamic>?` detail fetches.
+/// If the cache is fresh, returns it without touching the network. If the
+/// cache is stale or missing, performs the fetch; on network failure the
+/// stale entry (if any) is returned so the UI keeps working offline.
+Future<Map<String, dynamic>?> _staleWhileRevalidateMap({
+  required JsonCache cache,
+  required String key,
+  required Duration freshness,
+  required Future<Map<String, dynamic>?> Function() fetch,
+}) async {
+  final cached = cache.read(key);
+  if (cached != null && cache.isFresh(cached.fetchedAt, freshness)) {
+    return cached.data;
+  }
+  try {
+    final fresh = await fetch();
+    if (fresh != null) {
+      await cache.write(key, fresh);
+      return fresh;
+    }
+  } catch (e) {
+    if (cached != null) return cached.data;
+    rethrow;
+  }
+  return cached?.data;
+}
+
+/// Same as [_staleWhileRevalidateMap] but for endpoints that return a list.
+/// Wraps the list under an `items` key for storage.
+Future<List<Map<String, dynamic>>> _staleWhileRevalidateList({
+  required JsonCache cache,
+  required String key,
+  required Duration freshness,
+  required Future<List<Map<String, dynamic>>> Function() fetch,
+}) async {
+  final cached = cache.read(key);
+  if (cached != null && cache.isFresh(cached.fetchedAt, freshness)) {
+    return jsonListAsMaps(cached.data['items']);
+  }
+  try {
+    final fresh = await fetch();
+    await cache.write(key, {'items': fresh});
+    return fresh;
+  } catch (e) {
+    if (cached != null) return jsonListAsMaps(cached.data['items']);
+    rethrow;
+  }
+}
+
+/// Optimistically updates a single field on a cached detail map. Used when
+/// we know the server-side change (e.g. toggled favourite) so the next read
+/// from cache reflects the new state without a round-trip refetch.
+Future<void> _patchCachedDetail(
+  JsonCache cache,
+  String key,
+  Map<String, dynamic> patch,
+) async {
+  final cached = cache.read(key);
+  if (cached == null) return;
+  await cache.write(key, {...cached.data, ...patch});
+}
 
 @Riverpod(keepAlive: true)
 AnilistAuthDatasource anilistAuth(AnilistAuthRef ref) {
@@ -206,7 +286,7 @@ class AnilistPopular extends _$AnilistPopular {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AnilistBrowseMedia extends _$AnilistBrowseMedia {
   static const _perPage = 24;
   int _page = 1;
@@ -223,6 +303,14 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
     _hasMore = true;
     _isLoadingMore = false;
     final graphql = ref.read(anilistGraphqlProvider);
+    final cache = ref.read(jsonCacheProvider);
+    final cacheKey = _anilistBrowseMediaCacheKey(type, category);
+    final cached = cache.read(cacheKey);
+    if (cached != null &&
+        cache.isFresh(cached.fetchedAt, _anilistBrowseMediaFreshness)) {
+      _hasMore = (cached.data['hasMore'] as bool?) ?? false;
+      return jsonListAsMaps(cached.data['items']);
+    }
     final page = await graphql.fetchBrowseMedia(
       type: type,
       category: category,
@@ -230,6 +318,10 @@ class AnilistBrowseMedia extends _$AnilistBrowseMedia {
       perPage: _perPage,
     );
     _hasMore = page.hasNextPage;
+    await cache.write(cacheKey, {
+      'items': page.items,
+      'hasMore': page.hasNextPage,
+    });
     return page.items;
   }
 
@@ -328,7 +420,7 @@ FeedActivity? feedActivityFromAnilistActivityMap(Map<String, dynamic> a) {
   );
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AnilistFeed extends _$AnilistFeed {
   static const _perPage = 25;
   int _page = 1;
@@ -401,7 +493,7 @@ class AnilistFeed extends _$AnilistFeed {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AnilistFeedByType extends _$AnilistFeedByType {
   static const _perPage = 15;
   int _page = 1;
@@ -466,7 +558,7 @@ class AnilistFeedByType extends _$AnilistFeedByType {
   }
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class AnilistFeedFollowing extends _$AnilistFeedFollowing {
   static const _perPage = 25;
   int _page = 1;
@@ -577,9 +669,25 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
         return cached.items;
       }
       if (cached.items.isNotEmpty) {
+        final generation = _generation;
         scheduleMicrotask(() async {
           try {
             final fresh = await _fetchPage();
+            if (generation != _generation) return;
+            // Bug-guard: AniList ocasionalmente devuelve `activities: []`
+            // (rate-limit suave, hipo del backend, carrera con el refresh
+            // del token, etc.). Si teníamos ítems en caché, NO sobreescribir
+            // el estado ni la caché con una lista vacía: provocaba que el
+            // feed de "Siguiendo" se vaciara y mostrara "no hay actividad
+            // reciente" hasta reiniciar la app.
+            if (fresh.isEmpty && cached.items.isNotEmpty) {
+              debugPrint(
+                '[AniList] Social feed (type=$activityType, '
+                'foll=$isFollowing) refresh devolvió 0 ítems; '
+                'manteniendo caché previa de ${cached.items.length}.',
+              );
+              return;
+            }
             _lastFetchedAt = DateTime.now();
             unawaited(
               cache.write(activityType, isFollowing, fresh),
@@ -606,9 +714,20 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     _page = 1;
     _hasMore = true;
     _isLoadingMore = false;
+    final prev = state.valueOrNull;
     state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
     try {
       final fresh = await _fetchPage();
+      // Mismo guard que en build(): no destruyas una lista válida si la
+      // API devuelve [] de forma transitoria.
+      if (fresh.isEmpty && prev != null && prev.isNotEmpty) {
+        debugPrint(
+          '[AniList] Social feed refresh manual devolvió 0 ítems; '
+          'manteniendo ${prev.length} ítems previos.',
+        );
+        state = AsyncData(prev);
+        return;
+      }
       _lastFetchedAt = DateTime.now();
       final cache = AnilistFeedCache(ref.read(sharedPreferencesProvider));
       unawaited(cache.write(activityType, isFollowing, fresh));
@@ -622,8 +741,11 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     final graphql = ref.read(anilistGraphqlProvider);
     final token = await ref.read(anilistTokenProvider.future);
     if (isFollowing && token == null) {
+      // Antes devolvíamos [] aquí, lo que se confundía con "no hay
+      // actividad" y se persistía en caché. Mejor lanzar para que el
+      // catch del refresh de fondo preserve el estado/caché previos.
       _hasMore = false;
-      return [];
+      throw StateError('AniList token no disponible para feed Siguiendo');
     }
     final page = await graphql.fetchRecentActivityByType(
       activityType: activityType,
@@ -763,7 +885,13 @@ Future<Map<String, dynamic>?> anilistMediaDetail(
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
   final token = await ref.watch(anilistTokenProvider.future);
-  return graphql.fetchMediaDetail(mediaId, token: token);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistMediaDetailCacheKey(mediaId),
+    freshness: _anilistMediaDetailFreshness,
+    fetch: () => graphql.fetchMediaDetail(mediaId, token: token),
+  );
 }
 
 @riverpod
@@ -773,7 +901,13 @@ Future<Map<String, dynamic>?> anilistCharacterDetail(
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
   final token = await ref.watch(anilistTokenProvider.future);
-  return graphql.fetchCharacterDetail(characterId, token: token);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistCharacterDetailCacheKey(characterId),
+    freshness: _anilistCharacterDetailFreshness,
+    fetch: () => graphql.fetchCharacterDetail(characterId, token: token),
+  );
 }
 
 @riverpod
@@ -783,7 +917,13 @@ Future<Map<String, dynamic>?> anilistStaffDetail(
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
   final token = await ref.watch(anilistTokenProvider.future);
-  return graphql.fetchStaffDetail(staffId, token: token);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistStaffDetailCacheKey(staffId),
+    freshness: _anilistStaffDetailFreshness,
+    fetch: () => graphql.fetchStaffDetail(staffId, token: token),
+  );
 }
 
 @Riverpod(keepAlive: true)
@@ -846,7 +986,13 @@ Future<List<Map<String, dynamic>>> anilistMediaThreads(
   int mediaId,
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
-  return graphql.fetchMediaThreads(mediaId);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateList(
+    cache: cache,
+    key: _anilistMediaThreadsCacheKey(mediaId),
+    freshness: _anilistMediaThreadsFreshness,
+    fetch: () => graphql.fetchMediaThreads(mediaId),
+  );
 }
 
 @riverpod
@@ -856,10 +1002,74 @@ Future<Map<String, dynamic>?> anilistForumThread(
 ) async {
   final graphql = ref.read(anilistGraphqlProvider);
   final token = await ref.read(anilistTokenProvider.future);
-  return graphql.fetchForumThread(threadId, token: token);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistForumThreadCacheKey(threadId),
+    freshness: _anilistForumThreadFreshness,
+    fetch: () => graphql.fetchForumThread(threadId, token: token),
+  );
+}
+
+const Duration _anilistUserProfileFreshness = Duration(hours: 1);
+const Duration _anilistUserActivityFreshness = Duration(minutes: 15);
+const Duration _anilistActivityRepliesFreshness = Duration(minutes: 5);
+String _anilistUserProfileCacheKey(int id) => 'anilist_user_profile_$id';
+String _anilistUserActivityCacheKey(int id) => 'anilist_user_activity_$id';
+String _anilistActivityRepliesCacheKey(int id) =>
+    'anilist_activity_replies_$id';
+
+@riverpod
+Future<Map<String, dynamic>?> anilistUserProfile(
+  AnilistUserProfileRef ref,
+  int userId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.watch(anilistTokenProvider.future);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistUserProfileCacheKey(userId),
+    freshness: _anilistUserProfileFreshness,
+    fetch: () => graphql.fetchUserProfile(userId, token: token),
+  );
 }
 
 @riverpod
+Future<List<Map<String, dynamic>>> anilistUserActivity(
+  AnilistUserActivityRef ref,
+  int userId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.watch(anilistTokenProvider.future);
+  final cache = ref.read(jsonCacheProvider);
+  return _staleWhileRevalidateList(
+    cache: cache,
+    key: _anilistUserActivityCacheKey(userId),
+    freshness: _anilistUserActivityFreshness,
+    fetch: () => graphql.fetchUserActivity(userId, token: token),
+  );
+}
+
+@riverpod
+Future<Map<String, dynamic>> anilistActivityReplies(
+  AnilistActivityRepliesRef ref,
+  int activityId,
+) async {
+  final graphql = ref.read(anilistGraphqlProvider);
+  final token = await ref.watch(anilistTokenProvider.future);
+  final cache = ref.read(jsonCacheProvider);
+  final result = await _staleWhileRevalidateMap(
+    cache: cache,
+    key: _anilistActivityRepliesCacheKey(activityId),
+    freshness: _anilistActivityRepliesFreshness,
+    fetch: () =>
+        graphql.fetchActivityRepliesPageData(activityId, token: token),
+  );
+  return result ?? const {};
+}
+
+@Riverpod(keepAlive: true)
 Future<int> anilistUnreadNotificationCount(
   AnilistUnreadNotificationCountRef ref,
 ) async {
@@ -869,7 +1079,7 @@ Future<int> anilistUnreadNotificationCount(
   return await graphql.fetchUnreadNotificationCount(token) ?? 0;
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<Map<String, dynamic>>> anilistNotificationsList(
   AnilistNotificationsListRef ref,
 ) async {
@@ -1084,7 +1294,13 @@ class FavoriteAnilistMedia extends _$FavoriteAnilistMedia {
         debugPrint('[AniList] Favorite sync failed for $id/$type: $e');
       }
     }
+    final cache = ref.read(jsonCacheProvider);
     for (final id in touchedIds) {
+      await _patchCachedDetail(
+        cache,
+        _anilistMediaDetailCacheKey(id),
+        const {'isFavourite': true},
+      );
       ref.invalidate(anilistMediaDetailProvider(id));
     }
     ref.invalidate(anilistProfileProvider);
@@ -1233,7 +1449,13 @@ class FavoriteAnilistCharacters extends _$FavoriteAnilistCharacters {
         debugPrint('[AniList] Character favorite sync failed for $id: $e');
       }
     }
+    final cache = ref.read(jsonCacheProvider);
     for (final id in touched) {
+      await _patchCachedDetail(
+        cache,
+        _anilistCharacterDetailCacheKey(id),
+        const {'isFavourite': true},
+      );
       ref.invalidate(anilistCharacterDetailProvider(id));
     }
     ref.invalidate(anilistProfileProvider);
@@ -1324,7 +1546,13 @@ class FavoriteAnilistStaff extends _$FavoriteAnilistStaff {
         debugPrint('[AniList] Staff favorite sync failed for $id: $e');
       }
     }
+    final cache = ref.read(jsonCacheProvider);
     for (final id in touched) {
+      await _patchCachedDetail(
+        cache,
+        _anilistStaffDetailCacheKey(id),
+        const {'isFavourite': true},
+      );
       ref.invalidate(anilistStaffDetailProvider(id));
     }
     ref.invalidate(anilistProfileProvider);

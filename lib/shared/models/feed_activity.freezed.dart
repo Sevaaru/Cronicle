@@ -1,6 +1,13 @@
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'feed_activity.dart';
 
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
 
 T _$identity<T>(T value) => value;
 
@@ -12,6 +19,7 @@ FeedActivity _$FeedActivityFromJson(Map<String, dynamic> json) {
   return _FeedActivity.fromJson(json);
 }
 
+/// @nodoc
 mixin _$FeedActivity {
   String get id => throw _privateConstructorUsedError;
   MediaKind get source => throw _privateConstructorUsedError;
@@ -28,13 +36,17 @@ mixin _$FeedActivity {
   bool get isLiked => throw _privateConstructorUsedError;
   bool get isTextActivity => throw _privateConstructorUsedError;
 
+  /// Serializes this FeedActivity to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
+  /// Create a copy of FeedActivity
+  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   $FeedActivityCopyWith<FeedActivity> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
+/// @nodoc
 abstract class $FeedActivityCopyWith<$Res> {
   factory $FeedActivityCopyWith(
     FeedActivity value,
@@ -59,13 +71,18 @@ abstract class $FeedActivityCopyWith<$Res> {
   });
 }
 
+/// @nodoc
 class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
     implements $FeedActivityCopyWith<$Res> {
   _$FeedActivityCopyWithImpl(this._value, this._then);
 
+  // ignore: unused_field
   final $Val _value;
+  // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of FeedActivity
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -148,6 +165,7 @@ class _$FeedActivityCopyWithImpl<$Res, $Val extends FeedActivity>
   }
 }
 
+/// @nodoc
 abstract class _$$FeedActivityImplCopyWith<$Res>
     implements $FeedActivityCopyWith<$Res> {
   factory _$$FeedActivityImplCopyWith(
@@ -174,6 +192,7 @@ abstract class _$$FeedActivityImplCopyWith<$Res>
   });
 }
 
+/// @nodoc
 class __$$FeedActivityImplCopyWithImpl<$Res>
     extends _$FeedActivityCopyWithImpl<$Res, _$FeedActivityImpl>
     implements _$$FeedActivityImplCopyWith<$Res> {
@@ -182,6 +201,8 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
     $Res Function(_$FeedActivityImpl) _then,
   ) : super(_value, _then);
 
+  /// Create a copy of FeedActivity
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -263,6 +284,7 @@ class __$$FeedActivityImplCopyWithImpl<$Res>
   }
 }
 
+/// @nodoc
 @JsonSerializable()
 class _$FeedActivityImpl implements _FeedActivity {
   const _$FeedActivityImpl({
@@ -372,6 +394,8 @@ class _$FeedActivityImpl implements _FeedActivity {
     isTextActivity,
   );
 
+  /// Create a copy of FeedActivity
+  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
@@ -434,6 +458,8 @@ abstract class _FeedActivity implements FeedActivity {
   @override
   bool get isTextActivity;
 
+  /// Create a copy of FeedActivity
+  /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$FeedActivityImplCopyWith<_$FeedActivityImpl> get copyWith =>

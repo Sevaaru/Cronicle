@@ -49,6 +49,11 @@ class AnilistFeedCache {
     bool isFollowing,
     List<FeedActivity> items,
   ) async {
+    // Bug-guard: nunca persistas un feed vacío. Antes, si AniList devolvía
+    // momentáneamente `activities: []`, escribíamos esa lista vacía en
+    // SharedPreferences y, en builds posteriores, el feed de "Siguiendo"
+    // se quedaba en blanco ("no hay actividad reciente") hasta reiniciar.
+    if (items.isEmpty) return;
     final capped = items.take(50).toList();
     final payload = jsonEncode({
       'fetchedAt': DateTime.now().millisecondsSinceEpoch,

@@ -1,6 +1,13 @@
+// coverage:ignore-file
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'media_item.dart';
 
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
 
 T _$identity<T>(T value) => value;
 
@@ -12,6 +19,7 @@ MediaItem _$MediaItemFromJson(Map<String, dynamic> json) {
   return _MediaItem.fromJson(json);
 }
 
+/// @nodoc
 mixin _$MediaItem {
   int? get localId => throw _privateConstructorUsedError;
   MediaKind get kind => throw _privateConstructorUsedError;
@@ -25,13 +33,17 @@ mixin _$MediaItem {
   String? get notes => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
+  /// Serializes this MediaItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
+  /// Create a copy of MediaItem
+  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   $MediaItemCopyWith<MediaItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
+/// @nodoc
 abstract class $MediaItemCopyWith<$Res> {
   factory $MediaItemCopyWith(MediaItem value, $Res Function(MediaItem) then) =
       _$MediaItemCopyWithImpl<$Res, MediaItem>;
@@ -51,13 +63,18 @@ abstract class $MediaItemCopyWith<$Res> {
   });
 }
 
+/// @nodoc
 class _$MediaItemCopyWithImpl<$Res, $Val extends MediaItem>
     implements $MediaItemCopyWith<$Res> {
   _$MediaItemCopyWithImpl(this._value, this._then);
 
+  // ignore: unused_field
   final $Val _value;
+  // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of MediaItem
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -125,6 +142,7 @@ class _$MediaItemCopyWithImpl<$Res, $Val extends MediaItem>
   }
 }
 
+/// @nodoc
 abstract class _$$MediaItemImplCopyWith<$Res>
     implements $MediaItemCopyWith<$Res> {
   factory _$$MediaItemImplCopyWith(
@@ -148,6 +166,7 @@ abstract class _$$MediaItemImplCopyWith<$Res>
   });
 }
 
+/// @nodoc
 class __$$MediaItemImplCopyWithImpl<$Res>
     extends _$MediaItemCopyWithImpl<$Res, _$MediaItemImpl>
     implements _$$MediaItemImplCopyWith<$Res> {
@@ -156,6 +175,8 @@ class __$$MediaItemImplCopyWithImpl<$Res>
     $Res Function(_$MediaItemImpl) _then,
   ) : super(_value, _then);
 
+  /// Create a copy of MediaItem
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -222,6 +243,7 @@ class __$$MediaItemImplCopyWithImpl<$Res>
   }
 }
 
+/// @nodoc
 @JsonSerializable()
 class _$MediaItemImpl implements _MediaItem {
   const _$MediaItemImpl({
@@ -310,6 +332,8 @@ class _$MediaItemImpl implements _MediaItem {
     updatedAt,
   );
 
+  /// Create a copy of MediaItem
+  /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
@@ -363,6 +387,8 @@ abstract class _MediaItem implements MediaItem {
   @override
   DateTime? get updatedAt;
 
+  /// Create a copy of MediaItem
+  /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$MediaItemImplCopyWith<_$MediaItemImpl> get copyWith =>

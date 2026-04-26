@@ -44,6 +44,7 @@ import 'package:cronicle/features/search/presentation/search_browse_by_release_d
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_show_detail_page.dart';
@@ -291,6 +292,30 @@ GoRouter appRouter(AppRouterRef ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SettingsPage(),
             ),
+            routes: [
+              // Subpáginas de personalización de layouts. Se registran como
+              // GoRoutes (en vez de Navigator.push imperativo) para que:
+              //  - El botón atrás del sistema cierre la página (lo gestiona
+              //    GoRouter en vez de quedar atrapado en una ruta opaca).
+              //  - Cambiar de pestaña en la navbar inferior reemplace la
+              //    rama actual y cierre estas subpáginas en lugar de
+              //    dejarlas apiladas sobre la nueva pestaña.
+              GoRoute(
+                path: 'feed-filters',
+                builder: (context, state) =>
+                    const FeedFilterLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'library-kinds',
+                builder: (context, state) =>
+                    const LibraryKindLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'search-filters',
+                builder: (context, state) =>
+                    const SearchFilterLayoutEditorPage(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/media/:id',
