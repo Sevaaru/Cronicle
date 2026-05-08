@@ -2204,6 +2204,24 @@ abstract class AppLocalizations {
   /// **'Vista (0–1)'**
   String get addToListMovieProgress;
 
+  /// No description provided for @completionDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Lo has terminado!'**
+  String get completionDialogTitle;
+
+  /// No description provided for @completionDialogSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quieres dejar nota y comentarios?'**
+  String get completionDialogSubtitle;
+
+  /// No description provided for @completionDialogSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Omitir'**
+  String get completionDialogSkip;
+
   /// No description provided for @traktNotConfiguredHint.
   ///
   /// In es, this message translates to:
@@ -2515,6 +2533,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Anilist para anime y manga, Trakt para cine y series, Google opcional para copia en la nube. Los juegos quedan en el dispositivo.'**
   String get settingsAccountsSubtitle;
+
+  /// No description provided for @settingsNotificationsCategoryDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Alertas del dispositivo e integración con Wear OS'**
+  String get settingsNotificationsCategoryDesc;
+
+  /// No description provided for @settingsDataTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos y copia de seguridad'**
+  String get settingsDataTitle;
+
+  /// No description provided for @settingsDataCategorySubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Exportar e importar datos de tu biblioteca'**
+  String get settingsDataCategorySubtitle;
 
   /// No description provided for @twitchIgdbTitle.
   ///
@@ -3109,6 +3145,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Leyendo'**
   String get statusCurrentBook;
+
+  /// No description provided for @statusPlayedGame.
+  ///
+  /// In es, this message translates to:
+  /// **'Jugado'**
+  String get statusPlayedGame;
 
   /// No description provided for @statusReplayingGame.
   ///
@@ -4393,6 +4435,246 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Si no hay páginas en la API, puedes definir tu total manualmente.'**
   String get bookEditionNoPageHint;
+
+  /// No description provided for @steamTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Steam'**
+  String get steamTitle;
+
+  /// No description provided for @steamSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con Steam para importar tus juegos, horas jugadas y logros.'**
+  String get steamSubtitle;
+
+  /// No description provided for @steamConnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Steam'**
+  String get steamConnect;
+
+  /// No description provided for @steamDisconnect.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconectar Steam'**
+  String get steamDisconnect;
+
+  /// No description provided for @steamConnectedAs.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado como {name}'**
+  String steamConnectedAs(Object name);
+
+  /// No description provided for @steamConnectSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta de Steam vinculada.'**
+  String get steamConnectSuccess;
+
+  /// No description provided for @steamDisconnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta de Steam desconectada.'**
+  String get steamDisconnected;
+
+  /// No description provided for @steamMissingCredentials.
+  ///
+  /// In es, this message translates to:
+  /// **'El inicio de sesión con Steam no está disponible en esta build.'**
+  String get steamMissingCredentials;
+
+  /// No description provided for @steamWebUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'El inicio de sesión con Steam desde el navegador no está disponible; usa Android, iOS o escritorio.'**
+  String get steamWebUnavailable;
+
+  /// No description provided for @steamOpenLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver biblioteca de Steam'**
+  String get steamOpenLibrary;
+
+  /// No description provided for @steamLibraryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Biblioteca de Steam'**
+  String get steamLibraryTitle;
+
+  /// No description provided for @steamProfileSection.
+  ///
+  /// In es, this message translates to:
+  /// **'Steam'**
+  String get steamProfileSection;
+
+  /// No description provided for @steamProfileHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Explora tus juegos y logros de Steam'**
+  String get steamProfileHint;
+
+  /// No description provided for @steamNotConnectedHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no has conectado Steam. Vincula tu cuenta desde Ajustes.'**
+  String get steamNotConnectedHint;
+
+  /// No description provided for @steamNoGames.
+  ///
+  /// In es, this message translates to:
+  /// **'No se han encontrado juegos.'**
+  String get steamNoGames;
+
+  /// No description provided for @steamSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar juego…'**
+  String get steamSearchHint;
+
+  /// No description provided for @steamSortPlaytime.
+  ///
+  /// In es, this message translates to:
+  /// **'Horas'**
+  String get steamSortPlaytime;
+
+  /// No description provided for @steamSortLastPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'Reciente'**
+  String get steamSortLastPlayed;
+
+  /// No description provided for @steamSortName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get steamSortName;
+
+  /// No description provided for @steamRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get steamRefresh;
+
+  /// No description provided for @steamHoursPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h jugadas'**
+  String steamHoursPlayed(Object hours);
+
+  /// No description provided for @steamPlaytime.
+  ///
+  /// In es, this message translates to:
+  /// **'Tiempo total'**
+  String get steamPlaytime;
+
+  /// No description provided for @steamLastPlayed.
+  ///
+  /// In es, this message translates to:
+  /// **'Última partida'**
+  String get steamLastPlayed;
+
+  /// No description provided for @steamAddToLibrary.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir a mi biblioteca'**
+  String get steamAddToLibrary;
+
+  /// No description provided for @steamNoIgdbMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró equivalente en IGDB para {name}.'**
+  String steamNoIgdbMatch(Object name);
+
+  /// No description provided for @steamAchievements.
+  ///
+  /// In es, this message translates to:
+  /// **'Logros'**
+  String get steamAchievements;
+
+  /// No description provided for @steamNoAchievements.
+  ///
+  /// In es, this message translates to:
+  /// **'Este juego no tiene logros (o tu perfil de Steam es privado).'**
+  String get steamNoAchievements;
+
+  /// No description provided for @steamAchievementsProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{unlocked} de {total} desbloqueados'**
+  String steamAchievementsProgress(int unlocked, int total);
+
+  /// No description provided for @steamAchievementHidden.
+  ///
+  /// In es, this message translates to:
+  /// **'Logro oculto'**
+  String get steamAchievementHidden;
+
+  /// No description provided for @steamAchievementUnlockedOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Desbloqueado {date}'**
+  String steamAchievementUnlockedOn(Object date);
+
+  /// No description provided for @steamAbout.
+  ///
+  /// In es, this message translates to:
+  /// **'Acerca de'**
+  String get steamAbout;
+
+  /// No description provided for @steamMetacritic.
+  ///
+  /// In es, this message translates to:
+  /// **'Metacritic'**
+  String get steamMetacritic;
+
+  /// No description provided for @steamCurrentPlayers.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} jugando ahora'**
+  String steamCurrentPlayers(Object count);
+
+  /// No description provided for @steamFriendsActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad de amigos'**
+  String get steamFriendsActivity;
+
+  /// No description provided for @steamFriendsOwnThis.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} amigos tuyos tienen este juego'**
+  String steamFriendsOwnThis(int count);
+
+  /// No description provided for @steamFriendsNoneOwn.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguno de tus amigos revisados tiene este juego'**
+  String get steamFriendsNoneOwn;
+
+  /// No description provided for @steamNotConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conectar'**
+  String get steamNotConnected;
+
+  /// No description provided for @steamViewOnStore.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver en Steam'**
+  String get steamViewOnStore;
+
+  /// No description provided for @steamUserReviews.
+  ///
+  /// In es, this message translates to:
+  /// **'Reseñas de usuarios'**
+  String get steamUserReviews;
+
+  /// No description provided for @steamReviewsStats.
+  ///
+  /// In es, this message translates to:
+  /// **'{percent}% positivas · {total} reseñas'**
+  String steamReviewsStats(int percent, Object total);
 }
 
 class _AppLocalizationsDelegate

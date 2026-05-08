@@ -297,31 +297,89 @@ Future<List<Map<String, dynamic>>> igdbGamesSectionList(
   const reviewLimit = 50;
   final api = ref.read(igdbApiProvider);
 
+  // Fallback: las funciones IGDB por-sección (`fetchGamesMostAnticipated`,
+  // `fetchGamesRecentlyReleased`, `fetchGamesComingSoon`, `fetchGamesBestRated`,
+  // `fetchGamesGenreSpotlight`, …) van a través de `_tryPostGameQueries`, que
+  // se traga los errores y devuelve `[]`. Si la API rechaza esas queries
+  // (p.ej. cambios en filtros como `category`/`hypes`), la pantalla "ver más"
+  // se mostraba vacía aunque el carrusel del home tuviese ítems —ya que el
+  // home se alimenta de un multiquery distinto (`fetchHomeFeedGames`).
+  // Por eso, si la lista por-sección viene vacía, reutilizamos los ítems
+  // que el home ya tiene cacheados para el mismo slug. Para Popular usamos
+  // su propio provider, que tiene además el fallback vía
+  // `popularity_primitives`.
+  Future<List<Map<String, dynamic>>> homeFallback() async {
+    try {
+      if (slug == GamesFeedSection.popular) {
+        return await ref.read(igdbPopularProvider.future);
+      }
+      final aside = await ref.read(igdbGamesHomeFeedProvider.future);
+      return switch (slug) {
+        GamesFeedSection.anticipated => aside.anticipated,
+        GamesFeedSection.recentlyReleased => aside.recentlyReleased,
+        GamesFeedSection.comingSoon => aside.comingSoon,
+        GamesFeedSection.bestRated => aside.bestRated,
+        GamesFeedSection.indie => aside.indie,
+        GamesFeedSection.horror => aside.horror,
+        GamesFeedSection.multiplayer => aside.multiplayer,
+        GamesFeedSection.rpg => aside.rpg,
+        GamesFeedSection.sports => aside.sports,
+        GamesFeedSection.reviewsRecent => aside.reviewsRecent,
+        GamesFeedSection.reviewsCritics => aside.reviewsCritics,
+        _ => const <Map<String, dynamic>>[],
+      };
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> withFallback(
+    Future<List<Map<String, dynamic>>> Function() primary,
+  ) async {
+    try {
+      final list = await primary();
+      if (list.isNotEmpty) return list;
+    } catch (_) {}
+    return homeFallback();
+  }
+
   return switch (slug) {
-    GamesFeedSection.popular =>
-      _normalizeGamesSafe(await api.fetchPopularGames(limit: gameLimit)),
-    GamesFeedSection.anticipated =>
-      _normalizeGamesSafe(await api.fetchGamesMostAnticipated(limit: gameLimit)),
-    GamesFeedSection.recentlyReleased =>
-      _normalizeGamesSafe(await api.fetchGamesRecentlyReleased(limit: gameLimit)),
-    GamesFeedSection.comingSoon =>
-      _normalizeGamesSafe(await api.fetchGamesComingSoon(limit: gameLimit)),
-    GamesFeedSection.bestRated =>
-      _normalizeGamesSafe(await api.fetchGamesBestRated(limit: gameLimit)),
-    GamesFeedSection.indie =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: gameLimit)),
-    GamesFeedSection.horror =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: gameLimit)),
-    GamesFeedSection.multiplayer =>
-      _normalizeGamesSafe(await api.fetchGamesMultiplayerPopular(limit: gameLimit)),
-    GamesFeedSection.rpg =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: gameLimit)),
-    GamesFeedSection.sports =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: gameLimit)),
-    GamesFeedSection.reviewsRecent =>
-      _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: reviewLimit)),
-    GamesFeedSection.reviewsCritics =>
-      _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: reviewLimit)),
+    GamesFeedSection.popular => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchPopularGames(limit: gameLimit)),
+      ),
+    GamesFeedSection.anticipated => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesMostAnticipated(limit: gameLimit)),
+      ),
+    GamesFeedSection.recentlyReleased => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesRecentlyReleased(limit: gameLimit)),
+      ),
+    GamesFeedSection.comingSoon => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesComingSoon(limit: gameLimit)),
+      ),
+    GamesFeedSection.bestRated => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesBestRated(limit: gameLimit)),
+      ),
+    GamesFeedSection.indie => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: gameLimit)),
+      ),
+    GamesFeedSection.horror => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: gameLimit)),
+      ),
+    GamesFeedSection.multiplayer => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesMultiplayerPopular(limit: gameLimit)),
+      ),
+    GamesFeedSection.rpg => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: gameLimit)),
+      ),
+    GamesFeedSection.sports => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: gameLimit)),
+      ),
+    GamesFeedSection.reviewsRecent => withFallback(
+        () => _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: reviewLimit)),
+      ),
+    GamesFeedSection.reviewsCritics => withFallback(
+        () => _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: reviewLimit)),
+      ),
     _ => <Map<String, dynamic>>[],
   };
 }
@@ -373,6 +431,26 @@ class FavoriteGames extends _$FavoriteGames {
       next.removeAt(i);
     } else {
       next.add(_snapshotGameForFavorites(game));
+    }
+    await prefs.setString(_favoriteGamesPrefsKey, jsonEncode(next));
+    state = next;
+  }
+
+  Future<void> toggleSteamFavorite(
+      int appId, String name, String coverUrl) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere(
+        (e) => (e['steam_appid'] as num?)?.toInt() == appId);
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add({
+        'id': null,
+        'steam_appid': appId,
+        'title': {'english': name, 'romaji': null},
+        'coverImage': {'large': coverUrl},
+      });
     }
     await prefs.setString(_favoriteGamesPrefsKey, jsonEncode(next));
     state = next;

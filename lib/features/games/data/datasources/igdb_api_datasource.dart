@@ -367,12 +367,26 @@ limit ${orderedIds.length};
       {int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final twoYears = now + 730 * 24 * 3600;
+    // El multiquery del home usa `version_parent = null` (no `category = 0`)
+    // y ordena por `first_release_date asc`. Mantengamos ese mismo patrón
+    // como base —ordenar por `hypes desc` antes vacíaba la lista porque
+    // muchos juegos tienen `hypes = null` y IGDB los excluye del sort—.
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
-       first_release_date, hypes;
-where category = 0 & first_release_date > $now & first_release_date < $twoYears;
+       first_release_date, hypes, total_rating;
+where first_release_date > $now & first_release_date < $twoYears
+      & version_parent = null
+      & hypes != null;
 sort hypes desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date, total_rating;
+where first_release_date > $now & first_release_date < $twoYears
+      & version_parent = null;
+sort first_release_date asc;
 limit $limit;
 ''',
       '''
@@ -397,19 +411,32 @@ limit $limit;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final past = now - 548 * 24 * 3600; // ~18 months
     final pastWide = now - 1095 * 24 * 3600; // ~36 months
+    // Igual que el multiquery del home: `version_parent = null` (no
+    // `category = 0`) — el home funciona con esto, las versiones con
+    // `category` daban 0 resultados en algunas regiones.
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        first_release_date, total_rating;
-where category = 0 & first_release_date <= $now & first_release_date >= $past;
+where first_release_date <= $now & first_release_date >= $past
+      & version_parent = null;
 sort first_release_date desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        first_release_date, release_dates.date;
-where category = 0 & release_dates.date <= $now & release_dates.date >= $past;
+where release_dates.date <= $now & release_dates.date >= $past
+      & version_parent = null;
 sort release_dates.date desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
+where first_release_date <= $now & first_release_date >= $pastWide
+      & version_parent = null;
+sort first_release_date desc;
 limit $limit;
 ''',
       '''
@@ -425,19 +452,29 @@ limit $limit;
   Future<List<Map<String, dynamic>>> fetchGamesComingSoon({int limit = 24}) async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final cap = now + 730 * 24 * 3600; // 2 years
+    // Mismo filtro que el multiquery del home (`version_parent = null`).
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        first_release_date;
-where category = 0 & first_release_date > $now & first_release_date < $cap;
+where first_release_date > $now & first_release_date < $cap
+      & version_parent = null;
 sort first_release_date asc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        release_dates.date;
-where category = 0 & release_dates.date > $now & release_dates.date < $cap;
+where release_dates.date > $now & release_dates.date < $cap
+      & version_parent = null;
 sort release_dates.date asc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       first_release_date;
+where category = 0 & first_release_date > $now & first_release_date < $cap;
+sort first_release_date asc;
 limit $limit;
 ''',
       '''
@@ -456,25 +493,31 @@ limit $limit;
   static const int genreIdSports = 14;
 
   Future<List<Map<String, dynamic>>> fetchGamesBestRated({int limit = 24}) async {
+    // Antes pedíamos `total_rating_count >= 50 & total_rating >= 85`
+    // (combo super estricto): IGDB devolvía 0 ítems en muchos casos y
+    // como `_tryPostGameQueries` se traga el error la pantalla quedaba
+    // vacía. Bajamos el listón al mismo umbral que ya funciona en el
+    // multiquery del home (`total_rating > 80 & total_rating_count > 5`)
+    // y añadimos `version_parent = null` para excluir versiones duplicadas.
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, total_rating_count, first_release_date;
-where category = 0 & total_rating_count >= 50 & total_rating >= 85;
+where total_rating > 80 & total_rating_count > 5 & version_parent = null;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, total_rating_count, first_release_date;
-where category = 0 & total_rating_count >= 25 & total_rating >= 80;
+where category = 0 & total_rating > 80 & total_rating_count > 5;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, total_rating_count, first_release_date;
-where category = 0 & total_rating_count >= 10 & total_rating > 0;
+where category = 0 & total_rating_count >= 5 & total_rating > 0;
 sort total_rating desc;
 limit $limit;
 ''',
@@ -486,25 +529,41 @@ limit $limit;
     int limit = 24,
     int minRating = 72,
   }) async {
+    // Para horror el id 19 es de **themes**, no de **genres**: la query
+    // anterior (`genres = (19) ...`) devolvía 0 y la pantalla acababa
+    // vacía. Detectamos ese caso y consultamos `themes` además de
+    // probar el campo `genres` como fallback. Mantenemos
+    // `version_parent = null` como en el multiquery del home.
+    final isHorrorTheme = genreId == genreIdHorror;
+    final field = isHorrorTheme ? 'themes' : 'genres';
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
-where category = 0 & genres = ($genreId) & total_rating >= $minRating;
+where $field = ($genreId) & total_rating >= $minRating
+      & version_parent = null;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
-where category = 0 & genres = ($genreId) & total_rating >= 50;
+where $field = ($genreId) & total_rating >= 50
+      & version_parent = null;
 sort total_rating desc;
 limit $limit;
 ''',
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
-where category = 0 & genres = ($genreId);
+where $field = ($genreId) & version_parent = null;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where category = 0 & $field = ($genreId);
 sort total_rating desc;
 limit $limit;
 ''',
@@ -513,11 +572,20 @@ limit $limit;
 
   Future<List<Map<String, dynamic>>> fetchGamesMultiplayerPopular(
       {int limit = 24}) async {
+    // Igual que el multiquery del home: `game_modes = (2) & total_rating > 50`
+    // sin `category = 0`, con `version_parent = null` para deduplicar.
     return _tryPostGameQueries([
       '''
 fields name, cover.image_id, genres.name, platforms.abbreviation,
        total_rating, first_release_date;
-where category = 0 & game_modes = (2) & total_rating >= 60;
+where game_modes = (2) & total_rating > 50 & version_parent = null;
+sort total_rating desc;
+limit $limit;
+''',
+      '''
+fields name, cover.image_id, genres.name, platforms.abbreviation,
+       total_rating, first_release_date;
+where game_modes = (2) & version_parent = null;
 sort total_rating desc;
 limit $limit;
 ''',
@@ -629,6 +697,49 @@ where id = $reviewId;
     } catch (_) {
       return null;
     }
+  }
+
+  /// Resolves an IGDB game id from a Steam app id.
+  ///
+  /// Phase 1: queries IGDB `external_games` (Steam category = 1) by uid.
+  /// Phase 2: if phase 1 yields no result and [gameName] is provided, falls
+  /// back to a name search on `/games` and picks the best-matching title.
+  Future<int?> findGameIdBySteamAppId(int steamAppId, {String? gameName}) async {
+    // --- Phase 1: external_games lookup ---
+    try {
+      final list = await _postList('/external_games', '''
+fields game;
+where category = 1 & uid = "$steamAppId";
+limit 1;
+''');
+      if (list.isNotEmpty) {
+        final id = list.first['game'];
+        if (id is int) return id;
+        if (id is num) return id.toInt();
+      }
+    } catch (_) {}
+
+    // --- Phase 2: name-based fallback ---
+    if (gameName == null || gameName.trim().isEmpty) return null;
+    try {
+      final results = await searchGames(gameName.trim());
+      if (results.isEmpty) return null;
+      final target = gameName.trim().toLowerCase();
+      // Prefer exact name match; otherwise take the first result.
+      for (final r in results) {
+        final n = (r['name'] as String? ?? '').toLowerCase();
+        if (n == target) {
+          final id = r['id'];
+          if (id is int) return id;
+          if (id is num) return id.toInt();
+        }
+      }
+      final first = results.first['id'];
+      if (first is int) return first;
+      if (first is num) return first.toInt();
+    } catch (_) {}
+
+    return null;
   }
 
   Future<Map<String, dynamic>?> fetchGameDetail(int gameId) async {
@@ -922,9 +1033,10 @@ limit 15;
 
     final body = '''
 query games "anticipated" {
-  $f;
-  where first_release_date > $now & first_release_date < $twoYears & version_parent = null;
-  sort first_release_date asc;
+  $f, hypes;
+  where first_release_date > $now & first_release_date < $twoYears
+        & version_parent = null & hypes != null;
+  sort hypes desc;
   limit 24;
 };
 query games "recentlyReleased" {
@@ -936,7 +1048,7 @@ query games "recentlyReleased" {
 query games "comingSoon" {
   $f;
   where first_release_date > $now & first_release_date < $twoYears & version_parent = null;
-  sort first_release_date desc;
+  sort first_release_date asc;
   limit 24;
 };
 query games "bestRated" {

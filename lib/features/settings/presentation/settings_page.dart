@@ -31,9 +31,9 @@ import 'package:cronicle/features/library/presentation/anilist_sync_service.dart
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
+import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
-import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
 import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
@@ -51,7 +51,6 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final googleSignIn = ref.watch(googleSignInProvider);
     return Scaffold(
       appBar: AppBar(
         clipBehavior: Clip.none,
@@ -63,35 +62,175 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           16,
-          4,
+          8,
           16,
           kGlassBottomNavContentHeight + 24,
         ),
         children: [
-          // ===== Personalización =====
-          _SettingsCategoryHeader(
+          _SettingsCategoryCard(
             icon: Icons.palette_rounded,
-            label: l10n.settingsAppearanceTitle,
-            color: cs.primary,
+            iconColor: cs.primary,
+            title: l10n.settingsAppearanceTitle,
+            subtitle: l10n.settingsAppearanceSubtitle,
+            onTap: () => context.push('/settings/appearance'),
           ),
+          const SizedBox(height: 10),
+          _SettingsCategoryCard(
+            icon: Icons.notifications_active_rounded,
+            iconColor: cs.tertiary,
+            title: l10n.settingsNotificationsTitle,
+            subtitle: l10n.settingsNotificationsCategoryDesc,
+            onTap: () => context.push('/settings/notifications'),
+          ),
+          const SizedBox(height: 10),
+          _SettingsCategoryCard(
+            icon: Icons.sync_alt_rounded,
+            iconColor: cs.secondary,
+            title: l10n.settingsAccountsTitle,
+            subtitle: l10n.settingsAccountsSubtitle,
+            onTap: () => context.push('/settings/accounts'),
+          ),
+          const SizedBox(height: 10),
+          _SettingsCategoryCard(
+            icon: Icons.cloud_sync_rounded,
+            iconColor: cs.primary,
+            title: l10n.settingsDataTitle,
+            subtitle: l10n.settingsDataCategorySubtitle,
+            onTap: () => context.push('/settings/data'),
+          ),
+          const SizedBox(height: 32),
+          const _SettingsAboutFooter(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Android-16-style category navigation card for the main settings page.
+class _SettingsCategoryCard extends StatelessWidget {
+  const _SettingsCategoryCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? cs.surfaceContainerHigh
+        : Color.alphaBlend(cs.primaryContainer.withAlpha(30), cs.surface);
+
+    return Material(
+      color: bg,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: cs.outlineVariant.withAlpha(isDark ? 60 : 40),
+          width: 0.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconColor.withAlpha(isDark ? 50 : 30),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: iconColor, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            height: 1.3,
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded,
+                  color: cs.onSurfaceVariant, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Settings sub-pages
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SettingsAppearancePage extends ConsumerWidget {
+  const SettingsAppearancePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settingsAppearanceTitle)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        children: [
           const _AppearanceSection(),
           const SizedBox(height: 12),
-
           _AppDefaultsSection(),
           const SizedBox(height: 12),
-
           _DefaultFilterSection(),
           const SizedBox(height: 12),
-
           const _ScoringSection(),
-          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
 
-          // ===== Notificaciones / Wear =====
-          _SettingsCategoryHeader(
-            icon: Icons.notifications_active_rounded,
-            label: l10n.settingsNotificationsTitle,
-            color: cs.tertiary,
-          ),
+class SettingsNotificationsPage extends ConsumerWidget {
+  const SettingsNotificationsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settingsNotificationsTitle)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        children: [
           if (kIsWeb)
             _SettingsSection(
               icon: Icons.notifications_off_rounded,
@@ -105,35 +244,54 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 12),
             const _WearOsSection(),
           ],
-          const SizedBox(height: 24),
-
-          // ===== Cuentas y sincronización =====
-          _SettingsCategoryHeader(
-            icon: Icons.sync_alt_rounded,
-            label: l10n.settingsAccountsTitle,
-            color: cs.secondary,
-          ),
-          const _AnilistSection(),
-          const SizedBox(height: 12),
-          const _TraktSection(),
-          const SizedBox(height: 12),
-          _GoogleSection(googleSignIn: googleSignIn),
-          const SizedBox(height: 24),
-
-          // ===== Datos =====
-          _SettingsCategoryHeader(
-            icon: Icons.cloud_sync_rounded,
-            label: l10n.backupTitle,
-            color: cs.primary,
-          ),
-          _BackupSection(googleSignIn: googleSignIn),
-          const SizedBox(height: 32),
-          const _SettingsAboutFooter(),
         ],
       ),
     );
   }
+}
 
+class SettingsAccountsPage extends ConsumerWidget {
+  const SettingsAccountsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final googleSignIn = ref.watch(googleSignInProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settingsAccountsTitle)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        children: [
+          const _AnilistSection(),
+          const SizedBox(height: 12),
+          const _TraktSection(),
+          const SizedBox(height: 12),
+          const _SteamSection(),
+          const SizedBox(height: 12),
+          _GoogleSection(googleSignIn: googleSignIn),
+        ],
+      ),
+    );
+  }
+}
+
+class SettingsDataPage extends ConsumerWidget {
+  const SettingsDataPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final googleSignIn = ref.watch(googleSignInProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settingsDataTitle)),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        children: [
+          _BackupSection(googleSignIn: googleSignIn),
+        ],
+      ),
+    );
+  }
 }
 
 class _SettingsAboutFooter extends StatelessWidget {
@@ -702,6 +860,126 @@ class _TraktSection extends ConsumerWidget {
   }
 }
 
+class _SteamSection extends ConsumerWidget {
+  const _SteamSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final sessionAsync = ref.watch(steamSessionProvider);
+
+    return _SettingsSection(
+      iconWidget: Image.asset(
+        'assets/steam_icon.png',
+        width: 40,
+        height: 40,
+      ),
+      title: l10n.steamTitle,
+      subtitle: l10n.steamSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          sessionAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (e, _) => Text(l10n.errorWithMessage(e)),
+            data: (s) {
+              if (s.connected) {
+                final label = s.personaName ?? s.steamId ?? '—';
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle,
+                            size: 18, color: Colors.green.shade400),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            l10n.steamConnectedAs(label),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.list_alt_rounded, size: 18),
+                        label: Text(l10n.steamOpenLibrary),
+                        onPressed: () => context.push('/profile/steam'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.logout, size: 18),
+                        label: Text(l10n.steamDisconnect),
+                        onPressed: () async {
+                          await ref
+                              .read(steamSessionProvider.notifier)
+                              .disconnect();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.steamDisconnected)),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.login, size: 18),
+                  label: Text(l10n.steamConnect),
+                  onPressed: () async {
+                    if (kIsWeb) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.steamWebUnavailable)),
+                      );
+                      return;
+                    }
+                    if (EnvConfig.steamApiKey.isEmpty ||
+                        EnvConfig.steamRedirectUri.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(l10n.steamMissingCredentials)),
+                      );
+                      return;
+                    }
+                    try {
+                      await ref
+                          .read(steamSessionProvider.notifier)
+                          .connect();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.steamConnectSuccess)),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.errorWithMessage(e))),
+                      );
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DefaultFilterSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -920,8 +1198,10 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
         ref.read(sharedPreferencesProvider).getInt(GoogleDriveBackupPrefs.lastRunMs);
     if (ms == null || ms <= 0) return l10n.never;
     final dt = DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
-    return MaterialLocalizations.of(context)
-        .formatTimeOfDay(TimeOfDay.fromDateTime(dt));
+    final materialL10n = MaterialLocalizations.of(context);
+    final date = materialL10n.formatShortDate(dt);
+    final time = materialL10n.formatTimeOfDay(TimeOfDay.fromDateTime(dt));
+    return '$date $time';
   }
 
   bool get _needsGoogleServerClientId {
@@ -1800,6 +2080,7 @@ class _SettingsSection extends StatelessWidget {
   const _SettingsSection({
     this.icon,
     this.iconColor,
+    this.iconWidget,
     this.title,
     this.subtitle,
     required this.child,
@@ -1807,6 +2088,8 @@ class _SettingsSection extends StatelessWidget {
 
   final IconData? icon;
   final Color? iconColor;
+  /// If provided, rendered instead of [icon] inside the circular badge.
+  final Widget? iconWidget;
   final String? title;
   final String? subtitle;
   final Widget child;
@@ -1847,16 +2130,18 @@ class _SettingsSection extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (icon != null) ...[
+                  if (icon != null || iconWidget != null || iconWidget != null) ...[
                     Container(
                       width: 40,
                       height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: accent.withAlpha(isDark ? 60 : 40),
+                        color: iconWidget != null
+                            ? Colors.transparent
+                            : accent.withAlpha(isDark ? 60 : 40),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(icon, size: 22, color: accent),
+                      child: iconWidget ?? Icon(icon, size: 22, color: accent),
                     ),
                     const SizedBox(width: 14),
                   ],
@@ -1897,45 +2182,4 @@ class _SettingsSection extends StatelessWidget {
   }
 }
 
-/// Sticky-style category label shown above a group of related settings cards.
-class _SettingsCategoryHeader extends StatelessWidget {
-  const _SettingsCategoryHeader({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
 
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 14, 4, 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-              color: color,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: cs.outlineVariant.withAlpha(70),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

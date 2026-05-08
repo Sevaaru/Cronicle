@@ -11,5 +11,7 @@
   "TRAKT_CLIENT_ID": "",
   "TRAKT_CLIENT_SECRET": "",
   "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html",
-  "GOOGLE_BOOKS_API_KEY": ""
+  "GOOGLE_BOOKS_API_KEY": "",
+  "STEAM_API_KEY": "",
+  "STEAM_REDIRECT_URI": "https://TU-SITIO.netlify.app/steam_oauth_bridge.html"
 }

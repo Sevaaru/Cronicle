@@ -56,15 +56,18 @@ class _SocialPageState extends ConsumerState<SocialPage>
         );
   }
 
-  void _invalidate() {
+  Future<void> _invalidate() async {
     try {
-      // Si el notifier sigue vivo, refrescamos directo.
-      ref
+      // Si el notifier sigue vivo, refrescamos directo. Pasamos force=true
+      // para que un pull-to-refresh manual no quede silenciado por el
+      // bug-guard que conserva la lista previa cuando AniList responde 0
+      // ítems de forma transitoria.
+      await ref
           .read(
             anilistSocialFeedProvider(_activityType.apiValue, _isFollowing)
                 .notifier,
           )
-          .refresh();
+          .refresh(force: true);
     } catch (_) {
       // Fallback: invalidamos provider para forzar recarga limpia.
       ref.invalidate(

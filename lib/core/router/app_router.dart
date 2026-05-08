@@ -46,6 +46,8 @@ import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
+import 'package:cronicle/features/steam/presentation/steam_game_detail_page.dart';
+import 'package:cronicle/features/steam/presentation/steam_library_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_show_detail_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
@@ -288,6 +290,28 @@ GoRouter appRouter(AppRouterRef ref) {
             },
           ),
           GoRoute(
+            path: '/profile/steam',
+            builder: (context, state) => const SteamLibraryPage(),
+          ),
+          GoRoute(
+            path: '/profile/steam/game/:appid',
+            builder: (context, state) {
+              final id =
+                  int.tryParse(state.pathParameters['appid'] ?? '') ?? 0;
+              if (id <= 0) return const _InvalidBrowseParamsPage();
+              return SteamGameDetailPage(appId: id);
+            },
+          ),
+          GoRoute(
+            path: '/profile/steam/game/:appid/achievements',
+            builder: (context, state) {
+              final id =
+                  int.tryParse(state.pathParameters['appid'] ?? '') ?? 0;
+              if (id <= 0) return const _InvalidBrowseParamsPage();
+              return SteamAchievementsPage(appId: id);
+            },
+          ),
+          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SettingsPage(),
@@ -314,6 +338,26 @@ GoRouter appRouter(AppRouterRef ref) {
                 path: 'search-filters',
                 builder: (context, state) =>
                     const SearchFilterLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'appearance',
+                builder: (context, state) =>
+                    const SettingsAppearancePage(),
+              ),
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) =>
+                    const SettingsNotificationsPage(),
+              ),
+              GoRoute(
+                path: 'accounts',
+                builder: (context, state) =>
+                    const SettingsAccountsPage(),
+              ),
+              GoRoute(
+                path: 'data',
+                builder: (context, state) =>
+                    const SettingsDataPage(),
               ),
             ],
           ),

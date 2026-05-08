@@ -345,6 +345,20 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<void> updateLibraryEntryRatingAndNotes({
+    required int entryId,
+    required int? score,
+    required String? notes,
+  }) async {
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        score: Value(score),
+        notes: Value(notes),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   Future<void> updateAnimeAiringMetadata({
     required int id,
     required String? animeMediaStatus,

@@ -1348,6 +1348,62 @@ class AnilistGraphqlDatasource {
     return data['data']?['ToggleLikeV2']?['isLiked'] as bool? ?? false;
   }
 
+  /// Returns the list of users that liked the given activity. Each entry is a
+  /// `{id: int, name: String, avatar: String?}` map. Works for both
+  /// `ListActivity` and `TextActivity`. `MessageActivity` is also covered
+  /// for completeness even though it is not surfaced in the social feed.
+  Future<List<Map<String, dynamic>>> fetchActivityLikes(
+    int activityId, {
+    String? token,
+  }) async {
+    const query = r'''
+      query ($id: Int!) {
+        Activity(id: $id) {
+          __typename
+          ... on ListActivity { likes { id name avatar { medium } } }
+          ... on TextActivity { likes { id name avatar { medium } } }
+          ... on MessageActivity { likes { id name avatar { medium } } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': activityId}, token: token);
+    final activity = data['data']?['Activity'] as Map<String, dynamic>?;
+    final likes = (activity?['likes'] as List?) ?? const [];
+    return likes
+        .whereType<Map>()
+        .map((e) => <String, dynamic>{
+              'id': e['id'] as int?,
+              'name': e['name'] as String? ?? '',
+              'avatar': (e['avatar'] as Map?)?['medium'] as String?,
+            })
+        .toList();
+  }
+
+  /// Returns the list of users that liked an activity reply.
+  Future<List<Map<String, dynamic>>> fetchActivityReplyLikes(
+    int replyId, {
+    String? token,
+  }) async {
+    const query = r'''
+      query ($id: Int!) {
+        ActivityReply(id: $id) {
+          likes { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': replyId}, token: token);
+    final likes =
+        (data['data']?['ActivityReply']?['likes'] as List?) ?? const [];
+    return likes
+        .whereType<Map>()
+        .map((e) => <String, dynamic>{
+              'id': e['id'] as int?,
+              'name': e['name'] as String? ?? '',
+              'avatar': (e['avatar'] as Map?)?['medium'] as String?,
+            })
+        .toList();
+  }
+
   Future<Map<String, dynamic>> saveTextActivity(String text, String token) async {
     const query = r'''
       mutation ($text: String!) {

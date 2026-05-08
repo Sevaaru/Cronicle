@@ -22,6 +22,7 @@ import 'package:cronicle/features/profile/presentation/profile_favorites_kind.da
 import 'package:cronicle/features/profile/presentation/profile_favorites_preview.dart';
 import 'package:cronicle/features/profile/presentation/profile_stats_shared.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -202,6 +203,8 @@ class _NotLoggedIn extends ConsumerWidget {
           l10n: l10n,
           colorScheme: cs,
         ),
+        const SizedBox(height: 12),
+        _SteamNavTile(l10n: l10n, colorScheme: cs),
       ],
     );
   }
@@ -617,6 +620,8 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
               const SizedBox(height: 12),
               _TrophyRoomNavTile(l10n: l10n, colorScheme: cs),
               const SizedBox(height: 12),
+              _SteamNavTile(l10n: l10n, colorScheme: cs),
+              const SizedBox(height: 12),
 
               _FavoritesPreviewSection(
                 apiFavAnime: favAnime,
@@ -662,6 +667,44 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                   accent: const Color(0xFFED1C24),
                   icon: Icons.local_movies_rounded,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Consumer(
+                builder: (context, ref, _) {
+                  final steamAsync = ref.watch(steamSessionProvider);
+                  return steamAsync.when(
+                    loading: () => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: null,
+                      connected: false,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                      loading: true,
+                    ),
+                    error: (_, _) => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: l10n.steamNotConnected,
+                      connected: false,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                    ),
+                    data: (s) => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: s.connected
+                          ? (s.personaName ?? '')
+                          : l10n.steamNotConnected,
+                      connected: s.connected,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                      iconWidget: Image.asset(
+                        'assets/steam_icon.png',
+                        width: 42,
+                        height: 42,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -1433,6 +1476,7 @@ class _ConnectedAccountTile extends StatelessWidget {
     required this.connected,
     required this.accent,
     required this.icon,
+    this.iconWidget,
     this.loading = false,
   });
 
@@ -1441,6 +1485,7 @@ class _ConnectedAccountTile extends StatelessWidget {
   final bool connected;
   final Color accent;
   final IconData icon;
+  final Widget? iconWidget;
   final bool loading;
 
   @override
@@ -1461,7 +1506,12 @@ class _ConnectedAccountTile extends StatelessWidget {
                 color: accent.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: accent, size: 22),
+              child: iconWidget != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: iconWidget,
+                    )
+                  : Icon(icon, color: accent, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1693,3 +1743,75 @@ Color _kindColor(MediaKind kind, ColorScheme cs) => switch (kind) {
       MediaKind.game => Colors.redAccent,
       MediaKind.book => const Color(0xFFAB47BC),
     };
+
+
+class _SteamNavTile extends ConsumerWidget {
+  const _SteamNavTile({required this.l10n, required this.colorScheme});
+
+  final AppLocalizations l10n;
+  final ColorScheme colorScheme;
+
+  static const double _radius = 22;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = colorScheme;
+    final sessionAsync = ref.watch(steamSessionProvider);
+    final session = sessionAsync.asData?.value;
+    if (session == null || !session.connected) {
+      return const SizedBox.shrink();
+    }
+    final name = session.personaName ?? session.steamId ?? '';
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_radius),
+        onTap: () => context.push('/profile/steam'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/steam_icon.png',
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.steamProfileSection,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      name.isNotEmpty ? name : l10n.steamProfileHint,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

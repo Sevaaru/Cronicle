@@ -31,6 +31,7 @@ String libraryEntryStatusLabel(
       },
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
+    'PLAYED' => l10n.statusPlayedGame,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {

@@ -709,7 +709,7 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     return fresh;
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool force = false}) async {
     _generation++;
     _page = 1;
     _hasMore = true;
@@ -718,11 +718,14 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
     try {
       final fresh = await _fetchPage();
-      // Mismo guard que en build(): no destruyas una lista válida si la
-      // API devuelve [] de forma transitoria.
-      if (fresh.isEmpty && prev != null && prev.isNotEmpty) {
+      // Bug-guard: cuando NO es un refresh forzado por el usuario, no
+      // destruimos una lista válida si la API devuelve [] de forma
+      // transitoria. Cuando el usuario tira-para-refrescar (force=true)
+      // sí queremos reflejar el resultado real para que la UI no parezca
+      // ignorar la acción.
+      if (!force && fresh.isEmpty && prev != null && prev.isNotEmpty) {
         debugPrint(
-          '[AniList] Social feed refresh manual devolvió 0 ítems; '
+          '[AniList] Social feed refresh devolvió 0 ítems; '
           'manteniendo ${prev.length} ítems previos.',
         );
         state = AsyncData(prev);

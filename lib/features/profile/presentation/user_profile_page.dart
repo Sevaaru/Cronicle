@@ -11,6 +11,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
@@ -657,6 +658,15 @@ class _UserActivityCard extends ConsumerWidget {
                   isLiked: activity['isLiked'] as bool? ?? false,
                   likeCount: activity['likeCount'] as int? ?? 0,
                   onToggle: () => _handleLike(ref, context),
+                  onLongPress:
+                      ((activity['likeCount'] as int? ?? 0) > 0 && actId != null)
+                          ? () => showActivityLikersSheet(
+                                context,
+                                ref,
+                                targetId: actId,
+                                expectedCount: activity['likeCount'] as int? ?? 0,
+                              )
+                          : null,
                   compact: true,
                 ),
                 const SizedBox(width: 12),

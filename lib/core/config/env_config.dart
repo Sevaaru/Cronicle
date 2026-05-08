@@ -80,4 +80,14 @@ abstract final class EnvConfig {
     'TRAKT_REDIRECT_URI',
     defaultValue: '',
   );
+
+  static const String steamApiKey = String.fromEnvironment(
+    'STEAM_API_KEY',
+    defaultValue: '',
+  );
+
+  static const String steamRedirectUri = String.fromEnvironment(
+    'STEAM_REDIRECT_URI',
+    defaultValue: '',
+  );
 }

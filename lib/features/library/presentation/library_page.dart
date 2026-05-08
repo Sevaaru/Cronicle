@@ -27,10 +27,11 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/completion_rating_dialog.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
-const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
+const _statusKeys = [null, 'CURRENT', 'PLANNING', 'COMPLETED', 'PLAYED', 'PAUSED', 'DROPPED', 'REPEATING'];
 
 const _statusMenuValueAll = '';
 
@@ -39,6 +40,7 @@ String _statusLabel(String? key, AppLocalizations l10n) => switch (key) {
   'CURRENT' => l10n.statusCurrent,
   'PLANNING' => l10n.statusPlanning,
   'COMPLETED' => l10n.statusCompleted,
+  'PLAYED' => l10n.statusPlayedGame,
   'PAUSED' => l10n.statusPaused,
   'DROPPED' => l10n.statusDropped,
   'REPEATING' => l10n.statusRepeating,
@@ -50,6 +52,7 @@ IconData _statusIcon(String? key) => switch (key) {
   'CURRENT' => Icons.play_arrow_rounded,
   'PLANNING' => Icons.bookmark_add_outlined,
   'COMPLETED' => Icons.check_circle_outline,
+  'PLAYED' => Icons.done_all_rounded,
   'PAUSED' => Icons.pause_circle_outline,
   'DROPPED' => Icons.cancel_outlined,
   'REPEATING' => Icons.replay_rounded,
@@ -66,6 +69,7 @@ String _currentStatusLabel(String status, MediaKind? kind, AppLocalizations l10n
   return switch (upper) {
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
+    'PLAYED' => l10n.statusPlayedGame,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => l10n.statusRepeating,
@@ -223,6 +227,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         }
       } catch (_) {}
     }
+  }
+
+  /// Smoothly scrolls to the top of the library list/grid after a progress
+  /// increment. Pressing "+" promotes the entry to the top of the
+  /// "recently updated" sort, so we follow it visually instead of leaving
+  /// the user staring at the now-empty slot below.
+  void _scrollToTopAfterProgress() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels <= 0.5) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _openEditSheet(BuildContext context, LibraryEntry entry) async {
@@ -486,6 +504,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                               onEdit: () => _openEditSheet(context, entries[i]),
                               onProgressUpdated: () {
                                 ref.invalidate(paginatedLibraryProvider(_params));
+                                _scrollToTopAfterProgress();
                               },
                             );
                           },
@@ -498,6 +517,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           onEdit: (e) => _openEditSheet(context, e),
                           onProgressUpdated: () {
                             ref.invalidate(paginatedLibraryProvider(_params));
+                            _scrollToTopAfterProgress();
                           },
                         ),
                 );
@@ -824,14 +844,18 @@ class _EntryCard extends StatelessWidget {
               // Edge-to-edge poster: fills the full card height, no margin.
               SizedBox(
                 width: 64,
-                child: entry.posterUrl != null
-                    ? CachedNetworkImage(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (entry.posterUrl != null)
+                      CachedNetworkImage(
                         imageUrl: entry.posterUrl!,
                         fit: BoxFit.cover,
                         memCacheWidth: 160,
                         memCacheHeight: 240,
                       )
-                    : ColoredBox(
+                    else
+                      ColoredBox(
                         color: _kindColor(kind, cs).withAlpha(40),
                         child: Center(
                           child: Icon(
@@ -840,6 +864,55 @@ class _EntryCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                    // User score chip (top-left of the poster). Mirrors the
+                    // grid card so list view also surfaces the score on the
+                    // cover instead of the meta line, freeing space for the
+                    // next-episode airing indicator.
+                    if (entry.score != null && entry.score! > 0)
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final scoring =
+                                ref.watch(scoringSystemSettingProvider);
+                            final scoreText = scoring.formatScore(
+                                scoring.fromStoredScore(entry.score));
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withAlpha(140),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    size: 10,
+                                    color: Colors.amber.shade400,
+                                  ),
+                                  const SizedBox(width: 1),
+                                  Text(
+                                    scoreText,
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.1,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
               ),
               Expanded(
                 child: Padding(
@@ -1100,7 +1173,6 @@ class _EntryMetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = _progressText();
     final statusLabel = _currentStatusLabel(entry.status, kind, l10n);
-    final hasScore = entry.score != null && entry.score! > 0;
     final airing = _animeAiringLabel(entry, l10n);
 
     return Row(
@@ -1141,24 +1213,6 @@ class _EntryMetaLine extends StatelessWidget {
                     : cs.primary.withAlpha(220),
               ),
             ),
-          ),
-        ],
-        if (hasScore) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.star_rounded, size: 13, color: Colors.amber.shade600),
-          const SizedBox(width: 2),
-          Consumer(
-            builder: (context, ref, _) {
-              final scoring = ref.watch(scoringSystemSettingProvider);
-              return Text(
-                scoring.formatScore(scoring.fromStoredScore(entry.score)),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              );
-            },
           ),
         ],
       ],
@@ -1242,6 +1296,13 @@ class _IncrementButtonState extends State<_IncrementButton>
     try {
       final db = widget.ref.read(databaseProvider);
       final kind = MediaKind.fromCode(widget.entry.kind);
+      // Snapshot whether this increment is the one that completes the entry.
+      // We compute it from the in-memory entry BEFORE the increment so we
+      // can fire the rating dialog right after the DB write.
+      final wasCompleted =
+          widget.entry.status.toUpperCase() == 'COMPLETED';
+      final willComplete = !wasCompleted && _willCompleteWithIncrement(kind);
+
       if (kind == MediaKind.book) {
         await db.incrementBookProgress(widget.entry.id);
       } else {
@@ -1262,9 +1323,54 @@ class _IncrementButtonState extends State<_IncrementButton>
           unawaited(syncTraktEntryFromLocalDatabase(widget.ref, MediaKind.tv, tid));
         }
       }
+
+      // Just finished it — prompt the user to optionally drop a score and
+      // a personal note. Re-fetch the freshly-updated entry so the dialog
+      // sees the new status/progress.
+      if (willComplete && mounted) {
+        final updated =
+            await db.getLibraryEntryById(widget.entry.id) ?? widget.entry;
+        if (!mounted) return;
+        await showCompletionRatingDialog(
+          context: context,
+          ref: widget.ref,
+          entry: updated,
+        );
+        // Reflect any score/notes change in the list.
+        widget.onUpdated();
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// True when the next +1 will push the entry to its known final progress
+  /// and therefore mark it as COMPLETED in the local DB. Mirrors the logic
+  /// inside [AppDatabase.incrementProgress] / [incrementBookProgress].
+  bool _willCompleteWithIncrement(MediaKind kind) {
+    final entry = widget.entry;
+    if (kind == MediaKind.book) {
+      final mode = (entry.bookTrackingMode ?? 'pages').toLowerCase();
+      if (mode == 'chapters') {
+        final total = entry.userTotalChaptersOverride ??
+            entry.totalChaptersFromApi;
+        if (total == null || total <= 0) return false;
+        final next = (entry.currentChapter ?? 0) + 1;
+        return next >= total;
+      }
+      final total = mode == 'percentage'
+          ? 100
+          : entry.userTotalPagesOverride ??
+              entry.totalPagesFromApi ??
+              entry.totalEpisodes;
+      if (total == null || total <= 0) return false;
+      final next = (entry.progress ?? 0) + 1;
+      return next >= total;
+    }
+    final total = entry.totalEpisodes;
+    if (total == null || total <= 0) return false;
+    final next = (entry.progress ?? 0) + 1;
+    return next >= total;
   }
 
   void _syncProgressToAnilist() async {
@@ -1896,6 +2002,52 @@ class _GridEntryTile extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // User score chip — top-right by default. If the airing badge
+              // is also visible (also top-right), the score is pushed below
+              // it so they stack instead of overlapping.
+              if (entry.score != null && entry.score! > 0)
+                Positioned(
+                  top: airing != null ? 36 : 8,
+                  right: 8,
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final scoring = ref.watch(scoringSystemSettingProvider);
+                      final scoreText = scoring
+                          .formatScore(scoring.fromStoredScore(entry.score));
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(140),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: 11,
+                              color: Colors.amber.shade400,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              scoreText,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.1,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
 
               // Top-right next-episode airing badge for currently airing
               // anime. Shows either "Ep N • Xd Yh" or "N atrasados".

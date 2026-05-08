@@ -1137,6 +1137,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addToListMovieProgress => 'Vista (0–1)';
 
   @override
+  String get completionDialogTitle => '¡Lo has terminado!';
+
+  @override
+  String get completionDialogSubtitle => '¿Quieres dejar nota y comentarios?';
+
+  @override
+  String get completionDialogSkip => 'Omitir';
+
+  @override
   String get traktNotConfiguredHint =>
       'Añade TRAKT_CLIENT_ID a los dart-define para ver películas y series desde Trakt (sin género anime, para no duplicar AniList).';
 
@@ -1308,6 +1317,17 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsAccountsSubtitle =>
       'Anilist para anime y manga, Trakt para cine y series, Google opcional para copia en la nube. Los juegos quedan en el dispositivo.';
+
+  @override
+  String get settingsNotificationsCategoryDesc =>
+      'Alertas del dispositivo e integración con Wear OS';
+
+  @override
+  String get settingsDataTitle => 'Datos y copia de seguridad';
+
+  @override
+  String get settingsDataCategorySubtitle =>
+      'Exportar e importar datos de tu biblioteca';
 
   @override
   String get twitchIgdbTitle => 'Twitch (IGDB)';
@@ -1639,6 +1659,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get statusCurrentBook => 'Leyendo';
+
+  @override
+  String get statusPlayedGame => 'Jugado';
 
   @override
   String get statusReplayingGame => 'Rejugando';
@@ -2336,4 +2359,146 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get bookEditionNoPageHint =>
       'Si no hay páginas en la API, puedes definir tu total manualmente.';
+
+  @override
+  String get steamTitle => 'Steam';
+
+  @override
+  String get steamSubtitle =>
+      'Inicia sesión con Steam para importar tus juegos, horas jugadas y logros.';
+
+  @override
+  String get steamConnect => 'Conectar Steam';
+
+  @override
+  String get steamDisconnect => 'Desconectar Steam';
+
+  @override
+  String steamConnectedAs(Object name) {
+    return 'Conectado como $name';
+  }
+
+  @override
+  String get steamConnectSuccess => 'Cuenta de Steam vinculada.';
+
+  @override
+  String get steamDisconnected => 'Cuenta de Steam desconectada.';
+
+  @override
+  String get steamMissingCredentials =>
+      'El inicio de sesión con Steam no está disponible en esta build.';
+
+  @override
+  String get steamWebUnavailable =>
+      'El inicio de sesión con Steam desde el navegador no está disponible; usa Android, iOS o escritorio.';
+
+  @override
+  String get steamOpenLibrary => 'Ver biblioteca de Steam';
+
+  @override
+  String get steamLibraryTitle => 'Biblioteca de Steam';
+
+  @override
+  String get steamProfileSection => 'Steam';
+
+  @override
+  String get steamProfileHint => 'Explora tus juegos y logros de Steam';
+
+  @override
+  String get steamNotConnectedHint =>
+      'Aún no has conectado Steam. Vincula tu cuenta desde Ajustes.';
+
+  @override
+  String get steamNoGames => 'No se han encontrado juegos.';
+
+  @override
+  String get steamSearchHint => 'Buscar juego…';
+
+  @override
+  String get steamSortPlaytime => 'Horas';
+
+  @override
+  String get steamSortLastPlayed => 'Reciente';
+
+  @override
+  String get steamSortName => 'Nombre';
+
+  @override
+  String get steamRefresh => 'Actualizar';
+
+  @override
+  String steamHoursPlayed(Object hours) {
+    return '$hours h jugadas';
+  }
+
+  @override
+  String get steamPlaytime => 'Tiempo total';
+
+  @override
+  String get steamLastPlayed => 'Última partida';
+
+  @override
+  String get steamAddToLibrary => 'Añadir a mi biblioteca';
+
+  @override
+  String steamNoIgdbMatch(Object name) {
+    return 'No se encontró equivalente en IGDB para $name.';
+  }
+
+  @override
+  String get steamAchievements => 'Logros';
+
+  @override
+  String get steamNoAchievements =>
+      'Este juego no tiene logros (o tu perfil de Steam es privado).';
+
+  @override
+  String steamAchievementsProgress(int unlocked, int total) {
+    return '$unlocked de $total desbloqueados';
+  }
+
+  @override
+  String get steamAchievementHidden => 'Logro oculto';
+
+  @override
+  String steamAchievementUnlockedOn(Object date) {
+    return 'Desbloqueado $date';
+  }
+
+  @override
+  String get steamAbout => 'Acerca de';
+
+  @override
+  String get steamMetacritic => 'Metacritic';
+
+  @override
+  String steamCurrentPlayers(Object count) {
+    return '$count jugando ahora';
+  }
+
+  @override
+  String get steamFriendsActivity => 'Actividad de amigos';
+
+  @override
+  String steamFriendsOwnThis(int count) {
+    return '$count amigos tuyos tienen este juego';
+  }
+
+  @override
+  String get steamFriendsNoneOwn =>
+      'Ninguno de tus amigos revisados tiene este juego';
+
+  @override
+  String get steamNotConnected => 'Sin conectar';
+
+  @override
+  String get steamViewOnStore => 'Ver en Steam';
+
+  @override
+  String get steamUserReviews => 'Reseñas de usuarios';
+
+  @override
+  String steamReviewsStats(int percent, Object total) {
+    return '$percent% positivas · $total reseñas';
+  }
 }

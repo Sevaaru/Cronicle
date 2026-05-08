@@ -8,6 +8,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
@@ -538,6 +539,15 @@ class _OriginalActivityLikeRow extends ConsumerWidget {
           isLiked: activityMap['isLiked'] as bool? ?? false,
           likeCount: activityMap['likeCount'] as int? ?? 0,
           onToggle: () => _handleLike(ref, context),
+          onLongPress: ((activityMap['likeCount'] as int? ?? 0) > 0 &&
+                  activityMap['id'] is int)
+              ? () => showActivityLikersSheet(
+                    context,
+                    ref,
+                    targetId: activityMap['id'] as int,
+                    expectedCount: activityMap['likeCount'] as int? ?? 0,
+                  )
+              : null,
           compact: true,
         ),
       ],
@@ -785,6 +795,16 @@ class _ReplyCard extends ConsumerWidget {
                 likeCount: reply['likeCount'] as int? ?? 0,
                 iconSize: 15,
                 onToggle: () => _handleLike(ref, context),
+                onLongPress: ((reply['likeCount'] as int? ?? 0) > 0 &&
+                        reply['id'] is int)
+                    ? () => showActivityLikersSheet(
+                          context,
+                          ref,
+                          targetId: reply['id'] as int,
+                          target: LikersTarget.reply,
+                          expectedCount: reply['likeCount'] as int? ?? 0,
+                        )
+                    : null,
                 compact: true,
               ),
               const SizedBox(width: 8),

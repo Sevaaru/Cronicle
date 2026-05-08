@@ -9,6 +9,7 @@ class AnimatedLikeButton extends StatefulWidget {
     required this.isLiked,
     required this.likeCount,
     required this.onToggle,
+    this.onLongPress,
     this.iconSize = 20.0,
     this.fontSize = 13.0,
     this.likedColor,
@@ -21,6 +22,10 @@ class AnimatedLikeButton extends StatefulWidget {
   final int likeCount;
 
   final Future<bool?> Function() onToggle;
+
+  /// Optional long-press handler. Used by the social feed to surface the
+  /// list of users that have liked the activity.
+  final VoidCallback? onLongPress;
 
   final double iconSize;
   final double fontSize;
@@ -133,6 +138,7 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
       return InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: _onTap,
+        onLongPress: widget.onLongPress,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           child: Row(
@@ -179,6 +185,7 @@ class _AnimatedLikeButtonState extends State<AnimatedLikeButton>
         color: Colors.transparent,
         child: InkWell(
           onTap: _onTap,
+          onLongPress: widget.onLongPress,
           borderRadius: BorderRadius.circular(20),
           splashColor: likedCol.withValues(alpha: 0.18),
           highlightColor: likedCol.withValues(alpha: 0.08),

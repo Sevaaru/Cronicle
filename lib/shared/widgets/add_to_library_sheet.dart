@@ -41,6 +41,7 @@ const _gameStatusData = [
   ('CURRENT', Icons.sports_esports_rounded),
   ('PLANNING', Icons.bookmark_add_outlined),
   ('COMPLETED', Icons.check_circle_outline),
+  ('PLAYED', Icons.done_all_rounded),
   ('DROPPED', Icons.cancel_outlined),
   ('PAUSED', Icons.pause_circle_outline),
   ('REPEATING', Icons.replay_rounded),
@@ -96,6 +97,7 @@ String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
       },
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
+    'PLAYED' => l10n.statusPlayedGame,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {

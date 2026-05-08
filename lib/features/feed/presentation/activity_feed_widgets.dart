@@ -14,6 +14,7 @@ import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 
@@ -96,7 +97,7 @@ class FollowingFeedGuard extends ConsumerWidget {
     required this.activityTypeApi,
   });
   final Widget feedScopeBar;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
   final AppLocalizations l10n;
 
@@ -186,7 +187,7 @@ class ActivityFeedList extends ConsumerStatefulWidget {
   });
 
   final AsyncValue<List<FeedActivity>> feedAsync;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
   final bool Function() hasMore;
   final bool feedIsFollowing;
@@ -234,6 +235,14 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
 
   int get _scopeHeaderLen => widget.feedScopeHeader != null ? 1 : 0;
 
+  void _fireRefresh() {
+    // Sync entry-point used por callbacks que esperan VoidCallback
+    // (botones, ComposeCard.onPosted, etc.). El RefreshIndicator usa
+    // directamente widget.onRefresh para poder esperar la Future y
+    // mantener su spinner mientras tanto.
+    widget.onRefresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -245,8 +254,15 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
       16,
       100,
     );
+    // Cuando hay datos previos y se está refrescando (pull-to-refresh,
+    // refresco programático tras cambiar de scope/filtro, etc.), Riverpod
+    // entrega un AsyncLoading.copyWithPrevious y `.when` continúa
+    // mostrando los datos. Para que el usuario vea que algo está pasando
+    // pintamos una barrita arriba del feed.
+    final isRefreshing =
+        widget.feedAsync.isLoading && widget.feedAsync.hasValue;
 
-    return widget.feedAsync.when(
+    final content = widget.feedAsync.when(
       loading: () {
         if (scopeHeader != null) {
           return LayoutBuilder(
@@ -295,7 +311,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                   const SizedBox(height: 12),
                   Center(
                     child: FilledButton(
-                      onPressed: widget.onRefresh,
+                      onPressed: _fireRefresh,
                       child: Text(widget.l10n.feedRetry),
                     ),
                   ),
@@ -313,7 +329,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
               Text(errorMessage),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: widget.onRefresh,
+                onPressed: _fireRefresh,
                 child: Text(widget.l10n.feedRetry),
               ),
             ],
@@ -329,13 +345,13 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
 
         if (filtered.isEmpty) {
           return RefreshIndicator(
-            onRefresh: () async => widget.onRefresh(),
+            onRefresh: widget.onRefresh,
             child: ListView(
               controller: _scrollController,
               padding: listPadding,
               children: [
                 ?scopeHeader,
-                ComposeCard(onPosted: widget.onRefresh),
+                ComposeCard(onPosted: _fireRefresh),
                 Padding(
                   padding: const EdgeInsets.only(top: 28),
                   child: Center(
@@ -354,7 +370,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
         final totalItems =
             firstCompose + 1 + filtered.length + (hasMore ? 1 : 0);
         return RefreshIndicator(
-          onRefresh: () async => widget.onRefresh(),
+          onRefresh: widget.onRefresh,
           child: ListView.builder(
             controller: _scrollController,
             padding: listPadding,
@@ -366,7 +382,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                 return scopeHeader;
               }
               if (i == firstCompose) {
-                return ComposeCard(onPosted: widget.onRefresh);
+                return ComposeCard(onPosted: _fireRefresh);
               }
               final actIdx = i - firstCompose - 1;
               if (actIdx >= filtered.length) {
@@ -383,6 +399,23 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
           ),
         );
       },
+    );
+
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        if (isRefreshing)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(
+              minHeight: 2,
+              backgroundColor: colorScheme.surfaceContainerHighest
+                  .withAlpha(120),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -905,6 +938,18 @@ class ActivityCard extends ConsumerWidget {
                 isLiked: activity.isLiked,
                 likeCount: activity.likeCount,
                 onToggle: () => _handleLike(context, ref),
+                onLongPress: activity.likeCount > 0
+                    ? () {
+                        final actId = int.tryParse(activity.id);
+                        if (actId == null) return;
+                        showActivityLikersSheet(
+                          context,
+                          ref,
+                          targetId: actId,
+                          expectedCount: activity.likeCount,
+                        );
+                      }
+                    : null,
               ),
               const SizedBox(width: 8),
               _CommentButton(

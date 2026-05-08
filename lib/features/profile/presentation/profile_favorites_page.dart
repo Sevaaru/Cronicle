@@ -385,7 +385,14 @@ class _GameTile extends StatelessWidget {
     final id = (game['id'] as num?)?.toInt();
 
     return GestureDetector(
-      onTap: id != null ? () => context.push('/game/$id') : null,
+      onTap: () {
+        final steamId = (game['steam_appid'] as num?)?.toInt();
+        if (steamId != null) {
+          context.push('/profile/steam/game/$steamId');
+        } else if (id != null) {
+          context.push('/game/$id');
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
