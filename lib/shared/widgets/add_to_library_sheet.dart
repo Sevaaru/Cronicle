@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -60,7 +61,7 @@ SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   final base = SliderTheme.of(context);
   return base.copyWith(
-    trackHeight: 4,
+    trackHeight: 6,
     activeTrackColor: cs.primary,
     inactiveTrackColor: cs.surfaceContainerHighest,
     thumbColor: cs.primary,
@@ -72,18 +73,18 @@ SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
       return cs.primary.withAlpha(31);
     }),
     thumbShape: const RoundSliderThumbShape(
-      enabledThumbRadius: 11,
-      elevation: 1,
-      pressedElevation: 3,
+      enabledThumbRadius: 13,
+      elevation: 2,
+      pressedElevation: 6,
     ),
     trackShape: const RoundedRectSliderTrackShape(),
     valueIndicatorColor: cs.inverseSurface,
     valueIndicatorTextStyle: TextStyle(
       color: cs.onInverseSurface,
-      fontSize: 12,
-      fontWeight: FontWeight.w500,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
     ),
-    showValueIndicator: ShowValueIndicator.onlyForContinuous,
+    showValueIndicator: ShowValueIndicator.always,
   );
 }
 
@@ -115,6 +116,15 @@ Future<bool> showAddToLibrarySheet({
   required Map<String, dynamic> item,
   required MediaKind kind,
   LibraryEntry? existingEntry,
+  int? initialProgress,
+  /// Set to true when the calling page is inside the ShellRoute so the sheet
+  /// is pushed on the root navigator. This lets GoRouter's back-button handler
+  /// see the sheet and close it instead of popping the page underneath.
+  bool useRootNavigator = false,
+  /// Steam app ID — stored on the library entry so the app can open the
+  /// Steam detail view from the library later. Pass only when adding/editing
+  /// a game that was found via the Steam library pages.
+  int? steamAppId,
 }) async {
   final db = ref.read(databaseProvider);
 
@@ -145,10 +155,11 @@ Future<bool> showAddToLibrarySheet({
 
   final result = await showModalBottomSheet<_AddResult>(
     context: context,
+    useRootNavigator: useRootNavigator,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry),
+    builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry, initialProgress: initialProgress),
   );
 
   if (result == null) return false;
@@ -226,6 +237,9 @@ Future<bool> showAddToLibrarySheet({
       userTotalChaptersOverride: drift.Value(result.userTotalChaptersOverride),
       currentChapter: drift.Value(result.currentChapter),
       bookTrackingMode: drift.Value(result.bookTrackingMode),
+      steamAppId: steamAppId != null
+          ? drift.Value(steamAppId)
+          : const drift.Value.absent(),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     ),
   );
@@ -371,10 +385,11 @@ class _AnilistPromptDialog extends StatelessWidget {
 }
 
 class _AddToLibrarySheet extends ConsumerStatefulWidget {
-  const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry});
+  const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry, this.initialProgress});
   final Map<String, dynamic> item;
   final MediaKind kind;
   final LibraryEntry? existingEntry;
+  final int? initialProgress;
 
   @override
   ConsumerState<_AddToLibrarySheet> createState() => _AddToLibrarySheetState();
@@ -406,7 +421,8 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     _status = e?.status ?? 'PLANNING';
     final scoring = ref.read(scoringSystemSettingProvider);
     _score = scoring.fromStoredScore(e?.score);
-    _progressCtrl = TextEditingController(text: '${e?.progress ?? 0}');
+    final initialProg = e?.progress ?? widget.initialProgress ?? 0;
+    _progressCtrl = TextEditingController(text: '$initialProg');
     _notesCtrl = TextEditingController(text: e?.notes ?? '');
     _advScores = {for (final c in kAnilistAdvancedScoringCategories) c: 0};
 
@@ -425,6 +441,86 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
+
+  void _onScoreChanged(double v) {
+    HapticFeedback.selectionClick();
+    setState(() => _score = v);
+  }
+
+  double _parseScoreInput(String text, ScoringSystem scoring) {
+    final raw =
+        double.tryParse(text.trim().replaceAll(',', '.')) ?? _score;
+    final clamped = raw.clamp(0.0, scoring.max);
+    return switch (scoring) {
+      ScoringSystem.point10Decimal =>
+        (clamped * 10).round() / 10.0,
+      _ => clamped.roundToDouble(),
+    };
+  }
+
+  Future<void> _editScoreViaKeyboard(BuildContext context) async {
+    final scoring = ref.read(scoringSystemSettingProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDecimal = scoring == ScoringSystem.point10Decimal;
+    final ctrl = TextEditingController(
+      text: _score > 0
+          ? (isDecimal
+              ? _score.toStringAsFixed(1)
+              : _score.round().toString())
+          : '',
+    );
+    final rangeHint = isDecimal
+        ? '0.0 – ${scoring.max.toStringAsFixed(1)}'
+        : '0 – ${scoring.max.round()}';
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.star_rounded,
+                color: Colors.amber.shade600, size: 22),
+            const SizedBox(width: 8),
+            Text(l10n.addToListScore),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.numberWithOptions(
+              decimal: isDecimal),
+          decoration: InputDecoration(
+            hintText: rangeHint,
+            suffixText: isDecimal
+                ? '/ ${scoring.max.toStringAsFixed(1)}'
+                : '/ ${scoring.max.round()}',
+          ),
+          onSubmitted: (_) {
+            final v = _parseScoreInput(ctrl.text, scoring);
+            Navigator.of(ctx).pop(v);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(0.0),
+            child: Text(l10n.addToListNoScore),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = _parseScoreInput(ctrl.text, scoring);
+              Navigator.of(ctx).pop(v);
+            },
+            child: Text(l10n.scoreSet),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && mounted) {
+      HapticFeedback.lightImpact();
+      setState(() => _score = result);
+    }
+  }
   bool get _isGame => widget.kind == MediaKind.game;
   bool get _isMovie => widget.kind == MediaKind.movie;
   bool get _isBook => widget.kind == MediaKind.book;
@@ -705,7 +801,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
               const SizedBox(height: 20),
 
               Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(20),
@@ -713,65 +808,105 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.star_rounded,
-                            size: 18,
-                            color: _score > 0
-                                ? Colors.amber.shade600
-                                : cs.onSurfaceVariant),
-                        const SizedBox(width: 8),
-                        Text(l10n.addToListScore,
-                            style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurface,
-                            )),
-                        const Spacer(),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Container(
-                            key: ValueKey(_score > 0),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded,
+                              size: 18,
                               color: _score > 0
-                                  ? Colors.amber.shade600.withValues(alpha: 0.18)
-                                  : cs.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              _score > 0
-                                  ? ref
-                                      .watch(scoringSystemSettingProvider)
-                                      .formatScore(_score)
-                                  : l10n.addToListNoScore,
+                                  ? Colors.amber.shade600
+                                  : cs.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(l10n.addToListScore,
                               style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _score > 0
-                                    ? Colors.amber.shade700
-                                    : cs.onSurfaceVariant,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurface,
+                              )),
+                          const Spacer(),
+                          // Tappable score badge — opens keyboard input
+                          Tooltip(
+                            message: l10n.addToListScore,
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(999),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(999),
+                                onTap: () =>
+                                    _editScoreViaKeyboard(context),
+                                child: AnimatedSwitcher(
+                                  duration:
+                                      const Duration(milliseconds: 200),
+                                  child: Container(
+                                    key: ValueKey(_score > 0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: _score > 0
+                                          ? Colors.amber.shade600
+                                              .withValues(alpha: 0.18)
+                                          : cs.surfaceContainerHighest,
+                                      borderRadius:
+                                          BorderRadius.circular(999),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _score > 0
+                                              ? ref
+                                                  .watch(
+                                                      scoringSystemSettingProvider)
+                                                  .formatScore(_score)
+                                              : l10n.addToListNoScore,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: _score > 0
+                                                ? Colors.amber.shade700
+                                                : cs.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.edit_rounded,
+                                            size: 12,
+                                            color: _score > 0
+                                                ? Colors.amber.shade700
+                                                    .withAlpha(180)
+                                                : cs.onSurfaceVariant
+                                                    .withAlpha(150)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    SliderTheme(
-                      data: _m3ScoreSliderTheme(context),
-                      child: Slider(
-                        value: _score,
-                        min: 0,
-                        max: ref.watch(scoringSystemSettingProvider).max,
-                        divisions:
-                            ref.watch(scoringSystemSettingProvider).divisions,
-                        label: _score == 0
-                            ? l10n.addToListNoScore
-                            : ref
-                                .watch(scoringSystemSettingProvider)
-                                .formatScore(_score),
-                        onChanged: (v) => setState(() => _score = v),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                      child: SliderTheme(
+                        data: _m3ScoreSliderTheme(context),
+                        child: Slider(
+                          value: _score,
+                          min: 0,
+                          max: ref
+                              .watch(scoringSystemSettingProvider)
+                              .max,
+                          divisions: ref
+                              .watch(scoringSystemSettingProvider)
+                              .divisions,
+                          label: _score == 0
+                              ? l10n.addToListNoScore
+                              : ref
+                                  .watch(scoringSystemSettingProvider)
+                                  .formatScore(_score),
+                          onChanged: _onScoreChanged,
+                        ),
                       ),
                     ),
                   ],
@@ -816,8 +951,10 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                               min: 0,
                               max: scoring.max,
                               divisions: scoring.divisions,
-                              onChanged: (v) =>
-                                  setState(() => _advScores[cat] = v),
+                              onChanged: (v) {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _advScores[cat] = v);
+                                },
                             ),
                           ),
                         ),

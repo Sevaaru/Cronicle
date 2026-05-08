@@ -40,6 +40,10 @@ class LibraryEntries extends Table {
 
   IntColumn get nextEpisodeAirsAt => integer().nullable()();
 
+  /// Steam app ID — set when this entry was added from the Steam library view.
+  /// Null for entries added from other sources (IGDB search, Trakt, etc.).
+  IntColumn get steamAppId => integer().nullable()();
+
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
 
@@ -55,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +92,11 @@ class AppDatabase extends _$AppDatabase {
           if (from < 6) {
             await customStatement(
               'ALTER TABLE library_entries ADD COLUMN next_episode_airs_at INTEGER',
+            );
+          }
+          if (from < 7) {
+            await customStatement(
+              'ALTER TABLE library_entries ADD COLUMN steam_app_id INTEGER',
             );
           }
         },

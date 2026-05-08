@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -712,8 +713,14 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
 
           _AccountTile(
             icon: Icons.animation_rounded,
-            color: const Color(0xFF5C6BC0),
+            color: const Color(0xFF02A9FF),
             title: l10n.onboardingConnectAnilist,
+            iconWidget: Image.asset(
+              'assets/anilist_icon.png',
+              width: 42,
+              height: 42,
+              fit: BoxFit.cover,
+            ),
             subtitle: l10n.onboardingConnectAnilistDesc,
             connected: anilistConnected,
             syncLoading: _anilistSyncing,
@@ -728,6 +735,11 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
             icon: Icons.movie_filter_rounded,
             color: const Color(0xFFED1C24),
             title: l10n.onboardingConnectTrakt,
+            iconWidget: SvgPicture.asset(
+              'assets/trakt.svg',
+              width: 42,
+              height: 42,
+            ),
             subtitle: l10n.onboardingConnectTraktDesc,
             connected: traktConnected,
             syncLoading: _traktSyncing,
@@ -742,6 +754,11 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
             icon: Icons.cloud_rounded,
             color: const Color(0xFF4285F4),
             title: l10n.onboardingConnectGoogle,
+            iconWidget: SvgPicture.asset(
+              'assets/google.svg',
+              width: 42,
+              height: 42,
+            ),
             subtitle: l10n.onboardingConnectGoogleDesc,
             connected: _googleConnected,
             loading: _connectingGoogle || _restoringFromDrive,
@@ -990,6 +1007,7 @@ class _AccountTile extends StatelessWidget {
     required this.connected,
     required this.connectedLabel,
     required this.onConnect,
+    this.iconWidget,
     this.loading = false,
     this.syncLoading = false,
   });
@@ -1003,6 +1021,8 @@ class _AccountTile extends StatelessWidget {
   final bool syncLoading;
   final String connectedLabel;
   final VoidCallback onConnect;
+  /// If provided, rendered instead of [icon] inside the colored badge.
+  final Widget? iconWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -1022,10 +1042,12 @@ class _AccountTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: iconWidget != null
+                      ? Colors.transparent
+                      : color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: iconWidget ?? Icon(icon, color: color, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(

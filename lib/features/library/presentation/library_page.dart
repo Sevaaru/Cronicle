@@ -92,6 +92,11 @@ bool _libraryEntryHasDetailPage(LibraryEntry entry) {
 void _openLibraryEntryDetail(BuildContext context, LibraryEntry entry) {
   final kind = MediaKind.fromCode(entry.kind);
   if (kind == MediaKind.game) {
+    // Prefer the Steam detail view when this entry was added from Steam
+    if (entry.steamAppId != null) {
+      context.push('/profile/steam/game/${entry.steamAppId}');
+      return;
+    }
     final id = int.tryParse(entry.externalId);
     if (id != null) context.push('/game/$id');
     return;
@@ -320,19 +325,19 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         actions: [
           if (_remoteSyncing)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.only(right: 4),
               child: _SyncIndicatorPill(
                 label: l10n.syncLoading,
                 cs: cs,
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: l10n.searchTitle,
+            onPressed: () => _openLibrarySearchPage(context),
+          ),
+          const SizedBox(width: 4),
         ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: _LibrarySearchFab(
-          onTap: () => _openLibrarySearchPage(context),
-        ),
       ),
       body: Column(
         children: [
@@ -2151,9 +2156,27 @@ class _LibrarySearchPage extends StatefulWidget {
 class _LibrarySearchPageState extends State<_LibrarySearchPage> {
   final _controller = TextEditingController();
   String _query = '';
+  GoRouter? _goRouter;
+  final _expanded = <MediaKind>{};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (_goRouter != router) {
+      _goRouter?.routerDelegate.removeListener(_onGoRouterChange);
+      _goRouter = router;
+      router.routerDelegate.addListener(_onGoRouterChange);
+    }
+  }
+
+  void _onGoRouterChange() {
+    if (mounted) Navigator.of(context).maybePop();
+  }
 
   @override
   void dispose() {
+    _goRouter?.routerDelegate.removeListener(_onGoRouterChange);
     _controller.dispose();
     super.dispose();
   }
@@ -2179,96 +2202,105 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
       byKind.putIfAbsent(kind, () => []).add(e);
     }
 
-    const bottomSafePad = 20.0;
+    const kPreview = 5;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.librarySearchTitle)),
       body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: SearchBar(
-            controller: _controller,
-            autoFocus: true,
-            onChanged: (v) => setState(() => _query = v),
-            hintText: l10n.librarySearchHint,
-            leading: const Padding(
-              padding: EdgeInsets.only(left: 4),
-              child: Icon(Icons.search_rounded),
-            ),
-            trailing: _query.isNotEmpty
-                ? [
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () {
-                        _controller.clear();
-                        setState(() => _query = '');
-                      },
-                    ),
-                  ]
-                : null,
-            elevation: WidgetStatePropertyAll(0),
-            backgroundColor: WidgetStatePropertyAll(
-              cs.surfaceContainerHigh,
-            ),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: SearchBar(
+              controller: _controller,
+              autoFocus: true,
+              onChanged: (v) => setState(() {
+                _query = v;
+                _expanded.clear();
+              }),
+              hintText: l10n.librarySearchHint,
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Icon(Icons.search_rounded),
+              ),
+              trailing: _query.isNotEmpty
+                  ? [
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () {
+                          _controller.clear();
+                          setState(() {
+                            _query = '';
+                            _expanded.clear();
+                          });
+                        },
+                      ),
+                    ]
+                  : null,
+              elevation: const WidgetStatePropertyAll(0),
+              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerHigh),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              ),
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 12),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: _query.trim().isEmpty
-              ? Center(
-                  child: Text(
-                    l10n.librarySearchPrompt,
-                    style: TextStyle(color: cs.onSurfaceVariant),
-                  ),
-                )
-              : filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        l10n.libraryNoResults,
-                        style: TextStyle(color: cs.onSurfaceVariant),
-                      ),
-                    )
-                  : ListView(
-                      padding: EdgeInsets.fromLTRB(12, 0, 12, bottomSafePad),
-                      children: [
-                        _SearchSectionHeader(
-                          icon: Icons.public_rounded,
-                          title: l10n.librarySearchGlobalResults,
+          Expanded(
+            child: _query.trim().isEmpty
+                ? Center(
+                    child: Text(
+                      l10n.librarySearchPrompt,
+                      style: TextStyle(color: cs.onSurfaceVariant),
+                    ),
+                  )
+                : filtered.isEmpty
+                    ? Center(
+                        child: Text(
+                          l10n.libraryNoResults,
+                          style: TextStyle(color: cs.onSurfaceVariant),
                         ),
-                        const SizedBox(height: 6),
-                        ...filtered.map((e) => _SearchEntryTile(
-                              entry: e,
-                              onEdit: () => widget.onEdit(e),
-                            )),
-                        const SizedBox(height: 12),
-                        ...MediaKind.values.where(byKind.containsKey).map((kind) {
-                          final items = byKind[kind]!;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
+                        children: [
+                          ...MediaKind.values
+                              .where(byKind.containsKey)
+                              .expand((kind) {
+                            final items = byKind[kind]!;
+                            final isExpanded = _expanded.contains(kind);
+                            final preview = isExpanded
+                                ? items
+                                : items.take(kPreview).toList();
+                            final hasMore =
+                                items.length > kPreview && !isExpanded;
+                            final kindLabel = mediaKindLabel(kind, l10n);
+                            return [
+                              const SizedBox(height: 12),
                               _SearchSectionHeader(
                                 icon: _kindIcon(kind),
-                                title: mediaKindLabel(kind, l10n),
+                                title: kindLabel,
                               ),
                               const SizedBox(height: 6),
-                              ...items.map((e) => _SearchEntryTile(
+                              ...preview.map((e) => _SearchEntryTile(
                                     entry: e,
                                     onEdit: () => widget.onEdit(e),
                                   )),
-                              const SizedBox(height: 10),
-                            ],
-                          );
-                        }),
-                      ],
-                    ),
-        ),
-      ],
+                              if (hasMore) ...[
+                                const SizedBox(height: 4),
+                                _LibraryShowMoreCta(
+                                  label: l10n.searchShowMoreInCategory(kindLabel),
+                                  onTap: () =>
+                                      setState(() => _expanded.add(kind)),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                            ];
+                          }),
+                        ],
+                      ),
+          ),
+        ],
       ),
     );
   }
@@ -2357,19 +2389,9 @@ class _SearchEntryTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (canNavigate)
-                IconButton(
-                  icon: const Icon(Icons.open_in_new_rounded, size: 20),
-                  onPressed: () => _openLibraryEntryDetail(context, entry),
-                ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 20),
-                onPressed: onEdit,
-              ),
-            ],
+          trailing: IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            onPressed: onEdit,
           ),
         ),
       ),
@@ -2381,6 +2403,49 @@ class _SearchEntryTile extends StatelessWidget {
 /// sync. Uses a soft `primaryContainer` surface, a small wavy circular
 /// progress indicator (M3 expressive, `year2023: false`) and a subtly
 /// breathing animation so it doesn't feel like a static spinner.
+class _LibraryShowMoreCta extends StatelessWidget {
+  const _LibraryShowMoreCta({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    return Material(
+      color: cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Icon(Icons.layers_outlined, size: 22, color: cs.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.15,
+                    height: 1.25,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  size: 26, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SyncIndicatorPill extends StatefulWidget {
   const _SyncIndicatorPill({required this.label, required this.cs});
 

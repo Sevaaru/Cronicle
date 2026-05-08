@@ -1031,25 +1031,25 @@ abstract class AppLocalizations {
   /// No description provided for @sectionFavGames.
   ///
   /// In es, this message translates to:
-  /// **'Juegos favoritos'**
+  /// **'Juegos'**
   String get sectionFavGames;
 
   /// No description provided for @sectionFavBooks.
   ///
   /// In es, this message translates to:
-  /// **'Libros favoritos'**
+  /// **'Libros'**
   String get sectionFavBooks;
 
   /// No description provided for @sectionFavCharacters.
   ///
   /// In es, this message translates to:
-  /// **'Personajes favoritos'**
+  /// **'Personajes'**
   String get sectionFavCharacters;
 
   /// No description provided for @sectionFavStaff.
   ///
   /// In es, this message translates to:
-  /// **'Staff favorito'**
+  /// **'Staff'**
   String get sectionFavStaff;
 
   /// No description provided for @loginRequiredFavoriteCharacter.
@@ -1595,13 +1595,13 @@ abstract class AppLocalizations {
   /// No description provided for @sectionFavAnime.
   ///
   /// In es, this message translates to:
-  /// **'Anime favoritos'**
+  /// **'Anime'**
   String get sectionFavAnime;
 
   /// No description provided for @sectionFavManga.
   ///
   /// In es, this message translates to:
-  /// **'Manga favoritos'**
+  /// **'Manga'**
   String get sectionFavManga;
 
   /// No description provided for @sectionRecentActivity.
@@ -1649,13 +1649,13 @@ abstract class AppLocalizations {
   /// No description provided for @sectionFavTraktMovies.
   ///
   /// In es, this message translates to:
-  /// **'Películas favoritas'**
+  /// **'Películas'**
   String get sectionFavTraktMovies;
 
   /// No description provided for @sectionFavTraktShows.
   ///
   /// In es, this message translates to:
-  /// **'Series favoritas'**
+  /// **'Series'**
   String get sectionFavTraktShows;
 
   /// No description provided for @profileTraktNotConnected.
@@ -2155,6 +2155,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sin nota'**
   String get addToListNoScore;
+
+  /// No description provided for @scoreSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar'**
+  String get scoreSet;
 
   /// No description provided for @addToListEpisodes.
   ///

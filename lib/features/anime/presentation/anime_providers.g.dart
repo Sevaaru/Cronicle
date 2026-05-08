@@ -1875,7 +1875,7 @@ final anilistFeedFollowingProvider =
     );
 
 typedef _$AnilistFeedFollowing = AsyncNotifier<List<FeedActivity>>;
-String _$anilistSocialFeedHash() => r'41b61ae6888f5eb66d92786f5da2fb139aa35df3';
+String _$anilistSocialFeedHash() => r'b1d817bef93a1cc9519b1d623ea5ab85e853dcba';
 
 abstract class _$AnilistSocialFeed
     extends BuildlessAsyncNotifier<List<FeedActivity>> {

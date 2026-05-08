@@ -424,7 +424,7 @@ class _IgdbReviewByIdProviderElement
 }
 
 String _$igdbGamesSectionListHash() =>
-    r'637872dbb9a267b49e39ec7113c85942f511510b';
+    r'8cae765d404d9ee4cd1f5b20d60611d9fbfbd3e3';
 
 /// See also [igdbGamesSectionList].
 @ProviderFor(igdbGamesSectionList)
@@ -582,7 +582,7 @@ final igdbGamesHomeFeedProvider =
     );
 
 typedef _$IgdbGamesHomeFeed = AsyncNotifier<IgdbGamesHomeFeedData>;
-String _$favoriteGamesHash() => r'96ace829105b3d07cdda862470dea07b4784e682';
+String _$favoriteGamesHash() => r'cb3e3c95e458d1cee78f9554237fd619a0d801ad';
 
 /// See also [FavoriteGames].
 @ProviderFor(FavoriteGames)

@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -423,6 +424,8 @@ class _ProfileContent extends ConsumerStatefulWidget {
 }
 
 class _ProfileContentState extends ConsumerState<_ProfileContent> {
+  bool _bioExpanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -609,9 +612,12 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
           sliver: SliverList.list(
             children: [
               if (about != null && about.isNotEmpty) ...[
-                GlassCard(
-                  child: AnilistMarkdown(about,
-                      style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
+                _CollapsibleBioTile(
+                  about: about,
+                  expanded: _bioExpanded,
+                  onToggle: () => setState(() => _bioExpanded = !_bioExpanded),
+                  colorScheme: cs,
+                  l10n: l10n,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -640,6 +646,12 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                 connected: true,
                 accent: const Color(0xFF02A9FF),
                 icon: Icons.animation_rounded,
+                iconWidget: Image.asset(
+                  'assets/anilist_icon.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(height: 8),
               traktSessionAsync.when(
@@ -657,6 +669,11 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                   connected: false,
                   accent: const Color(0xFFED1C24),
                   icon: Icons.local_movies_rounded,
+                  iconWidget: SvgPicture.asset(
+                    'assets/trakt.svg',
+                    width: 42,
+                    height: 42,
+                  ),
                 ),
                 data: (s) => _ConnectedAccountTile(
                   title: l10n.traktTitle,
@@ -666,6 +683,11 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
                   connected: s.connected,
                   accent: const Color(0xFFED1C24),
                   icon: Icons.local_movies_rounded,
+                  iconWidget: SvgPicture.asset(
+                    'assets/trakt.svg',
+                    width: 42,
+                    height: 42,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -1286,6 +1308,111 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
   }
 }
 
+class _CollapsibleBioTile extends StatelessWidget {
+  const _CollapsibleBioTile({
+    required this.about,
+    required this.expanded,
+    required this.onToggle,
+    required this.colorScheme,
+    required this.l10n,
+  });
+
+  final String about;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final ColorScheme colorScheme;
+  final AppLocalizations l10n;
+
+  static const double _radius = 22;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = colorScheme;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(_radius),
+              bottom: expanded ? Radius.zero : const Radius.circular(_radius),
+            ),
+            onTap: onToggle,
+            splashColor: cs.primary.withValues(alpha: 0.14),
+            highlightColor: cs.primary.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: cs.secondaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: cs.onSecondaryContainer,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Bio',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: cs.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: AnilistMarkdown(
+                about,
+                style: TextStyle(
+                    fontSize: 13, color: cs.onSurfaceVariant, height: 1.4),
+              ),
+            ),
+            crossFadeState: expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PersonalStatsNavTile extends StatelessWidget {
   const _PersonalStatsNavTile({
     required this.l10n,
@@ -1503,15 +1630,12 @@ class _ConnectedAccountTile extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.18),
+                color: iconWidget != null
+                    ? Colors.transparent
+                    : accent.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: iconWidget != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: iconWidget,
-                    )
-                  : Icon(icon, color: accent, size: 22),
+              child: iconWidget ?? Icon(icon, color: accent, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(

@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -667,8 +668,11 @@ class _AnilistSection extends ConsumerWidget {
     final tokenAsync = ref.watch(anilistTokenProvider);
 
     return _SettingsSection(
-      icon: Icons.animation_rounded,
-      iconColor: const Color(0xFF02A9FF),
+      iconWidget: Image.asset(
+        'assets/anilist_icon.png',
+        width: 40,
+        height: 40,
+      ),
       title: l10n.anilistTitle,
       subtitle: l10n.anilistSubtitle,
       child: Column(
@@ -744,8 +748,11 @@ class _TraktSection extends ConsumerWidget {
     final sessionAsync = ref.watch(traktSessionProvider);
 
     return _SettingsSection(
-      icon: Icons.movie_filter_rounded,
-      iconColor: const Color(0xFFED1C24),
+      iconWidget: SvgPicture.asset(
+        'assets/trakt.svg',
+        width: 40,
+        height: 40,
+      ),
       title: l10n.traktTitle,
       subtitle: l10n.traktSubtitle,
       child: Column(
@@ -1458,8 +1465,11 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
     final cs = Theme.of(context).colorScheme;
 
     return _SettingsSection(
-      icon: Icons.account_circle_rounded,
-      iconColor: const Color(0xFF4285F4),
+      iconWidget: SvgPicture.asset(
+        'assets/google.svg',
+        width: 40,
+        height: 40,
+      ),
       title: l10n.googleAccountTitle,
       subtitle: l10n.googleAccountSubtitle,
       child: Column(
@@ -2141,7 +2151,12 @@ class _SettingsSection extends StatelessWidget {
                             : accent.withAlpha(isDark ? 60 : 40),
                         shape: BoxShape.circle,
                       ),
-                      child: iconWidget ?? Icon(icon, size: 22, color: accent),
+                      child: iconWidget != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: iconWidget,
+                            )
+                          : Icon(icon, size: 22, color: accent),
                     ),
                     const SizedBox(width: 14),
                   ],

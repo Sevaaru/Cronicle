@@ -267,7 +267,7 @@ final steamAppDetailsProvider =
 // ─── User reviews summary ─────────────────────────────────────────────────────
 
 final steamUserReviewsProvider =
-    FutureProvider.autoDispose.family<Map<String, dynamic>?, int>((ref, appId) async {
+    FutureProvider.family<Map<String, dynamic>?, int>((ref, appId) async {
   final api = ref.watch(steamApiProvider);
   return api.fetchUserReviews(appId);
 });
@@ -275,7 +275,7 @@ final steamUserReviewsProvider =
 // ─── Current concurrent players ───────────────────────────────────────────────
 
 final steamCurrentPlayersProvider =
-    FutureProvider.autoDispose.family<int?, int>((ref, appId) async {
+    FutureProvider.family<int?, int>((ref, appId) async {
   final api = ref.watch(steamApiProvider);
   return api.fetchCurrentPlayers(appId);
 });
@@ -287,9 +287,10 @@ class SteamFriendsActivity {
     required this.friendsWhoOwn,
     required this.totalChecked,
     required this.friendListPrivate,
+    this.playtimeByFriendId = const {},
   });
 
-  /// Summaries (personaname, avatarfull) of friends who own the game.
+  /// Summaries (personaname, avatarmedium, steamid) of friends who own the game.
   final List<Map<String, dynamic>> friendsWhoOwn;
 
   /// How many friends were actually checked (may be < total friend count).
@@ -297,6 +298,9 @@ class SteamFriendsActivity {
 
   /// True if the user's friend list is not publicly accessible.
   final bool friendListPrivate;
+
+  /// Maps steamId → playtime in minutes for this game (null = unavailable).
+  final Map<String, int?> playtimeByFriendId;
 }
 
 const _kFriendsActivityCap = 20;
@@ -317,29 +321,38 @@ final steamFriendsWithGameProvider =
   final toCheck = friendIds.take(_kFriendsActivityCap).toList();
 
   // Check ownership in parallel — silently skip private profiles.
-  final results = await Future.wait(
+  // Also capture playtime_forever for each friend who owns the game.
+  final rawResults = await Future.wait(
     toCheck.map((id) async {
       try {
         final games = await api.fetchOwnedGames(id);
-        final owns = games.any((g) => (g['appid'] as num?)?.toInt() == appId);
-        return owns ? id : null;
+        final entry = games.cast<Map<String, dynamic>?>().firstWhere(
+          (g) => (g?['appid'] as num?)?.toInt() == appId,
+          orElse: () => null,
+        );
+        if (entry == null) return null;
+        final playtime = (entry['playtime_forever'] as num?)?.toInt();
+        return MapEntry(id, playtime);
       } catch (_) {
         return null;
       }
     }),
     eagerError: false,
   );
-  final ownIds = results.whereType<String>().toList();
+  final ownerPairs = rawResults.whereType<MapEntry<String, int?>>().toList();
+  final ownIds = ownerPairs.map((e) => e.key).toList();
 
   if (ownIds.isEmpty) {
     return SteamFriendsActivity(
         friendsWhoOwn: [], totalChecked: toCheck.length, friendListPrivate: false);
   }
+  final playtimeMap = Map<String, int?>.fromEntries(ownerPairs);
   final summaries = await api.fetchPlayerSummaries(ownIds);
   return SteamFriendsActivity(
     friendsWhoOwn: summaries,
     totalChecked: toCheck.length,
     friendListPrivate: false,
+    playtimeByFriendId: playtimeMap,
   );
 });
 

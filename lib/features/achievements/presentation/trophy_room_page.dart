@@ -7,6 +7,8 @@ import 'package:cronicle/features/achievements/domain/achievement.dart';
 import 'package:cronicle/features/achievements/presentation/achievement_overlay.dart';
 import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 
+enum _StatusFilter { all, unlocked, locked }
+
 class TrophyRoomPage extends ConsumerStatefulWidget {
   const TrophyRoomPage({super.key});
 
@@ -16,7 +18,7 @@ class TrophyRoomPage extends ConsumerStatefulWidget {
 
 class _TrophyRoomPageState extends ConsumerState<TrophyRoomPage> {
   AchievementTier? _filter;
-
+  _StatusFilter _statusFilter = _StatusFilter.all;
   @override
   void initState() {
     super.initState();
@@ -50,9 +52,18 @@ class _TrophyRoomPageState extends ConsumerState<TrophyRoomPage> {
         ),
     };
 
-    final visible = _filter == null
-        ? all
-        : all.where((a) => a.tier == _filter).toList();
+    final visible = (() {
+      var list = _filter == null
+          ? all
+          : all.where((a) => a.tier == _filter).toList();
+      return switch (_statusFilter) {
+        _StatusFilter.all => list,
+        _StatusFilter.unlocked =>
+          list.where((a) => state[a.id]?.isUnlocked == true).toList(),
+        _StatusFilter.locked =>
+          list.where((a) => state[a.id]?.isUnlocked != true).toList(),
+      };
+    })();
 
     final levelData = _ChroniclerLevel.fromPoints(earnedPoints);
 
@@ -158,6 +169,33 @@ class _TrophyRoomPageState extends ConsumerState<TrophyRoomPage> {
             ),
           ),
           const SizedBox(height: 14),
+          // Status filter: All / Unlocked / Locked
+          SegmentedButton<_StatusFilter>(
+            segments: [
+              ButtonSegment(
+                value: _StatusFilter.all,
+                label: Text(isEs ? 'Todos' : 'All'),
+                icon: const Icon(Icons.list_alt_rounded),
+              ),
+              ButtonSegment(
+                value: _StatusFilter.unlocked,
+                label: Text(isEs ? 'Desbloqueados' : 'Unlocked'),
+                icon: const Icon(Icons.lock_open_rounded),
+              ),
+              ButtonSegment(
+                value: _StatusFilter.locked,
+                label: Text(isEs ? 'Bloqueados' : 'Locked'),
+                icon: const Icon(Icons.lock_outline_rounded),
+              ),
+            ],
+            selected: {_statusFilter},
+            onSelectionChanged: (s) =>
+                setState(() => _statusFilter = s.first),
+            style: const ButtonStyle(
+              visualDensity: VisualDensity(horizontal: -1, vertical: -2),
+            ),
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             height: 38,
             child: ListView(

@@ -75,7 +75,11 @@ Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
     builder: (ctx) => AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.animation_rounded, color: cs.primary, size: 22),
+          Image.asset(
+            'assets/anilist_icon.png',
+            width: 22,
+            height: 22,
+          ),
           const SizedBox(width: 8),
           Text(l10n.anilistConnectTitle),
         ],

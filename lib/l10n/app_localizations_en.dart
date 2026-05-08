@@ -521,16 +521,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sign in with Anilist in Settings to use favourites';
 
   @override
-  String get sectionFavGames => 'Favourite games';
+  String get sectionFavGames => 'Games';
 
   @override
-  String get sectionFavBooks => 'Favourite books';
+  String get sectionFavBooks => 'Books';
 
   @override
-  String get sectionFavCharacters => 'Favourite characters';
+  String get sectionFavCharacters => 'Characters';
 
   @override
-  String get sectionFavStaff => 'Favourite staff';
+  String get sectionFavStaff => 'Staff';
 
   @override
   String get loginRequiredFavoriteCharacter =>
@@ -823,10 +823,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionManga => 'Manga';
 
   @override
-  String get sectionFavAnime => 'Favourite anime';
+  String get sectionFavAnime => 'Anime';
 
   @override
-  String get sectionFavManga => 'Favourite manga';
+  String get sectionFavManga => 'Manga';
 
   @override
   String get sectionRecentActivity => 'Recent activity';
@@ -850,10 +850,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileTraktHoursApprox => 'Hours watched (approx.)';
 
   @override
-  String get sectionFavTraktMovies => 'Favourite movies';
+  String get sectionFavTraktMovies => 'Movies';
 
   @override
-  String get sectionFavTraktShows => 'Favourite shows';
+  String get sectionFavTraktShows => 'Shows';
 
   @override
   String get profileTraktNotConnected => 'Not connected';
@@ -1105,6 +1105,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addToListNoScore => 'No score';
+
+  @override
+  String get scoreSet => 'Set';
 
   @override
   String get addToListEpisodes => 'Episodes';

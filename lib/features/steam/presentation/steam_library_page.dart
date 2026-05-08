@@ -1,9 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
+import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.dart';
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
@@ -42,17 +45,7 @@ class _SteamLibraryPageState extends ConsumerState<SteamLibraryPage> {
     final session = ref.watch(steamSessionProvider);
     final gamesAsync = ref.watch(steamOwnedGamesProvider);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/profile');
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: Text(l10n.steamLibraryTitle),
           actions: [
@@ -127,7 +120,6 @@ class _SteamLibraryPageState extends ConsumerState<SteamLibraryPage> {
             ],
           );
         },
-      ),
       ),
     );
   }
@@ -258,52 +250,137 @@ class _FilterRow extends StatelessWidget {
   }
 }
 
-class _SteamGameRow extends ConsumerWidget {
+class _SteamGameRow extends ConsumerStatefulWidget {
   const _SteamGameRow({required this.game});
 
   final Map<String, dynamic> game;
 
+  @override
+  ConsumerState<_SteamGameRow> createState() => _SteamGameRowState();
+}
+
+class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
+  /// Cached IGDB id string once we've resolved it. Used to match library
+  /// entries, which store the IGDB id (not the Steam appId) as externalId.
+  String? _igdbExternalId;
+
+  /// Cached normalized IGDB game map so subsequent taps (edit) are instant.
+  Map<String, dynamic>? _cachedIgdbGame;
+
+  /// Whether the IGDB lookup is currently running; shows a spinner on the button.
+  bool _loading = false;
+
+  final _btnKey = GlobalKey();
+
+  Map<String, dynamic> get game => widget.game;
+
+  LibraryEntry? _findExisting(List<LibraryEntry> entries) {
+    final appId = (game['appid'] as num?)?.toInt() ?? 0;
+    // Primary: match by steamAppId stored in the DB
+    final bySteam = entries.cast<LibraryEntry?>().firstWhere(
+          (e) => e?.steamAppId == appId,
+          orElse: () => null,
+        );
+    if (bySteam != null) {
+      // Keep the IGDB id cached to skip the lookup on next "edit" tap
+      _igdbExternalId ??= bySteam.externalId;
+      return bySteam;
+    }
+    // Fallback: match by cached IGDB id
+    if (_igdbExternalId != null) {
+      return entries.cast<LibraryEntry?>().firstWhere(
+            (e) => e?.externalId == _igdbExternalId,
+            orElse: () => null,
+          );
+    }
+    return null;
+  }
+
   Future<bool> _openSheet(
-    BuildContext context,
-    WidgetRef ref, {
-    LibraryEntry? existing,
+    BuildContext context, {
+    required LibraryEntry? existing,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final appId = (game['appid'] as num?)?.toInt() ?? 0;
     final name = game['name'] as String? ?? '—';
-    final syntheticItem = {
-      'id': appId,
-      'name': name,
-      'coverImage': {'large': SteamApiDatasource.capsuleUrl(appId)},
-    };
+    final playtimeMin = (game['playtime_forever'] as num?)?.toInt() ?? 0;
+
+    // Use cached game map if available; otherwise fetch from IGDB.
+    Map<String, dynamic>? igdbGame = _cachedIgdbGame;
+
+    if (igdbGame == null) {
+      if (mounted) setState(() => _loading = true);
+      try {
+        final igdb = ref.read(igdbApiProvider);
+        final igdbId =
+            await igdb.findGameIdBySteamAppId(appId, gameName: name);
+        if (igdbId != null) {
+          igdbGame = IgdbApiDatasource.normalize(
+              await igdb.fetchGameDetail(igdbId) ?? {});
+          if (mounted) {
+            setState(() {
+              _igdbExternalId = igdbId.toString();
+              _cachedIgdbGame = igdbGame;
+            });
+          }
+        }
+      } catch (_) {}
+      if (mounted) setState(() => _loading = false);
+      if (!context.mounted) return false;
+    }
+
+    if (igdbGame == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.steamNoIgdbMatch(name))),
+      );
+      return false;
+    }
+
+    // Re-check existing entry by IGDB id now that we know it
+    LibraryEntry? resolvedExisting = existing;
+    if (resolvedExisting == null && _igdbExternalId != null) {
+      final db = ref.read(databaseProvider);
+      resolvedExisting = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.game.code,
+        _igdbExternalId!,
+      );
+    }
+    final wasEdit = resolvedExisting != null;
+
+    if (!context.mounted) return false;
+
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
-      item: syntheticItem,
+      item: igdbGame,
       kind: MediaKind.game,
-      existingEntry: existing,
+      existingEntry: resolvedExisting,
+      initialProgress: (!wasEdit && playtimeMin > 0)
+          ? (playtimeMin / 60).round()
+          : null,
+      useRootNavigator: false,
+      steamAppId: appId,
     );
     if (context.mounted && added) {
-      showLibrarySnackbar(context, wasEdit: existing != null);
+      showLibrarySnackbar(context, wasEdit: wasEdit);
     }
     return added;
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final appId = (game['appid'] as num?)?.toInt() ?? 0;
     final name = game['name'] as String? ?? '—';
     final playtimeMin = (game['playtime_forever'] as num?)?.toInt() ?? 0;
     final hours = playtimeMin / 60.0;
-    final capsule = SteamApiDatasource.capsuleUrl(appId);
+    final capsuleUrl = SteamApiDatasource.capsuleUrl(appId);
+    final fallbackUrl = SteamApiDatasource.headerUrl(appId);
 
     final libraryEntries =
         ref.watch(libraryByKindProvider(MediaKind.game)).valueOrNull ?? [];
-    final existing = libraryEntries.cast<LibraryEntry?>().firstWhere(
-          (e) => e?.externalId == appId.toString(),
-          orElse: () => null,
-        );
+    final existing = _findExisting(libraryEntries);
     final inLibrary = existing != null;
 
     return GlassCard(
@@ -317,13 +394,19 @@ class _SteamGameRow extends ConsumerWidget {
             ClipRRect(
               borderRadius:
                   const BorderRadius.horizontal(left: Radius.circular(20)),
-              child: SizedBox(
-                width: 100,
-                height: 56,
-                child: Image.network(
-                  capsule,
+              child: CachedNetworkImage(
+                imageUrl: capsuleUrl,
+                width: 75,
+                height: 105,
+                fit: BoxFit.cover,
+                errorWidget: (_, _, _) => CachedNetworkImage(
+                  imageUrl: fallbackUrl,
+                  width: 75,
+                  height: 105,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => ColoredBox(
+                  errorWidget: (_, _, _) => Container(
+                    width: 75,
+                    height: 105,
                     color: cs.surfaceContainerHighest,
                     child: Icon(Icons.sports_esports_rounded,
                         color: cs.onSurfaceVariant),
@@ -333,45 +416,63 @@ class _SteamGameRow extends ConsumerWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.steamHoursPlayed(hours.toStringAsFixed(1)),
-                    style:
-                        TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.steamHoursPlayed(hours.toStringAsFixed(1)),
+                      style:
+                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: Builder(
-                builder: (btnCtx) => IconButton(
-                  icon: Icon(
-                    inLibrary ? Icons.edit : Icons.add_circle_outline,
-                    color: cs.primary,
-                  ),
-                  tooltip:
-                      inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
-                  onPressed: () async {
-                    final wasInLibrary = inLibrary;
-                    final added = await _openSheet(context, ref, existing: existing);
-                    if (added && !wasInLibrary && btnCtx.mounted) {
-                      playLibraryInsertAnimation(
-                        sourceContext: btnCtx,
-                        imageUrl: capsule,
-                      );
-                    }
-                  },
-                ),
+              child: IconButton(
+                key: _btnKey,
+                icon: _loading
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: cs.primary,
+                        ),
+                      )
+                    : Icon(
+                        inLibrary
+                            ? Icons.edit_rounded
+                            : Icons.add_circle_outline_rounded,
+                        color: cs.primary,
+                      ),
+                tooltip:
+                    inLibrary ? l10n.editLibraryEntry : l10n.addToLibrary,
+                onPressed: _loading
+                    ? null
+                    : () async {
+                        final wasInLibrary = inLibrary;
+                        final added =
+                            await _openSheet(context, existing: existing);
+                        if (added &&
+                            !wasInLibrary &&
+                            _btnKey.currentContext != null) {
+                          playLibraryInsertAnimation(
+                            sourceContext: _btnKey.currentContext!,
+                            imageUrl: capsuleUrl,
+                          );
+                        }
+                      },
               ),
             ),
           ],

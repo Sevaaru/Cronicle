@@ -3,30 +3,93 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/database/app_database.dart';
+import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.dart';
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
+import 'package:cronicle/shared/widgets/library_insert_animation.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cronicle/shared/widgets/game_view_toggle.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 /// Detail page for one Steam app: header, playtime, achievements list, and
 /// an "Add to my library" action that resolves the matching IGDB game.
-class SteamGameDetailPage extends ConsumerWidget {
+class SteamGameDetailPage extends ConsumerStatefulWidget {
   const SteamGameDetailPage({super.key, required this.appId});
 
   final int appId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SteamGameDetailPage> createState() =>
+      _SteamGameDetailPageState();
+
+  static String _formatDate(DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)}';
+  }
+
+  static Future<void> _launchSteamStore(int appId) async {
+    final uri = Uri.parse('https://store.steampowered.com/app/$appId/');
+    if (await canLaunchUrl(uri))
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
+  /// The IGDB externalId resolved for this Steam game, once known.
+  /// Set immediately from the library entry (if already in library) or after
+  /// the first IGDB lookup triggered by "Add to library".
+  String? _igdbExternalId;
+
+  /// Whether the IGDB lookup is currently running (shows spinner on the add
+  /// button instead of opening a separate loading dialog).
+  bool _addLoading = false;
+
+  final _addBtnKey = GlobalKey();
+
+  int get appId => widget.appId;
+
+  LibraryEntry? _findExistingEntry(List<LibraryEntry> entries) {
+    // Primary: match by steamAppId stored in the DB (fastest, most accurate)
+    final bySteam = entries.cast<LibraryEntry?>().firstWhere(
+          (e) => e?.steamAppId == appId,
+          orElse: () => null,
+        );
+    if (bySteam != null) {
+      // Keep _igdbExternalId in sync so the IGDB toggle appears immediately
+      if (_igdbExternalId == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _igdbExternalId = bySteam.externalId);
+        });
+      }
+      return bySteam;
+    }
+    // Fallback: match by cached IGDB id (covers the moment between "just added"
+    // and the stream emitting the updated list with steamAppId set)
+    if (_igdbExternalId != null) {
+      return entries.cast<LibraryEntry?>().firstWhere(
+            (e) => e?.externalId == _igdbExternalId,
+            orElse: () => null,
+          );
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final gamesAsync = ref.watch(steamOwnedGamesProvider);
-    final achievementsAsync =
-        ref.watch(steamGameAchievementsProvider(appId));
+    final achievementsAsync = ref.watch(steamGameAchievementsProvider(appId));
 
     final game = gamesAsync.maybeWhen(
       data: (list) => list.firstWhere(
@@ -39,120 +102,159 @@ class SteamGameDetailPage extends ConsumerWidget {
     final name = (game['name'] as String?) ?? 'App $appId';
     final playtimeMin = (game['playtime_forever'] as num?)?.toInt() ?? 0;
     final hours = playtimeMin / 60.0;
-    final lastPlayedTs =
-        (game['rtime_last_played'] as num?)?.toInt() ?? 0;
+    final lastPlayedTs = (game['rtime_last_played'] as num?)?.toInt() ?? 0;
     final lastPlayed = lastPlayedTs > 0
         ? DateTime.fromMillisecondsSinceEpoch(lastPlayedTs * 1000)
         : null;
 
+    // Check if the game is already in the library
+    final gameEntries =
+        ref.watch(libraryByKindProvider(MediaKind.game)).valueOrNull ?? [];
+    final existing = _findExistingEntry(gameEntries);
+    final inLibrary = existing != null;
+
+    final igdbId = _igdbExternalId != null
+        ? int.tryParse(_igdbExternalId!)
+        : null;
+
     return Scaffold(
-        appBar: AppBar(title: Text(name)),
-        body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, kGlassBottomNavContentHeight + 24),
-        children: [
-          AspectRatio(
-            aspectRatio: 460 / 215,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                SteamApiDatasource.headerUrl(appId),
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          appBar: AppBar(title: Text(name)),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(
+                16, 16, 16, kGlassBottomNavContentHeight + 24),
+            children: [
+              // Steam / IGDB view toggle — visible once the IGDB id is known
+              if (igdbId != null) ...[
+                GameViewToggle(
+                  currentIsSteam: true,
+                  onSteam: null, // already on Steam view
+                  onIgdb: () => context.push('/game/$igdbId'),
+                ),
+                const SizedBox(height: 12),
+              ],
+              AspectRatio(
+                aspectRatio: 460 / 215,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    SteamApiDatasource.headerUrl(appId),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: cs.surfaceContainerHighest,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _SteamMediaCarousel(appId: appId),
-          const SizedBox(height: 16),
-          _StatTile(
-            icon: Icons.timelapse_rounded,
-            label: l10n.steamPlaytime,
-            value: l10n.steamHoursPlayed(hours.toStringAsFixed(1)),
-          ),
-          if (lastPlayed != null) ...[
-            const SizedBox(height: 6),
-            _StatTile(
-              icon: Icons.history_rounded,
-              label: l10n.steamLastPlayed,
-              value: _formatDate(lastPlayed),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _SteamFavoriteButton(appId: appId, name: name),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.add_to_photos_rounded),
-                  label: Text(l10n.steamAddToLibrary),
-                  onPressed: () => _addToLibrary(context, ref, name),
+              const SizedBox(height: 12),
+              _SteamMediaCarousel(appId: appId),
+              const SizedBox(height: 16),
+              _StatTile(
+                icon: Icons.timelapse_rounded,
+                label: l10n.steamPlaytime,
+                value: l10n.steamHoursPlayed(hours.toStringAsFixed(1)),
+              ),
+              if (lastPlayed != null) ...[
+                const SizedBox(height: 6),
+                _StatTile(
+                  icon: Icons.history_rounded,
+                  label: l10n.steamLastPlayed,
+                  value: SteamGameDetailPage._formatDate(lastPlayed),
                 ),
+              ],
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _SteamFavoriteButton(appId: appId, name: name),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: _addBtnKey,
+                      icon: _addLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                              ),
+                            )
+                          : Icon(inLibrary
+                              ? Icons.edit_rounded
+                              : Icons.add_to_photos_rounded),
+                      label: Text(inLibrary
+                          ? l10n.editLibraryEntry
+                          : l10n.steamAddToLibrary),
+                      onPressed: _addLoading
+                          ? null
+                          : () => _addToLibrary(
+                              context, name, playtimeMin, existing),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SteamGameInfoCard(appId: appId),
+              const SizedBox(height: 12),
+              _SteamFriendsCard(appId: appId),
+              const SizedBox(height: 24),
+              achievementsAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Text(l10n.errorWithMessage(e)),
+                data: (res) {
+                  if (res.total == 0) {
+                    return Text(l10n.steamNoAchievements);
+                  }
+                  return _AchievementsSummaryCard(
+                    appId: appId,
+                    unlocked: res.unlocked,
+                    total: res.total,
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _SteamReviewsCard(appId: appId),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: Text(l10n.steamViewOnStore),
+                onPressed: () => SteamGameDetailPage._launchSteamStore(appId),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _SteamGameInfoCard(appId: appId),
-          const SizedBox(height: 12),
-          _SteamFriendsCard(appId: appId),
-          const SizedBox(height: 24),
-          achievementsAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Text(l10n.errorWithMessage(e)),
-            data: (res) {
-              if (res.total == 0) {
-                return Text(l10n.steamNoAchievements);
-              }
-              return _AchievementsSummaryCard(
-                appId: appId,
-                unlocked: res.unlocked,
-                total: res.total,
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          _SteamReviewsCard(appId: appId),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.open_in_new_rounded, size: 16),
-            label: Text(l10n.steamViewOnStore),
-            onPressed: () => _launchSteamStore(appId),
-          ),
-        ],
-      ),
     );
   }
 
   Future<void> _addToLibrary(
     BuildContext context,
-    WidgetRef ref,
     String name,
+    int playtimeMin,
+    LibraryEntry? existing,
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
 
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    if (mounted) setState(() => _addLoading = true);
 
     Map<String, dynamic>? igdbGame;
     try {
       final igdb = ref.read(igdbApiProvider);
       final igdbId = await igdb.findGameIdBySteamAppId(appId, gameName: name);
       if (igdbId != null) {
-        igdbGame = await igdb.fetchGameDetail(igdbId);
+        final raw = await igdb.fetchGameDetail(igdbId);
+        if (raw != null) {
+          igdbGame = IgdbApiDatasource.normalize(raw);
+          if (mounted) {
+            setState(() => _igdbExternalId = igdbId.toString());
+          }
+        }
       }
     } catch (_) {}
 
-    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    if (mounted) setState(() => _addLoading = false);
+    if (!context.mounted) return;
 
     if (igdbGame == null) {
       messenger.showSnackBar(
@@ -161,30 +263,50 @@ class SteamGameDetailPage extends ConsumerWidget {
       return;
     }
 
+    // Re-check existing entry by IGDB id now that we have it
+    LibraryEntry? resolvedExisting = existing;
+    if (resolvedExisting == null && _igdbExternalId != null) {
+      final db = ref.read(databaseProvider);
+      resolvedExisting = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.game.code,
+        _igdbExternalId!,
+      );
+    }
+    final wasEdit = resolvedExisting != null;
+
     if (!context.mounted) return;
     final ok = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: igdbGame,
       kind: MediaKind.game,
+      existingEntry: resolvedExisting,
+      initialProgress: (!wasEdit && playtimeMin > 0)
+          ? (playtimeMin / 60).round()
+          : null,
+      useRootNavigator: false,
+      steamAppId: appId,
     );
-    if (ok && context.mounted) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.addedToLibrary)),
-      );
+
+    if (!context.mounted) return;
+    if (!ok) return;
+
+    if (!wasEdit) {
+      final btnCtx = _addBtnKey.currentContext;
+      if (btnCtx != null) {
+        playLibraryInsertAnimation(
+          sourceContext: btnCtx,
+          imageUrl: SteamApiDatasource.capsuleUrl(appId),
+          startWidth: 80,
+          startHeight: 60,
+        );
+      }
     }
-  }
-
-  static String _formatDate(DateTime d) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${d.year}-${two(d.month)}-${two(d.day)}';
-  }
-
-  static Future<void> _launchSteamStore(int appId) async {
-    final uri = Uri.parse('https://store.steampowered.com/app/$appId/');
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    showLibrarySnackbar(context, wasEdit: wasEdit);
   }
 }
+
+// ─── Stat tile ───────────────────────────────────────────────────────────────
 
 class _StatTile extends StatelessWidget {
   const _StatTile({
@@ -539,7 +661,6 @@ class _SteamFriendsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final activityAsync = ref.watch(steamFriendsWithGameProvider(appId));
-    final cs = Theme.of(context).colorScheme;
 
     return activityAsync.when(
       loading: () => const SizedBox.shrink(),
@@ -549,16 +670,20 @@ class _SteamFriendsCard extends ConsumerWidget {
           return const SizedBox.shrink();
         }
         final friends = activity.friendsWhoOwn;
+        if (friends.isEmpty) return const SizedBox.shrink();
+
+        const kMax = 5;
         return Card.filled(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Icon(Icons.group_rounded,
-                        size: 18, color: cs.primary),
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -566,55 +691,157 @@ class _SteamFriendsCard extends ConsumerWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
+                    Text(
+                      l10n.steamFriendsOwnThis(friends.length),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  friends.isEmpty
-                      ? l10n.steamFriendsNoneOwn
-                      : l10n.steamFriendsOwnThis(friends.length),
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: cs.onSurfaceVariant),
-                ),
-                if (friends.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 42,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: friends.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final f = friends[i];
-                        final avatarUrl = (f['avatarmedium'] as String?) ??
-                            (f['avatar'] as String?);
-                        final name =
-                            (f['personaname'] as String?) ?? '?';
-                        return Tooltip(
-                          message: name,
-                          child: CircleAvatar(
-                            radius: 21,
-                            backgroundImage: avatarUrl != null
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: avatarUrl == null
-                                ? Text(name.isNotEmpty
-                                    ? name[0].toUpperCase()
-                                    : '?')
-                                : null,
-                          ),
-                        );
-                      },
-                    ),
+                const SizedBox(height: 10),
+                ...friends.take(kMax).map((f) {
+                  final steamId = f['steamid'] as String? ?? '';
+                  return _FriendPlaytimeRow(
+                    friend: f,
+                    playtimeMinutes: activity.playtimeByFriendId[steamId],
+                  );
+                }),
+                if (friends.length > kMax)
+                  TextButton(
+                    onPressed: () =>
+                        _showAllFriends(context, friends, activity, l10n),
+                    child: Text('+${friends.length - kMax} more'),
                   ),
-                ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  void _showAllFriends(
+    BuildContext context,
+    List<Map<String, dynamic>> friends,
+    SteamFriendsActivity activity,
+    AppLocalizations l10n,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetCtx) => DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (ctx, scroll) => Column(
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withAlpha(60),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(l10n.steamFriendsActivity,
+                  style: Theme.of(ctx).textTheme.titleMedium),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                controller: scroll,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                itemCount: friends.length,
+                itemBuilder: (ctx, i) {
+                  final f = friends[i];
+                  final steamId = f['steamid'] as String? ?? '';
+                  return _FriendPlaytimeRow(
+                    friend: f,
+                    playtimeMinutes: activity.playtimeByFriendId[steamId],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FriendPlaytimeRow extends StatelessWidget {
+  const _FriendPlaytimeRow({
+    required this.friend,
+    this.playtimeMinutes,
+  });
+
+  final Map<String, dynamic> friend;
+  final int? playtimeMinutes;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final avatarUrl =
+        (friend['avatarmedium'] as String?) ?? (friend['avatar'] as String?);
+    final name = (friend['personaname'] as String?) ?? '?';
+    final profileUrl = friend['profileurl'] as String?;
+    final hasProfile = profileUrl != null && profileUrl.isNotEmpty;
+
+    final playtimeText = playtimeMinutes != null
+        ? l10n.steamHoursPlayed((playtimeMinutes! / 60).toStringAsFixed(1))
+        : '—';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: hasProfile
+          ? () => launchUrl(Uri.parse(profileUrl),
+              mode: LaunchMode.externalApplication)
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundImage:
+                  avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null
+                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?')
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(name,
+                  style: const TextStyle(fontWeight: FontWeight.w500)),
+            ),
+            Text(
+              playtimeText,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+            if (hasProfile) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.open_in_new_rounded,
+                  size: 13, color: cs.onSurfaceVariant),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -854,16 +1081,27 @@ class _AchievementsSummaryCard extends StatelessWidget {
 
 // ─── Achievements full-screen page ───────────────────────────────────────────
 
-class SteamAchievementsPage extends ConsumerWidget {
+enum _AchievementFilter { all, unlocked, locked }
+
+class SteamAchievementsPage extends ConsumerStatefulWidget {
   const SteamAchievementsPage({super.key, required this.appId});
 
   final int appId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SteamAchievementsPage> createState() =>
+      _SteamAchievementsPageState();
+}
+
+class _SteamAchievementsPageState extends ConsumerState<SteamAchievementsPage> {
+  _AchievementFilter _filter = _AchievementFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
     final achievementsAsync =
-        ref.watch(steamGameAchievementsProvider(appId));
+        ref.watch(steamGameAchievementsProvider(widget.appId));
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.steamAchievements)),
@@ -875,29 +1113,80 @@ class SteamAchievementsPage extends ConsumerWidget {
           if (res.total == 0) {
             return Center(child: Text(l10n.steamNoAchievements));
           }
+
+          final visible = switch (_filter) {
+            _AchievementFilter.all => res.achievements,
+            _AchievementFilter.unlocked =>
+              res.achievements.where((a) => a.achieved).toList(),
+            _AchievementFilter.locked =>
+              res.achievements.where((a) => !a.achieved).toList(),
+          };
+
+          final cs = Theme.of(context).colorScheme;
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Expanded(
+                          child: Text(
+                            l10n.steamAchievementsProgress(
+                                res.unlocked, res.total),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
                         Text(
-                          l10n.steamAchievementsProgress(
-                              res.unlocked, res.total),
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          '${(res.total > 0 ? res.unlocked / res.total * 100 : 0).round()}%',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(color: cs.primary),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
                         value: res.total > 0 ? res.unlocked / res.total : 0,
                         minHeight: 8,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Filter chips row
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final f in _AchievementFilter.values) ...[
+                            _AchievFilterChip(
+                              label: switch (f) {
+                                _AchievementFilter.all =>
+                                  isEs ? 'Todos' : 'All',
+                                _AchievementFilter.unlocked =>
+                                  isEs ? 'Desbloqueados' : 'Unlocked',
+                                _AchievementFilter.locked =>
+                                  isEs ? 'Bloqueados' : 'Locked',
+                              },
+                              icon: switch (f) {
+                                _AchievementFilter.all =>
+                                  Icons.list_alt_rounded,
+                                _AchievementFilter.unlocked =>
+                                  Icons.lock_open_rounded,
+                                _AchievementFilter.locked =>
+                                  Icons.lock_outline_rounded,
+                              },
+                              selected: _filter == f,
+                              onTap: () => setState(() => _filter = f),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                        ],
                       ),
                     ),
                   ],
@@ -905,10 +1194,11 @@ class SteamAchievementsPage extends ConsumerWidget {
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: res.achievements.length,
+                  padding: EdgeInsets.fromLTRB(
+                      16, 8, 16, kGlassBottomNavContentHeight + 24),
+                  itemCount: visible.length,
                   itemBuilder: (context, i) =>
-                      _AchievementRow(achievement: res.achievements[i]),
+                      _AchievementCard(achievement: visible[i]),
                 ),
               ),
             ],
@@ -919,10 +1209,56 @@ class SteamAchievementsPage extends ConsumerWidget {
   }
 }
 
-// ─── Achievement row ──────────────────────────────────────────────────────────
+// ─── Achievement filter chip ──────────────────────────────────────────────────
 
-class _AchievementRow extends StatelessWidget {
-  const _AchievementRow({required this.achievement});
+class _AchievFilterChip extends StatelessWidget {
+  const _AchievFilterChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = selected ? cs.primaryContainer : cs.surfaceContainerHigh;
+    final fg = selected ? cs.onPrimaryContainer : cs.onSurfaceVariant;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: fg),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: fg)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Achievement card ─────────────────────────────────────────────────────────
+
+class _AchievementCard extends StatelessWidget {
+  const _AchievementCard({required this.achievement});
 
   final SteamAchievement achievement;
 
@@ -930,81 +1266,137 @@ class _AchievementRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final iconUrl = achievement.achieved
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unlocked = achievement.achieved;
+    final iconUrl = unlocked
         ? achievement.iconUrl
         : (achievement.iconGrayUrl ?? achievement.iconUrl);
+    final name = achievement.displayName.isNotEmpty
+        ? achievement.displayName
+        : achievement.apiName;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: iconUrl != null && iconUrl.isNotEmpty
-                  ? Image.network(
-                      iconUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          Container(color: cs.surfaceContainerHighest),
-                    )
-                  : Container(color: cs.surfaceContainerHighest),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  achievement.displayName.isNotEmpty
-                      ? achievement.displayName
-                      : achievement.apiName,
-                  style: Theme.of(context).textTheme.titleSmall,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: unlocked
+            ? (isDark
+                ? cs.primaryContainer.withAlpha(60)
+                : cs.primaryContainer.withAlpha(40))
+            : cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Icon
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: ColorFiltered(
+                  colorFilter: unlocked
+                      ? const ColorFilter.mode(
+                          Colors.transparent, BlendMode.multiply)
+                      : const ColorFilter.matrix([
+                          0.213, 0.715, 0.072, 0, 0, //
+                          0.213, 0.715, 0.072, 0, 0,
+                          0.213, 0.715, 0.072, 0, 0,
+                          0, 0, 0, 0.7, 0,
+                        ]),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: iconUrl != null && iconUrl.isNotEmpty
+                        ? Image.network(
+                            iconUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: cs.surfaceContainerHighest,
+                              child: Icon(Icons.emoji_events_outlined,
+                                  color: cs.onSurfaceVariant),
+                            ),
+                          )
+                        : Container(
+                            color: cs.surfaceContainerHighest,
+                            child: Icon(Icons.emoji_events_outlined,
+                                color: cs.onSurfaceVariant),
+                          ),
+                  ),
                 ),
-                if ((achievement.hidden && !achievement.achieved) == false &&
-                    achievement.description.isNotEmpty)
-                  Text(
-                    achievement.description,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
-                  )
-                else if (achievement.hidden && !achievement.achieved)
-                  Text(
-                    l10n.steamAchievementHidden,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                  ),
-                if (achievement.achieved && achievement.unlockTime != null)
-                  Text(
-                    l10n.steamAchievementUnlockedOn(
-                      SteamGameDetailPage._formatDate(achievement.unlockTime!),
+              ),
+              const SizedBox(width: 12),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: unlocked
+                                ? cs.onSurface
+                                : cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.green.shade400,
-                        ),
-                  ),
-              ],
-            ),
+                    if (!(achievement.hidden && !unlocked) &&
+                        achievement.description.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        achievement.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                      ),
+                    ] else if (achievement.hidden && !unlocked) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.steamAchievementHidden,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                      ),
+                    ],
+                    if (unlocked && achievement.unlockTime != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded,
+                              size: 12, color: Colors.green.shade400),
+                          const SizedBox(width: 4),
+                          Text(
+                            l10n.steamAchievementUnlockedOn(
+                              SteamGameDetailPage._formatDate(
+                                  achievement.unlockTime!),
+                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Colors.green.shade400),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Badge
+              Icon(
+                unlocked
+                    ? Icons.emoji_events_rounded
+                    : Icons.lock_outline_rounded,
+                size: 22,
+                color: unlocked
+                    ? Colors.amber.shade400
+                    : cs.onSurfaceVariant.withAlpha(120),
+              ),
+            ],
           ),
-          Icon(
-            achievement.achieved
-                ? Icons.emoji_events_rounded
-                : Icons.lock_outline_rounded,
-            color: achievement.achieved
-                ? Colors.amber.shade400
-                : cs.onSurfaceVariant,
-          ),
-        ],
+        ),
       ),
     );
   }

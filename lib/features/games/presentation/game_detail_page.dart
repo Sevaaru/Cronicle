@@ -19,6 +19,7 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/library_insert_animation.dart';
+import 'package:cronicle/shared/widgets/game_view_toggle.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 typedef _GameDetailLinkRow = ({
@@ -165,6 +166,20 @@ class _GameDetailContent extends StatelessWidget {
     final ttb = game['time_to_beat'] as Map<String, dynamic>?;
     final reviews = (game['igdb_reviews'] as List?) ?? const [];
 
+    // Extract Steam app ID from IGDB external_games (category 1 = Steam)
+    final steamExt = externalGames.cast<dynamic>().firstWhere(
+          (e) => e is Map && (e['category'] as int?) == 1,
+          orElse: () => null,
+        );
+    final steamAppIdFromIgdb = steamExt != null
+        ? (() {
+            final uid = (steamExt as Map)['uid'];
+            if (uid is int) return uid;
+            if (uid is String) return int.tryParse(uid);
+            return null;
+          })()
+        : null;
+
     final linkRows = <_GameDetailLinkRow>[];
     final seenLinkUrls = <String>{};
     void addLinkRow(
@@ -264,6 +279,16 @@ class _GameDetailContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 12),
+                  // Steam / IGDB view toggle
+                  if (steamAppIdFromIgdb != null) ...[
+                    GameViewToggle(
+                      currentIsSteam: false,
+                      onSteam: () => context.push(
+                          '/profile/steam/game/$steamAppIdFromIgdb'),
+                      onIgdb: null, // already on IGDB view
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
