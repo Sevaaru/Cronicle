@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
+import 'package:cronicle/features/games/presentation/game_detail_page.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.dart';
@@ -24,9 +25,19 @@ import 'package:cronicle/shared/widgets/m3_detail.dart';
 /// Detail page for one Steam app: header, playtime, achievements list, and
 /// an "Add to my library" action that resolves the matching IGDB game.
 class SteamGameDetailPage extends ConsumerStatefulWidget {
-  const SteamGameDetailPage({super.key, required this.appId});
+  const SteamGameDetailPage({
+    super.key,
+    required this.appId,
+    this.onSwitchToIgdb,
+  });
 
   final int appId;
+
+  /// When non-null, this page is rendered embedded inside a [GameDetailPage]
+  /// (the IGDB view toggled to Steam inline). The IGDB toggle in the body
+  /// and the AppBar back button delegate to this callback so the parent can
+  /// swap back to its own view without growing the navigation stack.
+  final VoidCallback? onSwitchToIgdb;
 
   @override
   ConsumerState<SteamGameDetailPage> createState() =>
@@ -50,9 +61,20 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
   /// the first IGDB lookup triggered by "Add to library".
   String? _igdbExternalId;
 
+  /// Parsed integer form of [_igdbExternalId]. Cached here so it is never
+  /// null once the inline IGDB view is activated (avoids a one-frame gap
+  /// where a provider rebuild could reset it to null mid-toggle).
+  int? _cachedIgdbId;
+
   /// Whether the IGDB lookup is currently running (shows spinner on the add
   /// button instead of opening a separate loading dialog).
   bool _addLoading = false;
+
+  /// True while the user has toggled to the IGDB view from this Steam page.
+  /// We render the [GameDetailPage] inline (replacing the entire body)
+  /// instead of pushing a new route, so back-navigation goes directly back
+  /// to wherever the Steam page was opened from.
+  bool _showIgdbInline = false;
 
   final _addBtnKey = GlobalKey();
 
@@ -68,7 +90,13 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
       // Keep _igdbExternalId in sync so the IGDB toggle appears immediately
       if (_igdbExternalId == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _igdbExternalId = bySteam.externalId);
+          if (mounted) {
+            final parsed = int.tryParse(bySteam.externalId ?? '');
+            setState(() {
+              _igdbExternalId = bySteam.externalId;
+              if (parsed != null) _cachedIgdbId = parsed;
+            });
+          }
         });
       }
       return bySteam;
@@ -86,6 +114,25 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ── Inline IGDB view ────────────────────────────────────────────────────
+    // Check this FIRST, before any ref.watch calls. Once the user toggles to
+    // IGDB we render GameDetailPage in place of our Scaffold. Checking here
+    // avoids the one-frame gap where a provider rebuild could briefly make
+    // _igdbExternalId appear null and fall through to the Steam Scaffold.
+    if (_showIgdbInline && _cachedIgdbId != null) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          setState(() => _showIgdbInline = false);
+        },
+        child: GameDetailPage(
+          gameId: _cachedIgdbId!,
+          onSwitchToSteam: () => setState(() => _showIgdbInline = false),
+        ),
+      );
+    }
+
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final gamesAsync = ref.watch(steamOwnedGamesProvider);
@@ -117,8 +164,30 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
         ? int.tryParse(_igdbExternalId!)
         : null;
 
+    // Keep _cachedIgdbId up-to-date whenever igdbId resolves
+    if (igdbId != null && _cachedIgdbId != igdbId) {
+      _cachedIgdbId = igdbId;
+    }
+
+    // (Inline IGDB view is handled at the very top of build before this point)
+
+    final isEmbedded = widget.onSwitchToIgdb != null;
+
     return Scaffold(
-          appBar: AppBar(title: Text(name)),
+          appBar: AppBar(
+            title: Text(name),
+            // When embedded inside an IGDB GameDetailPage, the AppBar back
+            // arrow should switch the parent back to the IGDB view instead
+            // of popping the entire route.
+            leading: isEmbedded
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: widget.onSwitchToIgdb,
+                    tooltip: 'IGDB',
+                  )
+                : null,
+            automaticallyImplyLeading: !isEmbedded,
+          ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(
                 16, 16, 16, kGlassBottomNavContentHeight + 24),
@@ -128,7 +197,19 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
                 GameViewToggle(
                   currentIsSteam: true,
                   onSteam: null, // already on Steam view
-                  onIgdb: () => context.push('/game/$igdbId'),
+                  onIgdb: () {
+                    // If embedded inside an IGDB page, ask the parent to
+                    // swap back. Otherwise toggle our own internal state
+                    // to render the IGDB page inline.
+                    if (widget.onSwitchToIgdb != null) {
+                      widget.onSwitchToIgdb!.call();
+                    } else {
+                      setState(() {
+                        _cachedIgdbId = igdbId; // lock in before ref.watch can change
+                        _showIgdbInline = true;
+                      });
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
               ],
@@ -136,12 +217,9 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
                 aspectRatio: 460 / 215,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    SteamApiDatasource.headerUrl(appId),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: cs.surfaceContainerHighest,
-                    ),
+                  child: _SteamHeaderImage(
+                    appId: appId,
+                    fallbackName: name,
                   ),
                 ),
               ),
@@ -195,7 +273,17 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
               const SizedBox(height: 16),
               _SteamGameInfoCard(appId: appId),
               const SizedBox(height: 12),
+              _SteamPopularTagsCard(appId: appId),
+              const SizedBox(height: 12),
               _SteamFriendsCard(appId: appId),
+              const SizedBox(height: 12),
+              _SteamNewsCard(appId: appId),
+              const SizedBox(height: 12),
+              _SteamCommunityLinksCard(appId: appId),
+              const SizedBox(height: 12),
+              _SteamExternalLinksCard(appId: appId),
+              const SizedBox(height: 12),
+              _SteamSystemRequirementsCard(appId: appId),
               const SizedBox(height: 24),
               achievementsAsync.when(
                 loading: () => const Padding(
@@ -217,6 +305,10 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
               const SizedBox(height: 12),
               _SteamReviewsCard(appId: appId),
               const SizedBox(height: 12),
+              if (_cachedIgdbId != null) ...[
+                _SteamSimilarGamesCard(igdbId: _cachedIgdbId!),
+                const SizedBox(height: 12),
+              ],
               OutlinedButton.icon(
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
                 label: Text(l10n.steamViewOnStore),
@@ -247,7 +339,10 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
         if (raw != null) {
           igdbGame = IgdbApiDatasource.normalize(raw);
           if (mounted) {
-            setState(() => _igdbExternalId = igdbId.toString());
+            setState(() {
+              _igdbExternalId = igdbId.toString();
+              _cachedIgdbId = igdbId;
+            });
           }
         }
       }
@@ -848,6 +943,126 @@ class _FriendPlaytimeRow extends StatelessWidget {
 
 // ─── User reviews card ────────────────────────────────────────────────────────
 
+// ─── Steam news / events / announcements card ────────────────────────────────
+//
+// Renders the same "Eventos y anuncios recientes" list that Steam shows on
+// the store page. Uses `ISteamNews/GetNewsForApp` (public, no API key
+// required) filtered to `steam_community_announcements`. Items deep-link
+// to Steam's web view of the announcement.
+class _SteamNewsCard extends ConsumerWidget {
+  const _SteamNewsCard({required this.appId});
+
+  final int appId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final newsAsync = ref.watch(steamAppNewsProvider(appId));
+
+    return newsAsync.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        // Strip very-noisy [bbcode] tags from snippets — the API returns raw
+        // bbcode for `contents` and rendering the markup faithfully is out
+        // of scope, so a quick sanitiser keeps the preview readable.
+        String stripBb(String s) =>
+            s.replaceAll(RegExp(r'\[/?[^\]]+\]'), '').trim();
+        final visible = items.take(4).toList();
+        return Card.filled(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.campaign_rounded, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.steamNewsAndEvents,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...visible.map((n) {
+                  final title = (n['title'] as String?) ?? '';
+                  final url = (n['url'] as String?) ?? '';
+                  final body = stripBb((n['contents'] as String?) ?? '');
+                  final ts = (n['date'] as num?)?.toInt() ?? 0;
+                  final date = ts > 0
+                      ? DateTime.fromMillisecondsSinceEpoch(ts * 1000)
+                      : null;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: url.isEmpty
+                          ? null
+                          : () async {
+                              final uri = Uri.tryParse(url);
+                              if (uri == null) return;
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            if (body.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                body,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ],
+                            if (date != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                SteamGameDetailPage._formatDate(date),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ─── User reviews card ────────────────────────────────────────────────────────
+
 class _SteamReviewsCard extends ConsumerWidget {
   const _SteamReviewsCard({required this.appId});
 
@@ -1398,6 +1613,511 @@ class _AchievementCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── Robust Steam header image with fallbacks ────────────────────────────────
+//
+// Steam's classic CDN header URL (`header.jpg`) is not always available —
+// some newer / free-to-play / region-restricted titles only expose the modern
+// "library_600x900" or "library_hero" assets, so a hardcoded URL produces a
+// blank square. This widget tries (in order):
+//
+//   1. `header_image` returned by the public `appdetails` endpoint (most
+//      authoritative — Steam itself uses this URL on the store page).
+//   2. The classic `header.jpg` CDN URL.
+//   3. The library capsule (`library_600x900.jpg`).
+//   4. A neutral placeholder showing the game name.
+class _SteamHeaderImage extends ConsumerWidget {
+  const _SteamHeaderImage({required this.appId, required this.fallbackName});
+
+  final int appId;
+  final String fallbackName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailsAsync = ref.watch(steamAppDetailsProvider(appId));
+    final apiHeader = detailsAsync.maybeWhen(
+      data: (d) => d?['header_image'] as String?,
+      orElse: () => null,
+    );
+    final urls = <String>[
+      if (apiHeader != null && apiHeader.isNotEmpty) apiHeader,
+      ...SteamApiDatasource.artworkCandidates(appId, preferHeader: true),
+    ];
+    return _ChainedNetworkImage(urls: urls, fallbackName: fallbackName);
+  }
+}
+
+/// Tries each URL in [urls] in order, falling through to the next one when
+/// the current image fails to load. Shows a neutral placeholder with the
+/// game name when every URL has failed.
+class _ChainedNetworkImage extends StatefulWidget {
+  const _ChainedNetworkImage({required this.urls, required this.fallbackName});
+  final List<String> urls;
+  final String fallbackName;
+
+  @override
+  State<_ChainedNetworkImage> createState() => _ChainedNetworkImageState();
+}
+
+class _ChainedNetworkImageState extends State<_ChainedNetworkImage> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (_index >= widget.urls.length) {
+      return Container(
+        color: cs.surfaceContainerHighest,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(12),
+        child: Text(
+          widget.fallbackName,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: widget.urls[_index],
+      fit: BoxFit.cover,
+      fadeInDuration: const Duration(milliseconds: 150),
+      placeholder: (_, _) => Container(color: cs.surfaceContainerHighest),
+      errorWidget: (_, _, _) {
+        // Schedule the rebuild after the failed frame to avoid setState during build.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _index += 1);
+        });
+        return Container(color: cs.surfaceContainerHighest);
+      },
+    );
+  }
+}
+
+// ─── Community links card ────────────────────────────────────────────────────
+
+/// Compact list of Steam community URLs (community hub, guides, discussions,
+/// workshop, points shop, announcements, update history). All URLs follow
+/// well-known Steam patterns so we don't need any API call here.
+class _SteamCommunityLinksCard extends StatelessWidget {
+  const _SteamCommunityLinksCard({required this.appId});
+  final int appId;
+
+  static Future<void> _open(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final entries = <(IconData, String, String)>[
+      (Icons.groups_2_rounded, l10n.steamLinkCommunityHub,
+          'https://steamcommunity.com/app/$appId'),
+      (Icons.menu_book_rounded, l10n.steamLinkGuides,
+          'https://steamcommunity.com/app/$appId/guides/'),
+      (Icons.forum_rounded, l10n.steamLinkDiscussions,
+          'https://steamcommunity.com/app/$appId/discussions/'),
+      (Icons.extension_rounded, l10n.steamLinkWorkshop,
+          'https://steamcommunity.com/app/$appId/workshop/'),
+      (Icons.campaign_rounded, l10n.steamLinkAnnouncements,
+          'https://steamcommunity.com/app/$appId/announcements/'),
+      (Icons.update_rounded, l10n.steamLinkUpdateHistory,
+          'https://store.steampowered.com/news/?appids=$appId'),
+      (Icons.stars_rounded, l10n.steamLinkPointsShop,
+          'https://store.steampowered.com/points/shop/app/$appId'),
+    ];
+    return Card.filled(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.link_rounded, size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Text(l10n.steamCommunityLinks,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (icon, label, url) in entries)
+                  ActionChip(
+                    avatar: Icon(icon, size: 16, color: cs.onSurfaceVariant),
+                    label: Text(label),
+                    onPressed: () => _open(url),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── External links card (website + support) ─────────────────────────────────
+
+class _SteamExternalLinksCard extends ConsumerWidget {
+  const _SteamExternalLinksCard({required this.appId});
+  final int appId;
+
+  static Future<void> _open(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  /// Detects which social-network icon to use based on the URL host.
+  IconData _socialIconFor(String url) {
+    final host = (Uri.tryParse(url)?.host ?? '').toLowerCase();
+    if (host.contains('twitter.com') || host.contains('x.com')) {
+      return Icons.alternate_email_rounded;
+    }
+    if (host.contains('facebook.com')) return Icons.facebook_rounded;
+    if (host.contains('youtube.com') || host.contains('youtu.be')) {
+      return Icons.smart_display_rounded;
+    }
+    if (host.contains('discord.gg') || host.contains('discord.com')) {
+      return Icons.chat_bubble_rounded;
+    }
+    if (host.contains('reddit.com')) return Icons.reddit;
+    if (host.contains('instagram.com')) return Icons.photo_camera_rounded;
+    if (host.contains('tiktok.com')) return Icons.music_video_rounded;
+    if (host.contains('twitch.tv')) return Icons.live_tv_rounded;
+    return Icons.public_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final detailsAsync = ref.watch(steamAppDetailsProvider(appId));
+    final website = detailsAsync.maybeWhen(
+      data: (d) => d?['website'] as String?,
+      orElse: () => null,
+    );
+    final supportInfo = detailsAsync.maybeWhen(
+      data: (d) => d?['support_info'] as Map<String, dynamic>?,
+      orElse: () => null,
+    );
+    final supportUrl = supportInfo?['url'] as String?;
+
+    final entries = <(IconData, String, String)>[
+      if (website != null && website.isNotEmpty)
+        (_socialIconFor(website), l10n.steamLinkOfficialSite, website),
+      if (supportUrl != null && supportUrl.isNotEmpty)
+        (Icons.help_outline_rounded, l10n.steamLinkSupport, supportUrl),
+    ];
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return Card.filled(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.public_rounded, size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Text(l10n.steamExternalLinks,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (icon, label, url) in entries)
+                  ActionChip(
+                    avatar: Icon(icon, size: 16, color: cs.onSurfaceVariant),
+                    label: Text(label),
+                    onPressed: () => _open(url),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Popular tags card (SteamSpy) ────────────────────────────────────────────
+
+class _SteamPopularTagsCard extends ConsumerWidget {
+  const _SteamPopularTagsCard({required this.appId});
+  final int appId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final tagsAsync = ref.watch(steamSpyTagsProvider(appId));
+    return tagsAsync.maybeWhen(
+      data: (tags) {
+        if (tags.isEmpty) return const SizedBox.shrink();
+        // Take top 15 tags, sorted by votes (already sorted in datasource).
+        final top = tags.entries.take(15).toList();
+        return Card.filled(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.local_offer_rounded, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Text(l10n.steamPopularTags,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final e in top)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          e.key,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(color: cs.onSurface),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ─── System requirements card ────────────────────────────────────────────────
+
+class _SteamSystemRequirementsCard extends ConsumerWidget {
+  const _SteamSystemRequirementsCard({required this.appId});
+  final int appId;
+
+  /// Strips the simple HTML markup Steam returns (`<strong>`, `<br>`, `<ul>`,
+  /// `<li>`) and converts list items into bulleted lines for clean display.
+  String _stripHtml(String html) {
+    var s = html
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'</?(ul|ol)>', caseSensitive: false), '\n')
+        .replaceAllMapped(
+            RegExp(r'<li[^>]*>(.*?)</li>',
+                caseSensitive: false, dotAll: true),
+            (m) => '• ${m.group(1)?.trim() ?? ''}\n')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#039;', "'");
+    // Collapse 3+ newlines and trim each line.
+    s = s.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    s = s
+        .split('\n')
+        .map((l) => l.trimRight())
+        .where((l) => l.isNotEmpty)
+        .join('\n');
+    return s.trim();
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final detailsAsync = ref.watch(steamAppDetailsProvider(appId));
+    return detailsAsync.maybeWhen(
+      data: (d) {
+        if (d == null) return const SizedBox.shrink();
+        // Steam returns either a Map { "minimum": "...", "recommended": "..." }
+        // for PC games or an empty list for some apps. We currently surface
+        // PC requirements only — Mac/Linux are rare and similar in structure.
+        final pcReq = d['pc_requirements'];
+        if (pcReq is! Map) return const SizedBox.shrink();
+        final minimum = pcReq['minimum'] as String?;
+        final recommended = pcReq['recommended'] as String?;
+        if ((minimum == null || minimum.isEmpty) &&
+            (recommended == null || recommended.isEmpty)) {
+          return const SizedBox.shrink();
+        }
+        return Card.filled(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.computer_rounded, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Text(l10n.steamSystemRequirements,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+                if (minimum != null && minimum.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(l10n.steamSysReqMinimum,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(_stripHtml(minimum),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant)),
+                ],
+                if (recommended != null && recommended.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(l10n.steamSysReqRecommended,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(_stripHtml(recommended),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant)),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ─── Similar games card (uses linked IGDB game) ──────────────────────────────
+
+class _SteamSimilarGamesCard extends ConsumerWidget {
+  const _SteamSimilarGamesCard({required this.igdbId});
+  final int igdbId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final detailAsync = ref.watch(igdbGameDetailProvider(igdbId));
+    return detailAsync.maybeWhen(
+      data: (game) {
+        final list = game?['similar_games'] as List?;
+        if (list == null || list.isEmpty) return const SizedBox.shrink();
+        final items = list.take(12).toList();
+        return Card.filled(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.games_rounded, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Text(l10n.steamSimilarGames,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 170,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (context, i) {
+                      final g = items[i] as Map<String, dynamic>?;
+                      if (g == null) return const SizedBox.shrink();
+                      final cover = g['cover'] as Map<String, dynamic>?;
+                      final imageId = cover?['image_id'] as String?;
+                      final coverUrl = imageId != null
+                          ? IgdbApiDatasource.coverUrl(imageId)
+                          : null;
+                      final id = g['id'] as int?;
+                      final name = (g['name'] as String?) ?? '';
+                      return GestureDetector(
+                        onTap: id != null
+                            ? () => context.push('/game/$id')
+                            : null,
+                        child: SizedBox(
+                          width: 100,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: coverUrl != null
+                                    ? CachedNetworkImage(
+                                        imageUrl: coverUrl,
+                                        width: 100,
+                                        height: 130,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(
+                                        width: 100,
+                                        height: 130,
+                                        color: cs.surfaceContainerHighest,
+                                      ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                    Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

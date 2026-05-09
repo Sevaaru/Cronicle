@@ -29,6 +29,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/collapsible_bio_tile.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
@@ -424,8 +425,6 @@ class _ProfileContent extends ConsumerStatefulWidget {
 }
 
 class _ProfileContentState extends ConsumerState<_ProfileContent> {
-  bool _bioExpanded = false;
-
   @override
   void initState() {
     super.initState();
@@ -612,13 +611,7 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
           sliver: SliverList.list(
             children: [
               if (about != null && about.isNotEmpty) ...[
-                _CollapsibleBioTile(
-                  about: about,
-                  expanded: _bioExpanded,
-                  onToggle: () => setState(() => _bioExpanded = !_bioExpanded),
-                  colorScheme: cs,
-                  l10n: l10n,
-                ),
+                CollapsibleBioTile(about: about),
                 const SizedBox(height: 12),
               ],
 
@@ -1304,111 +1297,6 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
           child: const Text('Usar esta foto'),
         ),
       ],
-    );
-  }
-}
-
-class _CollapsibleBioTile extends StatelessWidget {
-  const _CollapsibleBioTile({
-    required this.about,
-    required this.expanded,
-    required this.onToggle,
-    required this.colorScheme,
-    required this.l10n,
-  });
-
-  final String about;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final ColorScheme colorScheme;
-  final AppLocalizations l10n;
-
-  static const double _radius = 22;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = colorScheme;
-    return Material(
-      color: cs.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(_radius),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(_radius),
-              bottom: expanded ? Radius.zero : const Radius.circular(_radius),
-            ),
-            onTap: onToggle,
-            splashColor: cs.primary.withValues(alpha: 0.14),
-            highlightColor: cs.primary.withValues(alpha: 0.06),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: cs.secondaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: cs.onSecondaryContainer,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      'Bio',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15.5,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: expanded ? 0.5 : 0.0,
-                    duration: const Duration(milliseconds: 250),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: cs.onSurfaceVariant,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              child: AnilistMarkdown(
-                about,
-                style: TextStyle(
-                    fontSize: 13, color: cs.onSurfaceVariant, height: 1.4),
-              ),
-            ),
-            crossFadeState: expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 250),
-          ),
-        ],
-      ),
     );
   }
 }

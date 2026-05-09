@@ -10,6 +10,7 @@ import 'package:cronicle/features/profile/presentation/anilist_profile_follow_ro
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/collapsible_bio_tile.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
 import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
@@ -278,11 +279,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
             sliver: SliverList.list(
               children: [
                 if (about != null && about.isNotEmpty) ...[
-                  GlassCard(
-                    child: AnilistMarkdown(about,
-                        style: TextStyle(
-                            fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
-                  ),
+                  CollapsibleBioTile(about: about),
                   const SizedBox(height: 12),
                 ],
 

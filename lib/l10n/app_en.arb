@@ -881,5 +881,24 @@
       "percent": { "type": "int" },
       "total": {}
     }
-  }
+  },
+  "steamNewsAndEvents": "Recent events & announcements",
+  "steamNewsEmpty": "No recent announcements",
+  "steamNewsReadMore": "Read more",
+  "steamCommunityLinks": "Community",
+  "steamLinkCommunityHub": "Community hub",
+  "steamLinkGuides": "Guides",
+  "steamLinkDiscussions": "Discussions",
+  "steamLinkWorkshop": "Workshop",
+  "steamLinkAnnouncements": "Announcements",
+  "steamLinkUpdateHistory": "Update history",
+  "steamLinkPointsShop": "Points shop",
+  "steamExternalLinks": "External links",
+  "steamLinkOfficialSite": "Official site",
+  "steamLinkSupport": "Support",
+  "steamPopularTags": "Popular tags",
+  "steamSystemRequirements": "System requirements",
+  "steamSysReqMinimum": "Minimum",
+  "steamSysReqRecommended": "Recommended",
+  "steamSimilarGames": "Similar games"
 }

@@ -2498,4 +2498,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String steamReviewsStats(int percent, Object total) {
     return '$percent% positive · $total reviews';
   }
+
+  @override
+  String get steamNewsAndEvents => 'Recent events & announcements';
+
+  @override
+  String get steamNewsEmpty => 'No recent announcements';
+
+  @override
+  String get steamNewsReadMore => 'Read more';
+
+  @override
+  String get steamCommunityLinks => 'Community';
+
+  @override
+  String get steamLinkCommunityHub => 'Community hub';
+
+  @override
+  String get steamLinkGuides => 'Guides';
+
+  @override
+  String get steamLinkDiscussions => 'Discussions';
+
+  @override
+  String get steamLinkWorkshop => 'Workshop';
+
+  @override
+  String get steamLinkAnnouncements => 'Announcements';
+
+  @override
+  String get steamLinkUpdateHistory => 'Update history';
+
+  @override
+  String get steamLinkPointsShop => 'Points shop';
+
+  @override
+  String get steamExternalLinks => 'External links';
+
+  @override
+  String get steamLinkOfficialSite => 'Official site';
+
+  @override
+  String get steamLinkSupport => 'Support';
+
+  @override
+  String get steamPopularTags => 'Popular tags';
+
+  @override
+  String get steamSystemRequirements => 'System requirements';
+
+  @override
+  String get steamSysReqMinimum => 'Minimum';
+
+  @override
+  String get steamSysReqRecommended => 'Recommended';
+
+  @override
+  String get steamSimilarGames => 'Similar games';
 }

@@ -4681,6 +4681,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{percent}% positivas · {total} reseñas'**
   String steamReviewsStats(int percent, Object total);
+
+  /// No description provided for @steamNewsAndEvents.
+  ///
+  /// In es, this message translates to:
+  /// **'Eventos y anuncios recientes'**
+  String get steamNewsAndEvents;
+
+  /// No description provided for @steamNewsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin anuncios recientes'**
+  String get steamNewsEmpty;
+
+  /// No description provided for @steamNewsReadMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer más'**
+  String get steamNewsReadMore;
+
+  /// No description provided for @steamCommunityLinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Comunidad'**
+  String get steamCommunityLinks;
+
+  /// No description provided for @steamLinkCommunityHub.
+  ///
+  /// In es, this message translates to:
+  /// **'Centro de la comunidad'**
+  String get steamLinkCommunityHub;
+
+  /// No description provided for @steamLinkGuides.
+  ///
+  /// In es, this message translates to:
+  /// **'Guías'**
+  String get steamLinkGuides;
+
+  /// No description provided for @steamLinkDiscussions.
+  ///
+  /// In es, this message translates to:
+  /// **'Discusiones'**
+  String get steamLinkDiscussions;
+
+  /// No description provided for @steamLinkWorkshop.
+  ///
+  /// In es, this message translates to:
+  /// **'Workshop'**
+  String get steamLinkWorkshop;
+
+  /// No description provided for @steamLinkAnnouncements.
+  ///
+  /// In es, this message translates to:
+  /// **'Anuncios'**
+  String get steamLinkAnnouncements;
+
+  /// No description provided for @steamLinkUpdateHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de actualizaciones'**
+  String get steamLinkUpdateHistory;
+
+  /// No description provided for @steamLinkPointsShop.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienda de puntos'**
+  String get steamLinkPointsShop;
+
+  /// No description provided for @steamExternalLinks.
+  ///
+  /// In es, this message translates to:
+  /// **'Enlaces externos'**
+  String get steamExternalLinks;
+
+  /// No description provided for @steamLinkOfficialSite.
+  ///
+  /// In es, this message translates to:
+  /// **'Sitio web oficial'**
+  String get steamLinkOfficialSite;
+
+  /// No description provided for @steamLinkSupport.
+  ///
+  /// In es, this message translates to:
+  /// **'Soporte'**
+  String get steamLinkSupport;
+
+  /// No description provided for @steamPopularTags.
+  ///
+  /// In es, this message translates to:
+  /// **'Etiquetas populares'**
+  String get steamPopularTags;
+
+  /// No description provided for @steamSystemRequirements.
+  ///
+  /// In es, this message translates to:
+  /// **'Requisitos del sistema'**
+  String get steamSystemRequirements;
+
+  /// No description provided for @steamSysReqMinimum.
+  ///
+  /// In es, this message translates to:
+  /// **'Mínimos'**
+  String get steamSysReqMinimum;
+
+  /// No description provided for @steamSysReqRecommended.
+  ///
+  /// In es, this message translates to:
+  /// **'Recomendados'**
+  String get steamSysReqRecommended;
+
+  /// No description provided for @steamSimilarGames.
+  ///
+  /// In es, this message translates to:
+  /// **'Juegos similares'**
+  String get steamSimilarGames;
 }
 
 class _AppLocalizationsDelegate

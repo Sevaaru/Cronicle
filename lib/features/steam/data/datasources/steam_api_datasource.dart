@@ -266,4 +266,110 @@ class SteamApiDatasource {
 
   static String headerUrl(int appId) =>
       'https://cdn.cloudflare.steamstatic.com/steam/apps/$appId/header.jpg';
+
+  /// Ordered list of artwork URL candidates for [appId]. Some titles
+  /// (free-to-play, recently launched, region-restricted) only expose a
+  /// subset of artwork variants; consumers should try them in order and
+  /// fall through on 404. Vertical capsule first → suits row thumbnails;
+  /// horizontal header last → suits hero banners.
+  static List<String> artworkCandidates(int appId, {bool preferHeader = false}) {
+    final cf = 'https://cdn.cloudflare.steamstatic.com/steam/apps/$appId';
+    final ak = 'https://cdn.akamai.steamstatic.com/steam/apps/$appId';
+    final shared =
+        'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/$appId';
+    final vertical = [
+      '$cf/library_600x900.jpg',
+      '$ak/library_600x900.jpg',
+      '$shared/library_600x900.jpg',
+      '$cf/library_600x900_2x.jpg',
+    ];
+    final horizontal = [
+      '$cf/header.jpg',
+      '$ak/header.jpg',
+      '$shared/header.jpg',
+      '$cf/capsule_616x353.jpg',
+      '$cf/library_hero.jpg',
+    ];
+    return preferHeader
+        ? [...horizontal, ...vertical]
+        : [...vertical, ...horizontal];
+  }
+
+  /// Public Steam news / events for [appId] (no API key required).
+  ///
+  /// Returns up to [count] news items, each with `title`, `url`, `author`,
+  /// `contents`, `date` (unix seconds), `feedlabel`, `feedname`, `tags`.
+  /// Maximum length per item body limited by [maxLength]. We request
+  /// `feeds=steam_community_announcements` to surface the official
+  /// developer announcements that show up under "Events & Announcements"
+  /// on the store page.
+  Future<List<Map<String, dynamic>>> fetchAppNews(
+    int appId, {
+    int count = 8,
+    int maxLength = 600,
+  }) async {
+    try {
+      final res = await _dio.get<dynamic>(
+        '$_base/ISteamNews/GetNewsForApp/v2/',
+        queryParameters: {
+          'appid': appId,
+          'count': count,
+          'maxlength': maxLength,
+          'feeds': 'steam_community_announcements',
+          'format': 'json',
+        },
+        options: Options(
+          responseType: ResponseType.json,
+          validateStatus: (s) => s != null && s >= 200 && s < 500,
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+      if (res.statusCode != 200 || res.data == null) return const [];
+      final raw = res.data;
+      Map<String, dynamic>? items;
+      if (raw is Map) {
+        items = (raw['appnews'] as Map?)?.cast<String, dynamic>();
+      }
+      final list = items?['newsitems'] as List?;
+      if (list == null) return const [];
+      return list
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Popular community-voted tags for [appId] from the public SteamSpy API.
+  /// Returns a map of `tag → vote count` sorted descending. Returns an
+  /// empty map on any error (network, parse, or rate-limit).
+  Future<Map<String, int>> fetchSteamSpyTags(int appId) async {
+    try {
+      final res = await _dio.get<dynamic>(
+        'https://steamspy.com/api.php',
+        queryParameters: {'request': 'appdetails', 'appid': appId},
+        options: Options(
+          responseType: ResponseType.json,
+          validateStatus: (s) => s != null && s >= 200 && s < 500,
+          receiveTimeout: const Duration(seconds: 8),
+        ),
+      );
+      if (res.statusCode != 200 || res.data == null) return const {};
+      final raw = res.data;
+      if (raw is! Map) return const {};
+      final tags = raw['tags'];
+      if (tags is! Map) return const {};
+      final out = <String, int>{};
+      tags.forEach((k, v) {
+        if (k is String && v is num) out[k] = v.toInt();
+      });
+      // Sort by votes desc.
+      final sorted = out.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      return Map.fromEntries(sorted);
+    } catch (_) {
+      return const {};
+    }
+  }
 }

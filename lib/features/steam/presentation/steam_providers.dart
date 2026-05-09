@@ -195,7 +195,7 @@ class SteamAchievementsResult {
   final int total;
 }
 
-final steamGameAchievementsProvider = FutureProvider.autoDispose
+final steamGameAchievementsProvider = FutureProvider
     .family<SteamAchievementsResult, int>((ref, appId) async {
   final session = await ref.watch(steamSessionProvider.future);
   if (!session.connected || session.steamId == null) {
@@ -259,9 +259,25 @@ final steamGameAchievementsProvider = FutureProvider.autoDispose
 // ─── Store details (short description, metacritic, developer) ─────────────────
 
 final steamAppDetailsProvider =
-    FutureProvider.autoDispose.family<Map<String, dynamic>?, int>((ref, appId) async {
+    FutureProvider.family<Map<String, dynamic>?, int>((ref, appId) async {
   final api = ref.watch(steamApiProvider);
   return api.fetchAppDetails(appId);
+});
+
+// ─── App news / events / announcements (public, no API key required) ─────────
+
+final steamAppNewsProvider = FutureProvider
+    .family<List<Map<String, dynamic>>, int>((ref, appId) async {
+  final api = ref.watch(steamApiProvider);
+  return api.fetchAppNews(appId, count: 8, maxLength: 600);
+});
+
+// ─── SteamSpy popular tags (public, no key) ──────────────────────────────────
+
+final steamSpyTagsProvider =
+    FutureProvider.family<Map<String, int>, int>((ref, appId) async {
+  final api = ref.watch(steamApiProvider);
+  return api.fetchSteamSpyTags(appId);
 });
 
 // ─── User reviews summary ─────────────────────────────────────────────────────
@@ -303,10 +319,11 @@ class SteamFriendsActivity {
   final Map<String, int?> playtimeByFriendId;
 }
 
-const _kFriendsActivityCap = 20;
+const _kFriendsActivityCap = 100;
+const _kFriendsActivityConcurrency = 8;
 
 final steamFriendsWithGameProvider =
-    FutureProvider.autoDispose.family<SteamFriendsActivity, int>((ref, appId) async {
+    FutureProvider.family<SteamFriendsActivity, int>((ref, appId) async {
   final session = await ref.watch(steamSessionProvider.future);
   if (!session.connected || session.steamId == null) {
     return const SteamFriendsActivity(
@@ -320,26 +337,34 @@ final steamFriendsWithGameProvider =
   }
   final toCheck = friendIds.take(_kFriendsActivityCap).toList();
 
-  // Check ownership in parallel — silently skip private profiles.
-  // Also capture playtime_forever for each friend who owns the game.
-  final rawResults = await Future.wait(
-    toCheck.map((id) async {
-      try {
-        final games = await api.fetchOwnedGames(id);
-        final entry = games.cast<Map<String, dynamic>?>().firstWhere(
-          (g) => (g?['appid'] as num?)?.toInt() == appId,
-          orElse: () => null,
-        );
-        if (entry == null) return null;
-        final playtime = (entry['playtime_forever'] as num?)?.toInt();
-        return MapEntry(id, playtime);
-      } catch (_) {
-        return null;
-      }
-    }),
-    eagerError: false,
-  );
-  final ownerPairs = rawResults.whereType<MapEntry<String, int?>>().toList();
+  // Check ownership in chunked parallel batches — silently skip private
+  // profiles. Batching avoids hammering Steam with 100 simultaneous
+  // requests (which can trigger rate limits / 429s, leaving the section
+  // empty for popular games like Wuthering Waves where many friends own
+  // it but the burst gets throttled).
+  final ownerPairs = <MapEntry<String, int?>>[];
+  for (var i = 0; i < toCheck.length; i += _kFriendsActivityConcurrency) {
+    final end = (i + _kFriendsActivityConcurrency).clamp(0, toCheck.length);
+    final chunk = toCheck.sublist(i, end);
+    final results = await Future.wait(
+      chunk.map((id) async {
+        try {
+          final games = await api.fetchOwnedGames(id);
+          final entry = games.cast<Map<String, dynamic>?>().firstWhere(
+            (g) => (g?['appid'] as num?)?.toInt() == appId,
+            orElse: () => null,
+          );
+          if (entry == null) return null;
+          final playtime = (entry['playtime_forever'] as num?)?.toInt();
+          return MapEntry(id, playtime);
+        } catch (_) {
+          return null;
+        }
+      }),
+      eagerError: false,
+    );
+    ownerPairs.addAll(results.whereType<MapEntry<String, int?>>());
+  }
   final ownIds = ownerPairs.map((e) => e.key).toList();
 
   if (ownIds.isEmpty) {

@@ -295,11 +295,17 @@ GoRouter appRouter(AppRouterRef ref) {
           ),
           GoRoute(
             path: '/profile/steam/game/:appid',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final id =
                   int.tryParse(state.pathParameters['appid'] ?? '') ?? 0;
-              if (id <= 0) return const _InvalidBrowseParamsPage();
-              return SteamGameDetailPage(appId: id);
+              final child = id <= 0
+                  ? const _InvalidBrowseParamsPage()
+                  : SteamGameDetailPage(appId: id);
+              final fromToggle =
+                  state.uri.queryParameters['toggle'] == '1';
+              return fromToggle
+                  ? NoTransitionPage(key: state.pageKey, child: child)
+                  : MaterialPage(key: state.pageKey, child: child);
             },
           ),
           GoRoute(
@@ -488,9 +494,14 @@ GoRouter appRouter(AppRouterRef ref) {
           ),
           GoRoute(
             path: '/game/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final gameId = int.parse(state.pathParameters['id']!);
-              return GameDetailPage(gameId: gameId);
+              final child = GameDetailPage(gameId: gameId);
+              final fromToggle =
+                  state.uri.queryParameters['toggle'] == '1';
+              return fromToggle
+                  ? NoTransitionPage(key: state.pageKey, child: child)
+                  : MaterialPage(key: state.pageKey, child: child);
             },
           ),
           GoRoute(

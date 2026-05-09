@@ -895,5 +895,24 @@
       "percent": { "type": "int" },
       "total": {}
     }
-  }
+  },
+  "steamNewsAndEvents": "Eventos y anuncios recientes",
+  "steamNewsEmpty": "Sin anuncios recientes",
+  "steamNewsReadMore": "Leer más",
+  "steamCommunityLinks": "Comunidad",
+  "steamLinkCommunityHub": "Centro de la comunidad",
+  "steamLinkGuides": "Guías",
+  "steamLinkDiscussions": "Discusiones",
+  "steamLinkWorkshop": "Workshop",
+  "steamLinkAnnouncements": "Anuncios",
+  "steamLinkUpdateHistory": "Historial de actualizaciones",
+  "steamLinkPointsShop": "Tienda de puntos",
+  "steamExternalLinks": "Enlaces externos",
+  "steamLinkOfficialSite": "Sitio web oficial",
+  "steamLinkSupport": "Soporte",
+  "steamPopularTags": "Etiquetas populares",
+  "steamSystemRequirements": "Requisitos del sistema",
+  "steamSysReqMinimum": "Mínimos",
+  "steamSysReqRecommended": "Recomendados",
+  "steamSimilarGames": "Juegos similares"
 }

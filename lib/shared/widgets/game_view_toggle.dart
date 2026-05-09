@@ -25,7 +25,12 @@ class GameViewToggle extends StatelessWidget {
       children: [
         _Chip(
           label: 'Steam',
-          icon: Icons.sports_esports_rounded,
+          leading: Image.asset(
+            'assets/steam_icon.png',
+            width: 16,
+            height: 16,
+            fit: BoxFit.contain,
+          ),
           selected: currentIsSteam,
           onTap: onSteam,
           cs: cs,
@@ -33,7 +38,7 @@ class GameViewToggle extends StatelessWidget {
         const SizedBox(width: 8),
         _Chip(
           label: 'IGDB',
-          icon: Icons.videogame_asset_rounded,
+          leading: const Icon(Icons.videogame_asset_rounded, size: 16),
           selected: !currentIsSteam,
           onTap: onIgdb,
           cs: cs,
@@ -46,14 +51,14 @@ class GameViewToggle extends StatelessWidget {
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
-    required this.icon,
+    required this.leading,
     required this.selected,
     required this.onTap,
     required this.cs,
   });
 
   final String label;
-  final IconData icon;
+  final Widget leading;
   final bool selected;
   final VoidCallback? onTap;
   final ColorScheme cs;
@@ -73,7 +78,10 @@ class _Chip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: fg),
+              IconTheme.merge(
+                data: IconThemeData(color: fg, size: 16),
+                child: leading,
+              ),
               const SizedBox(width: 6),
               Text(
                 label,

@@ -376,7 +376,6 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
     final playtimeMin = (game['playtime_forever'] as num?)?.toInt() ?? 0;
     final hours = playtimeMin / 60.0;
     final capsuleUrl = SteamApiDatasource.capsuleUrl(appId);
-    final fallbackUrl = SteamApiDatasource.headerUrl(appId);
 
     final libraryEntries =
         ref.watch(libraryByKindProvider(MediaKind.game)).valueOrNull ?? [];
@@ -394,24 +393,13 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
             ClipRRect(
               borderRadius:
                   const BorderRadius.horizontal(left: Radius.circular(20)),
-              child: CachedNetworkImage(
-                imageUrl: capsuleUrl,
+              child: _ChainedSteamArt(
+                urls: SteamApiDatasource.artworkCandidates(appId),
                 width: 75,
                 height: 105,
-                fit: BoxFit.cover,
-                errorWidget: (_, _, _) => CachedNetworkImage(
-                  imageUrl: fallbackUrl,
-                  width: 75,
-                  height: 105,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, _, _) => Container(
-                    width: 75,
-                    height: 105,
-                    color: cs.surfaceContainerHighest,
-                    child: Icon(Icons.sports_esports_rounded,
-                        color: cs.onSurfaceVariant),
-                  ),
-                ),
+                fallbackColor: cs.surfaceContainerHighest,
+                fallbackIcon: Icons.sports_esports_rounded,
+                fallbackIconColor: cs.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 12),
@@ -478,6 +466,69 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tries each URL in [urls] in order, falling through to the next when the
+/// current image fails. Used by the library row covers because some Steam
+/// titles only expose a subset of artwork variants — a single hardcoded URL
+/// returns an empty placeholder for those games (e.g. recent free-to-play
+/// titles like Wuthering Waves).
+class _ChainedSteamArt extends StatefulWidget {
+  const _ChainedSteamArt({
+    required this.urls,
+    required this.width,
+    required this.height,
+    required this.fallbackColor,
+    required this.fallbackIcon,
+    required this.fallbackIconColor,
+  });
+
+  final List<String> urls;
+  final double width;
+  final double height;
+  final Color fallbackColor;
+  final IconData fallbackIcon;
+  final Color fallbackIconColor;
+
+  @override
+  State<_ChainedSteamArt> createState() => _ChainedSteamArtState();
+}
+
+class _ChainedSteamArtState extends State<_ChainedSteamArt> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_index >= widget.urls.length) {
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        color: widget.fallbackColor,
+        child: Icon(widget.fallbackIcon, color: widget.fallbackIconColor),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: widget.urls[_index],
+      width: widget.width,
+      height: widget.height,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => Container(
+        width: widget.width,
+        height: widget.height,
+        color: widget.fallbackColor,
+      ),
+      errorWidget: (_, _, _) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _index += 1);
+        });
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          color: widget.fallbackColor,
+        );
+      },
     );
   }
 }

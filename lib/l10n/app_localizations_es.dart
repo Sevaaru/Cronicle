@@ -2504,4 +2504,61 @@ class AppLocalizationsEs extends AppLocalizations {
   String steamReviewsStats(int percent, Object total) {
     return '$percent% positivas · $total reseñas';
   }
+
+  @override
+  String get steamNewsAndEvents => 'Eventos y anuncios recientes';
+
+  @override
+  String get steamNewsEmpty => 'Sin anuncios recientes';
+
+  @override
+  String get steamNewsReadMore => 'Leer más';
+
+  @override
+  String get steamCommunityLinks => 'Comunidad';
+
+  @override
+  String get steamLinkCommunityHub => 'Centro de la comunidad';
+
+  @override
+  String get steamLinkGuides => 'Guías';
+
+  @override
+  String get steamLinkDiscussions => 'Discusiones';
+
+  @override
+  String get steamLinkWorkshop => 'Workshop';
+
+  @override
+  String get steamLinkAnnouncements => 'Anuncios';
+
+  @override
+  String get steamLinkUpdateHistory => 'Historial de actualizaciones';
+
+  @override
+  String get steamLinkPointsShop => 'Tienda de puntos';
+
+  @override
+  String get steamExternalLinks => 'Enlaces externos';
+
+  @override
+  String get steamLinkOfficialSite => 'Sitio web oficial';
+
+  @override
+  String get steamLinkSupport => 'Soporte';
+
+  @override
+  String get steamPopularTags => 'Etiquetas populares';
+
+  @override
+  String get steamSystemRequirements => 'Requisitos del sistema';
+
+  @override
+  String get steamSysReqMinimum => 'Mínimos';
+
+  @override
+  String get steamSysReqRecommended => 'Recomendados';
+
+  @override
+  String get steamSimilarGames => 'Juegos similares';
 }

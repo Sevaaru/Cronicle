@@ -14,6 +14,7 @@ import 'package:cronicle/features/games/data/datasources/opencritic_api_datasour
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/opencritic_providers.dart';
 import 'package:cronicle/features/games/presentation/igdb_detail_helpers.dart';
+import 'package:cronicle/features/steam/presentation/steam_game_detail_page.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
@@ -57,9 +58,19 @@ Future<void> _launchGameLink(
 }
 
 class GameDetailPage extends ConsumerWidget {
-  const GameDetailPage({super.key, required this.gameId});
+  const GameDetailPage({
+    super.key,
+    required this.gameId,
+    this.onSwitchToSteam,
+  });
 
   final int gameId;
+
+  /// When non-null, this page is rendered embedded inside another detail
+  /// page (i.e. the Steam detail toggled to IGDB view inline). The Steam
+  /// toggle in the body delegates to this callback instead of mutating its
+  /// own internal state, so the parent can swap back to its own view.
+  final VoidCallback? onSwitchToSteam;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,21 +95,77 @@ class GameDetailPage extends ConsumerWidget {
           if (game == null) {
             return Center(child: Text(l10n.gameDetailNoData));
           }
-          return _GameDetailContent(gameId: gameId, game: game);
+          return _GameDetailContent(
+            gameId: gameId,
+            game: game,
+            onSwitchToSteam: onSwitchToSteam,
+          );
         },
       ),
     );
   }
 }
 
-class _GameDetailContent extends StatelessWidget {
-  const _GameDetailContent({required this.gameId, required this.game});
+class _GameDetailContent extends StatefulWidget {
+  const _GameDetailContent({
+    required this.gameId,
+    required this.game,
+    this.onSwitchToSteam,
+  });
 
   final int gameId;
   final Map<String, dynamic> game;
+  final VoidCallback? onSwitchToSteam;
+
+  @override
+  State<_GameDetailContent> createState() => _GameDetailContentState();
+}
+
+class _GameDetailContentState extends State<_GameDetailContent> {
+  /// True while the user has toggled to the Steam view from this IGDB page.
+  /// We render the [SteamGameDetailPage] inline (replacing the entire body)
+  /// instead of pushing a new route, so the switch is instant and back-
+  /// navigation goes directly back to wherever IGDB was opened from.
+  bool _showSteamInline = false;
+
+  int? _resolveSteamAppId() {
+    final externalGames =
+        (widget.game['external_games'] as List?) ?? const [];
+    final steamExt = externalGames.cast<dynamic>().firstWhere(
+          (e) => e is Map && (e['category'] as int?) == 1,
+          orElse: () => null,
+        );
+    if (steamExt == null) return null;
+    final uid = (steamExt as Map)['uid'];
+    if (uid is int) return uid;
+    if (uid is String) return int.tryParse(uid);
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final steamAppId = _resolveSteamAppId();
+
+    if (_showSteamInline && steamAppId != null) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          setState(() => _showSteamInline = false);
+        },
+        child: SteamGameDetailPage(
+          appId: steamAppId,
+          onSwitchToIgdb: () => setState(() => _showSteamInline = false),
+        ),
+      );
+    }
+
+    return _buildIgdbContent(context, steamAppId);
+  }
+
+  Widget _buildIgdbContent(BuildContext context, int? steamAppIdFromIgdb) {
+    final gameId = widget.gameId;
+    final game = widget.game;
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -166,19 +233,9 @@ class _GameDetailContent extends StatelessWidget {
     final ttb = game['time_to_beat'] as Map<String, dynamic>?;
     final reviews = (game['igdb_reviews'] as List?) ?? const [];
 
-    // Extract Steam app ID from IGDB external_games (category 1 = Steam)
-    final steamExt = externalGames.cast<dynamic>().firstWhere(
-          (e) => e is Map && (e['category'] as int?) == 1,
-          orElse: () => null,
-        );
-    final steamAppIdFromIgdb = steamExt != null
-        ? (() {
-            final uid = (steamExt as Map)['uid'];
-            if (uid is int) return uid;
-            if (uid is String) return int.tryParse(uid);
-            return null;
-          })()
-        : null;
+    // (Steam app id is now resolved by the parent State and passed in as
+    // [steamAppIdFromIgdb] so the toggle bar and the inline-toggle render
+    // both see the same value.)
 
     final linkRows = <_GameDetailLinkRow>[];
     final seenLinkUrls = <String>{};
@@ -283,8 +340,17 @@ class _GameDetailContent extends StatelessWidget {
                   if (steamAppIdFromIgdb != null) ...[
                     GameViewToggle(
                       currentIsSteam: false,
-                      onSteam: () => context.push(
-                          '/profile/steam/game/$steamAppIdFromIgdb'),
+                      onSteam: () {
+                        // If embedded inside a Steam page, ask the parent
+                        // to swap back to its own view (no widget tree
+                        // grows). Otherwise toggle our own internal state
+                        // to render the Steam page inline.
+                        if (widget.onSwitchToSteam != null) {
+                          widget.onSwitchToSteam!.call();
+                        } else {
+                          setState(() => _showSteamInline = true);
+                        }
+                      },
                       onIgdb: null, // already on IGDB view
                     ),
                     const SizedBox(height: 12),
