@@ -2561,4 +2561,69 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get steamSimilarGames => 'Juegos similares';
+
+  @override
+  String get socialSourceFilter => 'Fuentes';
+
+  @override
+  String get socialSourceAnilist => 'AniList';
+
+  @override
+  String get socialSourceSteam => 'Steam';
+
+  @override
+  String get socialSteamFriendsTitle => 'Actividad de amigos en Steam';
+
+  @override
+  String get socialSteamNewsTitle => 'Noticias de Steam';
+
+  @override
+  String get socialSteamFriendsEmpty =>
+      'Tus amigos no han jugado nada las últimas 2 semanas (o sus perfiles son privados).';
+
+  @override
+  String get socialSteamNewsEmpty => 'Sin noticias recientes de tus juegos.';
+
+  @override
+  String get socialSteamLoadError => 'No se pudo cargar el contenido de Steam.';
+
+  @override
+  String get steamFriendPlayedAction => 'jugó a';
+
+  @override
+  String steamFriendPlayedHours(Object hours) {
+    return '$hours h jugadas en total';
+  }
+
+  @override
+  String steamFriendPlayedMinutes(int minutes) {
+    return '$minutes min jugados en total';
+  }
+
+  @override
+  String steamFriendAddedGames(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count juegos',
+      one: '1 juego',
+    );
+    return 'añadió $_temp0 a su biblioteca';
+  }
+
+  @override
+  String steamFriendAddedGamesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count juegos nuevos',
+      one: 'Nuevo juego en su biblioteca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String steamFriendUnlockedIn(Object game) {
+    return 'desbloqueó un logro en $game';
+  }
 }

@@ -900,5 +900,25 @@
   "steamSystemRequirements": "System requirements",
   "steamSysReqMinimum": "Minimum",
   "steamSysReqRecommended": "Recommended",
-  "steamSimilarGames": "Similar games"
+  "steamSimilarGames": "Similar games",
+
+  "socialSourceFilter": "Sources",
+  "socialSourceAnilist": "AniList",
+  "socialSourceSteam": "Steam",
+  "socialSteamFriendsTitle": "Steam friends activity",
+  "socialSteamNewsTitle": "Steam news",
+  "socialSteamFriendsEmpty": "Your friends haven't played anything in the last 2 weeks (or their profiles are private).",
+  "socialSteamNewsEmpty": "No recent news for your games.",
+  "socialSteamLoadError": "Couldn't load Steam content.",
+  "steamFriendPlayedAction": "played",
+  "steamFriendAddedGames": "added {count, plural, one{1 game} other{{count} games}} to their library",
+  "@steamFriendAddedGames": { "placeholders": { "count": { "type": "int" } } },
+  "steamFriendAddedGamesTitle": "{count, plural, one{New game in library} other{{count} new games}}",
+  "@steamFriendAddedGamesTitle": { "placeholders": { "count": { "type": "int" } } },
+  "steamFriendUnlockedIn": "unlocked an achievement in {game}",
+  "@steamFriendUnlockedIn": { "placeholders": { "game": {} } },
+  "steamFriendPlayedHours": "{hours} h played in total",
+  "@steamFriendPlayedHours": { "placeholders": { "hours": {} } },
+  "steamFriendPlayedMinutes": "{minutes} min played in total",
+  "@steamFriendPlayedMinutes": { "placeholders": { "minutes": { "type": "int" } } }
 }

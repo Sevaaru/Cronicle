@@ -300,7 +300,6 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
     BuildContext context, {
     required LibraryEntry? existing,
   }) async {
-    final l10n = AppLocalizations.of(context)!;
     final appId = (game['appid'] as num?)?.toInt() ?? 0;
     final name = game['name'] as String? ?? '—';
     final playtimeMin = (game['playtime_forever'] as num?)?.toInt() ?? 0;
@@ -329,12 +328,19 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
       if (!context.mounted) return false;
     }
 
-    if (igdbGame == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.steamNoIgdbMatch(name))),
-      );
-      return false;
-    }
+    // Fallback: no IGDB match — add the game using only Steam metadata.
+    // Synthetic item uses externalId `steam:<appId>` so library tap navigates
+    // via `entry.steamAppId` to the Steam detail page.
+    final libraryItem = igdbGame ??
+        <String, dynamic>{
+          'id': 'steam:$appId',
+          'title': {'english': name, 'romaji': null},
+          'coverImage': {
+            'large': SteamApiDatasource.capsuleUrl(appId),
+            'extraLarge': SteamApiDatasource.capsuleUrl(appId),
+          },
+          'name': name,
+        };
 
     // Re-check existing entry by IGDB id now that we know it
     LibraryEntry? resolvedExisting = existing;
@@ -345,6 +351,13 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
         _igdbExternalId!,
       );
     }
+    if (resolvedExisting == null && igdbGame == null) {
+      final db = ref.read(databaseProvider);
+      resolvedExisting = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.game.code,
+        'steam:$appId',
+      );
+    }
     final wasEdit = resolvedExisting != null;
 
     if (!context.mounted) return false;
@@ -352,7 +365,7 @@ class _SteamGameRowState extends ConsumerState<_SteamGameRow> {
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
-      item: igdbGame,
+      item: libraryItem,
       kind: MediaKind.game,
       existingEntry: resolvedExisting,
       initialProgress: (!wasEdit && playtimeMin > 0)
@@ -497,7 +510,20 @@ class _ChainedSteamArt extends StatefulWidget {
 }
 
 class _ChainedSteamArtState extends State<_ChainedSteamArt> {
-  int _index = 0;
+  // Session-level cache: first candidate URL → first working index found.
+  // Persists across widget re-creations so F2P games don't re-probe
+  // failing CDN URLs on every scroll or rebuild.
+  static final Map<String, int> _startIndexCache = {};
+
+  late int _index;
+
+  String get _cacheKey => widget.urls.isNotEmpty ? widget.urls.first : '';
+
+  @override
+  void initState() {
+    super.initState();
+    _index = _startIndexCache[_cacheKey] ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -521,7 +547,13 @@ class _ChainedSteamArtState extends State<_ChainedSteamArt> {
       ),
       errorWidget: (_, _, _) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _index += 1);
+          if (mounted) {
+            setState(() {
+              _index += 1;
+              // Cache the new start index so future rebuilds skip known-bad URLs.
+              _startIndexCache[_cacheKey] = _index;
+            });
+          }
         });
         return Container(
           width: widget.width,

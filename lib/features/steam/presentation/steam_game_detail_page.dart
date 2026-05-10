@@ -325,9 +325,6 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
     int playtimeMin,
     LibraryEntry? existing,
   ) async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-
     if (mounted) setState(() => _addLoading = true);
 
     Map<String, dynamic>? igdbGame;
@@ -351,14 +348,21 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
     if (mounted) setState(() => _addLoading = false);
     if (!context.mounted) return;
 
-    if (igdbGame == null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.steamNoIgdbMatch(name))),
-      );
-      return;
-    }
+    // Fallback: no IGDB match — add the game using only Steam metadata.
+    // The synthetic item uses a non-numeric externalId (`steam:<appId>`) so
+    // library navigation routes via `entry.steamAppId` to the Steam detail page.
+    final libraryItem = igdbGame ??
+        <String, dynamic>{
+          'id': 'steam:$appId',
+          'title': {'english': name, 'romaji': null},
+          'coverImage': {
+            'large': SteamApiDatasource.capsuleUrl(appId),
+            'extraLarge': SteamApiDatasource.capsuleUrl(appId),
+          },
+          'name': name,
+        };
 
-    // Re-check existing entry by IGDB id now that we have it
+    // Re-check existing entry by IGDB id (if resolved) or by steamAppId.
     LibraryEntry? resolvedExisting = existing;
     if (resolvedExisting == null && _igdbExternalId != null) {
       final db = ref.read(databaseProvider);
@@ -367,13 +371,20 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
         _igdbExternalId!,
       );
     }
+    if (resolvedExisting == null && igdbGame == null) {
+      final db = ref.read(databaseProvider);
+      resolvedExisting = await db.getLibraryEntryByKindAndExternalId(
+        MediaKind.game.code,
+        'steam:$appId',
+      );
+    }
     final wasEdit = resolvedExisting != null;
 
     if (!context.mounted) return;
     final ok = await showAddToLibrarySheet(
       context: context,
       ref: ref,
-      item: igdbGame,
+      item: libraryItem,
       kind: MediaKind.game,
       existingEntry: resolvedExisting,
       initialProgress: (!wasEdit && playtimeMin > 0)

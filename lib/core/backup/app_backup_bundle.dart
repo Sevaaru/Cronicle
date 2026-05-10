@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
+import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
@@ -30,10 +32,15 @@ const _secureKeysForBackup = <String>[
   'trakt_user_slug',
   'trakt_user_name',
   'trakt_user_avatar_url',
+  // Steam OpenID session
+  'steam_steamid64',
+  'steam_persona_name',
+  'steam_avatar_url',
+  'steam_profile_url',
 ];
 
 abstract final class AppBackupBundle {
-  static const currentVersion = 3;
+  static const currentVersion = 4;
 
   static Future<Map<String, dynamic>> build({
     required AppDatabase db,
@@ -69,6 +76,18 @@ abstract final class AppBackupBundle {
                 'nextEpisodeAirsAt': e.nextEpisodeAirsAt,
                 'notes': e.notes,
                 'updatedAt': e.updatedAt,
+                // Steam linkage — lets the entry open the Steam detail page
+                // even when restoring on a fresh install.
+                'steamAppId': e.steamAppId,
+                // Book tracking fields (schema v4+).
+                'editionKey': e.editionKey,
+                'isbn': e.isbn,
+                'totalPagesFromApi': e.totalPagesFromApi,
+                'totalChaptersFromApi': e.totalChaptersFromApi,
+                'userTotalPagesOverride': e.userTotalPagesOverride,
+                'userTotalChaptersOverride': e.userTotalChaptersOverride,
+                'currentChapter': e.currentChapter,
+                'bookTrackingMode': e.bookTrackingMode,
               })
           .toList(),
       'keyValues': kv.map((e) => {'key': e.key, 'value': e.value}).toList(),
@@ -184,6 +203,16 @@ abstract final class AppBackupBundle {
             releasedEpisodes: Value(e['releasedEpisodes'] as int?),
             nextEpisodeAirsAt: Value(e['nextEpisodeAirsAt'] as int?),
             notes: Value(e['notes'] as String?),
+            steamAppId: Value(e['steamAppId'] as int?),
+            editionKey: Value(e['editionKey'] as String?),
+            isbn: Value(e['isbn'] as String?),
+            totalPagesFromApi: Value(e['totalPagesFromApi'] as int?),
+            totalChaptersFromApi: Value(e['totalChaptersFromApi'] as int?),
+            userTotalPagesOverride: Value(e['userTotalPagesOverride'] as int?),
+            userTotalChaptersOverride:
+                Value(e['userTotalChaptersOverride'] as int?),
+            currentChapter: Value(e['currentChapter'] as int?),
+            bookTrackingMode: Value(e['bookTrackingMode'] as String?),
             updatedAt: Value(
               (e['updatedAt'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
             ),
@@ -213,6 +242,8 @@ abstract final class AppBackupBundle {
     ref.invalidate(feedFilterLayoutProvider);
     ref.invalidate(defaultLibraryFilterProvider);
     ref.invalidate(favoriteGamesProvider);
+    ref.invalidate(favoriteSteamGamesProvider);
+    ref.invalidate(favoriteBooksProvider);
     ref.invalidate(favoriteTraktTitlesProvider);
     ref.invalidate(favoriteAnilistMediaProvider);
     ref.invalidate(igdbPopularProvider);

@@ -198,50 +198,81 @@ class SteamAchievementsResult {
 final steamGameAchievementsProvider = FutureProvider
     .family<SteamAchievementsResult, int>((ref, appId) async {
   final session = await ref.watch(steamSessionProvider.future);
-  if (!session.connected || session.steamId == null) {
-    return const SteamAchievementsResult(
-      achievements: [],
-      unlocked: 0,
-      total: 0,
-    );
-  }
   final api = ref.watch(steamApiProvider);
-  final results = await Future.wait<dynamic>([
-    api.fetchPlayerAchievements(session.steamId!, appId),
-    api.fetchGameSchema(appId).catchError((_) => <Map<String, dynamic>>[]),
-  ]);
-  final player = results[0] as List<Map<String, dynamic>>;
-  final schema = results[1] as List<Map<String, dynamic>>;
-  final schemaByName = <String, Map<String, dynamic>>{
-    for (final s in schema)
-      if (s['name'] is String) s['name'] as String: s,
+
+  // Always try to load the schema — it lists all achievements available
+  // for the game regardless of ownership / login state. Player progress
+  // is fetched only when we have a session and is best-effort.
+  final schemaFuture =
+      api.fetchGameSchema(appId).catchError((_) => <Map<String, dynamic>>[]);
+  final playerFuture = (session.connected && session.steamId != null)
+      ? api
+          .fetchPlayerAchievements(session.steamId!, appId)
+          .catchError((_) => <Map<String, dynamic>>[])
+      : Future.value(<Map<String, dynamic>>[]);
+
+  final results = await Future.wait<List<Map<String, dynamic>>>(
+      [playerFuture, schemaFuture]);
+  final player = results[0];
+  final schema = results[1];
+
+  // Build progress lookup by api name from the player call (if any).
+  final progressByName = <String, Map<String, dynamic>>{
+    for (final p in player)
+      if (p['apiname'] is String) p['apiname'] as String: p,
   };
 
   final out = <SteamAchievement>[];
   var unlocked = 0;
-  for (final ach in player) {
-    final apiName = ach['apiname'] as String? ?? '';
-    final achieved = (ach['achieved'] as num?)?.toInt() == 1;
-    if (achieved) unlocked++;
-    final unlockTs = (ach['unlocktime'] as num?)?.toInt() ?? 0;
-    final s = schemaByName[apiName];
-    out.add(SteamAchievement(
-      apiName: apiName,
-      displayName: (ach['name'] as String?) ??
-          (s?['displayName'] as String?) ??
-          apiName,
-      description: (ach['description'] as String?) ??
-          (s?['description'] as String?) ??
-          '',
-      iconUrl: s?['icon'] as String?,
-      iconGrayUrl: s?['icongray'] as String?,
-      achieved: achieved,
-      unlockTime: unlockTs > 0
-          ? DateTime.fromMillisecondsSinceEpoch(unlockTs * 1000)
-          : null,
-      hidden: ((s?['hidden'] as num?)?.toInt() ?? 0) == 1,
-    ));
+
+  // Prefer schema as the source of truth for "all achievements". Fall back
+  // to the player list when schema is unavailable (e.g. games without a
+  // public schema endpoint).
+  if (schema.isNotEmpty) {
+    for (final s in schema) {
+      final apiName = (s['name'] as String?) ?? '';
+      final p = progressByName[apiName];
+      final achieved = (p?['achieved'] as num?)?.toInt() == 1;
+      if (achieved) unlocked++;
+      final unlockTs = (p?['unlocktime'] as num?)?.toInt() ?? 0;
+      out.add(SteamAchievement(
+        apiName: apiName,
+        displayName: (p?['name'] as String?) ??
+            (s['displayName'] as String?) ??
+            apiName,
+        description: (p?['description'] as String?) ??
+            (s['description'] as String?) ??
+            '',
+        iconUrl: s['icon'] as String?,
+        iconGrayUrl: s['icongray'] as String?,
+        achieved: achieved,
+        unlockTime: unlockTs > 0
+            ? DateTime.fromMillisecondsSinceEpoch(unlockTs * 1000)
+            : null,
+        hidden: ((s['hidden'] as num?)?.toInt() ?? 0) == 1,
+      ));
+    }
+  } else {
+    for (final ach in player) {
+      final apiName = ach['apiname'] as String? ?? '';
+      final achieved = (ach['achieved'] as num?)?.toInt() == 1;
+      if (achieved) unlocked++;
+      final unlockTs = (ach['unlocktime'] as num?)?.toInt() ?? 0;
+      out.add(SteamAchievement(
+        apiName: apiName,
+        displayName: (ach['name'] as String?) ?? apiName,
+        description: (ach['description'] as String?) ?? '',
+        iconUrl: null,
+        iconGrayUrl: null,
+        achieved: achieved,
+        unlockTime: unlockTs > 0
+            ? DateTime.fromMillisecondsSinceEpoch(unlockTs * 1000)
+            : null,
+        hidden: false,
+      ));
+    }
   }
+
   // Sort: unlocked first (most recent unlock), then locked.
   out.sort((a, b) {
     if (a.achieved != b.achieved) return a.achieved ? -1 : 1;

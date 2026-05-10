@@ -4795,6 +4795,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Juegos similares'**
   String get steamSimilarGames;
+
+  /// No description provided for @socialSourceFilter.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuentes'**
+  String get socialSourceFilter;
+
+  /// No description provided for @socialSourceAnilist.
+  ///
+  /// In es, this message translates to:
+  /// **'AniList'**
+  String get socialSourceAnilist;
+
+  /// No description provided for @socialSourceSteam.
+  ///
+  /// In es, this message translates to:
+  /// **'Steam'**
+  String get socialSourceSteam;
+
+  /// No description provided for @socialSteamFriendsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad de amigos en Steam'**
+  String get socialSteamFriendsTitle;
+
+  /// No description provided for @socialSteamNewsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Noticias de Steam'**
+  String get socialSteamNewsTitle;
+
+  /// No description provided for @socialSteamFriendsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus amigos no han jugado nada las últimas 2 semanas (o sus perfiles son privados).'**
+  String get socialSteamFriendsEmpty;
+
+  /// No description provided for @socialSteamNewsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin noticias recientes de tus juegos.'**
+  String get socialSteamNewsEmpty;
+
+  /// No description provided for @socialSteamLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el contenido de Steam.'**
+  String get socialSteamLoadError;
+
+  /// No description provided for @steamFriendPlayedAction.
+  ///
+  /// In es, this message translates to:
+  /// **'jugó a'**
+  String get steamFriendPlayedAction;
+
+  /// No description provided for @steamFriendPlayedHours.
+  ///
+  /// In es, this message translates to:
+  /// **'{hours} h jugadas en total'**
+  String steamFriendPlayedHours(Object hours);
+
+  /// No description provided for @steamFriendPlayedMinutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes} min jugados en total'**
+  String steamFriendPlayedMinutes(int minutes);
+
+  /// No description provided for @steamFriendAddedGames.
+  ///
+  /// In es, this message translates to:
+  /// **'añadió {count, plural, one{1 juego} other{{count} juegos}} a su biblioteca'**
+  String steamFriendAddedGames(int count);
+
+  /// No description provided for @steamFriendAddedGamesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{Nuevo juego en su biblioteca} other{{count} juegos nuevos}}'**
+  String steamFriendAddedGamesTitle(int count);
+
+  /// No description provided for @steamFriendUnlockedIn.
+  ///
+  /// In es, this message translates to:
+  /// **'desbloqueó un logro en {game}'**
+  String steamFriendUnlockedIn(Object game);
 }
 
 class _AppLocalizationsDelegate

@@ -914,5 +914,25 @@
   "steamSystemRequirements": "Requisitos del sistema",
   "steamSysReqMinimum": "Mínimos",
   "steamSysReqRecommended": "Recomendados",
-  "steamSimilarGames": "Juegos similares"
+  "steamSimilarGames": "Juegos similares",
+
+  "socialSourceFilter": "Fuentes",
+  "socialSourceAnilist": "AniList",
+  "socialSourceSteam": "Steam",
+  "socialSteamFriendsTitle": "Actividad de amigos en Steam",
+  "socialSteamNewsTitle": "Noticias de Steam",
+  "socialSteamFriendsEmpty": "Tus amigos no han jugado nada las últimas 2 semanas (o sus perfiles son privados).",
+  "socialSteamNewsEmpty": "Sin noticias recientes de tus juegos.",
+  "socialSteamLoadError": "No se pudo cargar el contenido de Steam.",
+  "steamFriendPlayedAction": "jugó a",
+  "steamFriendPlayedHours": "{hours} h jugadas en total",
+  "@steamFriendPlayedHours": { "placeholders": { "hours": {} } },
+  "steamFriendPlayedMinutes": "{minutes} min jugados en total",
+  "@steamFriendPlayedMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+  "steamFriendAddedGames": "añadió {count, plural, one{1 juego} other{{count} juegos}} a su biblioteca",
+  "@steamFriendAddedGames": { "placeholders": { "count": { "type": "int" } } },
+  "steamFriendAddedGamesTitle": "{count, plural, one{Nuevo juego en su biblioteca} other{{count} juegos nuevos}}",
+  "@steamFriendAddedGamesTitle": { "placeholders": { "count": { "type": "int" } } },
+  "steamFriendUnlockedIn": "desbloqueó un logro en {game}",
+  "@steamFriendUnlockedIn": { "placeholders": { "game": {} } }
 }

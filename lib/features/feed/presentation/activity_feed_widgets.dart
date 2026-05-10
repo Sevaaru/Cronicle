@@ -348,6 +348,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
             onRefresh: widget.onRefresh,
             child: ListView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: listPadding,
               children: [
                 ?scopeHeader,
@@ -360,6 +361,14 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                       style:
                           TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Center(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _fireRefresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(widget.l10n.feedRetry),
                   ),
                 ),
               ],

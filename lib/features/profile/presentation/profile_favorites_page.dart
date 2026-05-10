@@ -7,6 +7,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
+import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
@@ -383,10 +384,10 @@ class _GameTile extends StatelessWidget {
         : (title['romaji'] as String?) ?? '';
     final cover = (game['coverImage'] as Map?)?['large'] as String?;
     final id = (game['id'] as num?)?.toInt();
+    final steamId = (game['steam_appid'] as num?)?.toInt();
 
     return GestureDetector(
       onTap: () {
-        final steamId = (game['steam_appid'] as num?)?.toInt();
         if (steamId != null) {
           context.push('/profile/steam/game/$steamId');
         } else if (id != null) {
@@ -399,12 +400,19 @@ class _GameTile extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: cover != null
-                  ? CachedNetworkImage(imageUrl: cover, fit: BoxFit.cover, width: double.infinity)
-                  : ColoredBox(
-                      color: cs.surfaceContainerHighest,
-                      child: Icon(Icons.sports_esports, color: cs.onSurfaceVariant),
-                    ),
+              child: steamId != null
+                  ? _SteamChainedCover(
+                      appId: steamId,
+                      fallbackColor: cs.surfaceContainerHighest,
+                      fallbackIcon: Icons.sports_esports,
+                      fallbackIconColor: cs.onSurfaceVariant,
+                    )
+                  : cover != null
+                      ? CachedNetworkImage(imageUrl: cover, fit: BoxFit.cover, width: double.infinity)
+                      : ColoredBox(
+                          color: cs.surfaceContainerHighest,
+                          child: Icon(Icons.sports_esports, color: cs.onSurfaceVariant),
+                        ),
             ),
           ),
           const SizedBox(height: 6),
@@ -534,6 +542,68 @@ class _BookTile extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Chains through [SteamApiDatasource.artworkCandidates] in order, advancing
+/// to the next URL on each 404/network error. A static session-level cache
+/// remembers the first working index per appId so F2P games (whose primary
+/// CDN asset doesn't exist) don't re-probe failing URLs on every rebuild.
+class _SteamChainedCover extends StatefulWidget {
+  const _SteamChainedCover({
+    required this.appId,
+    required this.fallbackColor,
+    required this.fallbackIcon,
+    required this.fallbackIconColor,
+  });
+
+  final int appId;
+  final Color fallbackColor;
+  final IconData fallbackIcon;
+  final Color fallbackIconColor;
+
+  @override
+  State<_SteamChainedCover> createState() => _SteamChainedCoverState();
+}
+
+class _SteamChainedCoverState extends State<_SteamChainedCover> {
+  static final Map<int, int> _startIndexCache = {};
+
+  late int _index;
+  late List<String> _urls;
+
+  @override
+  void initState() {
+    super.initState();
+    _urls = SteamApiDatasource.artworkCandidates(widget.appId);
+    _index = _startIndexCache[widget.appId] ?? 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_index >= _urls.length) {
+      return ColoredBox(
+        color: widget.fallbackColor,
+        child: Icon(widget.fallbackIcon, color: widget.fallbackIconColor),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: _urls[_index],
+      fit: BoxFit.cover,
+      width: double.infinity,
+      placeholder: (_, _) => ColoredBox(color: widget.fallbackColor),
+      errorWidget: (_, _, _) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _index += 1;
+              _startIndexCache[widget.appId] = _index;
+            });
+          }
+        });
+        return ColoredBox(color: widget.fallbackColor);
+      },
     );
   }
 }

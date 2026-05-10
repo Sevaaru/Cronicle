@@ -689,9 +689,11 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
               return;
             }
             _lastFetchedAt = DateTime.now();
-            unawaited(
-              cache.write(activityType, isFollowing, fresh),
-            );
+            if (fresh.isNotEmpty) {
+              unawaited(
+                cache.write(activityType, isFollowing, fresh),
+              );
+            }
             state = AsyncData(fresh);
           } catch (e) {
             debugPrint(
@@ -705,7 +707,25 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
 
     final fresh = await _fetchPage();
     _lastFetchedAt = DateTime.now();
-    unawaited(cache.write(activityType, isFollowing, fresh));
+    // No persistir caché vacía: si la primera petición devuelve [] por
+    // un hipo transitorio de AniList, escribir [] envenenaría el build()
+    // siguiente (cached.items.isEmpty → no se programa revalidación de
+    // fondo y el feed se queda vacío hasta reiniciar).
+    if (fresh.isNotEmpty) {
+      unawaited(cache.write(activityType, isFollowing, fresh));
+      return fresh;
+    }
+    // Reintento corto cuando la primera carga viene vacía sin caché —
+    // evita que un único hipo de AniList deje el feed Siguiendo sin
+    // datos hasta que el usuario tire-para-refrescar.
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    try {
+      final retry = await _fetchPage();
+      if (retry.isNotEmpty) {
+        unawaited(cache.write(activityType, isFollowing, retry));
+        return retry;
+      }
+    } catch (_) {}
     return fresh;
   }
 
@@ -717,7 +737,20 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
     final prev = state.valueOrNull;
     state = const AsyncLoading<List<FeedActivity>>().copyWithPrevious(state);
     try {
-      final fresh = await _fetchPage();
+      var fresh = await _fetchPage();
+      // Si el resultado vino vacío y NO había datos previos visibles,
+      // intentamos una segunda vez tras un breve delay — AniList suele
+      // devolver `activities: []` en condiciones de rate-limit suave o
+      // cuando el token acaba de refrescarse, y el feed Siguiendo es
+      // especialmente susceptible. Esto evita que el usuario se quede
+      // viendo "feed vacío" sin manera de recuperar.
+      if (fresh.isEmpty && (prev == null || prev.isEmpty)) {
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        try {
+          final retry = await _fetchPage();
+          if (retry.isNotEmpty) fresh = retry;
+        } catch (_) {}
+      }
       // Bug-guard: cuando NO es un refresh forzado por el usuario, no
       // destruimos una lista válida si la API devuelve [] de forma
       // transitoria. Cuando el usuario tira-para-refrescar (force=true)
@@ -733,10 +766,20 @@ class AnilistSocialFeed extends _$AnilistSocialFeed {
       }
       _lastFetchedAt = DateTime.now();
       final cache = AnilistFeedCache(ref.read(sharedPreferencesProvider));
-      unawaited(cache.write(activityType, isFollowing, fresh));
+      if (fresh.isNotEmpty) {
+        unawaited(cache.write(activityType, isFollowing, fresh));
+      }
       state = AsyncData(fresh);
     } catch (e, st) {
-      state = AsyncError(e, st);
+      // Preservar datos previos: AsyncError sin previousData hace que el
+      // feed se vacíe en pantalla aunque ya teníamos ítems válidos.
+      if (prev != null && prev.isNotEmpty) {
+        state = AsyncError<List<FeedActivity>>(e, st).copyWithPrevious(
+          AsyncData<List<FeedActivity>>(prev),
+        );
+      } else {
+        state = AsyncError(e, st);
+      }
     }
   }
 
