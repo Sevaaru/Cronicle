@@ -19,7 +19,7 @@ import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cronicle/shared/widgets/game_view_toggle.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/m3_detail.dart';
 
 /// Detail page for one Steam app: header, playtime, achievements list, and
@@ -189,8 +189,8 @@ class _SteamGameDetailPageState extends ConsumerState<SteamGameDetailPage> {
             automaticallyImplyLeading: !isEmbedded,
           ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(
-                16, 16, 16, kGlassBottomNavContentHeight + 24),
+            padding: EdgeInsets.fromLTRB(
+                16, 16, 16, shellScrollBottomPadding(context)),
             children: [
               // Steam / IGDB view toggle — visible once the IGDB id is known
               if (igdbId != null) ...[
@@ -1421,7 +1421,7 @@ class _SteamAchievementsPageState extends ConsumerState<SteamAchievementsPage> {
               Expanded(
                 child: ListView.builder(
                   padding: EdgeInsets.fromLTRB(
-                      16, 8, 16, kGlassBottomNavContentHeight + 24),
+                      16, 8, 16, shellScrollBottomPadding(context)),
                   itemCount: visible.length,
                   itemBuilder: (context, i) =>
                       _AchievementCard(achievement: visible[i]),

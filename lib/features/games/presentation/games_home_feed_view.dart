@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
     show IgdbWebUnsupportedException;
 import 'package:cronicle/features/games/data/games_feed_section.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -87,6 +88,7 @@ class GamesHomeFeedView extends ConsumerWidget {
             FilledButton.tonal(
               onPressed: () {
                 ref.invalidate(igdbGamesHomeFeedProvider);
+                ref.invalidate(igdbPopularProvider);
               },
               child: const Text('Reintentar'),
             ),
@@ -106,7 +108,7 @@ class GamesHomeFeedView extends ConsumerWidget {
       onRefresh: () => _onRefresh(ref),
       child: ListView(
         padding: EdgeInsets.only(
-          bottom: kGlassBottomNavContentHeight + 28,
+          bottom: shellScrollBottomPadding(context, extra: 28),
         ),
         children: [
           popularAsync.when(

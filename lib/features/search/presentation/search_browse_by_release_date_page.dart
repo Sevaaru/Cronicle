@@ -203,17 +203,13 @@ class _SearchBrowseByReleaseDatePageState
               );
         final startSec = start.millisecondsSinceEpoch ~/ 1000;
         final endSec = end.millisecondsSinceEpoch ~/ 1000;
-        try {
-          final api = ref.read(igdbApiProvider);
-          final raw = await api.fetchGamesByFirstReleaseBetween(
-            startSec: startSec,
-            endSec: endSec,
-            limit: 100,
-          );
-          return raw.map(IgdbApiDatasource.normalize).toList();
-        } on IgdbWebUnsupportedException {
-          return [];
-        }
+        final api = ref.read(igdbApiProvider);
+        final raw = await api.fetchGamesByFirstReleaseBetween(
+          startSec: startSec,
+          endSec: endSec,
+          limit: 100,
+        );
+        return raw.map(IgdbApiDatasource.normalize).toList();
       case MediaKind.book:
         final api = ref.read(googleBooksApiProvider);
         return api.searchBooksByPublishYear(

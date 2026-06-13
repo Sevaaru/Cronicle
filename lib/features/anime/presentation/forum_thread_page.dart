@@ -9,6 +9,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 String _timeAgoForum(int? createdAt) {
@@ -1236,9 +1237,11 @@ class _ReplyInputBarState extends ConsumerState<_ReplyInputBar>
     final keyboardInset = view.viewInsets.bottom / view.devicePixelRatio;
     // Sit above the floating navbar pill from AppShell. The navbar uses
     // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
-    final navbarTotal = 4 +
-        kGlassBottomNavContentHeight +
-        (bottomSafe > 0 ? bottomSafe : 10);
+    final navbarTotal = ShellLayoutInfo.usesBottomNav(context)
+        ? 4 +
+            kGlassBottomNavContentHeight +
+            (bottomSafe > 0 ? bottomSafe : 10)
+        : shellScrollBottomPadding(context);
     final bottomPad = keyboardInset > 0 ? 8.0 : navbarTotal + 6;
 
     return Padding(

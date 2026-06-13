@@ -143,6 +143,82 @@ class AppLocalizationsEs extends AppLocalizations {
   String get googleSignIn => 'Iniciar sesión con Google';
 
   @override
+  String get cronicleLoginTitle => 'Bienvenido a Cronicle';
+
+  @override
+  String get cronicleLoginSubtitle =>
+      'Inicia sesión con correo o Google para sincronizar tu perfil y el feed social entre dispositivos.';
+
+  @override
+  String get cronicleAuthSignInTab => 'Iniciar sesión';
+
+  @override
+  String get cronicleAuthSignUpTab => 'Crear cuenta';
+
+  @override
+  String get cronicleAuthEmailLabel => 'Correo';
+
+  @override
+  String get cronicleAuthPasswordLabel => 'Contraseña';
+
+  @override
+  String get cronicleAuthSignInButton => 'Iniciar sesión';
+
+  @override
+  String get cronicleAuthSignUpButton => 'Crear cuenta';
+
+  @override
+  String get cronicleAuthEmailConfirmation =>
+      'Revisa tu correo para confirmar la cuenta y luego inicia sesión.';
+
+  @override
+  String get cronicleAuthOrDivider => 'o';
+
+  @override
+  String get cronicleUsernameTitle => 'Elige tu nombre de usuario';
+
+  @override
+  String get cronicleUsernameSubtitle =>
+      'Así te encontrarán otros usuarios en Cronicle.';
+
+  @override
+  String get cronicleUsernameHint => 'usuario';
+
+  @override
+  String get cronicleUsernameInvalid =>
+      'Usa de 3 a 24 caracteres: minúsculas, números y guiones bajos.';
+
+  @override
+  String get cronicleUsernameTaken => 'Ese nombre de usuario ya está en uso.';
+
+  @override
+  String get cronicleUsernameContinue => 'Continuar';
+
+  @override
+  String get cronicleAccountSignOut => 'Cerrar sesión';
+
+  @override
+  String get cronicleAccountTitle => 'Cuenta Cronicle';
+
+  @override
+  String get cronicleAccountSignedInHint =>
+      'Perfil social y sincronización entre dispositivos.';
+
+  @override
+  String cronicleGoogleWebOriginHint(Object origin) {
+    return 'El inicio de sesión con Google en web exige este origen exacto en Google Cloud → Credenciales → tu cliente Web → Orígenes autorizados de JavaScript: $origin';
+  }
+
+  @override
+  String cronicleGoogleWebClientHint(Object clientId) {
+    return 'Cliente OAuth cargado por la app: $clientId';
+  }
+
+  @override
+  String get cronicleGoogleConsentHint =>
+      'Si Google bloquea el acceso, añade tu Gmail en Google Cloud → Pantalla de consentimiento → Usuarios de prueba (mientras la app esté en modo Prueba).';
+
+  @override
   String get googleSignOut => 'Cerrar sesión de Google';
 
   @override
@@ -793,6 +869,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileLocalUser => 'Usuario local';
+
+  @override
+  String get profileCronicleAccount => 'Cuenta Cronicle';
+
+  @override
+  String get profileCronicleConnectHint =>
+      'Conecta AniList y Trakt en Ajustes para ver estadísticas completas entre servicios';
 
   @override
   String get profileFavoritesSectionTitle => 'Favoritos';
@@ -1680,7 +1763,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get igdbWebNotSupported =>
-      'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).';
+      'No se pudo conectar con IGDB en web. En local usa .\\scripts\\run_web.ps1 (arranca el proxy CORS). En producción despliega con netlify.toml.';
 
   @override
   String get twitchConnect => 'Conectar Twitch';
@@ -2626,4 +2709,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String steamFriendUnlockedIn(Object game) {
     return 'desbloqueó un logro en $game';
   }
+
+  @override
+  String get settingsInfoTitle => 'Información';
+
+  @override
+  String settingsInfoVersion(Object version) {
+    return 'Versión: $version';
+  }
+
+  @override
+  String get settingsInfoDiscord => 'Únete a Discord';
+
+  @override
+  String get settingsInfoKofi => 'Apoya en Ko-fi';
 }

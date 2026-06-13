@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cronicle/core/app/cronicle_quick_actions.dart';
 import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/config/env_config.dart';
+import 'package:cronicle/core/config/google_web_bootstrap.dart';
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
@@ -18,6 +19,8 @@ import 'package:cronicle/core/storage/fresh_install_guard.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
+import 'package:cronicle/core/auth/web_oauth_bootstrap.dart';
+import 'package:cronicle/core/supabase/supabase_bootstrap.dart';
 import 'package:cronicle/cronicle_app.dart';
 import 'package:cronicle/wear_sync_entry.dart';
 
@@ -46,9 +49,30 @@ Future<void> main() async {
   // BEFORE anything reads from secure storage (including the OAuth callback).
   await ensureFreshInstallCleanup();
 
-  await _handleAnilistOAuthCallback();
+  await initializeSupabaseIfConfigured();
 
-  if (!kIsWeb) {
+  if (kIsWeb) {
+    try {
+      final clientId = _trimOrNull(EnvConfig.googleServerClientId);
+      if (clientId != null) {
+        configureGoogleSignInForWeb(clientId);
+      }
+      if (kDebugMode) {
+        debugPrint(
+          '[Cronicle] Web origin: ${currentWebOrigin ?? Uri.base.origin}; '
+          'Google client: ${clientId ?? '(not set)'}',
+        );
+      }
+      await GoogleSignIn.instance.initialize(
+        clientId: clientId,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Cronicle] Google Sign-In web init: $e');
+      }
+    }
+    await completePendingWebOAuthCallbacks();
+  } else {
     try {
       final server = EnvConfig.googleServerClientId.trim();
       final String? clientId = switch (defaultTargetPlatform) {
@@ -73,6 +97,8 @@ Future<void> main() async {
       }
     }
   }
+
+  await _handleAnilistOAuthCallback();
 
   final prefs = await SharedPreferences.getInstance();
   await _migrateUnifiedFeedPreferences(prefs);
@@ -103,14 +129,28 @@ Future<void> main() async {
 }
 
 Future<void> _handleAnilistOAuthCallback() async {
-  final pendingToken = await getPendingAnilistToken();
-  if (pendingToken == null || pendingToken.isEmpty) return;
+  final auth = AnilistAuthDatasource(const FlutterSecureStorage(), Dio());
 
-  final auth = AnilistAuthDatasource(const FlutterSecureStorage());
-  await auth.saveToken(pendingToken);
+  final pendingCode = await getPendingAnilistCode();
+  String? token = await getPendingAnilistToken();
+
+  if (pendingCode != null && pendingCode.isNotEmpty) {
+    try {
+      token = await auth.exchangeAuthorizationCode(pendingCode);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Cronicle] AniList code exchange failed: $e');
+      }
+    }
+    await clearPendingAnilistCode();
+  }
+
+  if (token == null || token.isEmpty) return;
+
+  await auth.saveToken(token);
   try {
     final gql = AnilistGraphqlDatasource(Dio());
-    final viewer = await gql.fetchViewer(pendingToken);
+    final viewer = await gql.fetchViewer(token);
     final name = viewer?['name'] as String?;
     if (name != null && name.isNotEmpty) {
       await auth.saveUserName(name);

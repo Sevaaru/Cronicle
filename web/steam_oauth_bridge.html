@@ -83,6 +83,19 @@
         return;
       }
 
+      var isAndroid = /Android/i.test(navigator.userAgent || '');
+      var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      var mobile = isAndroid || isIOS;
+
+      if (!mobile) {
+        try {
+          localStorage.setItem('steam_pending_oauth', url.search);
+        } catch (eStore) {}
+        msg.textContent = 'Volviendo a Cronicle…';
+        window.location.replace('/');
+        return;
+      }
+
       // Dedupe — avoid double-handling on refresh
       var dedupeKey = 'cronicle_steam_sent';
       try {

@@ -6,7 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/library_add_badge.dart';
 
 
@@ -71,7 +71,7 @@ class BooksHomeFeedView extends ConsumerWidget {
       },
       child: ListView(
         padding: EdgeInsets.only(
-          bottom: kGlassBottomNavContentHeight + 28,
+          bottom: shellScrollBottomPadding(context, extra: 28),
         ),
         children: [
           _AsyncSection(

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.dart';
@@ -15,9 +14,6 @@ class IgdbApiDatasource {
   final IgdbAuthDatasource _auth;
 
   static String get _baseUrl => EnvConfig.igdbApiV4BaseUrl;
-
-  static bool get _blockWebWithoutProxy =>
-      kIsWeb && !EnvConfig.hasDevApiProxy;
 
   int? _cachedVisitPopularityTypeId;
 
@@ -135,8 +131,6 @@ limit $limit;
     required int endSec,
     int limit = 100,
   }) async {
-    if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
-
     const fetchCap = 500;
 
     final fieldsGames = '''
@@ -960,7 +954,6 @@ limit 15;
 
   Future<Map<String, List<Map<String, dynamic>>>> _postMultiquery(
       String body) async {
-    if (_blockWebWithoutProxy) throw const IgdbWebUnsupportedException();
     var options = await _headers();
 
     for (var attempt = 0; attempt < 2; attempt++) {
@@ -1094,9 +1087,6 @@ query games "sports" {
 
   Future<List<Map<String, dynamic>>> _postList(
       String endpoint, String body) async {
-    if (_blockWebWithoutProxy) {
-      throw const IgdbWebUnsupportedException();
-    }
     var options = await _headers();
 
     for (var attempt = 0; attempt < 2; attempt++) {

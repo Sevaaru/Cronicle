@@ -54,6 +54,38 @@
   "@errorSyncMessage": { "placeholders": { "message": {} } },
 
   "googleSignIn": "Iniciar sesión con Google",
+  "cronicleLoginTitle": "Bienvenido a Cronicle",
+  "cronicleLoginSubtitle": "Inicia sesión con correo o Google para sincronizar tu perfil y el feed social entre dispositivos.",
+  "cronicleAuthSignInTab": "Iniciar sesión",
+  "cronicleAuthSignUpTab": "Crear cuenta",
+  "cronicleAuthEmailLabel": "Correo",
+  "cronicleAuthPasswordLabel": "Contraseña",
+  "cronicleAuthSignInButton": "Iniciar sesión",
+  "cronicleAuthSignUpButton": "Crear cuenta",
+  "cronicleAuthEmailConfirmation": "Revisa tu correo para confirmar la cuenta y luego inicia sesión.",
+  "cronicleAuthOrDivider": "o",
+  "cronicleUsernameTitle": "Elige tu nombre de usuario",
+  "cronicleUsernameSubtitle": "Así te encontrarán otros usuarios en Cronicle.",
+  "cronicleUsernameHint": "usuario",
+  "cronicleUsernameInvalid": "Usa de 3 a 24 caracteres: minúsculas, números y guiones bajos.",
+  "cronicleUsernameTaken": "Ese nombre de usuario ya está en uso.",
+  "cronicleUsernameContinue": "Continuar",
+  "cronicleAccountSignOut": "Cerrar sesión",
+  "cronicleAccountTitle": "Cuenta Cronicle",
+  "cronicleAccountSignedInHint": "Perfil social y sincronización entre dispositivos.",
+  "cronicleGoogleWebOriginHint": "El inicio de sesión con Google en web exige este origen exacto en Google Cloud → Credenciales → tu cliente Web → Orígenes autorizados de JavaScript: {origin}",
+  "@cronicleGoogleWebOriginHint": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "cronicleGoogleWebClientHint": "Cliente OAuth cargado por la app: {clientId}",
+  "@cronicleGoogleWebClientHint": {
+    "placeholders": {
+      "clientId": {}
+    }
+  },
+  "cronicleGoogleConsentHint": "Si Google bloquea el acceso, añade tu Gmail en Google Cloud → Pantalla de consentimiento → Usuarios de prueba (mientras la app esté en modo Prueba).",
   "googleSignOut": "Cerrar sesión de Google",
   "googleSyncNow": "Sincronizar ahora",
   "never": "Nunca",
@@ -290,6 +322,8 @@
   "profileLocalGamesHoursTotal": "Horas registradas",
   "profileLocalGamesEmpty": "Aún no hay juegos en tu biblioteca local.",
   "profileLocalUser": "Usuario local",
+  "profileCronicleAccount": "Cuenta Cronicle",
+  "profileCronicleConnectHint": "Conecta AniList y Trakt en Ajustes para ver estadísticas completas entre servicios",
   "profileFavoritesSectionTitle": "Favoritos",
   "profileConnectHint": "Conecta AniList y Trakt en Ajustes para ver tus estadísticas completas",
   "profileLocalLibrary": "Biblioteca local",
@@ -599,7 +633,7 @@
   "searchTrendingGames": "Juegos en tendencia",
   "searchTrendingBooks": "Libros en tendencia",
 
-  "igdbWebNotSupported": "IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).",
+  "igdbWebNotSupported": "No se pudo conectar con IGDB en web. En local usa .\\scripts\\run_web.ps1 (arranca el proxy CORS). En producción despliega con netlify.toml.",
 
   "twitchConnect": "Conectar Twitch",
 
@@ -934,5 +968,11 @@
   "steamFriendAddedGamesTitle": "{count, plural, one{Nuevo juego en su biblioteca} other{{count} juegos nuevos}}",
   "@steamFriendAddedGamesTitle": { "placeholders": { "count": { "type": "int" } } },
   "steamFriendUnlockedIn": "desbloqueó un logro en {game}",
-  "@steamFriendUnlockedIn": { "placeholders": { "game": {} } }
+  "@steamFriendUnlockedIn": { "placeholders": { "game": {} } },
+
+  "settingsInfoTitle": "Información",
+  "settingsInfoVersion": "Versión: {version}",
+  "@settingsInfoVersion": { "placeholders": { "version": {} } },
+  "settingsInfoDiscord": "Únete a Discord",
+  "settingsInfoKofi": "Apoya en Ko-fi"
 }

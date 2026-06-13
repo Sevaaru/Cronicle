@@ -1,6 +1,7 @@
 {
   "DEV_API_PROXY": "http://127.0.0.1:8787",
   "ANILIST_CLIENT_ID": "",
+  "ANILIST_CLIENT_SECRET": "",
   "ANILIST_REDIRECT_URI": "https://anilist.co/api/v2/oauth/pin",
   "TWITCH_CLIENT_ID": "",
   "TWITCH_CLIENT_SECRET": "",
@@ -13,5 +14,7 @@
   "TRAKT_REDIRECT_URI": "https://TU-SITIO.netlify.app/trakt_oauth_bridge.html",
   "GOOGLE_BOOKS_API_KEY": "",
   "STEAM_API_KEY": "",
-  "STEAM_REDIRECT_URI": "https://TU-SITIO.netlify.app/steam_oauth_bridge.html"
+  "STEAM_REDIRECT_URI": "https://TU-SITIO.netlify.app/steam_oauth_bridge.html",
+  "SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_YOUR_KEY"
 }

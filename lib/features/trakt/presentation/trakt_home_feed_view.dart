@@ -6,7 +6,7 @@ import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/library_add_badge.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
@@ -128,7 +128,7 @@ class _MoviesFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListView(
-      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
+      padding: EdgeInsets.only(bottom: shellScrollBottomPadding(context, extra: 28)),
       children: [
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
@@ -205,7 +205,7 @@ class _ShowsFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListView(
-      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
+      padding: EdgeInsets.only(bottom: shellScrollBottomPadding(context, extra: 28)),
       children: [
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
@@ -1242,7 +1242,7 @@ class _MovieSkeletons extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
+      padding: EdgeInsets.only(bottom: shellScrollBottomPadding(context, extra: 28)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: const [
@@ -1270,7 +1270,7 @@ class _ShowSkeletons extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
+      padding: EdgeInsets.only(bottom: shellScrollBottomPadding(context, extra: 28)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: const [

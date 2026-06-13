@@ -13,6 +13,7 @@
       justify-content: center;
       height: 100vh;
       margin: 0;
+      padding: 1rem;
     }
     .card {
       text-align: center;
@@ -20,6 +21,7 @@
       border-radius: 16px;
       background: rgba(255,255,255,0.06);
       backdrop-filter: blur(12px);
+      max-width: 26rem;
     }
     .spinner {
       width: 36px; height: 36px;
@@ -29,22 +31,52 @@
       animation: spin .7s linear infinite;
       margin: 0 auto 1rem;
     }
+    .error { color: #f87171; font-size: 0.95rem; line-height: 1.45; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner"></div>
-    <p>Conectando con Anilist...</p>
+    <div class="spinner" id="spinner"></div>
+    <p id="msg">Conectando con Anilist...</p>
   </div>
   <script>
-    var hash = window.location.hash.substring(1);
-    var params = new URLSearchParams(hash);
-    var token = params.get('access_token');
-    if (token) {
-      localStorage.setItem('anilist_pending_token', token);
-    }
-    window.location.replace('/');
+    (function () {
+      var msg = document.getElementById('msg');
+      var spinner = document.getElementById('spinner');
+      var query = new URLSearchParams(window.location.search);
+      var hash = new URLSearchParams(window.location.hash.substring(1));
+
+      var err = query.get('error') || hash.get('error');
+      if (err) {
+        spinner.style.display = 'none';
+        msg.className = 'error';
+        msg.textContent =
+          'AniList: ' + err +
+          (hash.get('error_description') || query.get('error_description') || query.get('message') || '');
+        return;
+      }
+
+      var code = query.get('code');
+      if (code) {
+        localStorage.setItem('anilist_pending_code', code);
+        window.location.replace('/');
+        return;
+      }
+
+      var token = hash.get('access_token');
+      if (token) {
+        localStorage.setItem('anilist_pending_token', token);
+        window.location.replace('/');
+        return;
+      }
+
+      spinner.style.display = 'none';
+      msg.className = 'error';
+      msg.textContent =
+        'No se recibió código ni token. Registra en AniList Developer: ' +
+        window.location.origin + window.location.pathname;
+    })();
   </script>
 </body>
 </html>

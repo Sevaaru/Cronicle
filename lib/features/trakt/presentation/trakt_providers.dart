@@ -120,14 +120,11 @@ class TraktSession extends _$TraktSession {
   }
 
   Future<void> connectOAuth() async {
-    if (kIsWeb) {
-      throw UnsupportedError('web');
-    }
     if (EnvConfig.traktClientId.isEmpty ||
         EnvConfig.traktClientSecret.isEmpty) {
       throw StateError('no_credentials');
     }
-    final redirectRaw = EnvConfig.traktRedirectUri.trim();
+    final redirectRaw = TraktAuthDatasource.effectiveRedirectUri;
     if (redirectRaw.isEmpty) {
       throw StateError('no_redirect_uri');
     }
@@ -137,6 +134,16 @@ class TraktSession extends _$TraktSession {
     await prefs.setString(_oauthStatePrefsKey, oauthState);
 
     final uri = auth.buildAuthorizeUri(oauthState);
+
+    if (kIsWeb) {
+      final launched = await launchUrl(uri, webOnlyWindowName: '_self');
+      if (!launched) {
+        await prefs.remove(_oauthStatePrefsKey);
+        throw StateError('launch_failed');
+      }
+      return;
+    }
+
     final String result;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       result = await _traktOAuthAndroidExternalBrowser(uri, oauthState);

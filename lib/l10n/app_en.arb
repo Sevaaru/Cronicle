@@ -51,6 +51,38 @@
   "errorSyncMessage": "Sync error: {message}",
 
   "googleSignIn": "Sign in with Google",
+  "cronicleLoginTitle": "Welcome to Cronicle",
+  "cronicleLoginSubtitle": "Sign in with email or Google to sync your profile and social feed across devices.",
+  "cronicleAuthSignInTab": "Sign in",
+  "cronicleAuthSignUpTab": "Create account",
+  "cronicleAuthEmailLabel": "Email",
+  "cronicleAuthPasswordLabel": "Password",
+  "cronicleAuthSignInButton": "Sign in",
+  "cronicleAuthSignUpButton": "Create account",
+  "cronicleAuthEmailConfirmation": "Check your email to confirm your account, then sign in.",
+  "cronicleAuthOrDivider": "or",
+  "cronicleUsernameTitle": "Choose your username",
+  "cronicleUsernameSubtitle": "This is how others will find you on Cronicle.",
+  "cronicleUsernameHint": "username",
+  "cronicleUsernameInvalid": "Use 3–24 characters: lowercase letters, numbers and underscores.",
+  "cronicleUsernameTaken": "That username is already taken.",
+  "cronicleUsernameContinue": "Continue",
+  "cronicleAccountSignOut": "Sign out",
+  "cronicleAccountTitle": "Cronicle account",
+  "cronicleAccountSignedInHint": "Social profile and sync across devices.",
+  "cronicleGoogleWebOriginHint": "Google web sign-in requires this exact origin in Google Cloud → Credentials → your Web client → Authorized JavaScript origins: {origin}",
+  "@cronicleGoogleWebOriginHint": {
+    "placeholders": {
+      "origin": {}
+    }
+  },
+  "cronicleGoogleWebClientHint": "OAuth client loaded by the app: {clientId}",
+  "@cronicleGoogleWebClientHint": {
+    "placeholders": {
+      "clientId": {}
+    }
+  },
+  "cronicleGoogleConsentHint": "If Google blocks sign-in, add your Gmail under Google Cloud → OAuth consent screen → Test users (while the app is in Testing).",
   "googleSignOut": "Sign out of Google",
   "googleSyncNow": "Sync now",
   "never": "Never",
@@ -282,6 +314,8 @@
   "profileLocalGamesHoursTotal": "Hours logged",
   "profileLocalGamesEmpty": "No games in your local library yet.",
   "profileLocalUser": "Local user",
+  "profileCronicleAccount": "Cronicle account",
+  "profileCronicleConnectHint": "Connect AniList and Trakt in Settings for full cross-service statistics",
   "profileFavoritesSectionTitle": "Favorites",
   "profileConnectHint": "Connect AniList and Trakt in Settings to see your full statistics",
   "profileLocalLibrary": "Local library",
@@ -585,7 +619,7 @@
   "searchTrendingGames": "Trending games",
   "searchTrendingBooks": "Trending books",
 
-  "igdbWebNotSupported": "IGDB cannot call the API from the browser (no CORS). Use Android or desktop, or run node scripts/dev_api_proxy.mjs and set DEV_API_PROXY in your dart-defines (see dart_defines.example.json).",
+  "igdbWebNotSupported": "Could not reach IGDB on web. For local dev use .\\scripts\\run_web.ps1 (starts the CORS proxy). Production needs netlify.toml deployed.",
 
   "twitchConnect": "Connect Twitch",
 
@@ -920,5 +954,11 @@
   "steamFriendPlayedHours": "{hours} h played in total",
   "@steamFriendPlayedHours": { "placeholders": { "hours": {} } },
   "steamFriendPlayedMinutes": "{minutes} min played in total",
-  "@steamFriendPlayedMinutes": { "placeholders": { "minutes": { "type": "int" } } }
+  "@steamFriendPlayedMinutes": { "placeholders": { "minutes": { "type": "int" } } },
+
+  "settingsInfoTitle": "Information",
+  "settingsInfoVersion": "Version: {version}",
+  "@settingsInfoVersion": { "placeholders": { "version": {} } },
+  "settingsInfoDiscord": "Join Discord",
+  "settingsInfoKofi": "Support on Ko-fi"
 }

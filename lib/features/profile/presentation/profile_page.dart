@@ -11,6 +11,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/utils/json_int.dart';
 import 'package:cronicle/features/achievements/domain/achievement.dart';
@@ -22,6 +23,8 @@ import 'package:cronicle/features/profile/presentation/anilist_profile_follow_ro
 import 'package:cronicle/features/profile/presentation/profile_favorites_kind.dart';
 import 'package:cronicle/features/profile/presentation/profile_favorites_preview.dart';
 import 'package:cronicle/features/profile/presentation/profile_stats_shared.dart';
+import 'package:cronicle/features/identity/data/cronicle_auth_service.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_auth_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
@@ -33,6 +36,7 @@ import 'package:cronicle/shared/widgets/collapsible_bio_tile.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> _showFullscreenMemoryImage(BuildContext context, Uint8List bytes) {
   return showDialog<void>(
@@ -82,6 +86,12 @@ class ProfilePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(anilistProfileProvider);
     final tokenAsync = ref.watch(anilistTokenProvider);
+    final cronicleSession = EnvConfig.hasSupabase
+        ? ref.watch(cronicleAuthSessionProvider).valueOrNull
+        : null;
+    final cronicleProfileAsync = EnvConfig.hasSupabase
+        ? ref.watch(cronicleMyProfileProvider)
+        : const AsyncValue<CronicleProfileRow?>.data(null);
 
     return Scaffold(
       appBar: AppBar(
@@ -95,17 +105,34 @@ class ProfilePage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(child: Text(l10n.errorLoadingProfile)),
         data: (token) {
-          if (token == null) {
-            return _NotLoggedIn();
+          if (token != null) {
+            return profileAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (profile) {
+                if (profile == null) {
+                  return _NotLoggedIn(
+                    cronicleSession: cronicleSession,
+                    cronicleProfile: cronicleProfileAsync.valueOrNull,
+                  );
+                }
+                return _ProfileContent(profile: profile);
+              },
+            );
           }
-          return profileAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
-            data: (profile) {
-              if (profile == null) return _NotLoggedIn();
-              return _ProfileContent(profile: profile);
-            },
-          );
+
+          if (cronicleSession != null) {
+            return cronicleProfileAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, __) => _NotLoggedIn(cronicleSession: cronicleSession),
+              data: (cronicleProfile) => _NotLoggedIn(
+                cronicleSession: cronicleSession,
+                cronicleProfile: cronicleProfile,
+              ),
+            );
+          }
+
+          return const _NotLoggedIn();
         },
       ),
     );
@@ -113,12 +140,58 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class _NotLoggedIn extends ConsumerWidget {
+  const _NotLoggedIn({
+    this.cronicleSession,
+    this.cronicleProfile,
+  });
+
+  final Session? cronicleSession;
+  final CronicleProfileRow? cronicleProfile;
+
+  bool get _isCronicleAccount => cronicleSession != null;
+
+  String _title(AppLocalizations l10n) {
+    if (!_isCronicleAccount) return l10n.profileLocalUser;
+
+    final username = cronicleProfile?.username.trim() ?? '';
+    if (username.isNotEmpty) return '@$username';
+
+    final displayName = cronicleProfile?.displayName.trim() ?? '';
+    if (displayName.isNotEmpty) return displayName;
+
+    final email = cronicleSession?.user.email?.trim() ?? '';
+    if (email.isNotEmpty) return email;
+
+    return l10n.profileCronicleAccount;
+  }
+
+  String _subtitle(AppLocalizations l10n) {
+    if (_isCronicleAccount) return l10n.profileCronicleConnectHint;
+    return l10n.profileConnectHint;
+  }
+
+  ImageProvider? _avatarImage(ResolvedProfileAvatar resolvedAvatar) {
+    final cronicleUrl = cronicleProfile?.avatarUrl?.trim() ?? '';
+    if (cronicleUrl.isNotEmpty) {
+      return CachedNetworkImageProvider(cronicleUrl);
+    }
+    if (resolvedAvatar.memoryBytes != null) {
+      return MemoryImage(resolvedAvatar.memoryBytes!);
+    }
+    if (resolvedAvatar.networkUrl != null &&
+        resolvedAvatar.networkUrl!.isNotEmpty) {
+      return CachedNetworkImageProvider(resolvedAvatar.networkUrl!);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final resolvedAvatar = ref.watch(resolvedProfileAvatarProvider);
     final libraryStream = ref.watch(databaseProvider).watchAllLibrary();
+    final avatarImage = _avatarImage(resolvedAvatar);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -132,14 +205,15 @@ class _NotLoggedIn extends ConsumerWidget {
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: cs.surfaceContainerHighest,
-                    backgroundImage: resolvedAvatar.memoryBytes != null
-                        ? MemoryImage(resolvedAvatar.memoryBytes!)
-                        : (resolvedAvatar.networkUrl != null &&
-                                  resolvedAvatar.networkUrl!.isNotEmpty)
-                            ? CachedNetworkImageProvider(resolvedAvatar.networkUrl!)
-                            : null,
-                    child: !resolvedAvatar.hasImage
-                        ? Icon(Icons.person_outline, size: 40, color: cs.onSurfaceVariant)
+                    backgroundImage: avatarImage,
+                    child: avatarImage == null
+                        ? Icon(
+                            _isCronicleAccount
+                                ? Icons.auto_stories_rounded
+                                : Icons.person_outline,
+                            size: 40,
+                            color: cs.onSurfaceVariant,
+                          )
                         : null,
                   ),
                   Positioned(
@@ -152,12 +226,29 @@ class _NotLoggedIn extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              Text(l10n.profileLocalUser,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface)),
+              Text(
+                _title(l10n),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                ),
+              ),
+              if (_isCronicleAccount &&
+                  (cronicleProfile?.displayName.trim().isNotEmpty ?? false) &&
+                  (cronicleProfile?.username.trim().isNotEmpty ?? false)) ...[
+                const SizedBox(height: 4),
+                Text(
+                  cronicleProfile!.displayName,
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                ),
+              ],
               const SizedBox(height: 4),
-              Text(l10n.profileConnectHint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+              Text(
+                _subtitle(l10n),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
             ],
           ),
         ),

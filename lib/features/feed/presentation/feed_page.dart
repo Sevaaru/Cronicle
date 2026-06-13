@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
@@ -300,7 +301,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
-        leadingWidth: kProfileLeadingWidth,
+        leadingWidth: shellProfileLeadingWidth(context),
         titleSpacing: 0,
         title: Text(l10n.feedTitle, style: pageTitleStyle()),
         actionsPadding: const EdgeInsets.only(right: 12),

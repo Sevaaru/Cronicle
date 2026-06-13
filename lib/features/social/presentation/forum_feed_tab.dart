@@ -5,7 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 
 enum _ForumCategory {
   all(null, 'All', Icons.forum_rounded),
@@ -274,7 +274,7 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
     return RefreshIndicator(
       onRefresh: _loadAll,
       child: ListView.builder(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(12, 0, 12, shellScrollBottomPadding(context)),
         itemCount: results.length,
         itemBuilder: (_, i) => _ForumThreadTile(thread: results[i], cs: cs),
       ),
@@ -309,7 +309,7 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
     return RefreshIndicator(
       onRefresh: _loadAll,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(12, 0, 12, shellScrollBottomPadding(context)),
         children: [
           if (_stickyThreads != null &&
               _stickyThreads!.isNotEmpty) ...[

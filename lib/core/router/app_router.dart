@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
+import 'package:cronicle/core/supabase/supabase_bootstrap.dart';
 import 'package:cronicle/core/router/profile_route_transition.dart';
 import 'package:cronicle/core/router/shell_nav_tab.dart';
 import 'package:cronicle/features/anime/presentation/media_detail_page.dart';
@@ -14,6 +16,9 @@ import 'package:cronicle/features/anime/presentation/forum_media_threads_page.da
 import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_auth_providers.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_login_page.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_username_page.dart';
 import 'package:cronicle/features/achievements/presentation/trophy_room_page.dart';
 import 'package:cronicle/features/books/presentation/book_detail_page.dart';
 import 'package:cronicle/features/books/presentation/book_subject_browse_page.dart';
@@ -87,6 +92,17 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
+/// Notifies [GoRouter] when auth/profile changes without recreating the router
+/// (recreating it would duplicate [cronicleRootNavigatorKey] / [_shellKey]).
+class _AppRouterRefresh extends ChangeNotifier {
+  _AppRouterRefresh(AppRouterRef ref) {
+    ref.listen(cronicleAuthSessionProvider, (_, __) => notifyListeners());
+    ref.listen(cronicleMyProfileProvider, (_, __) => notifyListeners());
+    ref.listen(onboardingCompletedProvider, (_, __) => notifyListeners());
+    ref.listen(defaultStartPageProvider, (_, __) => notifyListeners());
+  }
+}
+
 /// Converts a widget deep-link (cronicle://library/{kind}/{externalId}) to
 /// the matching GoRouter path. Kinds mirror [MediaKind]: 0=anime, 1=movie,
 /// 2=tv, 3=game, 4=manga, 5=book.
@@ -101,13 +117,26 @@ String _widgetLibraryRoute(int kind, String externalId) =>
 
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
-  final startPage = ref.read(defaultStartPageProvider);
-  final onboardingDone = ref.read(onboardingCompletedProvider);
+  final refresh = _AppRouterRefresh(ref);
+  ref.onDispose(refresh.dispose);
+
+  String initialLocation() {
+    final onboardingDone = ref.read(onboardingCompletedProvider);
+    final startPage = ref.read(defaultStartPageProvider);
+    if (EnvConfig.hasSupabase &&
+        cronicleSupabaseClient?.auth.currentSession == null) {
+      return '/cronicle-login';
+    }
+    return onboardingDone ? startPage : '/onboarding';
+  }
 
   return GoRouter(
     navigatorKey: cronicleRootNavigatorKey,
-    initialLocation: onboardingDone ? startPage : '/onboarding',
+    refreshListenable: refresh,
+    initialLocation: initialLocation(),
     redirect: (context, state) {
+      final startPage = ref.read(defaultStartPageProvider);
+      final onboardingDone = ref.read(onboardingCompletedProvider);
       if (state.uri.scheme == 'cronicle') {
         final host = state.uri.host;
         // Widget / app deep link into a specific library entry.
@@ -139,6 +168,27 @@ GoRouter appRouter(AppRouterRef ref) {
         return done ? startPage : '/onboarding';
       }
       final path = state.uri.path;
+
+      if (EnvConfig.hasSupabase) {
+        const loginPath = '/cronicle-login';
+        const usernamePath = '/cronicle-username';
+        final session = cronicleSupabaseClient?.auth.currentSession;
+        final profile = ref.read(cronicleMyProfileProvider).valueOrNull;
+        final needsUsername = profile?.needsUsernameSetup ?? false;
+
+        if (session == null) {
+          if (path != loginPath) return loginPath;
+        } else {
+          if (needsUsername && path != usernamePath) return usernamePath;
+          if (!needsUsername && path == loginPath) {
+            return onboardingDone ? startPage : '/onboarding';
+          }
+          if (!needsUsername && path == usernamePath) {
+            return onboardingDone ? startPage : '/onboarding';
+          }
+        }
+      }
+
       // Defensive: malformed deep links (e.g. an Android intent that lost
       // its scheme/host) can reach the router as bare `/`, `/?`, or empty.
       // Send those to the configured start page so the app never lands on
@@ -154,11 +204,19 @@ GoRouter appRouter(AppRouterRef ref) {
     },
     routes: [
       GoRoute(
+        path: '/cronicle-login',
+        builder: (context, state) => const CronicleLoginPage(),
+      ),
+      GoRoute(
+        path: '/cronicle-username',
+        builder: (context, state) => const CronicleUsernamePage(),
+      ),
+      GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingPage(),
         redirect: (context, state) {
           final done = ref.read(onboardingCompletedProvider);
-          if (done) return startPage;
+          if (done) return ref.read(defaultStartPageProvider);
           return null;
         },
       ),

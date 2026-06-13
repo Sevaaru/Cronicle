@@ -596,7 +596,6 @@ class _AccountsPageState extends ConsumerState<_AccountsPage> {
   }
 
   Future<void> _connectTrakt() async {
-    if (kIsWeb) return;
     if (EnvConfig.traktClientId.isEmpty ||
         EnvConfig.traktClientSecret.isEmpty ||
         EnvConfig.traktRedirectUri.isEmpty) {

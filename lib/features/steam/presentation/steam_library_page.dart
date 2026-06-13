@@ -12,8 +12,8 @@ import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.da
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/library_snackbar.dart';
@@ -105,7 +105,7 @@ class _SteamLibraryPageState extends ConsumerState<SteamLibraryPage> {
                         await ref.read(steamOwnedGamesProvider.future);
                       },
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
+                        padding: EdgeInsets.fromLTRB(12, 0, 12, shellScrollBottomPadding(context)),
                         itemCount: filtered.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 6),
                         itemBuilder: (context, i) {

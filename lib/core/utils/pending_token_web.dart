@@ -14,3 +14,12 @@ Future<String?> getPendingAnilistToken() async {
 Future<void> clearPendingAnilistToken() async {
   _removeItem('anilist_pending_token'.toJS);
 }
+
+Future<String?> getPendingAnilistCode() async {
+  final result = _getItem('anilist_pending_code'.toJS);
+  return result?.toDart;
+}
+
+Future<void> clearPendingAnilistCode() async {
+  _removeItem('anilist_pending_code'.toJS);
+}

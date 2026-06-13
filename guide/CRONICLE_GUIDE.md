@@ -7,6 +7,9 @@ Evolución hacia **social nativo** (identidad Cronicle, follows, feed cross-medi
 | Recurso | Descripción |
 |---------|-------------|
 | **[CRONICLE_2_PLAN.md](./CRONICLE_2_PLAN.md)** | Plan maestro: arquitectura híbrida Drift + Supabase, esquema SQL, fases 0–7, web, RLS, roadmap ~20 semanas |
+| **Login Cronicle** | `/cronicle-login`: email/contraseña o botón Google (GIS). **Perfil:** con sesión Cronicle muestra `@username` (no «Usuario local»). **Cerrar sesión:** Ajustes → Cuentas → Cuenta Cronicle. |
+| **Web / IGDB** | En web las peticiones IGDB/Twitch van por proxy CORS: local `127.0.0.1:8787` (auto con `run_web.ps1`) o mismo origen en Netlify (`netlify.toml`). |
+| **Web / UI** | Navegación estilo **X/Twitter**: rail lateral (≥900px) con pills redondeados, hover, tipografía grande y chip de perfil abajo; barra superior compacta (600–899px). Contenido centrado hasta 1280px. |
 | **Rama Git** | `cronicle-2` (desarrollo v2; `main` permanece estable v1.x) |
 
 ---
@@ -86,7 +89,7 @@ lib/
 │   │   └── presentation/
 │   │       ├── anime_page.dart
 │   │       ├── anime_providers.dart              # Providers de Anilist; `AnilistToken.connectOAuthBridge()` (móvil + puente HTTPS); incluye `anilistMediaThreadsProvider`, `anilistForumThreadProvider`
-│   │       ├── anilist_connect_flow.dart        # Flujo unificado Conectar Anilist (Ajustes + barra de anime): puente móvil o PIN/pegar token
+│   │       ├── anilist_connect_flow.dart        # Conectar Anilist: web → `auth_callback.html` (mismo origen); móvil → puente HTTPS; escritorio sin web → pegar token
 │   │       ├── media_detail_page.dart            # Detalle de anime/manga; secciones **Personajes** y **Staff** (carruseles horizontales con "Ver todos"), **Discusiones del foro** (3 hilos + "Ver más"); tags de estado localizados
 │   │       ├── character_detail_page.dart        # Detalle de personaje Anilist: imagen + nombre, toggle favorito, info (edad/género/sangre/cumpleaños), nombres alternativos (con reveal de spoilers), descripción y apariciones (con voice actors)
 │   │       ├── staff_detail_page.dart            # Detalle de staff Anilist: ocupaciones, info (edad/género/lugar/sangre/fechas/años activo), descripción, character roles y staff media
@@ -1205,8 +1208,10 @@ flutter run --dart-define-from-file=dart_defines.local.json
 # .\scripts\build_android.ps1 -Release
 # .\scripts\build_android.ps1 -Target appbundle
 
-# Ejecutar en Chrome (puerto fijo para OAuth web)
-flutter run -d chrome --web-port=5555
+# Ejecutar en Chrome (puerto fijo 60889 para OAuth web)
+.\scripts\run_web.ps1
+# equivalente:
+flutter run -d chrome --web-port=60889 --web-hostname=localhost --dart-define-from-file=dart_defines.local.json
 
 # Analizar código
 flutter analyze

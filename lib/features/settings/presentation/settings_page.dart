@@ -11,11 +11,14 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
+import 'package:cronicle/core/config/google_web_bootstrap.dart';
+import 'package:cronicle/core/utils/google_web_button.dart';
 import 'package:cronicle/core/backup/app_backup_bundle.dart';
 import 'package:cronicle/core/backup/backup_repository_provider.dart';
 import 'package:cronicle/core/backup/data/drive_backup_repository.dart';
@@ -33,6 +36,7 @@ import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/library/presentation/trakt_sync_service.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_auth_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/settings/presentation/feed_filter_layout_notifier.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
@@ -40,9 +44,8 @@ import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.da
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
-import 'package:cronicle/core/utils/google_web_button.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
-import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -56,7 +59,7 @@ class SettingsPage extends ConsumerWidget {
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
-        leadingWidth: kProfileLeadingWidth,
+        leadingWidth: shellProfileLeadingWidth(context),
         titleSpacing: 0,
         title: Text(l10n.settingsTitle, style: pageTitleStyle()),
       ),
@@ -65,7 +68,7 @@ class SettingsPage extends ConsumerWidget {
           16,
           8,
           16,
-          kGlassBottomNavContentHeight + 24,
+          shellScrollBottomPadding(context),
         ),
         children: [
           _SettingsCategoryCard(
@@ -99,8 +102,9 @@ class SettingsPage extends ConsumerWidget {
             subtitle: l10n.settingsDataCategorySubtitle,
             onTap: () => context.push('/settings/data'),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           const _SettingsAboutFooter(),
+          const _SettingsInfoSection(),
         ],
       ),
     );
@@ -206,7 +210,7 @@ class SettingsAppearancePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsAppearanceTitle)),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, shellScrollBottomPadding(context)),
         children: [
           const _AppearanceSection(),
           const SizedBox(height: 12),
@@ -230,7 +234,7 @@ class SettingsNotificationsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsNotificationsTitle)),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, shellScrollBottomPadding(context)),
         children: [
           if (kIsWeb)
             _SettingsSection(
@@ -261,8 +265,9 @@ class SettingsAccountsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsAccountsTitle)),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, shellScrollBottomPadding(context)),
         children: [
+          if (EnvConfig.hasSupabase) const _CronicleAccountSection(),
           const _AnilistSection(),
           const SizedBox(height: 12),
           const _TraktSection(),
@@ -286,7 +291,7 @@ class SettingsDataPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsDataTitle)),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, kGlassBottomNavContentHeight + 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, shellScrollBottomPadding(context)),
         children: [
           _BackupSection(googleSignIn: googleSignIn),
         ],
@@ -297,6 +302,15 @@ class SettingsDataPage extends ConsumerWidget {
 
 class _SettingsAboutFooter extends StatelessWidget {
   const _SettingsAboutFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class _SettingsInfoSection extends StatelessWidget {
+  const _SettingsInfoSection();
 
   @override
   Widget build(BuildContext context) {
@@ -313,21 +327,31 @@ class _SettingsAboutFooter extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                Icons.info_outline_rounded,
-                size: 20,
-                color: cs.outline,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: _InfoLinkButton(
+                      label: l10n.settingsInfoDiscord,
+                      icon: Icons.language_rounded,
+                      onTap: () => _launchUrl(
+                        'https://discord.gg/N7MqyPfep',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InfoLinkButton(
+                      label: l10n.settingsInfoKofi,
+                      icon: Icons.favorite_rounded,
+                      onTap: () => _launchUrl(
+                        'https://ko-fi.com/sevaaru',
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.settingsAboutApp,
-                textAlign: TextAlign.center,
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 16),
               Text(
                 l10n.settingsAboutCopyright(year),
                 textAlign: TextAlign.center,
@@ -335,13 +359,94 @@ class _SettingsAboutFooter extends StatelessWidget {
                   color: cs.onSurfaceVariant.withValues(alpha: 0.85),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 l10n.settingsAboutCreator,
                 textAlign: TextAlign.center,
                 style: textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant.withValues(alpha: 0.85),
                 ),
+              ),
+              const SizedBox(height: 8),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final version = snapshot.data!.version;
+                    return Text(
+                      l10n.settingsInfoVersion(version),
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.65),
+                      ),
+                    );
+                  }
+                  return SizedBox.fromSize(size: const Size(0, 0));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+}
+
+class _InfoLinkButton extends StatelessWidget {
+  const _InfoLinkButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark
+        ? cs.surfaceContainerHigh
+        : Color.alphaBlend(cs.primaryContainer.withAlpha(30), cs.surface);
+
+    return Material(
+      color: bg,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: cs.outlineVariant.withAlpha(isDark ? 60 : 40),
+          width: 0.6,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: cs.primary, size: 20),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -829,12 +934,6 @@ class _TraktSection extends ConsumerWidget {
                 icon: const Icon(Icons.login, size: 18),
                 label: Text(l10n.traktConnect),
                 onPressed: () async {
-                  if (kIsWeb) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.traktOAuthWebUnavailable)),
-                    );
-                    return;
-                  }
                   if (EnvConfig.traktClientId.isEmpty ||
                       EnvConfig.traktClientSecret.isEmpty ||
                       EnvConfig.traktRedirectUri.isEmpty) {
@@ -852,6 +951,9 @@ class _TraktSection extends ConsumerWidget {
                     );
                   } catch (e) {
                     if (!context.mounted) return;
+                    if (e is StateError && e.message == 'web_redirect') {
+                      return;
+                    }
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(l10n.errorWithMessage(e))),
                     );
@@ -948,12 +1050,6 @@ class _SteamSection extends ConsumerWidget {
                   icon: const Icon(Icons.login, size: 18),
                   label: Text(l10n.steamConnect),
                   onPressed: () async {
-                    if (kIsWeb) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.steamWebUnavailable)),
-                      );
-                      return;
-                    }
                     if (EnvConfig.steamApiKey.isEmpty ||
                         EnvConfig.steamRedirectUri.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -972,6 +1068,9 @@ class _SteamSection extends ConsumerWidget {
                       );
                     } catch (e) {
                       if (!context.mounted) return;
+                      if (e is StateError && e.message == 'web_redirect') {
+                        return;
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.errorWithMessage(e))),
                       );
@@ -1178,6 +1277,83 @@ class _AppDefaultsSection extends ConsumerWidget {
   }
 }
 
+class _CronicleAccountSection extends ConsumerWidget {
+  const _CronicleAccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(cronicleAuthSessionProvider).valueOrNull;
+    if (session == null) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final profile = ref.watch(cronicleMyProfileProvider).valueOrNull;
+    final username = profile?.username.trim() ?? '';
+    final email = session.user.email?.trim() ?? '';
+    final label = username.isNotEmpty
+        ? '@$username'
+        : (email.isNotEmpty ? email : profile?.displayName ?? '');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _SettingsSection(
+        icon: Icons.auto_stories_rounded,
+        title: l10n.cronicleAccountTitle,
+        subtitle: l10n.cronicleAccountSignedInHint,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (label.isNotEmpty)
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await ref.read(cronicleAuthServiceProvider).signOut();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.cronicleAccountSignOut)),
+                  );
+                },
+                icon: const Icon(Icons.logout, size: 18),
+                label: Text(l10n.cronicleAccountSignOut),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleWebOriginHint extends StatelessWidget {
+  const _GoogleWebOriginHint({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final origin = currentWebOrigin ?? Uri.base.origin;
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      l10n.cronicleGoogleWebOriginHint(origin),
+      style: TextStyle(
+        fontSize: 11,
+        color: cs.onSurfaceVariant,
+        height: 1.35,
+      ),
+    );
+  }
+}
+
 class _GoogleSection extends ConsumerStatefulWidget {
   const _GoogleSection({required this.googleSignIn});
 
@@ -1212,7 +1388,9 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   }
 
   bool get _needsGoogleServerClientId {
-    if (kIsWeb) return false;
+    if (kIsWeb) {
+      return EnvConfig.googleServerClientId.trim().isEmpty;
+    }
     return Platform.isAndroid || Platform.isIOS;
   }
 
@@ -1255,7 +1433,7 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
             );
           }
           setState(() => _accountEmail = e.isEmpty ? null : e);
-          unawaited(_refreshSignedIn());
+          unawaited(_completeGoogleDriveConnect(event.user));
         } else if (event is GoogleSignInAuthenticationEventSignOut) {
           unawaited(
             ref.read(sharedPreferencesProvider).remove(_kPrefsGoogleDisplayEmail),
@@ -1275,17 +1453,23 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
     super.dispose();
   }
 
-  Future<bool> _refreshSignedIn([GoogleSignInAccount? authenticatedAccount]) async {
-    if (kIsWeb) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _signedIn = false;
-          _accountEmail = null;
-        });
-      }
-      return false;
+  Future<void> _completeGoogleDriveConnect(GoogleSignInAccount account) async {
+    final l10n = AppLocalizations.of(context)!;
+    final driveOk = await _refreshSignedIn(account);
+    if (!mounted) return;
+    if (driveOk) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.connectedWithGoogle)),
+      );
+      unawaited(_restoreFromDriveAfterSignIn());
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.googleDrivePermissionMissing)),
+      );
     }
+  }
+
+  Future<bool> _refreshSignedIn([GoogleSignInAccount? authenticatedAccount]) async {
     final prefs = ref.read(sharedPreferencesProvider);
     try {
       final account = authenticatedAccount;
@@ -1343,7 +1527,7 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   }
 
   Future<void> _syncNowToGoogle() async {
-    if (_syncing || !_signedIn || kIsWeb) return;
+    if (_syncing || !_signedIn) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _syncing = true);
     try {
@@ -1408,7 +1592,7 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
   }
 
   Future<void> _restoreFromDriveAfterSignIn() async {
-    if (!mounted || kIsWeb) return;
+    if (!mounted) return;
     if (_syncing) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _syncing = true);
@@ -1486,9 +1670,11 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
           ),
           const SizedBox(height: 8),
         ],
-        if (kIsWeb)
-          buildGoogleWebButton(context)
-        else if (_loading)
+        if (kIsWeb && !_missingGoogleServerClientId) ...[
+          _GoogleWebOriginHint(l10n: l10n),
+          const SizedBox(height: 8),
+        ],
+        if (_loading)
           const LinearProgressIndicator(minHeight: 2)
         else if (_signedIn)
           Column(
@@ -1567,6 +1753,11 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
               ),
             ],
           )
+        else if (kIsWeb)
+          SizedBox(
+            width: double.infinity,
+            child: buildGoogleWebButton(context),
+          )
         else
           SizedBox(
             width: double.infinity,
@@ -1583,20 +1774,8 @@ class _GoogleSectionState extends ConsumerState<_GoogleSection> {
                       'https://www.googleapis.com/auth/drive.appdata',
                     ],
                   );
-                  final driveOk = await _refreshSignedIn(account);
                   if (!context.mounted) return;
-                  if (driveOk) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.connectedWithGoogle)),
-                    );
-                    unawaited(_restoreFromDriveAfterSignIn());
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.googleDrivePermissionMissing),
-                      ),
-                    );
-                  }
+                  await _completeGoogleDriveConnect(account);
                 } catch (e) {
                   if (!context.mounted) return;
                   if (e is GoogleSignInException &&
@@ -1651,7 +1830,6 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
   static const _driveScope = 'https://www.googleapis.com/auth/drive.appdata';
 
   Future<bool> _googleAuthorizedForDrive() async {
-    if (kIsWeb) return false;
     try {
       final client = widget.googleSignIn.authorizationClient;
       final a = await client.authorizationForScopes([_driveScope]);

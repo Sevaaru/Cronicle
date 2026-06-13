@@ -4,12 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/library_insert_animation.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
+import 'package:cronicle/shared/widgets/web_shell_nav.dart';
 
 TextStyle pageTitleStyle() => GoogleFonts.inter(
   fontSize: 20,
@@ -114,21 +115,65 @@ class _AppShellState extends ConsumerState<AppShell>
       items: items,
     );
 
-    return Scaffold(
-      body: _NavFadeThrough(
-        index: widget.currentIndex,
-        child: widget.child,
-      ),
-      // The navbar is a floating pill: let the body paint behind it so the
-      // surrounding area shows the page background instead of the scaffold
-      // background as opaque rectangles around the rounded corners.
-      extendBody: true,
-      bottomNavigationBar: _cartridgeCtrl == null
-          ? navBar
-          : _NavCartridgeIntro(
-              controller: _cartridgeCtrl!,
-              child: navBar,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final placement = shellNavPlacementForWidth(constraints.maxWidth);
+        final page = _NavFadeThrough(
+          index: widget.currentIndex,
+          child: widget.child,
+        );
+
+        final constrainedPage = shellUsesConstrainedContentFromPlacement(placement)
+            ? Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: kWebContentMaxWidth),
+                  child: page,
+                ),
+              )
+            : page;
+
+        final shellChild = switch (placement) {
+          ShellNavPlacement.side => Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                WebSideNavigation(
+                  currentIndex: widget.currentIndex,
+                  onTap: widget.onTabChanged,
+                  items: items,
+                ),
+                Expanded(child: constrainedPage),
+              ],
             ),
+          ShellNavPlacement.top => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                WebTopNavigation(
+                  currentIndex: widget.currentIndex,
+                  onTap: widget.onTabChanged,
+                  items: items,
+                ),
+                Expanded(child: constrainedPage),
+              ],
+            ),
+          ShellNavPlacement.bottom => page,
+        };
+
+        return ShellLayoutInfo(
+          placement: placement,
+          child: Scaffold(
+            body: shellChild,
+            extendBody: placement == ShellNavPlacement.bottom,
+            bottomNavigationBar: placement == ShellNavPlacement.bottom
+                ? (_cartridgeCtrl == null
+                    ? navBar
+                    : _NavCartridgeIntro(
+                        controller: _cartridgeCtrl!,
+                        child: navBar,
+                      ))
+                : null,
+          ),
+        );
+      },
     );
   }
 }
@@ -279,6 +324,9 @@ class _ProfileAvatarButtonState extends ConsumerState<ProfileAvatarButton> {
 
   @override
   Widget build(BuildContext context) {
+    if (!ShellLayoutInfo.usesBottomNav(context)) {
+      return const SizedBox.shrink();
+    }
     final cs = Theme.of(context).colorScheme;
     final resolvedAvatar = ref.watch(resolvedProfileAvatarProvider);
 

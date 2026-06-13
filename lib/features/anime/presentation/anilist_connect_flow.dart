@@ -11,14 +11,42 @@ import 'package:cronicle/l10n/app_localizations.dart';
 
 Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context)!;
+  final auth = ref.read(anilistAuthProvider);
+
   if (kIsWeb) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.anilistOAuthWebUnavailable)),
+    final redirect = AnilistAuthDatasource.redirectUriForDeveloperConsole;
+    if (redirect == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.anilistBridgeNotConfigured)),
+        );
+      }
+      return;
+    }
+    if (!AnilistAuthDatasource.hasClientSecret) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Web: define ANILIST_CLIENT_ID y ANILIST_CLIENT_SECRET en dart_defines.local.json',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    final launched = await launchUrl(
+      Uri.parse(auth.authorizeUrl),
+      webOnlyWindowName: '_self',
     );
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.anilistOAuthLaunchFailed)),
+      );
+    }
     return;
   }
 
-  final auth = ref.read(anilistAuthProvider);
   final bridge = AnilistAuthDatasource.usesHttpsImplicitBridge;
   final mobile = defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;

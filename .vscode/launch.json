@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Cronicle (Chrome Web)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "preLaunchTask": "cronicle:dev-api-proxy",
+      "args": [
+        "-d",
+        "chrome",
+        "--web-port=60889",
+        "--web-hostname=localhost",
+        "--dart-define-from-file=dart_defines.local.json",
+        "--dart-define=DEV_API_PROXY=http://127.0.0.1:8787"
+      ]
+    }
+  ]
+}

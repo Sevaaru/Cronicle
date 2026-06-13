@@ -1,0 +1,29 @@
+# Cronicle web — SPA + proxy CORS para IGDB/Twitch en el mismo origen.
+[build]
+  publish = "build/web"
+  command = "flutter build web --dart-define-from-file=dart_defines.local.json"
+
+# IGDB v4 + Twitch OAuth/Helix (sin CORS en el navegador).
+[[redirects]]
+  from = "/v4/*"
+  to = "https://api.igdb.com/v4/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/oauth2/*"
+  to = "https://id.twitch.tv/oauth2/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/helix/*"
+  to = "https://api.twitch.tv/helix/:splat"
+  status = 200
+  force = true
+
+# Flutter SPA (debe ir después de los proxies de API).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

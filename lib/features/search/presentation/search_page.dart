@@ -6,7 +6,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
-import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
+import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart'
+    show IgdbWebUnsupportedException;
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/search_filter_layout_notifier.dart';
@@ -14,6 +15,7 @@ import 'package:cronicle/features/search/presentation/search_category_browse_hub
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
@@ -138,7 +140,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
-        leadingWidth: kProfileLeadingWidth,
+        leadingWidth: shellProfileLeadingWidth(context),
         titleSpacing: 0,
         title: Text(l10n.searchTitle, style: pageTitleStyle()),
       ),

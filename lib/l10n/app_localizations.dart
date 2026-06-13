@@ -344,6 +344,138 @@ abstract class AppLocalizations {
   /// **'Iniciar sesión con Google'**
   String get googleSignIn;
 
+  /// No description provided for @cronicleLoginTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenido a Cronicle'**
+  String get cronicleLoginTitle;
+
+  /// No description provided for @cronicleLoginSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con correo o Google para sincronizar tu perfil y el feed social entre dispositivos.'**
+  String get cronicleLoginSubtitle;
+
+  /// No description provided for @cronicleAuthSignInTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión'**
+  String get cronicleAuthSignInTab;
+
+  /// No description provided for @cronicleAuthSignUpTab.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get cronicleAuthSignUpTab;
+
+  /// No description provided for @cronicleAuthEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo'**
+  String get cronicleAuthEmailLabel;
+
+  /// No description provided for @cronicleAuthPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get cronicleAuthPasswordLabel;
+
+  /// No description provided for @cronicleAuthSignInButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión'**
+  String get cronicleAuthSignInButton;
+
+  /// No description provided for @cronicleAuthSignUpButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get cronicleAuthSignUpButton;
+
+  /// No description provided for @cronicleAuthEmailConfirmation.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa tu correo para confirmar la cuenta y luego inicia sesión.'**
+  String get cronicleAuthEmailConfirmation;
+
+  /// No description provided for @cronicleAuthOrDivider.
+  ///
+  /// In es, this message translates to:
+  /// **'o'**
+  String get cronicleAuthOrDivider;
+
+  /// No description provided for @cronicleUsernameTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige tu nombre de usuario'**
+  String get cronicleUsernameTitle;
+
+  /// No description provided for @cronicleUsernameSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Así te encontrarán otros usuarios en Cronicle.'**
+  String get cronicleUsernameSubtitle;
+
+  /// No description provided for @cronicleUsernameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'usuario'**
+  String get cronicleUsernameHint;
+
+  /// No description provided for @cronicleUsernameInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa de 3 a 24 caracteres: minúsculas, números y guiones bajos.'**
+  String get cronicleUsernameInvalid;
+
+  /// No description provided for @cronicleUsernameTaken.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese nombre de usuario ya está en uso.'**
+  String get cronicleUsernameTaken;
+
+  /// No description provided for @cronicleUsernameContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get cronicleUsernameContinue;
+
+  /// No description provided for @cronicleAccountSignOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get cronicleAccountSignOut;
+
+  /// No description provided for @cronicleAccountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta Cronicle'**
+  String get cronicleAccountTitle;
+
+  /// No description provided for @cronicleAccountSignedInHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil social y sincronización entre dispositivos.'**
+  String get cronicleAccountSignedInHint;
+
+  /// No description provided for @cronicleGoogleWebOriginHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El inicio de sesión con Google en web exige este origen exacto en Google Cloud → Credenciales → tu cliente Web → Orígenes autorizados de JavaScript: {origin}'**
+  String cronicleGoogleWebOriginHint(Object origin);
+
+  /// No description provided for @cronicleGoogleWebClientHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Cliente OAuth cargado por la app: {clientId}'**
+  String cronicleGoogleWebClientHint(Object clientId);
+
+  /// No description provided for @cronicleGoogleConsentHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Si Google bloquea el acceso, añade tu Gmail en Google Cloud → Pantalla de consentimiento → Usuarios de prueba (mientras la app esté en modo Prueba).'**
+  String get cronicleGoogleConsentHint;
+
   /// No description provided for @googleSignOut.
   ///
   /// In es, this message translates to:
@@ -1531,6 +1663,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Usuario local'**
   String get profileLocalUser;
+
+  /// No description provided for @profileCronicleAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta Cronicle'**
+  String get profileCronicleAccount;
+
+  /// No description provided for @profileCronicleConnectHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Conecta AniList y Trakt en Ajustes para ver estadísticas completas entre servicios'**
+  String get profileCronicleConnectHint;
 
   /// No description provided for @profileFavoritesSectionTitle.
   ///
@@ -3185,7 +3329,7 @@ abstract class AppLocalizations {
   /// No description provided for @igdbWebNotSupported.
   ///
   /// In es, this message translates to:
-  /// **'IGDB no puede llamar a la API desde el navegador (sin CORS). Usa Android o escritorio, o ejecuta node scripts/dev_api_proxy.mjs y define DEV_API_PROXY en tus dart-defines (ver dart_defines.example.json).'**
+  /// **'No se pudo conectar con IGDB en web. En local usa .\\scripts\\run_web.ps1 (arranca el proxy CORS). En producción despliega con netlify.toml.'**
   String get igdbWebNotSupported;
 
   /// No description provided for @twitchConnect.
@@ -4879,6 +5023,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'desbloqueó un logro en {game}'**
   String steamFriendUnlockedIn(Object game);
+
+  /// No description provided for @settingsInfoTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Información'**
+  String get settingsInfoTitle;
+
+  /// No description provided for @settingsInfoVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión: {version}'**
+  String settingsInfoVersion(Object version);
+
+  /// No description provided for @settingsInfoDiscord.
+  ///
+  /// In es, this message translates to:
+  /// **'Únete a Discord'**
+  String get settingsInfoDiscord;
+
+  /// No description provided for @settingsInfoKofi.
+  ///
+  /// In es, this message translates to:
+  /// **'Apoya en Ko-fi'**
+  String get settingsInfoKofi;
 }
 
 class _AppLocalizationsDelegate

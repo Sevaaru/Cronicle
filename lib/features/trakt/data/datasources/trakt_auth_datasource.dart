@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
+import 'package:cronicle/core/config/web_dev_config.dart';
 
 class TraktAuthDatasource {
   TraktAuthDatasource(this._storage, this._dio);
@@ -17,6 +19,14 @@ class TraktAuthDatasource {
   static const _userAvatarUrlKey = 'trakt_user_avatar_url';
 
   static const _tokenUrl = 'https://api.trakt.tv/oauth/token';
+
+  /// Redirect URI sent to Trakt. On web uses same-origin callback HTML.
+  static String get effectiveRedirectUri {
+    if (kIsWeb) {
+      return '${WebDevConfig.effectiveOrigin}/trakt_oauth_callback.html';
+    }
+    return EnvConfig.traktRedirectUri.trim();
+  }
 
   Future<String?> getAccessToken() => _storage.read(key: _accessKey);
 
@@ -64,7 +74,7 @@ class TraktAuthDatasource {
       await clearSession();
       return null;
     }
-    final redirect = EnvConfig.traktRedirectUri.trim();
+    final redirect = effectiveRedirectUri;
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         _tokenUrl,
@@ -98,7 +108,7 @@ class TraktAuthDatasource {
         EnvConfig.traktClientSecret.isEmpty) {
       throw StateError('TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET no configurados');
     }
-    final redirect = EnvConfig.traktRedirectUri.trim();
+    final redirect = effectiveRedirectUri;
     if (redirect.isEmpty) {
       throw StateError('TRAKT_REDIRECT_URI no configurado');
     }
@@ -182,7 +192,7 @@ class TraktAuthDatasource {
   }
 
   Uri buildAuthorizeUri(String state) {
-    final redirect = EnvConfig.traktRedirectUri.trim();
+    final redirect = effectiveRedirectUri;
     return Uri.parse('https://trakt.tv/oauth/authorize').replace(
       queryParameters: <String, String>{
         'response_type': 'code',

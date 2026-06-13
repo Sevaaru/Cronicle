@@ -7,6 +7,7 @@ import 'package:cronicle/features/social/presentation/forum_feed_tab.dart';
 import 'package:cronicle/features/social/presentation/social_steam_providers.dart';
 import 'package:cronicle/features/social/presentation/social_unified_feed.dart';
 import 'package:cronicle/features/steam/presentation/steam_providers.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
@@ -199,7 +200,7 @@ class _SocialPageState extends ConsumerState<SocialPage>
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
-        leadingWidth: kProfileLeadingWidth,
+        leadingWidth: shellProfileLeadingWidth(context),
         titleSpacing: 0,
         title: Text(l10n.socialTitle, style: pageTitleStyle()),
         actions: [

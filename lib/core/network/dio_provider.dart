@@ -13,9 +13,11 @@ Dio dio(DioRef ref) {
     ),
   );
   assert(() {
-    dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
+    if (!kIsWeb) {
+      dio.interceptors.add(
+        LogInterceptor(requestBody: true, responseBody: true),
+      );
+    }
     return true;
   }());
   return dio;

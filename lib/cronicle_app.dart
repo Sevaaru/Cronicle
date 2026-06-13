@@ -1,5 +1,6 @@
 import 'dart:math' show max;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -73,6 +74,16 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
+      scrollBehavior: kIsWeb
+          ? const MaterialScrollBehavior().copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.stylus,
+                PointerDeviceKind.trackpad,
+              },
+            )
+          : null,
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       theme: AppTheme.light,

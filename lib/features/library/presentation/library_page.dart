@@ -26,6 +26,7 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/layout/shell_layout.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
 import 'package:cronicle/shared/widgets/completion_rating_dialog.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
@@ -319,7 +320,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       appBar: AppBar(
         clipBehavior: Clip.none,
         leading: const ProfileAvatarButton(),
-        leadingWidth: kProfileLeadingWidth,
+        leadingWidth: shellProfileLeadingWidth(context),
         titleSpacing: 0,
         title: Text(l10n.libraryTitle, style: pageTitleStyle()),
         actions: [
@@ -2262,7 +2263,7 @@ class _LibrarySearchPageState extends State<_LibrarySearchPage> {
                         ),
                       )
                     : ListView(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
+                        padding: EdgeInsets.fromLTRB(12, 0, 12, shellScrollBottomPadding(context)),
                         children: [
                           ...MediaKind.values
                               .where(byKind.containsKey)

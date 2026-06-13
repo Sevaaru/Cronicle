@@ -131,7 +131,7 @@ Ambos coexisten. Drive no se elimina en v2.
 |------------|---------|
 | Hosting | Firebase Hosting, Netlify o Cloudflare Pages |
 | Drift WASM | `sqlite3.wasm` + `drift_worker.dart.js` (ya preparado) |
-| OAuth web | Redirect al mismo origen (`/auth/callback`) |
+| OAuth web | Redirect al mismo origen; en local siempre `http://localhost:60889` (`WebDevConfig`, `scripts/run_web.ps1`) |
 | PWA | `manifest.json` + service worker básico (fase posterior) |
 | Proxy IGDB | Edge Function Supabase (`DEV_API_PROXY` → producción) |
 
@@ -170,7 +170,14 @@ blocks (bloquear usuario)
 reports (moderación, fase posterior)
 ```
 
-### 4.2 SQL — Migración inicial (`001_cronicle2_core.sql`)
+### 4.2 SQL — Migración inicial
+
+**Archivo listo para copiar/ejecutar:** [`supabase/migrations/001_cronicle2_core.sql`](../supabase/migrations/001_cronicle2_core.sql)
+
+Incluye tablas, RLS completo, trigger de registro (`handle_new_user`), helpers y Realtime.
+
+<details>
+<summary>SQL inline (referencia; usar el archivo .sql de arriba)</summary>
 
 ```sql
 -- Extensiones
@@ -308,7 +315,11 @@ create table public.blocks (
 );
 ```
 
+</details>
+
 ### 4.3 Row Level Security (RLS) — reglas clave
+
+> Implementación completa en [`001_cronicle2_core.sql`](../supabase/migrations/001_cronicle2_core.sql).
 
 ```sql
 alter table public.profiles enable row level security;
@@ -372,9 +383,9 @@ class CronicleProfileCache extends Table { ... }
 
 | Método | Móvil | Web |
 |--------|-------|-----|
-| Google | `google_sign_in` → Supabase `signInWithIdToken` | `google_sign_in_web` + mismo flujo |
+| Google | `google_sign_in` → Supabase `signInWithIdToken` | Mismo flujo (popup, sin redirect a localhost) |
+| Email + contraseña | `signInWithPassword` / `signUp` | Igual |
 | Apple | `sign_in_with_apple` | Apple JS (fase 2) |
-| Email magic link | Supabase OTP | Supabase OTP |
 
 ### 5.2 Onboarding Cronicle 2 (nuevo)
 
@@ -530,7 +541,7 @@ Paridad con móvil en:
 | W1 | Init `GoogleSignIn` en web | `main.dart` |
 | W2 | Init `Supabase.initialize` | `main.dart`, `env_config.dart` |
 | W3 | Habilitar Drive backup en web (opcional, coexistir con Supabase) | `settings_page.dart` |
-| W4 | OAuth AniList web (`auth_callback.html` + flow) | `anilist_connect_flow.dart` |
+| W4 | OAuth AniList/Trakt/Steam/Google Drive en web | `auth_callback.html`, `trakt_oauth_callback.html`, `steam_oauth_bridge.html`, `web_oauth_bootstrap.dart` |
 | W5 | OAuth Trakt web (redirect mismo origen) | `trakt_providers.dart` |
 | W6 | Proxy IGDB Edge Function | `supabase/functions/igdb-proxy/` |
 | W7 | Deploy `sqlite3.wasm` | `web/` |
@@ -877,10 +888,10 @@ Monitorear: tamaño `activities` (retención 90 días → job de limpieza).
 
 1. ✅ Crear rama `cronicle-2` en GitHub.
 2. ✅ Documentar plan (este archivo).
-3. ⬜ Crear proyecto Supabase staging.
-4. ⬜ Aplicar `001_cronicle2_core.sql`.
-5. ⬜ PR `cronicle-2`: Fase 0.3–0.5 (`supabase_flutter` + init).
-6. ⬜ Reunión/producto: validar MVP = Fases 0–2 antes de listas.
+3. ✅ Crear proyecto Supabase staging (`pidlodpgabmgguzzwksn`).
+4. ✅ Aplicar `001_cronicle2_core.sql` + `002_fix_shared_lists_rls.sql`.
+5. ✅ Fase 0.3–0.5: `supabase_flutter`, `EnvConfig`, init en `main.dart`, login Google + email/contraseña + username (`/cronicle-login`, `/cronicle-username`). Sesión persistente en `localStorage` (web).
+6. ⬜ Fase 2: follow + feed Cronicle + `ActivityEmitter`.
 
 ---
 

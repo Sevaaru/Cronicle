@@ -8,6 +8,7 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
+import 'package:cronicle/core/config/web_dev_config.dart';
 
 /// Manages Steam OpenID 2.0 "Sign in through Steam" flow + persistence.
 ///
@@ -66,7 +67,15 @@ class SteamAuthDatasource {
   /// bridge to `cronicle://steam-oauth?...`.
   Future<String> connectViaBridge() async {
     if (kIsWeb) {
-      throw UnsupportedError('web');
+      final bridge = '${WebDevConfig.effectiveOrigin}/steam_oauth_bridge.html';
+      final launched = await launchUrl(
+        Uri.parse(bridge),
+        webOnlyWindowName: '_self',
+      );
+      if (!launched) {
+        throw StateError('launch_failed');
+      }
+      throw StateError('web_redirect');
     }
     final bridge = EnvConfig.steamRedirectUri.trim();
     if (bridge.isEmpty) {
