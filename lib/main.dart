@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,15 +12,11 @@ import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
 import 'package:cronicle/core/notifications/notification_work_scheduler.dart';
-import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/core/storage/fresh_install_guard.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
-import 'package:cronicle/core/utils/pending_token.dart';
-import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/core/auth/web_oauth_bootstrap.dart';
 import 'package:cronicle/core/supabase/supabase_bootstrap.dart';
 import 'package:cronicle/cronicle_app.dart';
-import 'package:cronicle/wear_sync_entry.dart';
 
 String? _trimOrNull(String value) {
   final t = value.trim();
@@ -58,9 +52,11 @@ Future<void> main() async {
         configureGoogleSignInForWeb(clientId);
       }
       if (kDebugMode) {
+        final anilistId = EnvConfig.anilistClientId.trim();
         debugPrint(
           '[Cronicle] Web origin: ${currentWebOrigin ?? Uri.base.origin}; '
-          'Google client: ${clientId ?? '(not set)'}',
+          'Google client: ${clientId ?? '(not set)'}; '
+          'AniList client: ${anilistId.isEmpty ? '(not set — use run_web.ps1)' : anilistId}',
         );
       }
       await GoogleSignIn.instance.initialize(
@@ -98,8 +94,6 @@ Future<void> main() async {
     }
   }
 
-  await _handleAnilistOAuthCallback();
-
   final prefs = await SharedPreferences.getInstance();
   await _migrateUnifiedFeedPreferences(prefs);
 
@@ -126,45 +120,4 @@ Future<void> main() async {
       child: const CronicleApp(),
     ),
   );
-}
-
-Future<void> _handleAnilistOAuthCallback() async {
-  final auth = AnilistAuthDatasource(const FlutterSecureStorage(), Dio());
-
-  final pendingCode = await getPendingAnilistCode();
-  String? token = await getPendingAnilistToken();
-
-  if (pendingCode != null && pendingCode.isNotEmpty) {
-    try {
-      token = await auth.exchangeAuthorizationCode(pendingCode);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[Cronicle] AniList code exchange failed: $e');
-      }
-    }
-    await clearPendingAnilistCode();
-  }
-
-  if (token == null || token.isEmpty) return;
-
-  await auth.saveToken(token);
-  try {
-    final gql = AnilistGraphqlDatasource(Dio());
-    final viewer = await gql.fetchViewer(token);
-    final name = viewer?['name'] as String?;
-    if (name != null && name.isNotEmpty) {
-      await auth.saveUserName(name);
-    }
-    final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
-    final fmt = opts?['scoreFormat'] as String?;
-    if (fmt != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('scoring_system', fmt);
-    }
-  } catch (_) {}
-  await clearPendingAnilistToken();
-
-  if (kDebugMode) {
-    debugPrint('[Cronicle] Anilist token saved automatically');
-  }
 }

@@ -20,36 +20,28 @@ if (Test-Path $LocalDefines) {
   throw "No se encontro ningun JSON de defines."
 }
 
+try {
+  $definesJson = Get-Content -Raw -Path $DefinesFile | ConvertFrom-Json
+  $anilistId = $definesJson.ANILIST_CLIENT_ID
+  Write-Host "Defines: $DefinesFile"
+  Write-Host "AniList CLIENT_ID en archivo: $(if ($anilistId) { $anilistId } else { '(vacio)' })"
+  Write-Host "Detén Flutter por completo antes de relanzar; hot reload no recarga dart-defines." -ForegroundColor Yellow
+} catch {
+  Write-Warning "No se pudo leer ANILIST_CLIENT_ID de $DefinesFile"
+}
+
 $ProxyPort = 8787
 $ProxyUrl = "http://127.0.0.1:$ProxyPort"
 
-function Test-TcpPortOpen([int] $Port) {
-  try {
-    $client = New-Object System.Net.Sockets.TcpClient
-    $client.Connect("127.0.0.1", $Port)
-    $client.Close()
-    return $true
-  } catch {
-    return $false
-  }
+$restartProxy = Join-Path $Root "scripts/restart_dev_proxy.ps1"
+if (-not (Test-Path $restartProxy)) {
+  throw "No se encontro $restartProxy"
 }
 
-if (-not (Test-TcpPortOpen $ProxyPort)) {
-  $proxyScript = Join-Path $Root "scripts/dev_api_proxy.mjs"
-  if (-not (Test-Path $proxyScript)) {
-    throw "No se encontro $proxyScript"
-  }
-  Write-Host "Iniciando proxy CORS IGDB/Twitch en $ProxyUrl ..."
-  Start-Process -FilePath "node" -ArgumentList @($proxyScript) -WindowStyle Hidden | Out-Null
-  for ($i = 0; $i -lt 20; $i++) {
-    Start-Sleep -Milliseconds 250
-    if (Test-TcpPortOpen $ProxyPort) { break }
-  }
-  if (-not (Test-TcpPortOpen $ProxyPort)) {
-    Write-Warning "El proxy no respondio en $ProxyUrl. Ejecuta: node scripts/dev_api_proxy.mjs"
-  }
-} else {
-  Write-Host "Proxy CORS ya activo en $ProxyUrl"
+# Reinicia el proxy si está obsoleto (sin /anilist-oauth) y sigue con Flutter.
+& $restartProxy
+if ($LASTEXITCODE -ne 0) {
+  throw "No se pudo iniciar dev_api_proxy"
 }
 
 flutter run -d chrome --web-port=60889 --web-hostname=localhost `

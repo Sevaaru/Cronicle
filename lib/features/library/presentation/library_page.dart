@@ -1777,9 +1777,7 @@ class _ViewModeToggle extends StatelessWidget {
 }
 
 // ===========================================================================
-// Pinterest-style masonry grid. Uses 2 columns and assigns each entry to the
-// shorter column, with deterministic varied poster aspect ratios derived from
-// the entry id so it reads as dynamic but stable between rebuilds.
+// Pinterest-style masonry grid. Column count scales with viewport width on web.
 // ===========================================================================
 class _LibraryMasonryGrid extends StatelessWidget {
   const _LibraryMasonryGrid({
@@ -1798,8 +1796,14 @@ class _LibraryMasonryGrid extends StatelessWidget {
   final ValueChanged<LibraryEntry> onEdit;
   final VoidCallback onProgressUpdated;
 
-  static const _columns = 2;
   static const _gap = 10.0;
+
+  static int _columnsForWidth(double width) {
+    if (width >= kWebContentMaxWidth) return 5;
+    if (width >= kWebSideNavBreakpoint) return 4;
+    if (width >= kWebTopNavBreakpoint) return 3;
+    return 2;
+  }
 
   /// Stable per-entry aspect ratio for the poster tile (height / width).
   /// Slight variation gives the masonry its "Pinterest" rhythm.
@@ -1815,17 +1819,18 @@ class _LibraryMasonryGrid extends StatelessWidget {
       builder: (context, constraints) {
         const horizontalPadding = 16.0;
         final available = constraints.maxWidth - horizontalPadding * 2;
-        final tileWidth = (available - _gap * (_columns - 1)) / _columns;
+        final columns = _columnsForWidth(constraints.maxWidth);
+        final tileWidth = (available - _gap * (columns - 1)) / columns;
 
-        // Distribute into the two shortest columns.
-        final columns = List.generate(_columns, (_) => <LibraryEntry>[]);
-        final heights = List.filled(_columns, 0.0);
+        // Distribute into the shortest columns.
+        final columnEntries = List.generate(columns, (_) => <LibraryEntry>[]);
+        final heights = List.filled(columns, 0.0);
         for (final e in entries) {
           var shortest = 0;
-          for (var i = 1; i < _columns; i++) {
+          for (var i = 1; i < columns; i++) {
             if (heights[i] < heights[shortest]) shortest = i;
           }
-          columns[shortest].add(e);
+          columnEntries[shortest].add(e);
           heights[shortest] += tileWidth * _ratioFor(e) + _gap;
         }
 
@@ -1844,12 +1849,12 @@ class _LibraryMasonryGrid extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var c = 0; c < _columns; c++) ...[
+                    for (var c = 0; c < columns; c++) ...[
                       if (c > 0) const SizedBox(width: _gap),
                       Expanded(
                         child: Column(
                           children: [
-                            for (final e in columns[c]) ...[
+                            for (final e in columnEntries[c]) ...[
                               _GridEntryTile(
                                 key: ValueKey(e.id),
                                 entry: e,

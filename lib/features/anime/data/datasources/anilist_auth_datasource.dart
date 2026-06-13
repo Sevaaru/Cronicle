@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,8 +22,18 @@ class AnilistAuthDatasource {
     return e.isNotEmpty ? e : defaultAnilistClientId;
   }
 
+  static bool get hasConfiguredClientId =>
+      EnvConfig.anilistClientId.trim().isNotEmpty;
+
   static bool get hasClientSecret =>
       EnvConfig.anilistClientSecret.trim().isNotEmpty;
+
+  /// Web OAuth ready when dart-defines include client id + secret (authorization code).
+  static bool get isWebOAuthConfigured =>
+      kIsWeb &&
+      registeredRedirectUri != null &&
+      hasConfiguredClientId &&
+      hasClientSecret;
 
   /// Redirect URI registered in AniList → Developer settings.
   static String? get registeredRedirectUri {
@@ -69,13 +81,14 @@ class AnilistAuthDatasource {
       throw StateError('no_client_secret');
     }
 
-    final res = await _dio.post<Map<String, dynamic>>(
-      'https://anilist.co/api/v2/oauth/token',
+    final res = await _dio.post<String>(
+      EnvConfig.anilistOAuthTokenUrl,
       options: Options(
         headers: const {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        responseType: ResponseType.plain,
         validateStatus: (_) => true,
       ),
       data: {
@@ -87,10 +100,19 @@ class AnilistAuthDatasource {
       },
     );
 
-    final data = res.data;
+    final data = _parseTokenResponseBody(res.data);
     if (res.statusCode != 200 || data == null) {
-      final msg = data?['message'] ?? data?['error'] ?? res.statusMessage;
-      throw Exception('AniList token: $msg');
+      final plain = res.data?.trim();
+      if (plain != null && plain.contains('dev_api_proxy:')) {
+        throw Exception(
+          'Proxy local desactualizado. Cierra node en el puerto 8787 y ejecuta .\\scripts\\run_web.ps1',
+        );
+      }
+      final msg = data?['message'] ??
+          data?['error'] ??
+          plain ??
+          res.statusMessage;
+      throw Exception('AniList token (${res.statusCode}): $msg');
     }
 
     final token = data['access_token'] as String?;
@@ -98,6 +120,18 @@ class AnilistAuthDatasource {
       throw Exception('AniList token: sin access_token');
     }
     return token;
+  }
+
+  Map<String, dynamic>? _parseTokenResponseBody(dynamic body) {
+    if (body is Map<String, dynamic>) return body;
+    if (body is Map) return Map<String, dynamic>.from(body);
+    if (body is String && body.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<String?> getToken() => _storage.read(key: _tokenKey);

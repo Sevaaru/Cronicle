@@ -22,6 +22,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/anilist-oauth/*"
+  to = "https://anilist.co/:splat"
+  status = 200
+  force = true
+
 # Flutter SPA (debe ir después de los proxies de API).
 [[redirects]]
   from = "/*"

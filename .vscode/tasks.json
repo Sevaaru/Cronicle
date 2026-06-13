@@ -4,8 +4,15 @@
     {
       "label": "cronicle:dev-api-proxy",
       "type": "shell",
-      "command": "node",
-      "args": ["scripts/dev_api_proxy.mjs"],
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/restart_dev_proxy.ps1",
+        "-Foreground"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },

@@ -18,11 +18,9 @@ abstract final class WebDevConfig {
     if (!kIsWeb) return '';
     final base = Uri.base;
     if (_isLocalhost) {
-      // Use the real browser origin (localhost vs 127.0.0.1, port, etc.).
-      if (base.hasScheme && base.host.isNotEmpty) {
-        return base.origin;
-      }
-      return localOrigin;
+      // AniList/Trakt dev consoles register http://localhost:PORT, not 127.0.0.1.
+      final port = base.hasPort && base.port != 0 ? base.port : localPort;
+      return 'http://localhost:$port';
     }
     return base.origin;
   }

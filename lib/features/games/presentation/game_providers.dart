@@ -8,12 +8,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:cronicle/core/cache/json_cache.dart';
+import 'package:cronicle/core/connected_accounts/connected_account_kind.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.dart';
 import 'package:cronicle/features/games/data/games_feed_section.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
 
 part 'game_providers.g.dart';
 
@@ -533,10 +535,12 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     state = AsyncData(
       TwitchIgdbAccountState(userConnected: true, login: login),
     );
+    schedulePushConnectedAccount(ConnectedAccountKind.twitch);
   }
 
   Future<void> disconnectUser() async {
     await ref.read(igdbAuthProvider).clearUserSession();
+    scheduleClearConnectedAccountRemote(ConnectedAccountKind.twitch);
     invalidateIgdbProviders(ref);
     state = const AsyncData(
       TwitchIgdbAccountState(userConnected: false, login: null),

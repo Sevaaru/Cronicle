@@ -6,10 +6,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cronicle/core/cache/json_cache.dart';
+import 'package:cronicle/core/connected_accounts/connected_account_kind.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/steam/data/datasources/steam_api_datasource.dart';
 import 'package:cronicle/features/steam/data/datasources/steam_auth_datasource.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
 
 const String _steamOwnedGamesCacheKey = 'steam_owned_games';
 
@@ -80,6 +82,7 @@ class SteamSessionNotifier extends AsyncNotifier<SteamSessionState> {
     }
     ref.invalidateSelf();
     ref.invalidate(steamOwnedGamesProvider);
+    schedulePushConnectedAccount(ConnectedAccountKind.steam);
     await future;
   }
 
@@ -102,6 +105,7 @@ class SteamSessionNotifier extends AsyncNotifier<SteamSessionState> {
 
   Future<void> disconnect() async {
     await ref.read(steamAuthProvider).clearSession();
+    scheduleClearConnectedAccountRemote(ConnectedAccountKind.steam);
     await ref.read(jsonCacheProvider).clear(_steamOwnedGamesCacheKey);
     ref.invalidate(steamOwnedGamesProvider);
     state = const AsyncData(SteamSessionState.disconnected);

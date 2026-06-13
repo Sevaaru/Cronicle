@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Proxy CORS solo para desarrollo: reenvía a IGDB v4, OAuth token de Twitch y Helix.
+ * Proxy CORS solo para desarrollo: reenvía a IGDB v4, OAuth token de Twitch, Helix y AniList OAuth.
  *
  * Uso:
  *   node scripts/dev_api_proxy.mjs
@@ -21,7 +21,14 @@ const routes = [
   { prefix: '/v4', target: 'https://api.igdb.com' },
   { prefix: '/oauth2/', target: 'https://id.twitch.tv' },
   { prefix: '/helix/', target: 'https://api.twitch.tv' },
+  { prefix: '/anilist-oauth', target: 'https://anilist.co', rewrite: true },
 ];
+
+function rewritePath(pathname, route) {
+  if (!route.rewrite) return pathname;
+  const rest = pathname.slice(route.prefix.length);
+  return rest.startsWith('/') ? rest : `/${rest}`;
+}
 
 function pickTarget(pathname) {
   for (const r of routes) {
@@ -30,9 +37,10 @@ function pickTarget(pathname) {
   return null;
 }
 
-function forward(req, res, targetOrigin) {
+function forward(req, res, route) {
   const incoming = new URL(req.url, 'http://127.0.0.1');
-  const dest = new URL(incoming.pathname + incoming.search, targetOrigin);
+  const pathname = rewritePath(incoming.pathname, route);
+  const dest = new URL(pathname + incoming.search, route.target);
   const isHttps = dest.protocol === 'https:';
   const lib = isHttps ? https : http;
   const defaultPort = isHttps ? 443 : 80;
@@ -77,15 +85,29 @@ const server = http.createServer((req, res) => {
     return;
   }
   const path = new URL(req.url, 'http://127.0.0.1').pathname;
+  if (req.method === 'GET' && path === '/__health') {
+    res.writeHead(200, {
+      'content-type': 'application/json',
+      'access-control-allow-origin': '*',
+    });
+    res.end(
+      JSON.stringify({
+        ok: true,
+        version: 2,
+        routes: routes.map((r) => r.prefix),
+      }),
+    );
+    return;
+  }
   const route = pickTarget(path);
   if (!route) {
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end(
-      'dev_api_proxy: rutas /v4/*, /oauth2/*, /helix/* — ver scripts/dev_api_proxy.mjs',
+      'dev_api_proxy: rutas /v4/*, /oauth2/*, /helix/*, /anilist-oauth/* — ver scripts/dev_api_proxy.mjs',
     );
     return;
   }
-  forward(req, res, route.target);
+  forward(req, res, route);
 });
 
 server.listen(PORT, '127.0.0.1', () => {

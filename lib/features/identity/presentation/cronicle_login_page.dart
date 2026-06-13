@@ -13,6 +13,7 @@ import 'package:cronicle/core/config/google_web_bootstrap.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/core/utils/google_web_button.dart';
 import 'package:cronicle/features/identity/data/cronicle_auth_service.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
 import 'package:cronicle/features/identity/presentation/cronicle_auth_providers.dart';
 import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
@@ -95,6 +96,8 @@ class _CronicleLoginPageState extends ConsumerState<CronicleLoginPage> {
   }
 
   Future<void> _afterSignIn() async {
+    await restoreConnectedAccounts(ref);
+    await ref.read(connectedAccountsRepositoryProvider)?.pushAllConnected();
     await ref.read(cronicleMyProfileProvider.notifier).refresh();
     final profile = ref.read(cronicleMyProfileProvider).valueOrNull;
     if (!mounted) return;

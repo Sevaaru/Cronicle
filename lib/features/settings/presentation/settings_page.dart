@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kDebugMode, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -30,6 +30,7 @@ import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/network/google_sign_in_provider.dart';
 import 'package:cronicle/core/wear/wear_connection_status_provider.dart';
 import 'package:cronicle/features/anime/presentation/anilist_connect_flow.dart';
+import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/library/presentation/anilist_sync_service.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
@@ -824,13 +825,28 @@ class _AnilistSection extends ConsumerWidget {
               );
             }
 
-            return SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.login, size: 18),
-                label: Text(l10n.anilistConnect),
-                onPressed: () => _AnilistSection._startAnilistLogin(context, ref),
-              ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.login, size: 18),
+                    label: Text(l10n.anilistConnect),
+                    onPressed: () =>
+                        _AnilistSection._startAnilistLogin(context, ref),
+                  ),
+                ),
+                if (kIsWeb && kDebugMode) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _anilistWebOAuthDebugLine(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ],
+              ],
             );
           },
         ),
@@ -841,6 +857,15 @@ class _AnilistSection extends ConsumerWidget {
 
   static void _startAnilistLogin(BuildContext context, WidgetRef ref) {
     showAnilistConnectFlow(context, ref);
+  }
+
+  static String _anilistWebOAuthDebugLine() {
+    final id = EnvConfig.anilistClientId.trim();
+    final secret = EnvConfig.anilistClientSecret.trim();
+    final redirect = AnilistAuthDatasource.redirectUriForDeveloperConsole;
+    return 'Web OAuth: ID ${id.isEmpty ? "(no cargado)" : id}, '
+        'secret ${secret.isEmpty ? "no" : "sí"}, '
+        'redirect ${redirect ?? "(sin origin)"}';
   }
 }
 

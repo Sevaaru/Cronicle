@@ -11,11 +11,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:cronicle/core/cache/json_cache.dart';
+import 'package:cronicle/core/connected_accounts/connected_account_kind.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/trakt/data/datasources/trakt_api_datasource.dart';
 import 'package:cronicle/features/trakt/data/datasources/trakt_auth_datasource.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
 
 part 'trakt_providers.g.dart';
 
@@ -108,6 +110,7 @@ class TraktSession extends _$TraktSession {
 
   Future<void> clear() async {
     await ref.read(traktAuthProvider).clearSession();
+    scheduleClearConnectedAccountRemote(ConnectedAccountKind.trakt);
     invalidateTraktHomeProviders(ref);
     state = AsyncData(
       TraktSessionState(
@@ -172,6 +175,7 @@ class TraktSession extends _$TraktSession {
     await prefs.remove(_oauthStatePrefsKey);
     await refreshFromNetwork();
     invalidateTraktHomeProviders(ref);
+    schedulePushConnectedAccount(ConnectedAccountKind.trakt);
   }
 }
 

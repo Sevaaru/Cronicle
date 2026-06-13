@@ -38,6 +38,11 @@ abstract final class EnvConfig {
       ? '$_proxyBase/helix/users'
       : 'https://api.twitch.tv/helix/users';
 
+  /// AniList token exchange (authorization code). Proxied on web to avoid CORS.
+  static String get anilistOAuthTokenUrl => hasApiProxy
+      ? '$_proxyBase/anilist-oauth/api/v2/oauth/token'
+      : 'https://anilist.co/api/v2/oauth/token';
+
   static const String anilistClientId = String.fromEnvironment(
     'ANILIST_CLIENT_ID',
     defaultValue: '',

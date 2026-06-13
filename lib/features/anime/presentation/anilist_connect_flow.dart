@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -14,23 +15,24 @@ Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
   final auth = ref.read(anilistAuthProvider);
 
   if (kIsWeb) {
-    final redirect = AnilistAuthDatasource.redirectUriForDeveloperConsole;
-    if (redirect == null) {
+    if (!AnilistAuthDatasource.isWebOAuthConfigured) {
       if (context.mounted) {
+        final id = EnvConfig.anilistClientId.trim();
+        final secret = EnvConfig.anilistClientSecret.trim();
+        final redirect = AnilistAuthDatasource.redirectUriForDeveloperConsole;
+        final String msg;
+        if (id.isEmpty || secret.isEmpty) {
+          msg =
+              'AniList: ANILIST_CLIENT_ID/SECRET no están en memoria. '
+              'Cierra Chrome, detén Flutter y ejecuta .\\scripts\\run_web.ps1 '
+              '(el hot reload no aplica dart_defines.local.json).';
+        } else if (redirect == null) {
+          msg = l10n.anilistBridgeNotConfigured;
+        } else {
+          msg = l10n.anilistBridgeNotConfigured;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.anilistBridgeNotConfigured)),
-        );
-      }
-      return;
-    }
-    if (!AnilistAuthDatasource.hasClientSecret) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Web: define ANILIST_CLIENT_ID y ANILIST_CLIENT_SECRET en dart_defines.local.json',
-            ),
-          ),
+          SnackBar(content: Text(msg), duration: const Duration(seconds: 10)),
         );
       }
       return;

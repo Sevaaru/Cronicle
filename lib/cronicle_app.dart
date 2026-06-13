@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' show max;
 
 import 'package:flutter/gestures.dart';
@@ -7,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/app/cronicle_quick_actions.dart';
 import 'package:cronicle/core/app/global_messenger.dart';
+import 'package:cronicle/core/auth/web_oauth_bootstrap.dart';
 import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_lifecycle_sync.dart';
 import 'package:cronicle/core/notifications/notification_permission_bootstrap.dart';
@@ -15,7 +17,12 @@ import 'package:cronicle/core/theme/app_theme.dart';
 import 'package:cronicle/core/wear/wear_event_listener.dart';
 import 'package:cronicle/features/achievements/presentation/achievement_overlay.dart';
 import 'package:cronicle/features/achievements/presentation/achievements_bootstrap.dart';
+import 'package:cronicle/features/anime/presentation/anime_providers.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
+import 'package:cronicle/features/identity/presentation/cronicle_auth_providers.dart';
 import 'package:cronicle/features/settings/presentation/locale_notifier.dart';
+import 'package:cronicle/features/steam/presentation/steam_providers.dart';
+import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/features/settings/presentation/theme_mode_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
@@ -63,7 +70,68 @@ class _CronicleAppState extends ConsumerState<CronicleApp> {
       // Conecta el router a los Quick Actions y consume cualquier
       // shortcut pendiente del cold start.
       CronicleQuickActions.bindRouter(router);
+      unawaited(_bootstrapConnectedAccounts());
+      if (kIsWeb) {
+        ref.invalidate(traktSessionProvider);
+        ref.invalidate(steamSessionProvider);
+        unawaited(_completePendingAnilistWebOAuth());
+      }
     });
+  }
+
+  Future<void> _bootstrapConnectedAccounts() async {
+    if (ref.read(cronicleAuthSessionProvider).valueOrNull == null) return;
+    await restoreConnectedAccounts(ref);
+    await ref.read(connectedAccountsRepositoryProvider)?.pushAllConnected();
+  }
+
+  Future<void> _completePendingAnilistWebOAuth() async {
+    try {
+      final auth = ref.read(anilistAuthProvider);
+      final token = await takePendingAnilistAccessToken(auth);
+      if (token == null || token.isEmpty || !mounted) return;
+
+      await ref.read(anilistTokenProvider.notifier).setToken(token);
+
+      final messenger = rootScaffoldMessengerKey.currentState;
+      if (messenger == null || !mounted) return;
+      final l10n = AppLocalizations.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n?.anilistConnectSuccess ?? 'AniList connected'),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Cronicle] AniList web OAuth bootstrap failed: $e');
+      }
+      final saved = await ref.read(anilistAuthProvider).getToken();
+      if (saved != null && saved.isNotEmpty) {
+        ref.invalidate(anilistTokenProvider);
+        final messenger = rootScaffoldMessengerKey.currentState;
+        if (messenger != null && mounted) {
+          final l10n = AppLocalizations.of(context);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(l10n?.anilistConnectSuccess ?? 'AniList connected'),
+            ),
+          );
+        }
+        return;
+      }
+      final messenger = rootScaffoldMessengerKey.currentState;
+      if (messenger == null || !mounted) return;
+      final text = e.toString().contains('dev_api_proxy') ||
+              e.toString().contains('Proxy local desactualizado')
+          ? 'AniList: reinicia el proxy con .\\scripts\\run_web.ps1 (puerto 8787)'
+          : 'AniList: no se pudo completar la conexión ($e)';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(text),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    }
   }
 
   @override

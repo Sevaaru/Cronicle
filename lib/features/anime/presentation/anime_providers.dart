@@ -9,12 +9,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/cache/json_cache.dart';
+import 'package:cronicle/core/connected_accounts/connected_account_kind.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
 import 'package:cronicle/features/anime/presentation/anilist_feed_cache.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/identity/presentation/connected_accounts_sync.dart';
 import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
@@ -138,28 +140,35 @@ class AnilistToken extends _$AnilistToken {
       }
     } catch (_) {}
     state = AsyncData(token);
-    _invalidateSessionScopedProviders();
-    unawaited(
-      ref
-          .read(favoriteAnilistMediaProvider.notifier)
-          .pushPendingFavoritesToAnilist(token),
-    );
-    unawaited(
-      ref
-          .read(favoriteAnilistCharactersProvider.notifier)
-          .pushPendingFavoritesToAnilist(token),
-    );
-    unawaited(
-      ref
-          .read(favoriteAnilistStaffProvider.notifier)
-          .pushPendingFavoritesToAnilist(token),
-    );
+    final savedToken = token;
+    Future.microtask(() {
+      _invalidateSessionScopedProviders();
+      unawaited(
+        ref
+            .read(favoriteAnilistMediaProvider.notifier)
+            .pushPendingFavoritesToAnilist(savedToken),
+      );
+      unawaited(
+        ref
+            .read(favoriteAnilistCharactersProvider.notifier)
+            .pushPendingFavoritesToAnilist(savedToken),
+      );
+      unawaited(
+        ref
+            .read(favoriteAnilistStaffProvider.notifier)
+            .pushPendingFavoritesToAnilist(savedToken),
+      );
+      schedulePushConnectedAccount(ConnectedAccountKind.anilist);
+    });
   }
 
   Future<void> clearToken() async {
     await ref.read(anilistAuthProvider).deleteToken();
     state = const AsyncData(null);
-    _invalidateSessionScopedProviders();
+    scheduleClearConnectedAccountRemote(ConnectedAccountKind.anilist);
+    Future.microtask(() {
+      _invalidateSessionScopedProviders();
+    });
   }
 
   void _invalidateSessionScopedProviders() {
