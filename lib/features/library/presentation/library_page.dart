@@ -1212,6 +1212,10 @@ class _EntryMetaLine extends StatelessWidget {
             ),
           ),
         ],
+        if (entry.repeatCount > 0) ...[
+          const SizedBox(width: 6),
+          _RepeatCountChip(count: entry.repeatCount),
+        ],
         if (airing != null) ...[
           const SizedBox(width: 6),
           Flexible(
@@ -1230,6 +1234,43 @@ class _EntryMetaLine extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _RepeatCountChip extends StatelessWidget {
+  const _RepeatCountChip({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l10n.addToListRepeatSummary(count),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: cs.secondaryContainer,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.replay_rounded, size: 11, color: cs.onSecondaryContainer),
+            const SizedBox(width: 2),
+            Text(
+              '×$count',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: cs.onSecondaryContainer,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1397,12 +1438,16 @@ class _IncrementButtonState extends State<_IncrementButton>
       final total = widget.entry.totalEpisodes;
       final completed =
           total != null && total > 0 && newProgress >= total;
+      final saved = completed
+          ? await widget.ref.read(databaseProvider).getLibraryEntryById(widget.entry.id)
+          : null;
       final graphql = widget.ref.read(anilistGraphqlProvider);
       await graphql.saveMediaListEntry(
         mediaId: mediaId,
         token: token,
         progress: newProgress,
         status: completed ? 'COMPLETED' : null,
+        repeat: saved?.repeatCount,
       );
     } catch (_) {}
   }

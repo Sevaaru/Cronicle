@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
+import 'package:cronicle/features/library/domain/repeat_count_rules.dart';
 
 part 'app_database.g.dart';
 
@@ -44,6 +45,9 @@ class LibraryEntries extends Table {
   /// Null for entries added from other sources (IGDB search, Trakt, etc.).
   IntColumn get steamAppId => integer().nullable()();
 
+  /// Veces repetido (rewatch / relectura / rejugado). AniList: `MediaList.repeat`.
+  IntColumn get repeatCount => integer().withDefault(const Constant(0))();
+
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
 
@@ -59,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +102,22 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'ALTER TABLE library_entries ADD COLUMN steam_app_id INTEGER',
             );
+          }
+          if (from < 8) {
+            // Dev builds shipped a v7 with repeat_count instead of steam_app_id.
+            final cols = await customSelect('PRAGMA table_info(library_entries)')
+                .map((r) => r.read<String>('name'))
+                .get();
+            if (!cols.contains('steam_app_id')) {
+              await customStatement(
+                'ALTER TABLE library_entries ADD COLUMN steam_app_id INTEGER',
+              );
+            }
+            if (!cols.contains('repeat_count')) {
+              await customStatement(
+                'ALTER TABLE library_entries ADD COLUMN repeat_count INTEGER NOT NULL DEFAULT 0',
+              );
+            }
           }
         },
       );
@@ -267,10 +287,19 @@ class AppDatabase extends _$AppDatabase {
       LibraryEntriesCompanion(
         progress: Value(next),
         status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+        repeatCount: reachedTotal ? _repeatAfterCompleting(entry) : const Value.absent(),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
   }
+
+  Value<int> _repeatAfterCompleting(LibraryEntry entry) => Value(
+        RepeatCountRules.afterStatusChange(
+          fromStatus: entry.status,
+          toStatus: 'COMPLETED',
+          count: entry.repeatCount,
+        ),
+      );
 
   Future<void> incrementBookProgress(int entryId) async {
     final entry = await getLibraryEntryById(entryId);
@@ -289,6 +318,7 @@ class AppDatabase extends _$AppDatabase {
         LibraryEntriesCompanion(
           currentChapter: Value(next),
           status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+          repeatCount: reachedTotal ? _repeatAfterCompleting(entry) : const Value.absent(),
           updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
         ),
       );
@@ -306,6 +336,7 @@ class AppDatabase extends _$AppDatabase {
       LibraryEntriesCompanion(
         progress: Value(next),
         status: reachedTotal ? const Value('COMPLETED') : const Value.absent(),
+        repeatCount: reachedTotal ? _repeatAfterCompleting(entry) : const Value.absent(),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );
@@ -349,6 +380,13 @@ class AppDatabase extends _$AppDatabase {
       LibraryEntriesCompanion(
         progress: Value(p),
         status: Value(status.toUpperCase()),
+        repeatCount: Value(
+          RepeatCountRules.afterStatusChange(
+            fromStatus: entry.status,
+            toStatus: status,
+            count: entry.repeatCount,
+          ),
+        ),
         updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
       ),
     );

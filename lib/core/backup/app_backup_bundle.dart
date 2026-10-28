@@ -74,6 +74,7 @@ abstract final class AppBackupBundle {
                 'animeMediaStatus': e.animeMediaStatus,
                 'releasedEpisodes': e.releasedEpisodes,
                 'nextEpisodeAirsAt': e.nextEpisodeAirsAt,
+                'repeatCount': e.repeatCount,
                 'notes': e.notes,
                 'updatedAt': e.updatedAt,
                 // Steam linkage — lets the entry open the Steam detail page
@@ -202,6 +203,9 @@ abstract final class AppBackupBundle {
             animeMediaStatus: Value(e['animeMediaStatus'] as String?),
             releasedEpisodes: Value(e['releasedEpisodes'] as int?),
             nextEpisodeAirsAt: Value(e['nextEpisodeAirsAt'] as int?),
+            repeatCount: e['repeatCount'] is int
+                ? Value(e['repeatCount'] as int)
+                : const Value.absent(),
             notes: Value(e['notes'] as String?),
             steamAppId: Value(e['steamAppId'] as int?),
             editionKey: Value(e['editionKey'] as String?),

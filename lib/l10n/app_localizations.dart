@@ -2210,6 +2210,60 @@ abstract class AppLocalizations {
   /// **'Vista (0–1)'**
   String get addToListMovieProgress;
 
+  /// No description provided for @addToListRepeatWatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Veces revisto'**
+  String get addToListRepeatWatch;
+
+  /// No description provided for @addToListRepeatRead.
+  ///
+  /// In es, this message translates to:
+  /// **'Veces releído'**
+  String get addToListRepeatRead;
+
+  /// No description provided for @addToListRepeatPlay.
+  ///
+  /// In es, this message translates to:
+  /// **'Veces rejugado'**
+  String get addToListRepeatPlay;
+
+  /// No description provided for @addToListRepeatHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Se suma solo al pasar de Repitiendo a Completado.'**
+  String get addToListRepeatHint;
+
+  /// No description provided for @entrySheetNewBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'NUEVO'**
+  String get entrySheetNewBadge;
+
+  /// No description provided for @entrySheetEditBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'EDITANDO'**
+  String get entrySheetEditBadge;
+
+  /// No description provided for @entrySheetInsert.
+  ///
+  /// In es, this message translates to:
+  /// **'Insertar en la biblioteca'**
+  String get entrySheetInsert;
+
+  /// No description provided for @entrySheetTapToType.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca para escribir el número'**
+  String get entrySheetTapToType;
+
+  /// No description provided for @addToListRepeatSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Aún sin repeticiones} =1{Repetido 1 vez} other{Repetido {count} veces}}'**
+  String addToListRepeatSummary(int count);
+
   /// No description provided for @completionDialogTitle.
   ///
   /// In es, this message translates to:

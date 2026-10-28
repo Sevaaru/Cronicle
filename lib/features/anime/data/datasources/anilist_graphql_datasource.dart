@@ -1662,6 +1662,7 @@ class AnilistGraphqlDatasource {
               score(format: POINT_100)
               progress
               progressVolumes
+              repeat
               notes
               updatedAt
               media {
@@ -2008,14 +2009,16 @@ class AnilistGraphqlDatasource {
     int? score,
     int? progress,
     String? notes,
+    int? repeat,
   }) async {
     const query = r'''
-      mutation ($mediaId: Int, $status: MediaListStatus, $scoreRaw: Int, $progress: Int, $notes: String) {
-        SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $scoreRaw, progress: $progress, notes: $notes) {
+      mutation ($mediaId: Int, $status: MediaListStatus, $scoreRaw: Int, $progress: Int, $notes: String, $repeat: Int) {
+        SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $scoreRaw, progress: $progress, notes: $notes, repeat: $repeat) {
           id
           status
           score(format: POINT_100)
           progress
+          repeat
           notes
         }
       }
@@ -2025,6 +2028,7 @@ class AnilistGraphqlDatasource {
     if (score != null) variables['scoreRaw'] = score;
     if (progress != null) variables['progress'] = progress;
     if (notes != null) variables['notes'] = notes;
+    if (repeat != null) variables['repeat'] = repeat;
 
     final data = await _post(query, variables: variables, token: token);
     return data['data']?['SaveMediaListEntry'] as Map<String, dynamic>?;

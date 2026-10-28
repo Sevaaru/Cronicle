@@ -488,6 +488,18 @@ class $LibraryEntriesTable extends LibraryEntries
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _repeatCountMeta = const VerificationMeta(
+    'repeatCount',
+  );
+  @override
+  late final GeneratedColumn<int> repeatCount = GeneratedColumn<int>(
+    'repeat_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -524,6 +536,7 @@ class $LibraryEntriesTable extends LibraryEntries
     releasedEpisodes,
     nextEpisodeAirsAt,
     steamAppId,
+    repeatCount,
     updatedAt,
   ];
   @override
@@ -706,6 +719,15 @@ class $LibraryEntriesTable extends LibraryEntries
         ),
       );
     }
+    if (data.containsKey('repeat_count')) {
+      context.handle(
+        _repeatCountMeta,
+        repeatCount.isAcceptableOrUnknown(
+          data['repeat_count']!,
+          _repeatCountMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -813,6 +835,10 @@ class $LibraryEntriesTable extends LibraryEntries
         DriftSqlType.int,
         data['${effectivePrefix}steam_app_id'],
       ),
+      repeatCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}repeat_count'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -852,6 +878,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
   /// Steam app ID — set when this entry was added from the Steam library view.
   /// Null for entries added from other sources (IGDB search, Trakt, etc.).
   final int? steamAppId;
+
+  /// Veces repetido (rewatch / relectura / rejugado). AniList: `MediaList.repeat`.
+  final int repeatCount;
   final int updatedAt;
   const LibraryEntry({
     required this.id,
@@ -876,6 +905,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     this.releasedEpisodes,
     this.nextEpisodeAirsAt,
     this.steamAppId,
+    required this.repeatCount,
     required this.updatedAt,
   });
   @override
@@ -939,6 +969,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     if (!nullToAbsent || steamAppId != null) {
       map['steam_app_id'] = Variable<int>(steamAppId);
     }
+    map['repeat_count'] = Variable<int>(repeatCount);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
   }
@@ -1000,6 +1031,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       steamAppId: steamAppId == null && nullToAbsent
           ? const Value.absent()
           : Value(steamAppId),
+      repeatCount: Value(repeatCount),
       updatedAt: Value(updatedAt),
     );
   }
@@ -1038,6 +1070,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       releasedEpisodes: serializer.fromJson<int?>(json['releasedEpisodes']),
       nextEpisodeAirsAt: serializer.fromJson<int?>(json['nextEpisodeAirsAt']),
       steamAppId: serializer.fromJson<int?>(json['steamAppId']),
+      repeatCount: serializer.fromJson<int>(json['repeatCount']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
   }
@@ -1069,6 +1102,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       'releasedEpisodes': serializer.toJson<int?>(releasedEpisodes),
       'nextEpisodeAirsAt': serializer.toJson<int?>(nextEpisodeAirsAt),
       'steamAppId': serializer.toJson<int?>(steamAppId),
+      'repeatCount': serializer.toJson<int>(repeatCount),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
   }
@@ -1096,6 +1130,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     Value<int?> releasedEpisodes = const Value.absent(),
     Value<int?> nextEpisodeAirsAt = const Value.absent(),
     Value<int?> steamAppId = const Value.absent(),
+    int? repeatCount,
     int? updatedAt,
   }) => LibraryEntry(
     id: id ?? this.id,
@@ -1140,6 +1175,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
         ? nextEpisodeAirsAt.value
         : this.nextEpisodeAirsAt,
     steamAppId: steamAppId.present ? steamAppId.value : this.steamAppId,
+    repeatCount: repeatCount ?? this.repeatCount,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   LibraryEntry copyWithCompanion(LibraryEntriesCompanion data) {
@@ -1192,6 +1228,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       steamAppId: data.steamAppId.present
           ? data.steamAppId.value
           : this.steamAppId,
+      repeatCount: data.repeatCount.present
+          ? data.repeatCount.value
+          : this.repeatCount,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -1221,6 +1260,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           ..write('releasedEpisodes: $releasedEpisodes, ')
           ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
           ..write('steamAppId: $steamAppId, ')
+          ..write('repeatCount: $repeatCount, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1250,6 +1290,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     releasedEpisodes,
     nextEpisodeAirsAt,
     steamAppId,
+    repeatCount,
     updatedAt,
   ]);
   @override
@@ -1278,6 +1319,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           other.releasedEpisodes == this.releasedEpisodes &&
           other.nextEpisodeAirsAt == this.nextEpisodeAirsAt &&
           other.steamAppId == this.steamAppId &&
+          other.repeatCount == this.repeatCount &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -1304,6 +1346,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
   final Value<int?> releasedEpisodes;
   final Value<int?> nextEpisodeAirsAt;
   final Value<int?> steamAppId;
+  final Value<int> repeatCount;
   final Value<int> updatedAt;
   const LibraryEntriesCompanion({
     this.id = const Value.absent(),
@@ -1328,6 +1371,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.releasedEpisodes = const Value.absent(),
     this.nextEpisodeAirsAt = const Value.absent(),
     this.steamAppId = const Value.absent(),
+    this.repeatCount = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   LibraryEntriesCompanion.insert({
@@ -1353,6 +1397,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.releasedEpisodes = const Value.absent(),
     this.nextEpisodeAirsAt = const Value.absent(),
     this.steamAppId = const Value.absent(),
+    this.repeatCount = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : kind = Value(kind),
        externalId = Value(externalId),
@@ -1380,6 +1425,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Expression<int>? releasedEpisodes,
     Expression<int>? nextEpisodeAirsAt,
     Expression<int>? steamAppId,
+    Expression<int>? repeatCount,
     Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -1408,6 +1454,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       if (releasedEpisodes != null) 'released_episodes': releasedEpisodes,
       if (nextEpisodeAirsAt != null) 'next_episode_airs_at': nextEpisodeAirsAt,
       if (steamAppId != null) 'steam_app_id': steamAppId,
+      if (repeatCount != null) 'repeat_count': repeatCount,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -1435,6 +1482,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Value<int?>? releasedEpisodes,
     Value<int?>? nextEpisodeAirsAt,
     Value<int?>? steamAppId,
+    Value<int>? repeatCount,
     Value<int>? updatedAt,
   }) {
     return LibraryEntriesCompanion(
@@ -1462,6 +1510,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       releasedEpisodes: releasedEpisodes ?? this.releasedEpisodes,
       nextEpisodeAirsAt: nextEpisodeAirsAt ?? this.nextEpisodeAirsAt,
       steamAppId: steamAppId ?? this.steamAppId,
+      repeatCount: repeatCount ?? this.repeatCount,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -1541,6 +1590,9 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     if (steamAppId.present) {
       map['steam_app_id'] = Variable<int>(steamAppId.value);
     }
+    if (repeatCount.present) {
+      map['repeat_count'] = Variable<int>(repeatCount.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
@@ -1572,6 +1624,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
           ..write('releasedEpisodes: $releasedEpisodes, ')
           ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
           ..write('steamAppId: $steamAppId, ')
+          ..write('repeatCount: $repeatCount, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1773,6 +1826,7 @@ typedef $$LibraryEntriesTableCreateCompanionBuilder =
       Value<int?> releasedEpisodes,
       Value<int?> nextEpisodeAirsAt,
       Value<int?> steamAppId,
+      Value<int> repeatCount,
       Value<int> updatedAt,
     });
 typedef $$LibraryEntriesTableUpdateCompanionBuilder =
@@ -1799,6 +1853,7 @@ typedef $$LibraryEntriesTableUpdateCompanionBuilder =
       Value<int?> releasedEpisodes,
       Value<int?> nextEpisodeAirsAt,
       Value<int?> steamAppId,
+      Value<int> repeatCount,
       Value<int> updatedAt,
     });
 
@@ -1918,6 +1973,11 @@ class $$LibraryEntriesTableFilterComposer
 
   ColumnFilters<int> get steamAppId => $composableBuilder(
     column: $table.steamAppId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get repeatCount => $composableBuilder(
+    column: $table.repeatCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2046,6 +2106,11 @@ class $$LibraryEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get repeatCount => $composableBuilder(
+    column: $table.repeatCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -2153,6 +2218,11 @@ class $$LibraryEntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get repeatCount => $composableBuilder(
+    column: $table.repeatCount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
@@ -2212,6 +2282,7 @@ class $$LibraryEntriesTableTableManager
                 Value<int?> releasedEpisodes = const Value.absent(),
                 Value<int?> nextEpisodeAirsAt = const Value.absent(),
                 Value<int?> steamAppId = const Value.absent(),
+                Value<int> repeatCount = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion(
                 id: id,
@@ -2236,6 +2307,7 @@ class $$LibraryEntriesTableTableManager
                 releasedEpisodes: releasedEpisodes,
                 nextEpisodeAirsAt: nextEpisodeAirsAt,
                 steamAppId: steamAppId,
+                repeatCount: repeatCount,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -2262,6 +2334,7 @@ class $$LibraryEntriesTableTableManager
                 Value<int?> releasedEpisodes = const Value.absent(),
                 Value<int?> nextEpisodeAirsAt = const Value.absent(),
                 Value<int?> steamAppId = const Value.absent(),
+                Value<int> repeatCount = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion.insert(
                 id: id,
@@ -2286,6 +2359,7 @@ class $$LibraryEntriesTableTableManager
                 releasedEpisodes: releasedEpisodes,
                 nextEpisodeAirsAt: nextEpisodeAirsAt,
                 steamAppId: steamAppId,
+                repeatCount: repeatCount,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

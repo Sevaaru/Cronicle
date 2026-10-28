@@ -1140,6 +1140,43 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addToListMovieProgress => 'Vista (0–1)';
 
   @override
+  String get addToListRepeatWatch => 'Veces revisto';
+
+  @override
+  String get addToListRepeatRead => 'Veces releído';
+
+  @override
+  String get addToListRepeatPlay => 'Veces rejugado';
+
+  @override
+  String get addToListRepeatHint =>
+      'Se suma solo al pasar de Repitiendo a Completado.';
+
+  @override
+  String get entrySheetNewBadge => 'NUEVO';
+
+  @override
+  String get entrySheetEditBadge => 'EDITANDO';
+
+  @override
+  String get entrySheetInsert => 'Insertar en la biblioteca';
+
+  @override
+  String get entrySheetTapToType => 'Toca para escribir el número';
+
+  @override
+  String addToListRepeatSummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Repetido $count veces',
+      one: 'Repetido 1 vez',
+      zero: 'Aún sin repeticiones',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get completionDialogTitle => '¡Lo has terminado!';
 
   @override

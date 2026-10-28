@@ -116,6 +116,7 @@ Future<void> _pushAnilist(
     token: token,
     progress: progress,
     status: completed ? 'COMPLETED' : null,
+    repeat: completed ? entry.repeatCount : null,
   );
 }
 

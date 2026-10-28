@@ -13,11 +13,13 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
+import 'package:cronicle/features/library/domain/repeat_count_rules.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
 import 'package:cronicle/features/trakt/data/trakt_library_remote_sync.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/library_entry_sheet_parts.dart';
 import 'package:drift/drift.dart' as drift;
 
 const _animeStatusData = [
@@ -57,20 +59,20 @@ const _bookStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
-SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
+SliderThemeData _m3ScoreSliderTheme(BuildContext context, Color color) {
   final cs = Theme.of(context).colorScheme;
   final base = SliderTheme.of(context);
   return base.copyWith(
     trackHeight: 6,
-    activeTrackColor: cs.primary,
+    activeTrackColor: color,
     inactiveTrackColor: cs.surfaceContainerHighest,
-    thumbColor: cs.primary,
+    thumbColor: color,
     overlayColor: WidgetStateColor.resolveWith((states) {
       if (states.contains(WidgetState.dragged) ||
           states.contains(WidgetState.pressed)) {
-        return cs.primary.withAlpha(51);
+        return color.withAlpha(51);
       }
-      return cs.primary.withAlpha(31);
+      return color.withAlpha(31);
     }),
     thumbShape: const RoundSliderThumbShape(
       enabledThumbRadius: 13,
@@ -109,6 +111,12 @@ String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
     _ => key,
   };
 }
+
+String _repeatLabel(AppLocalizations l10n, MediaKind kind) => switch (kind) {
+      MediaKind.manga || MediaKind.book => l10n.addToListRepeatRead,
+      MediaKind.game => l10n.addToListRepeatPlay,
+      _ => l10n.addToListRepeatWatch,
+    };
 
 Future<bool> showAddToLibrarySheet({
   required BuildContext context,
@@ -204,6 +212,7 @@ Future<bool> showAddToLibrarySheet({
       status: drift.Value(result.status),
       score: drift.Value(result.score),
       progress: drift.Value(result.progress),
+      repeatCount: drift.Value(result.repeatCount),
       totalEpisodes: drift.Value(
         kind == MediaKind.game
             ? null
@@ -317,6 +326,7 @@ void _syncEntryToAnilist(WidgetRef ref, int mediaId, _AddResult result) async {
       score: result.score,
       progress: result.progress,
       notes: result.notes,
+      repeat: result.repeatCount,
     );
   } catch (_) {}
 }
@@ -326,6 +336,7 @@ class _AddResult {
     required this.status,
     this.score,
     this.progress,
+    this.repeatCount = 0,
     this.notes,
     this.deleted = false,
     this.editionKey,
@@ -340,6 +351,7 @@ class _AddResult {
   final String status;
   final int? score;
   final int? progress;
+  final int repeatCount;
   final String? notes;
   final bool deleted;
   final String? editionKey;
@@ -410,6 +422,8 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   String? _selectedIsbn;
   int? _totalPagesFromApi;
   int? _totalChaptersFromApi;
+  late int _repeatCount;
+  bool _repeatAutoBumped = false;
 
   bool get _isAnilist =>
       widget.kind == MediaKind.anime || widget.kind == MediaKind.manga;
@@ -438,6 +452,21 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     _selectedIsbn = e?.isbn;
     _totalPagesFromApi = e?.totalPagesFromApi ?? (widget.item['pages'] as num?)?.toInt();
     _totalChaptersFromApi = e?.totalChaptersFromApi;
+    _repeatCount = e?.repeatCount ?? 0;
+  }
+
+  void _selectStatus(String next) {
+    final r = RepeatCountRules.onEditorStatusChange(
+      fromStatus: _status,
+      toStatus: next,
+      count: _repeatCount,
+      autoBumped: _repeatAutoBumped,
+    );
+    setState(() {
+      _status = next;
+      _repeatCount = r.count;
+      _repeatAutoBumped = r.autoBumped;
+    });
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
@@ -622,6 +651,7 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     return '$base • $pagesLabel';
   }
 
+
   @override
   void dispose() {
     _progressCtrl.dispose();
@@ -632,14 +662,221 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     super.dispose();
   }
 
+  void _save() {
+    var progress = int.tryParse(_progressCtrl.text);
+    if (widget.kind == MediaKind.anime && progress != null) {
+      final max = AnimeAiringProgress.maxProgressForStoredAnime(
+            totalEpisodes: widget.existingEntry?.totalEpisodes ??
+                (widget.item['episodes'] as num?)?.toInt(),
+            releasedEpisodes: widget.existingEntry?.releasedEpisodes ??
+                AnimeAiringProgress.releasedEpisodesFromAnilistMedia(widget.item),
+          ) ??
+          AnimeAiringProgress.maxProgressForAnimeItem(widget.item);
+      if (max != null && progress > max) progress = max;
+    }
+    final notes = _notesCtrl.text.trim();
+    final chapter = int.tryParse(_chapterCtrl.text) ?? 0;
+    Navigator.of(context).pop(_AddResult(
+      status: _status,
+      score: _score > 0
+          ? ref.read(scoringSystemSettingProvider).toStoredScore(_score)
+          : null,
+      progress: progress != null && progress > 0 ? progress : null,
+      repeatCount: _repeatCount,
+      notes: notes.isNotEmpty ? notes : null,
+      editionKey: _isBook ? _selectedEditionKey : null,
+      isbn: _isBook ? _selectedIsbn : null,
+      totalPagesFromApi: _isBook ? _totalPagesFromApi : null,
+      totalChaptersFromApi: _isBook ? _totalChaptersFromApi : null,
+      userTotalPagesOverride:
+          _isBook ? int.tryParse(_totalPagesOverrideCtrl.text) : null,
+      userTotalChaptersOverride:
+          _isBook ? int.tryParse(_totalChaptersOverrideCtrl.text) : null,
+      currentChapter: _isBook && chapter > 0 ? chapter : null,
+      bookTrackingMode: _isBook ? _bookTrackingMode.name : null,
+    ));
+  }
+
+  Future<void> _confirmRemove(String name) async {
+    final l10n = AppLocalizations.of(context)!;
+    final material = MaterialLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.delete_outline_rounded, color: cs.error),
+        title: Text(l10n.removeFromLibrary),
+        content: name.isEmpty ? null : Text(name, textAlign: TextAlign.center),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(material.cancelButtonLabel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.removeFromLibrary),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) Navigator.of(context).pop(_AddResult.remove);
+  }
+
+  Widget _editionPicker(
+    AppLocalizations l10n,
+    ColorScheme cs,
+    AsyncValue<List<Map<String, dynamic>>> editionsAsync,
+  ) {
+    return editionsAsync.when(
+      loading: () => const LinearProgressIndicator(minHeight: 2),
+      error: (_, _) => Text(
+        l10n.bookEditionUnknownPages,
+        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+      ),
+      data: (editions) {
+        if (editions.isEmpty) {
+          return Text(
+            l10n.bookEditionNoPageHint,
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+          );
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _syncEditionSelection(editions);
+        });
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: editions.any(
+                      (e) => (e['editionKey'] as String?) == _selectedEditionKey)
+                  ? _selectedEditionKey
+                  : null,
+              isExpanded: true,
+              decoration: const InputDecoration(isDense: true),
+              hint: Text(l10n.bookEditionLabel),
+              items: editions.map((e) {
+                final key = e['editionKey'] as String? ?? '';
+                return DropdownMenuItem<String>(
+                  value: key,
+                  child: Text(
+                    _editionLabel(e, l10n),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                final selected = editions.firstWhere(
+                  (e) => (e['editionKey'] as String?) == value,
+                );
+                _syncEditionSelection([selected]);
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.bookEditionNoPageHint,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _advancedScores(AppLocalizations l10n, ColorScheme cs, Color gold) {
+    final scoring = ref.watch(scoringSystemSettingProvider);
+    return Column(
+      children: kAnilistAdvancedScoringCategories.map((cat) {
+        final val = _advScores[cat] ?? 0;
+        final label = switch (cat) {
+          'Story' => l10n.advScoringStory,
+          'Characters' => l10n.advScoringCharacters,
+          'Visuals' => l10n.advScoringVisuals,
+          'Audio' => l10n.advScoringAudio,
+          'Enjoyment' => l10n.advScoringEnjoyment,
+          _ => cat,
+        };
+        return Row(
+          children: [
+            SizedBox(
+              width: 85,
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: _m3ScoreSliderTheme(context, gold).copyWith(
+                  trackHeight: 3,
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 9,
+                    elevation: 1,
+                    pressedElevation: 2,
+                  ),
+                ),
+                child: Slider(
+                  value: val,
+                  min: 0,
+                  max: scoring.max,
+                  divisions: scoring.divisions,
+                  onChanged: (v) {
+                    HapticFeedback.selectionClick();
+                    setState(() => _advScores[cat] = v);
+                  },
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 38,
+              child: Text(
+                scoring.formatScore(val),
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: val > 0 ? gold : cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  InputDecoration _fieldDecoration(ColorScheme cs, {String? label, String? hint}) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide.none,
+    );
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      isDense: true,
+      filled: true,
+      fillColor: cs.surfaceContainerHighest,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final workKey = widget.item['workKey'] as String?;
     final editionsAsync = _isBook && workKey != null && workKey.isNotEmpty
-      ? ref.watch(bookWorkEditionsProvider(workKey))
-      : const AsyncData<List<Map<String, dynamic>>>([]);
+        ? ref.watch(bookWorkEditionsProvider(workKey))
+        : const AsyncData<List<Map<String, dynamic>>>([]);
     final title = widget.item['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
@@ -658,14 +895,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
       MediaKind.game => l10n.mediaKindGame,
       MediaKind.book => l10n.mediaKindBook,
     };
-    final kindAccent = switch (widget.kind) {
-      MediaKind.anime => cs.primary,
-      MediaKind.manga => cs.secondary,
-      MediaKind.movie => cs.tertiary,
-      MediaKind.tv => cs.tertiary,
-      MediaKind.game => cs.primary,
-      MediaKind.book => cs.secondary,
-    };
     final kindIcon = switch (widget.kind) {
       MediaKind.anime => Icons.animation_rounded,
       MediaKind.manga => Icons.menu_book_rounded,
@@ -683,921 +912,296 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 : _isMovie
                     ? l10n.addToListMovieProgress
                     : l10n.addToListEpisodes;
-
+    final accent = entryKindAccent(widget.kind);
+    final gold = Colors.amber.shade500;
+    final scoring = ref.watch(scoringSystemSettingProvider);
     final isEdit = widget.existingEntry != null;
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final total = _totalCount;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.78,
-        minChildSize: 0.32,
+        initialChildSize: 0.85,
+        minChildSize: 0.4,
         maxChildSize: 0.96,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + bottomPad),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, scrollController) => Column(
+          children: [
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 children: [
-              _SheetHeroHeader(
-                posterUrl: posterUrl,
-                title: name,
-                kindLabel: kindLabel,
-                kindIcon: kindIcon,
-                kindAccent: kindAccent,
-                isEdit: isEdit,
-                titleLabel: isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
-              ),
-              if (_isBook && workKey != null && workKey.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(l10n.bookEditionLabel, style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                )),
-                const SizedBox(height: 6),
-                editionsAsync.when(
-                  loading: () => const LinearProgressIndicator(minHeight: 2),
-                  error: (_, _) => Text(
-                    l10n.bookEditionUnknownPages,
-                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  CartridgeHeader(
+                    title: name.isNotEmpty
+                        ? name
+                        : (isEdit ? l10n.editLibraryEntry : l10n.addToListTitle),
+                    kindLabel: kindLabel,
+                    kindIcon: kindIcon,
+                    accent: accent,
+                    badge: isEdit
+                        ? l10n.entrySheetEditBadge
+                        : l10n.entrySheetNewBadge,
+                    posterUrl: posterUrl,
                   ),
-                  data: (editions) {
-                    if (editions.isEmpty) {
-                      return Text(
-                        l10n.bookEditionNoPageHint,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                      );
-                    }
-
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) _syncEditionSelection(editions);
-                    });
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 18),
+                  if (_isBook && workKey != null && workKey.isNotEmpty)
+                    CartridgeSection(
+                      icon: Icons.library_books_rounded,
+                      title: l10n.bookEditionLabel,
+                      child: _editionPicker(l10n, cs, editionsAsync),
+                    ),
+                  CartridgeSection(
+                    icon: Icons.bolt_rounded,
+                    title: l10n.addToListStatus,
+                    child: CartridgeStatusGrid(
+                      options: [
+                        for (final s in _statusData)
+                          (
+                            key: s.$1,
+                            icon: s.$2,
+                            label: _statusLabel(l10n, s.$1, widget.kind),
+                          ),
+                      ],
+                      selected: _status,
+                      accent: accent,
+                      onSelect: _selectStatus,
+                    ),
+                  ),
+                  if (_isBook)
+                    CartridgeSection(
+                      icon: Icons.tune_rounded,
+                      title: l10n.bookTrackingModeLabel,
+                      child: CartridgeStatusGrid(
+                        options: [
+                          (
+                            key: BookTrackingMode.pages.name,
+                            icon: Icons.menu_book_rounded,
+                            label: l10n.bookTrackingModePages,
+                          ),
+                          (
+                            key: BookTrackingMode.percentage.name,
+                            icon: Icons.percent_rounded,
+                            label: l10n.bookTrackingModePercent,
+                          ),
+                          (
+                            key: BookTrackingMode.chapters.name,
+                            icon: Icons.format_list_numbered_rounded,
+                            label: l10n.bookTrackingModeChapters,
+                          ),
+                        ],
+                        selected: _bookTrackingMode.name,
+                        accent: accent,
+                        onSelect: (k) => setState(
+                          () => _bookTrackingMode = BookTrackingMode.values.byName(k),
+                        ),
+                      ),
+                    ),
+                  CartridgeSection(
+                    icon: _isGame ? Icons.timer_rounded : Icons.speed_rounded,
+                    title: countLabel,
+                    child: CartridgeCounter(
+                      controller: _progressCtrl,
+                      accent: accent,
+                      title: countLabel,
+                      tapHint: l10n.entrySheetTapToType,
+                      max: total,
+                      maxLabel: l10n.addToListMax,
+                      onMax: total == null
+                          ? null
+                          : () {
+                              _progressCtrl.text = '$total';
+                              _selectStatus('COMPLETED');
+                            },
+                      footer: _isBook &&
+                              _bookTrackingMode == BookTrackingMode.pages &&
+                              total != null
+                          ? (current) => total - current > 0
+                              ? Text(
+                                  l10n.libraryPagesRemaining(total - current),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: accent,
+                                  ),
+                                )
+                              : const SizedBox()
+                          : null,
+                    ),
+                  ),
+                  if (_isBook && _bookTrackingMode == BookTrackingMode.chapters)
+                    CartridgeSection(
+                      icon: Icons.format_list_numbered_rounded,
+                      title: l10n.bookChapterProgress,
+                      child: CartridgeCounter(
+                        controller: _chapterCtrl,
+                        accent: accent,
+                        title: l10n.bookChapterProgress,
+                        tapHint: l10n.entrySheetTapToType,
+                        max: int.tryParse(_totalChaptersOverrideCtrl.text),
+                      ),
+                    ),
+                  CartridgeSection(
+                    icon: Icons.replay_rounded,
+                    title: _repeatLabel(l10n, widget.kind),
+                    child: CartridgeRepeatStamps(
+                      count: _repeatCount,
+                      accent: accent,
+                      summary: l10n.addToListRepeatSummary(_repeatCount),
+                      hint: l10n.addToListRepeatHint,
+                      onChanged: (v) => setState(() {
+                        _repeatCount = v;
+                        _repeatAutoBumped = false;
+                      }),
+                    ),
+                  ),
+                  CartridgeSection(
+                    icon: Icons.star_rounded,
+                    title: l10n.addToListScore,
+                    child: Column(
                       children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: editions.any((e) =>
-                            (e['editionKey'] as String?) == _selectedEditionKey)
-                              ? _selectedEditionKey
-                              : null,
-                          isExpanded: true,
-                          decoration: const InputDecoration(isDense: true),
-                          hint: Text(l10n.bookEditionLabel),
-                          items: editions.map((e) {
-                            final key = e['editionKey'] as String? ?? '';
-                            return DropdownMenuItem<String>(
-                              value: key,
+                        CartridgeScoreStars(
+                          value: _score,
+                          scoring: scoring,
+                          emptyLabel: l10n.addToListNoScore,
+                          onChanged: (v) => setState(() => _score = v),
+                          onTapNumber: () => _editScoreViaKeyboard(context),
+                        ),
+                        SliderTheme(
+                          data: _m3ScoreSliderTheme(context, gold),
+                          child: Slider(
+                            value: _score,
+                            min: 0,
+                            max: scoring.max,
+                            divisions: scoring.divisions,
+                            label: _score == 0
+                                ? l10n.addToListNoScore
+                                : scoring.formatScore(_score),
+                            onChanged: _onScoreChanged,
+                          ),
+                        ),
+                        if (_isAnilist &&
+                            ref.watch(anilistAdvancedScoringEnabledProvider))
+                          _advancedScores(l10n, cs, gold),
+                      ],
+                    ),
+                  ),
+                  if (_isBook)
+                    CartridgeSection(
+                      icon: Icons.edit_note_rounded,
+                      title: l10n.bookOverrideTotalsLabel,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.bookOverrideTotalsHint,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _totalPagesOverrideCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: _fieldDecoration(
+                                    cs,
+                                    label: l10n.bookTotalPagesOverride,
+                                    hint: _totalPagesFromApi?.toString() ?? '',
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _totalChaptersOverrideCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: _fieldDecoration(
+                                    cs,
+                                    label: l10n.bookTotalChaptersOverride,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  CartridgeSection(
+                    icon: Icons.sticky_note_2_rounded,
+                    title: l10n.addToListNotes,
+                    child: TextField(
+                      controller: _notesCtrl,
+                      minLines: 2,
+                      maxLines: 5,
+                      decoration: _fieldDecoration(cs, hint: l10n.addToListNotesHint),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: cs.outlineVariant.withAlpha(90)),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 8 + bottomPad),
+                child: Row(
+                  children: [
+                    if (isEdit) ...[
+                      ChunkyButton(
+                        color: cs.errorContainer,
+                        foreground: cs.onErrorContainer,
+                        padding: const EdgeInsets.all(14),
+                        tooltip: l10n.removeFromLibrary,
+                        onTap: () => _confirmRemove(name),
+                        child: const Icon(Icons.delete_outline_rounded),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: ChunkyButton(
+                        color: accent,
+                        depth: 5,
+                        radius: 16,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        onTap: _save,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(isEdit
+                                ? Icons.save_rounded
+                                : Icons.sim_card_download_rounded),
+                            const SizedBox(width: 8),
+                            Flexible(
                               child: Text(
-                                _editionLabel(e, l10n),
+                                isEdit ? l10n.addToListSave : l10n.entrySheetInsert,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            final selected = editions.firstWhere(
-                              (e) => (e['editionKey'] as String?) == value,
-                            );
-                            _syncEditionSelection([selected]);
-                          },
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.bookEditionNoPageHint,
-                          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-              const SizedBox(height: 20),
-
-              _SectionLabel(text: l10n.addToListStatus),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _statusData.map((s) {
-                  final selected = _status == s.$1;
-                  return _StatusChip(
-                    icon: s.$2,
-                    label: _statusLabel(l10n, s.$1, widget.kind),
-                    selected: selected,
-                    accent: kindAccent,
-                    onTap: () => setState(() => _status = s.$1),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-
-              Container(
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star_rounded,
-                              size: 18,
-                              color: _score > 0
-                                  ? Colors.amber.shade600
-                                  : cs.onSurfaceVariant),
-                          const SizedBox(width: 8),
-                          Text(l10n.addToListScore,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
-                              )),
-                          const Spacer(),
-                          // Tappable score badge — opens keyboard input
-                          Tooltip(
-                            message: l10n.addToListScore,
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(999),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(999),
-                                onTap: () =>
-                                    _editScoreViaKeyboard(context),
-                                child: AnimatedSwitcher(
-                                  duration:
-                                      const Duration(milliseconds: 200),
-                                  child: Container(
-                                    key: ValueKey(_score > 0),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _score > 0
-                                          ? Colors.amber.shade600
-                                              .withValues(alpha: 0.18)
-                                          : cs.surfaceContainerHighest,
-                                      borderRadius:
-                                          BorderRadius.circular(999),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _score > 0
-                                              ? ref
-                                                  .watch(
-                                                      scoringSystemSettingProvider)
-                                                  .formatScore(_score)
-                                              : l10n.addToListNoScore,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: _score > 0
-                                                ? Colors.amber.shade700
-                                                : cs.onSurfaceVariant,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Icon(Icons.edit_rounded,
-                                            size: 12,
-                                            color: _score > 0
-                                                ? Colors.amber.shade700
-                                                    .withAlpha(180)
-                                                : cs.onSurfaceVariant
-                                                    .withAlpha(150)),
-                                      ],
-                                    ),
-                                  ),
+                                style: const TextStyle(
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                      child: SliderTheme(
-                        data: _m3ScoreSliderTheme(context),
-                        child: Slider(
-                          value: _score,
-                          min: 0,
-                          max: ref
-                              .watch(scoringSystemSettingProvider)
-                              .max,
-                          divisions: ref
-                              .watch(scoringSystemSettingProvider)
-                              .divisions,
-                          label: _score == 0
-                              ? l10n.addToListNoScore
-                              : ref
-                                  .watch(scoringSystemSettingProvider)
-                                  .formatScore(_score),
-                          onChanged: _onScoreChanged,
+                          ],
                         ),
                       ),
                     ),
                   ],
-                ),
-              ),
-
-              if (_isAnilist && ref.watch(anilistAdvancedScoringEnabledProvider)) ...[
-                const SizedBox(height: 4),
-                ...kAnilistAdvancedScoringCategories.map((cat) {
-                  final scoring = ref.watch(scoringSystemSettingProvider);
-                  final val = _advScores[cat] ?? 0;
-                  final label = switch (cat) {
-                    'Story' => l10n.advScoringStory,
-                    'Characters' => l10n.advScoringCharacters,
-                    'Visuals' => l10n.advScoringVisuals,
-                    'Audio' => l10n.advScoringAudio,
-                    'Enjoyment' => l10n.advScoringEnjoyment,
-                    _ => cat,
-                  };
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 85,
-                          child: Text(label,
-                              style: TextStyle(
-                                  fontSize: 12, color: cs.onSurfaceVariant)),
-                        ),
-                        Expanded(
-                          child: SliderTheme(
-                            data: _m3ScoreSliderTheme(context).copyWith(
-                              trackHeight: 3,
-                              thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 9,
-                                elevation: 1,
-                                pressedElevation: 2,
-                              ),
-                            ),
-                            child: Slider(
-                              value: val,
-                              min: 0,
-                              max: scoring.max,
-                              divisions: scoring.divisions,
-                              onChanged: (v) {
-                                  HapticFeedback.selectionClick();
-                                  setState(() => _advScores[cat] = v);
-                                },
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 38,
-                          child: Text(
-                            scoring.formatScore(val),
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: val > 0
-                                    ? Colors.amber.shade600
-                                    : cs.onSurfaceVariant),
-                            textAlign: TextAlign.end,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-
-              const SizedBox(height: 12),
-
-              if (_isBook) ...[
-                Text(l10n.bookTrackingModeLabel, style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                )),
-                const SizedBox(height: 8),
-                SegmentedButton<BookTrackingMode>(
-                  segments: [
-                    ButtonSegment(
-                      value: BookTrackingMode.pages,
-                      label: Text(l10n.bookTrackingModePages),
-                      icon: const Icon(Icons.menu_book, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: BookTrackingMode.percentage,
-                      label: Text(l10n.bookTrackingModePercent),
-                      icon: const Icon(Icons.percent, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: BookTrackingMode.chapters,
-                      label: Text(l10n.bookTrackingModeChapters),
-                      icon: const Icon(Icons.list, size: 16),
-                    ),
-                  ],
-                  selected: {_bookTrackingMode},
-                  onSelectionChanged: (v) =>
-                      setState(() => _bookTrackingMode = v.first),
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    textStyle: WidgetStatePropertyAll(
-                      const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              _ProgressStepper(
-                label: countLabel,
-                controller: _progressCtrl,
-                totalCount: _totalCount,
-                ofLabel: _totalCount != null
-                    ? l10n.addToListOf(_totalCount!)
-                    : null,
-                maxLabel: l10n.addToListMax,
-                accent: kindAccent,
-                onMaxTapped: _totalCount == null
-                    ? null
-                    : () {
-                        _progressCtrl.text = '$_totalCount';
-                        setState(() => _status = 'COMPLETED');
-                      },
-              ),
-              if (_isBook && _bookTrackingMode == BookTrackingMode.pages && _totalCount != null)
-                Builder(builder: (_) {
-                  final current = int.tryParse(_progressCtrl.text) ?? 0;
-                  final remaining = _totalCount! - current;
-                  if (remaining > 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        l10n.libraryPagesRemaining(remaining),
-                        style: TextStyle(fontSize: 12, color: cs.primary.withAlpha(180)),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                }),
-
-              if (_isBook && _bookTrackingMode == BookTrackingMode.chapters) ...[
-                const SizedBox(height: 12),
-                _ProgressStepper(
-                  label: l10n.bookChapterProgress,
-                  controller: _chapterCtrl,
-                  totalCount: int.tryParse(_totalChaptersOverrideCtrl.text),
-                  ofLabel: null,
-                  maxLabel: l10n.addToListMax,
-                  accent: kindAccent,
-                  onMaxTapped: null,
-                ),
-              ],
-
-              if (_isBook) ...[
-                const SizedBox(height: 12),
-                Text(l10n.bookOverrideTotalsLabel, style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                )),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.bookOverrideTotalsHint,
-                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant.withAlpha(160)),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _totalPagesOverrideCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.bookTotalPagesOverride,
-                          hintText: _totalPagesFromApi?.toString() ?? '',
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _totalChaptersOverrideCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: l10n.bookTotalChaptersOverride,
-                          isDense: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-
-              const SizedBox(height: 18),
-
-              _SectionLabel(text: l10n.addToListNotes),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                child: TextField(
-                  controller: _notesCtrl,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: l10n.addToListNotesHint,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  icon: Icon(isEdit ? Icons.save_rounded : Icons.check_rounded),
-                  label: Text(l10n.addToListSave),
-                  onPressed: () {
-                    var progress = int.tryParse(_progressCtrl.text);
-                    if (widget.kind == MediaKind.anime && progress != null) {
-                      final max = AnimeAiringProgress.maxProgressForStoredAnime(
-                            totalEpisodes: widget.existingEntry?.totalEpisodes ??
-                                (widget.item['episodes'] as num?)?.toInt(),
-                            releasedEpisodes: widget.existingEntry?.releasedEpisodes ??
-                                AnimeAiringProgress.releasedEpisodesFromAnilistMedia(
-                                    widget.item),
-                          ) ??
-                          AnimeAiringProgress.maxProgressForAnimeItem(widget.item);
-                      if (max != null && progress > max) progress = max;
-                    }
-                    final notes = _notesCtrl.text.trim();
-                    Navigator.of(context).pop(_AddResult(
-                      status: _status,
-                      score: _score > 0 ? ref.read(scoringSystemSettingProvider).toStoredScore(_score) : null,
-                      progress: progress != null && progress > 0 ? progress : null,
-                      notes: notes.isNotEmpty ? notes : null,
-                      editionKey: _isBook ? _selectedEditionKey : null,
-                      isbn: _isBook ? _selectedIsbn : null,
-                      totalPagesFromApi: _isBook ? _totalPagesFromApi : null,
-                      totalChaptersFromApi: _isBook ? _totalChaptersFromApi : null,
-                      userTotalPagesOverride: _isBook
-                          ? int.tryParse(_totalPagesOverrideCtrl.text)
-                          : null,
-                      userTotalChaptersOverride: _isBook
-                          ? int.tryParse(_totalChaptersOverrideCtrl.text)
-                          : null,
-                      currentChapter: _isBook
-                          ? (int.tryParse(_chapterCtrl.text) ?? 0) > 0
-                              ? int.tryParse(_chapterCtrl.text)
-                              : null
-                          : null,
-                      bookTrackingMode:
-                          _isBook ? _bookTrackingMode.name : null,
-                    ));
-                  },
-                ),
-              ),
-              if (isEdit) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      backgroundColor: cs.errorContainer.withValues(alpha: 0.5),
-                      foregroundColor: cs.onErrorContainer,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                    label: Text(l10n.removeFromLibrary),
-                    onPressed: () => Navigator.of(context).pop(_AddResult.remove),
-                  ),
-                ),
-              ],
-            ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SheetHeroHeader extends StatelessWidget {
-  const _SheetHeroHeader({
-    required this.posterUrl,
-    required this.title,
-    required this.kindLabel,
-    required this.kindIcon,
-    required this.kindAccent,
-    required this.isEdit,
-    required this.titleLabel,
-  });
-
-  final String? posterUrl;
-  final String title;
-  final String kindLabel;
-  final IconData kindIcon;
-  final Color kindAccent;
-  final bool isEdit;
-  final String titleLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              width: 56,
-              height: 78,
-              child: posterUrl != null
-                  ? Image.network(
-                      posterUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        color: cs.surfaceContainerHigh,
-                        child: Icon(kindIcon,
-                            color: cs.onSurfaceVariant, size: 28),
-                      ),
-                    )
-                  : Container(
-                      color: cs.surfaceContainerHigh,
-                      child: Icon(kindIcon,
-                          color: cs.onSurfaceVariant, size: 28),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: kindAccent.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(kindIcon, size: 12, color: kindAccent),
-                          const SizedBox(width: 4),
-                          Text(
-                            kindLabel,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: kindAccent,
-                              letterSpacing: 0.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    if (isEdit)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: cs.tertiaryContainer
-                              .withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          'EDIT',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: cs.onTertiaryContainer,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  title.isNotEmpty ? title : titleLabel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                    color: cs.onSurface,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: cs.onSurface,
-        letterSpacing: 0.2,
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bg = selected ? accent : cs.surfaceContainerHigh;
-    final fg = selected ? cs.onPrimary : cs.onSurfaceVariant;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(selected ? 14 : 18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: (selected ? cs.onPrimary : accent)
-              .withValues(alpha: 0.16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 16, color: fg),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
-                    color: fg,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProgressStepper extends StatelessWidget {
-  const _ProgressStepper({
-    required this.label,
-    required this.controller,
-    required this.totalCount,
-    required this.ofLabel,
-    required this.maxLabel,
-    required this.accent,
-    required this.onMaxTapped,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final int? totalCount;
-  final String? ofLabel;
-  final String maxLabel;
-  final Color accent;
-  final VoidCallback? onMaxTapped;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              const Spacer(),
-              if (ofLabel != null)
-                Text(
-                  ofLabel!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _StepperButton(
-                icon: Icons.remove_rounded,
-                onTap: () {
-                  final c = int.tryParse(controller.text) ?? 0;
-                  if (c > 0) controller.text = '${c - 1}';
-                },
-                cs: cs,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
-                    ),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _StepperButton(
-                icon: Icons.add_rounded,
-                onTap: () {
-                  final c = int.tryParse(controller.text) ?? 0;
-                  if (totalCount == null || c < totalCount!) {
-                    controller.text = '${c + 1}';
-                  }
-                },
-                cs: cs,
-                accent: accent,
-                filled: true,
-              ),
-            ],
-          ),
-          if (onMaxTapped != null) ...[
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: onMaxTapped,
-                icon: const Icon(Icons.flag_rounded, size: 16),
-                label: Text(maxLabel),
-                style: TextButton.styleFrom(
-                  foregroundColor: accent,
-                  textStyle: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
                 ),
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({
-    required this.icon,
-    required this.onTap,
-    required this.cs,
-    this.accent,
-    this.filled = false,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final ColorScheme cs;
-  final Color? accent;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = filled
-        ? (accent ?? cs.primary)
-        : cs.surfaceContainerHighest;
-    final fg = filled ? cs.onPrimary : cs.onSurfaceVariant;
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(14),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(child: Icon(icon, size: 22, color: fg)),
         ),
       ),
     );

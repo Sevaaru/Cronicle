@@ -155,6 +155,7 @@ Future<int> _writeAnilistEntriesToDb({
         animeMediaStatus: drift.Value(animeSt),
         releasedEpisodes: drift.Value(released),
         nextEpisodeAirsAt: drift.Value(nextAirAt),
+        repeatCount: drift.Value((entry['repeat'] as num?)?.toInt() ?? 0),
         notes: drift.Value(entry['notes'] as String?),
         updatedAt: drift.Value(resolvedUpdatedAt),
       ));

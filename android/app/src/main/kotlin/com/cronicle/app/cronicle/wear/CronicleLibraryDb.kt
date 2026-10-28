@@ -106,6 +106,7 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
             "UPDATE library_entries SET progress = ?, status = ?, updated_at = ? WHERE id = ?",
             arrayOf<Any?>(next, newStatus, System.currentTimeMillis(), entry.id),
         )
+        bumpRepeatIfFinished(entry, newStatus)
         return true
     }
 
@@ -123,6 +124,7 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
                     "UPDATE library_entries SET current_chapter = ?, status = ?, updated_at = ? WHERE id = ?",
                     arrayOf<Any?>(next, newStatus, now, entry.id),
                 )
+                bumpRepeatIfFinished(entry, newStatus)
                 true
             }
             "percentage" -> {
@@ -134,6 +136,7 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
                     "UPDATE library_entries SET progress = ?, status = ?, updated_at = ? WHERE id = ?",
                     arrayOf<Any?>(next, newStatus, now, entry.id),
                 )
+                bumpRepeatIfFinished(entry, newStatus)
                 true
             }
             else -> { // pages
@@ -146,6 +149,7 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
                     "UPDATE library_entries SET progress = ?, status = ?, updated_at = ? WHERE id = ?",
                     arrayOf<Any?>(next, newStatus, now, entry.id),
                 )
+                bumpRepeatIfFinished(entry, newStatus)
                 true
             }
         }
@@ -159,7 +163,34 @@ internal class CronicleLibraryDb private constructor(private val db: SQLiteDatab
             "UPDATE library_entries SET status = 'COMPLETED', progress = ?, updated_at = ? WHERE id = ?",
             arrayOf<Any?>(progress, now, entry.id),
         )
+        bumpRepeatIfFinished(entry, "COMPLETED")
         return true
+    }
+
+    /** Mirrors `RepeatCountRules.afterStatusChange`: finishing a repeat adds one. */
+    private fun bumpRepeatIfFinished(entry: EntrySnapshot, newStatus: String) {
+        if (!entry.status.equals("REPEATING", ignoreCase = true)) return
+        if (!newStatus.equals("COMPLETED", ignoreCase = true)) return
+        if (!hasRepeatColumn) return
+        db.execSQL(
+            "UPDATE library_entries SET repeat_count = repeat_count + 1 WHERE id = ?",
+            arrayOf<Any?>(entry.id),
+        )
+    }
+
+    // The watch can write before Flutter has migrated the DB to the schema with repeat_count.
+    private val hasRepeatColumn: Boolean by lazy {
+        db.rawQuery("PRAGMA table_info(library_entries)", null).use { c ->
+            val nameIdx = c.getColumnIndexOrThrow("name")
+            var found = false
+            while (c.moveToNext()) {
+                if (c.getString(nameIdx) == "repeat_count") {
+                    found = true
+                    break
+                }
+            }
+            found
+        }
     }
 
     private fun animeCap(entry: EntrySnapshot): Int? {
