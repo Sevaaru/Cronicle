@@ -23,9 +23,10 @@ Future<bool> _ensureIos() async {
 
 Future<bool> _ensureAndroid() async {
   final sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
-  final Permission perm = sdk >= 33 ? Permission.photos : Permission.storage;
-  var status = await perm.status;
+  // API 29+ inserts into MediaStore without READ_MEDIA_IMAGES / READ_MEDIA_VIDEO.
+  if (sdk >= 29) return true;
+  var status = await Permission.storage.status;
   if (status.isGranted || status.isLimited) return true;
-  status = await perm.request();
+  status = await Permission.storage.request();
   return status.isGranted || status.isLimited;
 }
