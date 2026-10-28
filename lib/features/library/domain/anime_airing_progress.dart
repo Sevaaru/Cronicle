@@ -103,6 +103,28 @@ abstract final class AnimeAiringProgress {
     return b > 0 ? b : null;
   }
 
+  /// Texto `visto/total` de la ficha. El total de la serie gana al cap de
+  /// emitidos, para que el contador no se sustituya por el retraso.
+  static String? watchedProgressLabel({
+    required int? progress,
+    required int? totalEpisodes,
+    required int? releasedEpisodes,
+    required int mediaKindCode,
+  }) {
+    if (progress == null) return null;
+    final seriesTotal = totalEpisodes;
+    if (seriesTotal != null && seriesTotal > 0) {
+      return '$progress/$seriesTotal';
+    }
+    final cap = displayEpisodeTotal(
+      mediaKindCode: mediaKindCode,
+      totalEpisodes: totalEpisodes,
+      releasedEpisodes: releasedEpisodes,
+    );
+    if (cap != null && cap > 0) return '$progress/$cap';
+    return '$progress';
+  }
+
   /// Total mostrado en UI tipo `visto/total` (prioriza emitidos si hay cap de emisión).
   static int? displayEpisodeTotal({
     required int mediaKindCode,

@@ -664,6 +664,14 @@ class _EntryCard extends StatelessWidget {
     final bookRemaining = kind == MediaKind.book
         ? BookProgressCalculator.getRemainingText(entry, l10n)
         : null;
+    final episodeCounter = kind == MediaKind.book
+        ? null
+        : AnimeAiringProgress.watchedProgressLabel(
+            progress: entry.progress,
+            totalEpisodes: entry.totalEpisodes,
+            releasedEpisodes: entry.releasedEpisodes,
+            mediaKindCode: entry.kind,
+          );
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -672,6 +680,7 @@ class _EntryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: canNavigate ? () => _openLibraryEntryDetail(context, entry) : null,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
@@ -695,6 +704,7 @@ class _EntryCard extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(entry.title,
@@ -703,53 +713,35 @@ class _EntryCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     const SizedBox(height: 4),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _statusColor(entry.status, cs),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            _currentStatusLabel(entry.status, kind, l10n),
-                            style: TextStyle(fontSize: 10, color: cs.onPrimaryContainer),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _statusColor(entry.status, cs),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _currentStatusLabel(entry.status, kind, l10n),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 10, color: cs.onPrimaryContainer),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: () {
-                            if (kind == MediaKind.book &&
-                                bookProgressLabel != null &&
-                                bookProgressLabel.isNotEmpty) {
-                              return Text(
-                                bookProgressLabel,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                              );
-                            }
-                            if (entry.progress != null) {
-                              final epTotal = AnimeAiringProgress.displayEpisodeTotal(
-                                mediaKindCode: entry.kind,
-                                totalEpisodes: entry.totalEpisodes,
-                                releasedEpisodes: entry.releasedEpisodes,
-                              );
-                              final s = epTotal != null
-                                  ? '${entry.progress}/$epTotal'
-                                  : entry.totalEpisodes != null
-                                      ? '${entry.progress}/${entry.totalEpisodes}'
-                                      : '${entry.progress}';
-                              return Text(
-                                s,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          }(),
-                        ),
+                        if (kind == MediaKind.book &&
+                            bookProgressLabel != null &&
+                            bookProgressLabel.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              bookProgressLabel,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     if (kind == MediaKind.anime)
@@ -767,8 +759,8 @@ class _EntryCard extends StatelessWidget {
                               return Text(
                                 l10n.libraryAnimeAiringBehind(behind),
                                 style: TextStyle(fontSize: 10, color: cs.tertiary),
-                                maxLines: 2,
-                                softWrap: true,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               );
                             }
                             if (!AnimeAiringProgress.isAnimeCaughtUpWithAiring(
@@ -845,6 +837,20 @@ class _EntryCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (episodeCounter != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8, right: 2),
+                child: Text(
+                  episodeCounter,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
             if (showProgressButton)
               _IncrementButton(entry: entry, ref: ref, onUpdated: onProgressUpdated),
             IconButton(
