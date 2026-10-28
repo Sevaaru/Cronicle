@@ -6,7 +6,6 @@ import 'package:cronicle/features/library/domain/anime_airing_progress.dart';
 import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Actualiza `releasedEpisodes` / `animeMediaStatus` para anime en CURRENT (API pública).
 Future<void> refreshAnimeLibraryAiringMetadata(WidgetRef ref) async {
   final db = ref.read(databaseProvider);
   final graphql = ref.read(anilistGraphqlProvider);

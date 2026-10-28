@@ -76,7 +76,7 @@ final defaultStartPageProvider =
     );
 
 typedef _$DefaultStartPage = AutoDisposeNotifier<String>;
-String _$defaultFeedTabHash() => r'0ccb0cc60796ea309795c45f6aee3b815623419e';
+String _$defaultFeedTabHash() => r'd2cf090e2d6c11a9c6d2aeffcb829269384e0ffd';
 
 /// See also [DefaultFeedTab].
 @ProviderFor(DefaultFeedTab)

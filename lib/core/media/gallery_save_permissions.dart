@@ -2,8 +2,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Solicita el permiso adecuado para guardar una imagen en la galería del
-/// sistema (Android ≤32: almacenamiento; 33+: fotos; iOS: solo añadir a Fotos).
 Future<bool> ensureGallerySavePermission() async {
   if (kIsWeb) return false;
   switch (defaultTargetPlatform) {

@@ -8,6 +8,8 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
 String _timeAgo(DateTime dt, AppLocalizations l10n) {
@@ -35,6 +37,7 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
   bool _loading = true;
   String? _error;
   final _replyController = TextEditingController();
+  final _replyFocusNode = FocusNode();
   bool _sending = false;
 
   @override
@@ -47,7 +50,28 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
   @override
   void dispose() {
     _replyController.dispose();
+    _replyFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Tag a user in the composer (Twitter / AniList web style). The Anilist
+  /// activity API doesn't support nested replies, so "replying" to a
+  /// comment just means prepending `@username ` to the draft text and
+  /// focusing the input. The mention is rendered as a profile link by
+  /// the AniList markdown renderer.
+  void _mentionUser(String name) {
+    if (name.isEmpty) return;
+    final mention = '@$name ';
+    final current = _replyController.text;
+    // Avoid duplicating the mention if the user taps reply twice in a row.
+    final newText = current.contains(mention)
+        ? current
+        : (current.isEmpty ? mention : '$mention$current');
+    _replyController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
+    _replyFocusNode.requestFocus();
   }
 
   Future<void> _load() async {
@@ -58,11 +82,11 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
     const maxTries = 3;
     for (var attempt = 0; attempt < maxTries; attempt++) {
       try {
-        final graphql = ref.read(anilistGraphqlProvider);
-        final token = await ref.read(anilistTokenProvider.future);
-        final data = await graphql.fetchActivityRepliesPageData(
-          widget.activityId,
-          token: token,
+        // Goes through anilistActivityRepliesProvider which is jsonCache-backed
+        // (5 min stale-while-revalidate) so re-entering a comments thread
+        // within minutes serves from cache instead of hitting AniList.
+        final data = await ref.read(
+          anilistActivityRepliesProvider(widget.activityId).future,
         );
         if (!mounted) return;
         setState(() {
@@ -126,10 +150,12 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: cs.surface,
+      extendBody: true,
       appBar: AppBar(title: Text(l10n.commentsTitle)),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
+          Positioned.fill(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
@@ -231,12 +257,13 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                           else
                             SliverPadding(
                               padding:
-                                  const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                                  const EdgeInsets.fromLTRB(16, 0, 16, 160),
                               sliver: SliverList(
                                 delegate: SliverChildBuilderDelegate(
                                   (context, i) => _ReplyCard(
                                     reply: _replies![i],
                                     timeAgo: (dt) => _timeAgo(dt, l10n),
+                                    onReply: _mentionUser,
                                   ),
                                   childCount: _replies!.length,
                                 ),
@@ -245,10 +272,16 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
                         ],
                       ),
           ),
-          _ReplyInputBar(
-            controller: _replyController,
-            sending: _sending,
-            onSend: _sendReply,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _ReplyInputBar(
+              controller: _replyController,
+              focusNode: _replyFocusNode,
+              sending: _sending,
+              onSend: _sendReply,
+            ),
           ),
         ],
       ),
@@ -256,7 +289,6 @@ class _ActivityRepliesPageState extends ConsumerState<ActivityRepliesPage> {
   }
 }
 
-/// Cabecera: actividad raíz (texto, lista o mensaje) al estilo del feed.
 class _ThreadOriginalBlock extends ConsumerWidget {
   const _ThreadOriginalBlock({
     required this.activity,
@@ -507,86 +539,182 @@ class _OriginalActivityLikeRow extends ConsumerWidget {
           isLiked: activityMap['isLiked'] as bool? ?? false,
           likeCount: activityMap['likeCount'] as int? ?? 0,
           onToggle: () => _handleLike(ref, context),
+          onLongPress: ((activityMap['likeCount'] as int? ?? 0) > 0 &&
+                  activityMap['id'] is int)
+              ? () => showActivityLikersSheet(
+                    context,
+                    ref,
+                    targetId: activityMap['id'] as int,
+                    expectedCount: activityMap['likeCount'] as int? ?? 0,
+                  )
+              : null,
+          compact: true,
         ),
       ],
     );
   }
 }
 
-class _ReplyInputBar extends ConsumerWidget {
+class _ReplyInputBar extends ConsumerStatefulWidget {
   const _ReplyInputBar({
     required this.controller,
+    required this.focusNode,
     required this.sending,
     required this.onSend,
   });
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool sending;
   final VoidCallback onSend;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReplyInputBar> createState() => _ReplyInputBarState();
+}
+
+class _ReplyInputBarState extends ConsumerState<_ReplyInputBar>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Scaffold consumes MediaQuery.viewInsets, so the bar can't rebuild via
+    // the usual MediaQuery dependency when the IME shows/hides. Listen to
+    // raw window metrics instead so the bar repositions both ways.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
+    final focusNode = widget.focusNode;
+    final sending = widget.sending;
+    final onSend = widget.onSend;
     final cs = Theme.of(context).colorScheme;
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: isLoggedIn && !sending,
-              maxLines: 3,
-              minLines: 1,
-              textInputAction: TextInputAction.newline,
-              decoration: InputDecoration(
-                hintText: isLoggedIn
-                    ? AppLocalizations.of(context)!.writeReplyHint
-                    : AppLocalizations.of(context)!.loginRequiredLike,
-                hintStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                isDense: true,
-              ),
-              style: TextStyle(fontSize: 13, color: cs.onSurface),
-            ),
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    // The page's Scaffold has resizeToAvoidBottomInset: true (default), so it
+    // consumes MediaQuery.viewInsets before our descendant context sees it.
+    // Read the raw insets from the root View so we can detect when the IME
+    // is open and dock the composer right above it.
+    final view = View.of(context);
+    final keyboardInset = view.viewInsets.bottom / view.devicePixelRatio;
+    // Sit above the floating navbar pill from AppShell. The navbar uses
+    // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
+    final navbarTotal = 4 +
+        kGlassBottomNavContentHeight +
+        (bottomSafe > 0 ? bottomSafe : 10);
+    final bottomPad = keyboardInset > 0 ? 8.0 : navbarTotal + 6;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),
+      child: Material(
+        color: isDark
+            ? cs.surfaceContainerHigh
+            : cs.secondaryContainer,
+        elevation: 3,
+        shadowColor: Colors.black.withAlpha(isDark ? 60 : 30),
+        surfaceTintColor: cs.surfaceTint,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(
+            color: cs.outlineVariant.withAlpha(isDark ? 70 : 40),
+            width: 0.6,
           ),
-          const SizedBox(width: 6),
-          sending
-              ? const SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  enabled: isLoggedIn && !sending,
+                  maxLines: 4,
+                  minLines: 1,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: isLoggedIn
+                        ? AppLocalizations.of(context)!.writeReplyHint
+                        : AppLocalizations.of(context)!.loginRequiredLike,
+                    hintStyle:
+                        TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    border: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    isDense: true,
                   ),
-                )
-              : IconButton(
-                  icon: Icon(Icons.send_rounded, color: cs.primary),
-                  onPressed: isLoggedIn ? onSend : null,
+                  style: TextStyle(fontSize: 14, color: cs.onSurface),
                 ),
-        ],
+              ),
+              const SizedBox(width: 4),
+              sending
+                  ? const SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : Material(
+                      color: isLoggedIn
+                          ? cs.primary
+                          : cs.surfaceContainerHighest,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: isLoggedIn ? onSend : null,
+                        child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Icon(
+                            Icons.send_rounded,
+                            size: 20,
+                            color: isLoggedIn
+                                ? cs.onPrimary
+                                : cs.onSurfaceVariant.withAlpha(120),
+                          ),
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
 class _ReplyCard extends ConsumerWidget {
-  const _ReplyCard({required this.reply, required this.timeAgo});
+  const _ReplyCard({
+    required this.reply,
+    required this.timeAgo,
+    required this.onReply,
+  });
   final Map<String, dynamic> reply;
   final String Function(DateTime) timeAgo;
+  final void Function(String userName) onReply;
 
   Future<bool?> _handleLike(WidgetRef ref, BuildContext context) async {
     final token = await ref.read(anilistTokenProvider.future);
@@ -660,13 +788,76 @@ class _ReplyCard extends ConsumerWidget {
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface, height: 1.4)),
           const SizedBox(height: 6),
-          AnimatedLikeButton(
-            isLiked: reply['isLiked'] as bool? ?? false,
-            likeCount: reply['likeCount'] as int? ?? 0,
-            iconSize: 15,
-            onToggle: () => _handleLike(ref, context),
+          Row(
+            children: [
+              AnimatedLikeButton(
+                isLiked: reply['isLiked'] as bool? ?? false,
+                likeCount: reply['likeCount'] as int? ?? 0,
+                iconSize: 15,
+                onToggle: () => _handleLike(ref, context),
+                onLongPress: ((reply['likeCount'] as int? ?? 0) > 0 &&
+                        reply['id'] is int)
+                    ? () => showActivityLikersSheet(
+                          context,
+                          ref,
+                          targetId: reply['id'] as int,
+                          target: LikersTarget.reply,
+                          expectedCount: reply['likeCount'] as int? ?? 0,
+                        )
+                    : null,
+                compact: true,
+              ),
+              const SizedBox(width: 8),
+              if (userName.isNotEmpty)
+                _ActivityReplyButton(
+                  cs: cs,
+                  onTap: () => onReply(userName),
+                ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Compact pill-shaped reply button shown next to the like button on an
+/// activity comment. Tapping it tags the comment author in the composer
+/// (Anilist activities don't support real nested replies, so this is the
+/// closest equivalent — same UX the AniList web client uses).
+class _ActivityReplyButton extends StatelessWidget {
+  const _ActivityReplyButton({required this.cs, required this.onTap});
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(999),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: cs.primary.withAlpha(36),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.reply_rounded,
+                  size: 14, color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                l10n.forumReplyButton,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

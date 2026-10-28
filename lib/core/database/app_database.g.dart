@@ -477,6 +477,17 @@ class $LibraryEntriesTable extends LibraryEntries
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _steamAppIdMeta = const VerificationMeta(
+    'steamAppId',
+  );
+  @override
+  late final GeneratedColumn<int> steamAppId = GeneratedColumn<int>(
+    'steam_app_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -512,6 +523,7 @@ class $LibraryEntriesTable extends LibraryEntries
     animeMediaStatus,
     releasedEpisodes,
     nextEpisodeAirsAt,
+    steamAppId,
     updatedAt,
   ];
   @override
@@ -685,6 +697,15 @@ class $LibraryEntriesTable extends LibraryEntries
         ),
       );
     }
+    if (data.containsKey('steam_app_id')) {
+      context.handle(
+        _steamAppIdMeta,
+        steamAppId.isAcceptableOrUnknown(
+          data['steam_app_id']!,
+          _steamAppIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -788,6 +809,10 @@ class $LibraryEntriesTable extends LibraryEntries
         DriftSqlType.int,
         data['${effectivePrefix}next_episode_airs_at'],
       ),
+      steamAppId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}steam_app_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -819,18 +844,14 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
   final int? userTotalPagesOverride;
   final int? userTotalChaptersOverride;
   final int? currentChapter;
-
-  /// "pages" | "percentage" | "chapters" — defaults to pages.
   final String? bookTrackingMode;
-
-  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
   final String? animeMediaStatus;
-
-  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
   final int? releasedEpisodes;
-
-  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
   final int? nextEpisodeAirsAt;
+
+  /// Steam app ID — set when this entry was added from the Steam library view.
+  /// Null for entries added from other sources (IGDB search, Trakt, etc.).
+  final int? steamAppId;
   final int updatedAt;
   const LibraryEntry({
     required this.id,
@@ -854,6 +875,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     this.animeMediaStatus,
     this.releasedEpisodes,
     this.nextEpisodeAirsAt,
+    this.steamAppId,
     required this.updatedAt,
   });
   @override
@@ -914,6 +936,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     if (!nullToAbsent || nextEpisodeAirsAt != null) {
       map['next_episode_airs_at'] = Variable<int>(nextEpisodeAirsAt);
     }
+    if (!nullToAbsent || steamAppId != null) {
+      map['steam_app_id'] = Variable<int>(steamAppId);
+    }
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
   }
@@ -972,6 +997,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       nextEpisodeAirsAt: nextEpisodeAirsAt == null && nullToAbsent
           ? const Value.absent()
           : Value(nextEpisodeAirsAt),
+      steamAppId: steamAppId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(steamAppId),
       updatedAt: Value(updatedAt),
     );
   }
@@ -1009,6 +1037,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       animeMediaStatus: serializer.fromJson<String?>(json['animeMediaStatus']),
       releasedEpisodes: serializer.fromJson<int?>(json['releasedEpisodes']),
       nextEpisodeAirsAt: serializer.fromJson<int?>(json['nextEpisodeAirsAt']),
+      steamAppId: serializer.fromJson<int?>(json['steamAppId']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
   }
@@ -1039,6 +1068,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       'animeMediaStatus': serializer.toJson<String?>(animeMediaStatus),
       'releasedEpisodes': serializer.toJson<int?>(releasedEpisodes),
       'nextEpisodeAirsAt': serializer.toJson<int?>(nextEpisodeAirsAt),
+      'steamAppId': serializer.toJson<int?>(steamAppId),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
   }
@@ -1065,6 +1095,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     Value<String?> animeMediaStatus = const Value.absent(),
     Value<int?> releasedEpisodes = const Value.absent(),
     Value<int?> nextEpisodeAirsAt = const Value.absent(),
+    Value<int?> steamAppId = const Value.absent(),
     int? updatedAt,
   }) => LibraryEntry(
     id: id ?? this.id,
@@ -1108,6 +1139,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     nextEpisodeAirsAt: nextEpisodeAirsAt.present
         ? nextEpisodeAirsAt.value
         : this.nextEpisodeAirsAt,
+    steamAppId: steamAppId.present ? steamAppId.value : this.steamAppId,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   LibraryEntry copyWithCompanion(LibraryEntriesCompanion data) {
@@ -1157,6 +1189,9 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
       nextEpisodeAirsAt: data.nextEpisodeAirsAt.present
           ? data.nextEpisodeAirsAt.value
           : this.nextEpisodeAirsAt,
+      steamAppId: data.steamAppId.present
+          ? data.steamAppId.value
+          : this.steamAppId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -1185,6 +1220,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           ..write('animeMediaStatus: $animeMediaStatus, ')
           ..write('releasedEpisodes: $releasedEpisodes, ')
           ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
+          ..write('steamAppId: $steamAppId, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1213,6 +1249,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
     animeMediaStatus,
     releasedEpisodes,
     nextEpisodeAirsAt,
+    steamAppId,
     updatedAt,
   ]);
   @override
@@ -1240,6 +1277,7 @@ class LibraryEntry extends DataClass implements Insertable<LibraryEntry> {
           other.animeMediaStatus == this.animeMediaStatus &&
           other.releasedEpisodes == this.releasedEpisodes &&
           other.nextEpisodeAirsAt == this.nextEpisodeAirsAt &&
+          other.steamAppId == this.steamAppId &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -1265,6 +1303,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
   final Value<String?> animeMediaStatus;
   final Value<int?> releasedEpisodes;
   final Value<int?> nextEpisodeAirsAt;
+  final Value<int?> steamAppId;
   final Value<int> updatedAt;
   const LibraryEntriesCompanion({
     this.id = const Value.absent(),
@@ -1288,6 +1327,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.animeMediaStatus = const Value.absent(),
     this.releasedEpisodes = const Value.absent(),
     this.nextEpisodeAirsAt = const Value.absent(),
+    this.steamAppId = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   LibraryEntriesCompanion.insert({
@@ -1312,6 +1352,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     this.animeMediaStatus = const Value.absent(),
     this.releasedEpisodes = const Value.absent(),
     this.nextEpisodeAirsAt = const Value.absent(),
+    this.steamAppId = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : kind = Value(kind),
        externalId = Value(externalId),
@@ -1338,6 +1379,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Expression<String>? animeMediaStatus,
     Expression<int>? releasedEpisodes,
     Expression<int>? nextEpisodeAirsAt,
+    Expression<int>? steamAppId,
     Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -1365,6 +1407,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       if (animeMediaStatus != null) 'anime_media_status': animeMediaStatus,
       if (releasedEpisodes != null) 'released_episodes': releasedEpisodes,
       if (nextEpisodeAirsAt != null) 'next_episode_airs_at': nextEpisodeAirsAt,
+      if (steamAppId != null) 'steam_app_id': steamAppId,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -1391,6 +1434,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     Value<String?>? animeMediaStatus,
     Value<int?>? releasedEpisodes,
     Value<int?>? nextEpisodeAirsAt,
+    Value<int?>? steamAppId,
     Value<int>? updatedAt,
   }) {
     return LibraryEntriesCompanion(
@@ -1417,6 +1461,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
       animeMediaStatus: animeMediaStatus ?? this.animeMediaStatus,
       releasedEpisodes: releasedEpisodes ?? this.releasedEpisodes,
       nextEpisodeAirsAt: nextEpisodeAirsAt ?? this.nextEpisodeAirsAt,
+      steamAppId: steamAppId ?? this.steamAppId,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -1493,6 +1538,9 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
     if (nextEpisodeAirsAt.present) {
       map['next_episode_airs_at'] = Variable<int>(nextEpisodeAirsAt.value);
     }
+    if (steamAppId.present) {
+      map['steam_app_id'] = Variable<int>(steamAppId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
@@ -1523,6 +1571,7 @@ class LibraryEntriesCompanion extends UpdateCompanion<LibraryEntry> {
           ..write('animeMediaStatus: $animeMediaStatus, ')
           ..write('releasedEpisodes: $releasedEpisodes, ')
           ..write('nextEpisodeAirsAt: $nextEpisodeAirsAt, ')
+          ..write('steamAppId: $steamAppId, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -1723,6 +1772,7 @@ typedef $$LibraryEntriesTableCreateCompanionBuilder =
       Value<String?> animeMediaStatus,
       Value<int?> releasedEpisodes,
       Value<int?> nextEpisodeAirsAt,
+      Value<int?> steamAppId,
       Value<int> updatedAt,
     });
 typedef $$LibraryEntriesTableUpdateCompanionBuilder =
@@ -1748,6 +1798,7 @@ typedef $$LibraryEntriesTableUpdateCompanionBuilder =
       Value<String?> animeMediaStatus,
       Value<int?> releasedEpisodes,
       Value<int?> nextEpisodeAirsAt,
+      Value<int?> steamAppId,
       Value<int> updatedAt,
     });
 
@@ -1862,6 +1913,11 @@ class $$LibraryEntriesTableFilterComposer
 
   ColumnFilters<int> get nextEpisodeAirsAt => $composableBuilder(
     column: $table.nextEpisodeAirsAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get steamAppId => $composableBuilder(
+    column: $table.steamAppId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1985,6 +2041,11 @@ class $$LibraryEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get steamAppId => $composableBuilder(
+    column: $table.steamAppId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -2087,6 +2148,11 @@ class $$LibraryEntriesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get steamAppId => $composableBuilder(
+    column: $table.steamAppId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
@@ -2145,6 +2211,7 @@ class $$LibraryEntriesTableTableManager
                 Value<String?> animeMediaStatus = const Value.absent(),
                 Value<int?> releasedEpisodes = const Value.absent(),
                 Value<int?> nextEpisodeAirsAt = const Value.absent(),
+                Value<int?> steamAppId = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion(
                 id: id,
@@ -2168,6 +2235,7 @@ class $$LibraryEntriesTableTableManager
                 animeMediaStatus: animeMediaStatus,
                 releasedEpisodes: releasedEpisodes,
                 nextEpisodeAirsAt: nextEpisodeAirsAt,
+                steamAppId: steamAppId,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -2193,6 +2261,7 @@ class $$LibraryEntriesTableTableManager
                 Value<String?> animeMediaStatus = const Value.absent(),
                 Value<int?> releasedEpisodes = const Value.absent(),
                 Value<int?> nextEpisodeAirsAt = const Value.absent(),
+                Value<int?> steamAppId = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => LibraryEntriesCompanion.insert(
                 id: id,
@@ -2216,6 +2285,7 @@ class $$LibraryEntriesTableTableManager
                 animeMediaStatus: animeMediaStatus,
                 releasedEpisodes: releasedEpisodes,
                 nextEpisodeAirsAt: nextEpisodeAirsAt,
+                steamAppId: steamAppId,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0

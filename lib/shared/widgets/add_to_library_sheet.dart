@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:cronicle/core/database/app_database.dart';
 import 'package:cronicle/core/database/database_provider.dart';
+import 'package:cronicle/core/widget/home_widget_bridge.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/domain/book_progress_calculator.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
@@ -40,6 +42,7 @@ const _gameStatusData = [
   ('CURRENT', Icons.sports_esports_rounded),
   ('PLANNING', Icons.bookmark_add_outlined),
   ('COMPLETED', Icons.check_circle_outline),
+  ('PLAYED', Icons.done_all_rounded),
   ('DROPPED', Icons.cancel_outlined),
   ('PAUSED', Icons.pause_circle_outline),
   ('REPEATING', Icons.replay_rounded),
@@ -54,12 +57,11 @@ const _bookStatusData = [
   ('REPEATING', Icons.replay_rounded),
 ];
 
-/// Slider estilo Material 3 (pista redondeada, pulgar con elevación suave).
 SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   final base = SliderTheme.of(context);
   return base.copyWith(
-    trackHeight: 4,
+    trackHeight: 6,
     activeTrackColor: cs.primary,
     inactiveTrackColor: cs.surfaceContainerHighest,
     thumbColor: cs.primary,
@@ -71,18 +73,18 @@ SliderThemeData _m3ScoreSliderTheme(BuildContext context) {
       return cs.primary.withAlpha(31);
     }),
     thumbShape: const RoundSliderThumbShape(
-      enabledThumbRadius: 11,
-      elevation: 1,
-      pressedElevation: 3,
+      enabledThumbRadius: 13,
+      elevation: 2,
+      pressedElevation: 6,
     ),
     trackShape: const RoundedRectSliderTrackShape(),
     valueIndicatorColor: cs.inverseSurface,
     valueIndicatorTextStyle: TextStyle(
       color: cs.onInverseSurface,
-      fontSize: 12,
-      fontWeight: FontWeight.w500,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
     ),
-    showValueIndicator: ShowValueIndicator.onlyForContinuous,
+    showValueIndicator: ShowValueIndicator.always,
   );
 }
 
@@ -96,6 +98,7 @@ String _statusLabel(AppLocalizations l10n, String key, MediaKind kind) {
       },
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
+    'PLAYED' => l10n.statusPlayedGame,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {
@@ -113,6 +116,15 @@ Future<bool> showAddToLibrarySheet({
   required Map<String, dynamic> item,
   required MediaKind kind,
   LibraryEntry? existingEntry,
+  int? initialProgress,
+  /// Set to true when the calling page is inside the ShellRoute so the sheet
+  /// is pushed on the root navigator. This lets GoRouter's back-button handler
+  /// see the sheet and close it instead of popping the page underneath.
+  bool useRootNavigator = false,
+  /// Steam app ID — stored on the library entry so the app can open the
+  /// Steam detail view from the library later. Pass only when adding/editing
+  /// a game that was found via the Steam library pages.
+  int? steamAppId,
 }) async {
   final db = ref.read(databaseProvider);
 
@@ -143,10 +155,11 @@ Future<bool> showAddToLibrarySheet({
 
   final result = await showModalBottomSheet<_AddResult>(
     context: context,
+    useRootNavigator: useRootNavigator,
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry),
+    builder: (_) => _AddToLibrarySheet(item: item, kind: kind, existingEntry: existingEntry, initialProgress: initialProgress),
   );
 
   if (result == null) return false;
@@ -163,6 +176,7 @@ Future<bool> showAddToLibrarySheet({
       }
     }
     ref.invalidate(paginatedLibraryProvider);
+    unawaited(HomeWidgetBridge.refresh());
     return true;
   }
 
@@ -215,7 +229,6 @@ Future<bool> showAddToLibrarySheet({
             : null,
       ),
       notes: drift.Value(result.notes),
-      // Book-specific fields
       editionKey: drift.Value(result.editionKey),
       isbn: drift.Value(result.isbn),
       totalPagesFromApi: drift.Value(result.totalPagesFromApi),
@@ -224,6 +237,9 @@ Future<bool> showAddToLibrarySheet({
       userTotalChaptersOverride: drift.Value(result.userTotalChaptersOverride),
       currentChapter: drift.Value(result.currentChapter),
       bookTrackingMode: drift.Value(result.bookTrackingMode),
+      steamAppId: steamAppId != null
+          ? drift.Value(steamAppId)
+          : const drift.Value.absent(),
       updatedAt: drift.Value(DateTime.now().millisecondsSinceEpoch),
     ),
   );
@@ -244,6 +260,7 @@ Future<bool> showAddToLibrarySheet({
   }
 
   ref.invalidate(paginatedLibraryProvider);
+  unawaited(HomeWidgetBridge.refresh());
   return true;
 }
 
@@ -311,7 +328,6 @@ class _AddResult {
     this.progress,
     this.notes,
     this.deleted = false,
-    // Book-specific
     this.editionKey,
     this.isbn,
     this.totalPagesFromApi,
@@ -326,7 +342,6 @@ class _AddResult {
   final int? progress;
   final String? notes;
   final bool deleted;
-  // Book-specific
   final String? editionKey;
   final String? isbn;
   final int? totalPagesFromApi;
@@ -370,10 +385,11 @@ class _AnilistPromptDialog extends StatelessWidget {
 }
 
 class _AddToLibrarySheet extends ConsumerStatefulWidget {
-  const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry});
+  const _AddToLibrarySheet({required this.item, required this.kind, this.existingEntry, this.initialProgress});
   final Map<String, dynamic> item;
   final MediaKind kind;
   final LibraryEntry? existingEntry;
+  final int? initialProgress;
 
   @override
   ConsumerState<_AddToLibrarySheet> createState() => _AddToLibrarySheetState();
@@ -386,7 +402,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   late final TextEditingController _notesCtrl;
   late final Map<String, double> _advScores;
 
-  // Book-specific state
   late BookTrackingMode _bookTrackingMode;
   late final TextEditingController _chapterCtrl;
   late final TextEditingController _totalPagesOverrideCtrl;
@@ -406,11 +421,11 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     _status = e?.status ?? 'PLANNING';
     final scoring = ref.read(scoringSystemSettingProvider);
     _score = scoring.fromStoredScore(e?.score);
-    _progressCtrl = TextEditingController(text: '${e?.progress ?? 0}');
+    final initialProg = e?.progress ?? widget.initialProgress ?? 0;
+    _progressCtrl = TextEditingController(text: '$initialProg');
     _notesCtrl = TextEditingController(text: e?.notes ?? '');
     _advScores = {for (final c in kAnilistAdvancedScoringCategories) c: 0};
 
-    // Book-specific init
     _bookTrackingMode = e != null
         ? BookTrackingMode.fromString(e.bookTrackingMode)
         : BookTrackingMode.pages;
@@ -426,6 +441,86 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
   }
 
   bool get _isManga => widget.kind == MediaKind.manga;
+
+  void _onScoreChanged(double v) {
+    HapticFeedback.selectionClick();
+    setState(() => _score = v);
+  }
+
+  double _parseScoreInput(String text, ScoringSystem scoring) {
+    final raw =
+        double.tryParse(text.trim().replaceAll(',', '.')) ?? _score;
+    final clamped = raw.clamp(0.0, scoring.max);
+    return switch (scoring) {
+      ScoringSystem.point10Decimal =>
+        (clamped * 10).round() / 10.0,
+      _ => clamped.roundToDouble(),
+    };
+  }
+
+  Future<void> _editScoreViaKeyboard(BuildContext context) async {
+    final scoring = ref.read(scoringSystemSettingProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDecimal = scoring == ScoringSystem.point10Decimal;
+    final ctrl = TextEditingController(
+      text: _score > 0
+          ? (isDecimal
+              ? _score.toStringAsFixed(1)
+              : _score.round().toString())
+          : '',
+    );
+    final rangeHint = isDecimal
+        ? '0.0 – ${scoring.max.toStringAsFixed(1)}'
+        : '0 – ${scoring.max.round()}';
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.star_rounded,
+                color: Colors.amber.shade600, size: 22),
+            const SizedBox(width: 8),
+            Text(l10n.addToListScore),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.numberWithOptions(
+              decimal: isDecimal),
+          decoration: InputDecoration(
+            hintText: rangeHint,
+            suffixText: isDecimal
+                ? '/ ${scoring.max.toStringAsFixed(1)}'
+                : '/ ${scoring.max.round()}',
+          ),
+          onSubmitted: (_) {
+            final v = _parseScoreInput(ctrl.text, scoring);
+            Navigator.of(ctx).pop(v);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(0.0),
+            child: Text(l10n.addToListNoScore),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = _parseScoreInput(ctrl.text, scoring);
+              Navigator.of(ctx).pop(v);
+            },
+            child: Text(l10n.scoreSet),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && mounted) {
+      HapticFeedback.lightImpact();
+      setState(() => _score = result);
+    }
+  }
   bool get _isGame => widget.kind == MediaKind.game;
   bool get _isMovie => widget.kind == MediaKind.movie;
   bool get _isBook => widget.kind == MediaKind.book;
@@ -456,7 +551,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                           AnimeAiringProgress.maxProgressForAnimeItem(widget.item))
                       : widget.item['episodes'] as int?;
 
-  /// For books, the effective total depends on the tracking mode.
   int? get _bookEffectiveTotal {
     switch (_bookTrackingMode) {
       case BookTrackingMode.pages:
@@ -549,7 +643,37 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
     final title = widget.item['title'] as Map<String, dynamic>? ?? {};
     final name = (title['english'] as String?) ??
         (title['romaji'] as String?) ??
+        (widget.item['name'] as String?) ??
         '';
+    final coverImage = widget.item['coverImage'] as Map<String, dynamic>? ?? {};
+    final posterUrl = (coverImage['extraLarge'] as String?) ??
+        (coverImage['large'] as String?) ??
+        (coverImage['medium'] as String?) ??
+        widget.existingEntry?.posterUrl;
+    final kindLabel = switch (widget.kind) {
+      MediaKind.anime => l10n.mediaKindAnime,
+      MediaKind.manga => l10n.mediaKindManga,
+      MediaKind.movie => l10n.mediaKindMovie,
+      MediaKind.tv => l10n.mediaKindTv,
+      MediaKind.game => l10n.mediaKindGame,
+      MediaKind.book => l10n.mediaKindBook,
+    };
+    final kindAccent = switch (widget.kind) {
+      MediaKind.anime => cs.primary,
+      MediaKind.manga => cs.secondary,
+      MediaKind.movie => cs.tertiary,
+      MediaKind.tv => cs.tertiary,
+      MediaKind.game => cs.primary,
+      MediaKind.book => cs.secondary,
+    };
+    final kindIcon = switch (widget.kind) {
+      MediaKind.anime => Icons.animation_rounded,
+      MediaKind.manga => Icons.menu_book_rounded,
+      MediaKind.movie => Icons.movie_rounded,
+      MediaKind.tv => Icons.live_tv_rounded,
+      MediaKind.game => Icons.sports_esports_rounded,
+      MediaKind.book => Icons.auto_stories_rounded,
+    };
     final countLabel = _isGame
         ? l10n.addToListHoursPlayed
         : _isBook
@@ -576,25 +700,19 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
           return SingleChildScrollView(
             controller: scrollController,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomPad),
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + bottomPad),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              Text(
-                isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                name,
-                style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              _SheetHeroHeader(
+                posterUrl: posterUrl,
+                title: name,
+                kindLabel: kindLabel,
+                kindIcon: kindIcon,
+                kindAccent: kindAccent,
+                isEdit: isEdit,
+                titleLabel: isEdit ? l10n.editLibraryEntry : l10n.addToListTitle,
               ),
               if (_isBook && workKey != null && workKey.isNotEmpty) ...[
                 const SizedBox(height: 14),
@@ -664,66 +782,134 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
               ],
               const SizedBox(height: 20),
 
-              Text(l10n.addToListStatus, style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              )),
-              const SizedBox(height: 8),
+              _SectionLabel(text: l10n.addToListStatus),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: _statusData.map((s) {
                   final selected = _status == s.$1;
-                  return ChoiceChip(
+                  return _StatusChip(
+                    icon: s.$2,
+                    label: _statusLabel(l10n, s.$1, widget.kind),
                     selected: selected,
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(s.$2, size: 16),
-                        const SizedBox(width: 4),
-                        Text(_statusLabel(l10n, s.$1, widget.kind)),
-                      ],
-                    ),
-                    onSelected: (_) => setState(() => _status = s.$1),
-                    showCheckmark: false,
-                    visualDensity: VisualDensity.compact,
+                    accent: kindAccent,
+                    onTap: () => setState(() => _status = s.$1),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 20),
 
-              Row(
-                children: [
-                  Text(l10n.addToListScore, style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  )),
-                  const Spacer(),
-                  Text(
-                    ref.watch(scoringSystemSettingProvider).formatScore(_score),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _score > 0 ? Colors.amber.shade600 : cs.onSurfaceVariant,
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded,
+                              size: 18,
+                              color: _score > 0
+                                  ? Colors.amber.shade600
+                                  : cs.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Text(l10n.addToListScore,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurface,
+                              )),
+                          const Spacer(),
+                          // Tappable score badge — opens keyboard input
+                          Tooltip(
+                            message: l10n.addToListScore,
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(999),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(999),
+                                onTap: () =>
+                                    _editScoreViaKeyboard(context),
+                                child: AnimatedSwitcher(
+                                  duration:
+                                      const Duration(milliseconds: 200),
+                                  child: Container(
+                                    key: ValueKey(_score > 0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: _score > 0
+                                          ? Colors.amber.shade600
+                                              .withValues(alpha: 0.18)
+                                          : cs.surfaceContainerHighest,
+                                      borderRadius:
+                                          BorderRadius.circular(999),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _score > 0
+                                              ? ref
+                                                  .watch(
+                                                      scoringSystemSettingProvider)
+                                                  .formatScore(_score)
+                                              : l10n.addToListNoScore,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: _score > 0
+                                                ? Colors.amber.shade700
+                                                : cs.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.edit_rounded,
+                                            size: 12,
+                                            color: _score > 0
+                                                ? Colors.amber.shade700
+                                                    .withAlpha(180)
+                                                : cs.onSurfaceVariant
+                                                    .withAlpha(150)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              SliderTheme(
-                data: _m3ScoreSliderTheme(context),
-                child: Slider(
-                  value: _score,
-                  min: 0,
-                  max: ref.watch(scoringSystemSettingProvider).max,
-                  divisions: ref.watch(scoringSystemSettingProvider).divisions,
-                  label: _score == 0
-                      ? l10n.addToListNoScore
-                      : ref
-                          .watch(scoringSystemSettingProvider)
-                          .formatScore(_score),
-                  onChanged: (v) => setState(() => _score = v),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                      child: SliderTheme(
+                        data: _m3ScoreSliderTheme(context),
+                        child: Slider(
+                          value: _score,
+                          min: 0,
+                          max: ref
+                              .watch(scoringSystemSettingProvider)
+                              .max,
+                          divisions: ref
+                              .watch(scoringSystemSettingProvider)
+                              .divisions,
+                          label: _score == 0
+                              ? l10n.addToListNoScore
+                              : ref
+                                  .watch(scoringSystemSettingProvider)
+                                  .formatScore(_score),
+                          onChanged: _onScoreChanged,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -765,8 +951,10 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                               min: 0,
                               max: scoring.max,
                               divisions: scoring.divisions,
-                              onChanged: (v) =>
-                                  setState(() => _advScores[cat] = v),
+                              onChanged: (v) {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _advScores[cat] = v);
+                                },
                             ),
                           ),
                         ),
@@ -791,7 +979,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
 
               const SizedBox(height: 12),
 
-              // Book tracking mode selector
               if (_isBook) ...[
                 Text(l10n.bookTrackingModeLabel, style: TextStyle(
                   fontSize: 13,
@@ -831,66 +1018,21 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 const SizedBox(height: 12),
               ],
 
-              Row(
-                children: [
-                  Text(countLabel, style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  )),
-                  const Spacer(),
-                  if (_totalCount != null)
-                    Text(
-                      l10n.addToListOf(_totalCount!),
-                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: () {
-                      final current = int.tryParse(_progressCtrl.text) ?? 0;
-                      if (current > 0) {
-                        _progressCtrl.text = '${current - 1}';
-                      }
-                    },
-                  ),
-                  SizedBox(
-                    width: 60,
-                    child: TextField(
-                      controller: _progressCtrl,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onPressed: () {
-                      final current = int.tryParse(_progressCtrl.text) ?? 0;
-                      final max = _totalCount;
-                      if (max == null || current < max) {
-                        _progressCtrl.text = '${current + 1}';
-                      }
-                    },
-                  ),
-                  if (_totalCount != null) ...[
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
+              _ProgressStepper(
+                label: countLabel,
+                controller: _progressCtrl,
+                totalCount: _totalCount,
+                ofLabel: _totalCount != null
+                    ? l10n.addToListOf(_totalCount!)
+                    : null,
+                maxLabel: l10n.addToListMax,
+                accent: kindAccent,
+                onMaxTapped: _totalCount == null
+                    ? null
+                    : () {
                         _progressCtrl.text = '$_totalCount';
                         setState(() => _status = 'COMPLETED');
                       },
-                      child: Text(l10n.addToListMax, style: const TextStyle(fontSize: 12)),
-                    ),
-                  ],
-                ],
               ),
               if (_isBook && _bookTrackingMode == BookTrackingMode.pages && _totalCount != null)
                 Builder(builder: (_) {
@@ -908,54 +1050,19 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                   return const SizedBox.shrink();
                 }),
 
-              // Book chapter tracking (shown when mode == chapters)
               if (_isBook && _bookTrackingMode == BookTrackingMode.chapters) ...[
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(l10n.bookChapterProgress, style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurfaceVariant,
-                    )),
-                    const Spacer(),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: () {
-                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
-                        if (c > 0) _chapterCtrl.text = '${c - 1}';
-                      },
-                    ),
-                    SizedBox(
-                      width: 60,
-                      child: TextField(
-                        controller: _chapterCtrl,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () {
-                        final c = int.tryParse(_chapterCtrl.text) ?? 0;
-                        final max = int.tryParse(_totalChaptersOverrideCtrl.text);
-                        if (max == null || c < max) _chapterCtrl.text = '${c + 1}';
-                      },
-                    ),
-                  ],
+                _ProgressStepper(
+                  label: l10n.bookChapterProgress,
+                  controller: _chapterCtrl,
+                  totalCount: int.tryParse(_totalChaptersOverrideCtrl.text),
+                  ofLabel: null,
+                  maxLabel: l10n.addToListMax,
+                  accent: kindAccent,
+                  onMaxTapped: null,
                 ),
               ],
 
-              // Book totals override section
               if (_isBook) ...[
                 const SizedBox(height: 12),
                 Text(l10n.bookOverrideTotalsLabel, style: TextStyle(
@@ -999,28 +1106,50 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ],
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              Text(l10n.addToListNotes, style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              )),
+              _SectionLabel(text: l10n.addToListNotes),
               const SizedBox(height: 8),
-              TextField(
-                controller: _notesCtrl,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: l10n.addToListNotesHint,
-                  isDense: true,
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: TextField(
+                  controller: _notesCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: l10n.addToListNotesHint,
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: FilledButton.icon(
-                  icon: const Icon(Icons.check),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  icon: Icon(isEdit ? Icons.save_rounded : Icons.check_rounded),
                   label: Text(l10n.addToListSave),
                   onPressed: () {
                     var progress = int.tryParse(_progressCtrl.text);
@@ -1041,7 +1170,6 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                       score: _score > 0 ? ref.read(scoringSystemSettingProvider).toStoredScore(_score) : null,
                       progress: progress != null && progress > 0 ? progress : null,
                       notes: notes.isNotEmpty ? notes : null,
-                      // Book-specific
                       editionKey: _isBook ? _selectedEditionKey : null,
                       isbn: _isBook ? _selectedIsbn : null,
                       totalPagesFromApi: _isBook ? _totalPagesFromApi : null,
@@ -1064,13 +1192,24 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
                 ),
               ),
               if (isEdit) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.delete_outline, color: cs.error),
-                    label: Text(l10n.removeFromLibrary, style: TextStyle(color: cs.error)),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error.withAlpha(120))),
+                  height: 48,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor: cs.errorContainer.withValues(alpha: 0.5),
+                      foregroundColor: cs.onErrorContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    label: Text(l10n.removeFromLibrary),
                     onPressed: () => Navigator.of(context).pop(_AddResult.remove),
                   ),
                 ),
@@ -1080,6 +1219,386 @@ class _AddToLibrarySheetState extends ConsumerState<_AddToLibrarySheet> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SheetHeroHeader extends StatelessWidget {
+  const _SheetHeroHeader({
+    required this.posterUrl,
+    required this.title,
+    required this.kindLabel,
+    required this.kindIcon,
+    required this.kindAccent,
+    required this.isEdit,
+    required this.titleLabel,
+  });
+
+  final String? posterUrl;
+  final String title;
+  final String kindLabel;
+  final IconData kindIcon;
+  final Color kindAccent;
+  final bool isEdit;
+  final String titleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: 56,
+              height: 78,
+              child: posterUrl != null
+                  ? Image.network(
+                      posterUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        color: cs.surfaceContainerHigh,
+                        child: Icon(kindIcon,
+                            color: cs.onSurfaceVariant, size: 28),
+                      ),
+                    )
+                  : Container(
+                      color: cs.surfaceContainerHigh,
+                      child: Icon(kindIcon,
+                          color: cs.onSurfaceVariant, size: 28),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kindAccent.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(kindIcon, size: 12, color: kindAccent),
+                          const SizedBox(width: 4),
+                          Text(
+                            kindLabel,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: kindAccent,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    if (isEdit)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cs.tertiaryContainer
+                              .withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          'EDIT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: cs.onTertiaryContainer,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title.isNotEmpty ? title : titleLabel,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                    color: cs.onSurface,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: cs.onSurface,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = selected ? accent : cs.surfaceContainerHigh;
+    final fg = selected ? cs.onPrimary : cs.onSurfaceVariant;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(selected ? 14 : 18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: (selected ? cs.onPrimary : accent)
+              .withValues(alpha: 0.16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: fg),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: fg,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressStepper extends StatelessWidget {
+  const _ProgressStepper({
+    required this.label,
+    required this.controller,
+    required this.totalCount,
+    required this.ofLabel,
+    required this.maxLabel,
+    required this.accent,
+    required this.onMaxTapped,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final int? totalCount;
+  final String? ofLabel;
+  final String maxLabel;
+  final Color accent;
+  final VoidCallback? onMaxTapped;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const Spacer(),
+              if (ofLabel != null)
+                Text(
+                  ofLabel!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _StepperButton(
+                icon: Icons.remove_rounded,
+                onTap: () {
+                  final c = int.tryParse(controller.text) ?? 0;
+                  if (c > 0) controller.text = '${c - 1}';
+                },
+                cs: cs,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StepperButton(
+                icon: Icons.add_rounded,
+                onTap: () {
+                  final c = int.tryParse(controller.text) ?? 0;
+                  if (totalCount == null || c < totalCount!) {
+                    controller.text = '${c + 1}';
+                  }
+                },
+                cs: cs,
+                accent: accent,
+                filled: true,
+              ),
+            ],
+          ),
+          if (onMaxTapped != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onMaxTapped,
+                icon: const Icon(Icons.flag_rounded, size: 16),
+                label: Text(maxLabel),
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  textStyle: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({
+    required this.icon,
+    required this.onTap,
+    required this.cs,
+    this.accent,
+    this.filled = false,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final ColorScheme cs;
+  final Color? accent;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = filled
+        ? (accent ?? cs.primary)
+        : cs.surfaceContainerHighest;
+    final fg = filled ? cs.onPrimary : cs.onSurfaceVariant;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(child: Icon(icon, size: 22, color: fg)),
+        ),
       ),
     );
   }

@@ -12,8 +12,6 @@ import 'package:cronicle/features/onboarding/presentation/onboarding_notifier.da
 import 'package:cronicle/features/settings/presentation/device_notifications_notifier.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Mounted under [MaterialApp] so that system notification permission is
-/// requested right after onboarding completes (Android 13+ / iOS).
 class NotificationPermissionBootstrap extends ConsumerStatefulWidget {
   const NotificationPermissionBootstrap({required this.child, super.key});
 
@@ -61,7 +59,6 @@ class _NotificationPermissionBootstrapState
     _inFlight = true;
 
     try {
-      // Small delay so the feed page is fully mounted before the system dialog.
       await Future<void>.delayed(const Duration(milliseconds: 600));
 
       await prefs.setBool(DeviceNotificationPrefs.permissionPrompted, true);
@@ -74,7 +71,6 @@ class _NotificationPermissionBootstrapState
             .read(deviceNotificationSettingsProvider.notifier)
             .applyDefaultsAfterPermissionGranted();
       } else {
-        // Show a hint that notifications can be enabled later.
         final navCtx = cronicleRootNavigatorKey.currentContext;
         if (navCtx != null && navCtx.mounted) {
           final l10n = AppLocalizations.of(navCtx);

@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
 String _timeAgoForum(int? createdAt) {
   if (createdAt == null) return '';
@@ -47,7 +47,6 @@ List<Map<String, dynamic>> _parseChildComments(dynamic raw) {
   return const [];
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class ForumThreadPage extends ConsumerStatefulWidget {
   const ForumThreadPage({
     super.key,
@@ -76,6 +75,34 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
 
   _CommentSort _sort = _CommentSort.oldest;
 
+  // Pagination. We track the range of pages that has been loaded so we can
+  // page forward (oldest sort) or backward from the last page (newest sort)
+  // without ever loading every page at once — that would melt AniList's
+  // rate limit on long threads.
+  int _minLoadedPage = 1;
+  int _maxLoadedPage = 1;
+  int _lastPage = 1;
+  bool _loadingMore = false;
+  // Gate so a single scroll-to-bottom triggers exactly one page load. We
+  // only re-arm once the user has scrolled back up past the trigger zone,
+  // so users explicitly scroll again to pull the next page instead of the
+  // listener auto-firing while they're still hovering near the bottom.
+  bool _canTriggerMoreLoad = true;
+  static const int _commentsPerPage = 15;
+
+  bool get _hasMoreInDirection {
+    switch (_sort) {
+      case _CommentSort.oldest:
+        return _maxLoadedPage < _lastPage;
+      case _CommentSort.newest:
+        return _minLoadedPage > 1;
+      case _CommentSort.mostLiked:
+        // Sort by likes operates on whatever the user has scrolled through;
+        // we do not auto-fetch in this mode to avoid hammering AniList.
+        return false;
+    }
+  }
+
   ({int id, String name})? _replyTarget;
   final _replyFocusNode = FocusNode();
 
@@ -86,53 +113,189 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _load();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _replyFocusNode.dispose();
     _commentController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final nearBottom = pos.extentAfter < 600;
+    if (!nearBottom) {
+      // User scrolled away from the end — re-arm the trigger so the next
+      // approach to the bottom can load the next page.
+      _canTriggerMoreLoad = true;
+      return;
+    }
+    if (!_canTriggerMoreLoad ||
+        _loadingMore ||
+        _loading ||
+        !_hasMoreInDirection) {
+      return;
+    }
+    _canTriggerMoreLoad = false;
+    _loadMoreInDirection();
+  }
+
+  void _ingestComments(List<Map<String, dynamic>> comments) {
+    for (final c in comments) {
+      final id = c['id'] as int?;
+      if (id != null) {
+        _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
+        _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
+      }
+      final children = _parseChildComments(c['childComments']);
+      for (final child in children) {
+        final childId = child['id'] as int?;
+        if (childId != null) {
+          _commentIsLiked[childId] = child['isLiked'] as bool? ?? false;
+          _commentLikeCount[childId] = child['likeCount'] as int? ?? 0;
+        }
+      }
+    }
+  }
+
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+      _minLoadedPage = 1;
+      _maxLoadedPage = 1;
+      _comments = [];
+    });
     try {
       final graphql = ref.read(anilistGraphqlProvider);
       final token = await ref.read(anilistTokenProvider.future);
-        final data = await graphql
-          .fetchForumThread(widget.threadId, token: token)
+      final data = await graphql
+          .fetchForumThread(widget.threadId,
+              token: token, page: 1, perPage: _commentsPerPage)
           .timeout(const Duration(seconds: 30));
       if (!mounted) return;
       final comments =
           (data?['comments'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final pageInfo = data?['pageInfo'] as Map<String, dynamic>?;
+      _ingestComments(comments);
       setState(() {
         _thread = data;
         _comments = comments;
         _threadIsLiked = data?['isLiked'] as bool? ?? false;
         _threadLikeCount = data?['likeCount'] as int? ?? 0;
-        for (final c in comments) {
-          final id = c['id'] as int?;
-          if (id != null) {
-            _commentIsLiked[id] = c['isLiked'] as bool? ?? false;
-            _commentLikeCount[id] = c['likeCount'] as int? ?? 0;
-          }
-          final children = _parseChildComments(c['childComments']);
-          for (final child in children) {
-            final childId = child['id'] as int?;
-            if (childId != null) {
-              _commentIsLiked[childId] = child['isLiked'] as bool? ?? false;
-              _commentLikeCount[childId] = child['likeCount'] as int? ?? 0;
-            }
-          }
-        }
+        _minLoadedPage = (pageInfo?['currentPage'] as int?) ?? 1;
+        _maxLoadedPage = _minLoadedPage;
+        _lastPage = (pageInfo?['lastPage'] as int?) ?? 1;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = '$e'; });
+    }
+  }
+
+  /// Loads the next page in the current sort direction:
+  /// - oldest  → page after `_maxLoadedPage`, appended to the bottom.
+  /// - newest  → page before `_minLoadedPage`, appended (sorting puts it on
+  ///   top anyway so it visually fills downward).
+  Future<void> _loadMoreInDirection() async {
+    if (_loadingMore || !_hasMoreInDirection) return;
+    final int targetPage;
+    final bool reverse;
+    switch (_sort) {
+      case _CommentSort.oldest:
+        targetPage = _maxLoadedPage + 1;
+        reverse = false;
+      case _CommentSort.newest:
+        targetPage = _minLoadedPage - 1;
+        reverse = true;
+      case _CommentSort.mostLiked:
+        return;
+    }
+    setState(() => _loadingMore = true);
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final token = await ref.read(anilistTokenProvider.future);
+      final result = await graphql
+          .fetchForumThreadCommentsPage(widget.threadId,
+              token: token, page: targetPage, perPage: _commentsPerPage)
+          .timeout(const Duration(seconds: 30));
+      if (!mounted) return;
+      _ingestComments(result.comments);
+      setState(() {
+        _comments = [..._comments, ...result.comments];
+        _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
+        if (reverse) {
+          _minLoadedPage = targetPage;
+        } else {
+          _maxLoadedPage = targetPage;
+        }
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  /// Resets the comment list and fetches the first page for the new sort
+  /// direction. For `newest` we jump straight to the last page and let the
+  /// user scroll backwards page-by-page instead of pulling the whole thread.
+  Future<void> _loadInitialForSort(_CommentSort sort) async {
+    final int targetPage;
+    switch (sort) {
+      case _CommentSort.oldest:
+        targetPage = 1;
+      case _CommentSort.newest:
+        targetPage = _lastPage;
+      case _CommentSort.mostLiked:
+        return;
+    }
+    if (_loadingMore) return;
+    setState(() {
+      _loadingMore = true;
+      _comments = [];
+    });
+    try {
+      final graphql = ref.read(anilistGraphqlProvider);
+      final token = await ref.read(anilistTokenProvider.future);
+      final result = await graphql
+          .fetchForumThreadCommentsPage(widget.threadId,
+              token: token, page: targetPage, perPage: _commentsPerPage)
+          .timeout(const Duration(seconds: 30));
+      if (!mounted) return;
+      _ingestComments(result.comments);
+      setState(() {
+        _comments = result.comments;
+        _minLoadedPage = targetPage;
+        _maxLoadedPage = targetPage;
+        _lastPage = (result.pageInfo?['lastPage'] as int?) ?? _lastPage;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  void _setSort(_CommentSort sort) {
+    if (sort == _sort) return;
+    final previous = _sort;
+    setState(() => _sort = sort);
+    // Most-liked sorts the comments already in memory — never trigger a full
+    // load, that would collapse AniList's rate limit on big threads.
+    if (sort == _CommentSort.mostLiked) return;
+    // Oldest/newest each have their own pagination window. Reset and fetch
+    // the appropriate edge page (page 1 for oldest, last page for newest).
+    final needsReload = previous == _CommentSort.mostLiked ||
+        (sort == _CommentSort.oldest && _minLoadedPage != 1) ||
+        (sort == _CommentSort.newest && _maxLoadedPage != _lastPage);
+    if (needsReload) {
+      _loadInitialForSort(sort);
     }
   }
 
@@ -195,10 +358,8 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           _commentLikeCount[newId] = 0;
         }
         if (replyTarget == null) {
-          // Top-level comment — append to list
           _comments = [..._comments, newComment];
         } else {
-          // Reply — insert into parent's childComments
           _comments = _comments.map((c) {
             if (c['id'] == replyTarget.id) {
               final children = List<dynamic>.from(
@@ -211,7 +372,6 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
           }).toList();
         }
       });
-      // Scroll to bottom after adding a top-level comment
       if (replyTarget == null && _scrollController.hasClients) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollController.animateTo(
@@ -252,9 +412,11 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
         l10n.forumThread;
 
     return Scaffold(
-      body: Column(
+      backgroundColor: cs.surface,
+      extendBody: true,
+      body: Stack(
         children: [
-          Expanded(
+          Positioned.fill(
             child: _loading
                 ? CustomScrollView(slivers: [
                     SliverAppBar(
@@ -298,13 +460,18 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ])
                     : _buildContent(context, cs, l10n, title),
           ),
-          _ReplyInputBar(
-            controller: _commentController,
-            focusNode: _replyFocusNode,
-            sending: _sending,
-            onSend: _sendComment,
-            replyTarget: _replyTarget,
-            onCancelReply: _clearReplyTarget,
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _ReplyInputBar(
+              controller: _commentController,
+              focusNode: _replyFocusNode,
+              sending: _sending,
+              onSend: _sendComment,
+              replyTarget: _replyTarget,
+              onCancelReply: _clearReplyTarget,
+            ),
           ),
         ],
       ),
@@ -339,97 +506,157 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
               overflow: TextOverflow.ellipsis),
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 160),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-
-              if (categories.isNotEmpty) ...[
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: categories.map((c) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(c['name'] as String? ?? '',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onPrimaryContainer,
-                              fontWeight: FontWeight.w600)),
-                    );
-                  }).toList(),
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                const SizedBox(height: 8),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                            color: cs.onSurface)),
+                    const SizedBox(height: 10),
 
-              Row(
-                children: [
-                  if (avatar != null)
-                    GestureDetector(
-                      onTap: userId != null ? () => context.push('/user/$userId') : null,
-                      child: ClipOval(
-                        child: CachedNetworkImage(
-                            imageUrl: avatar,
-                            width: 24,
-                            height: 24,
-                            fit: BoxFit.cover),
+                    if (categories.isNotEmpty) ...[
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: categories.map((c) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: cs.secondaryContainer
+                                  .withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(c['name'] as String? ?? '',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: cs.onSecondaryContainer,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2)),
+                          );
+                        }).toList(),
                       ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    Row(
+                      children: [
+                        if (avatar != null)
+                          GestureDetector(
+                            onTap: userId != null
+                                ? () => context.push('/user/$userId')
+                                : null,
+                            child: ClipOval(
+                              child: CachedNetworkImage(
+                                  imageUrl: avatar,
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.cover),
+                            ),
+                          ),
+                        if (avatar != null) const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GestureDetector(
+                                onTap: userId != null
+                                    ? () => context.push('/user/$userId')
+                                    : null,
+                                child: Text(userName,
+                                    style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: cs.onSurface)),
+                              ),
+                              Text(_timeAgoForum(createdAt),
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: cs.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.visibility_outlined,
+                                  size: 13, color: cs.onSurfaceVariant),
+                              const SizedBox(width: 5),
+                              Text('$viewCount',
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: cs.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  if (avatar != null) const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: userId != null ? () => context.push('/user/$userId') : null,
-                    child: Text(userName,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('Â· ${_timeAgoForum(createdAt)}',
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
-                  const Spacer(),
-                  Icon(Icons.visibility_outlined,
-                      size: 14, color: cs.onSurfaceVariant),
-                  const SizedBox(width: 3),
-                  Text('$viewCount',
-                      style: TextStyle(
-                          fontSize: 12, color: cs.onSurfaceVariant)),
-                ],
+
+                    if (body != null && body.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      AnilistMarkdown(body,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: cs.onSurface,
+                              height: 1.55)),
+                    ],
+
+                    const SizedBox(height: 12),
+                    AnimatedLikeButton(
+                      isLiked: _threadIsLiked,
+                      likeCount: _threadLikeCount,
+                      onToggle: _toggleThreadLike,
+                    ),
+                  ],
+                ),
               ),
-
-              if (body != null && body.isNotEmpty) ...[
-                const Divider(height: 24),
-                AnilistMarkdown(body,
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: cs.onSurface,
-                        height: 1.55)),
-              ],
-
-              const SizedBox(height: 8),
-              AnimatedLikeButton(
-                isLiked: _threadIsLiked,
-                likeCount: _threadLikeCount,
-                onToggle: _toggleThreadLike,
-              ),
-
-              const Divider(height: 32),
+              const SizedBox(height: 18),
 
               if (_comments.isNotEmpty) ...[
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        l10n.forumReplies(_comments.length),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.forumReplies(_comments.length),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 15),
+                          ),
+                          if (_lastPage > 1)
+                            Text(
+                              _sort == _CommentSort.newest
+                                  ? 'Pages $_minLoadedPage–$_maxLoadedPage / $_lastPage'
+                                  : 'Page $_maxLoadedPage / $_lastPage',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: cs.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                        ],
                       ),
                     ),
                     SegmentedButton<_CommentSort>(
@@ -458,12 +685,33 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                       ],
                       selected: {_sort},
                       onSelectionChanged: (s) {
-                        if (s.isNotEmpty) setState(() => _sort = s.first);
+                        if (s.isNotEmpty) _setSort(s.first);
                       },
                       showSelectedIcon: false,
                     ),
                   ],
                 ),
+                if (_loadingMore && _comments.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: cs.primary),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _sort == _CommentSort.newest
+                            ? 'Loading newest comments…'
+                            : 'Loading comments…',
+                        style: TextStyle(
+                            fontSize: 12, color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 ...(() {
                   final sorted = [..._comments];
@@ -506,6 +754,40 @@ class _ForumThreadPageState extends ConsumerState<ForumThreadPage> {
                     );
                   });
                 })(),
+                if (_loadingMore && _comments.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: cs.primary),
+                      ),
+                    ),
+                  ),
+                if (!_hasMoreInDirection && _comments.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest
+                            .withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '· End of thread ·',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4),
+                      ),
+                    ),
+                  ),
+                ],
               ] else
                 Center(
                   child: Padding(
@@ -567,9 +849,13 @@ class _CommentTileState extends State<_CommentTile> {
     final children = _parseChildComments(widget.comment['childComments']);
     final hasChildren = children.isNotEmpty;
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -581,12 +867,12 @@ class _CommentTileState extends State<_CommentTile> {
             cs: cs,
           ),
           if (body != null && body.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             AnilistMarkdown(body,
                 style: TextStyle(
-                    fontSize: 13, color: cs.onSurface, height: 1.5)),
+                    fontSize: 13.5, color: cs.onSurface, height: 1.5)),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               if (widget.onLike != null)
@@ -594,6 +880,7 @@ class _CommentTileState extends State<_CommentTile> {
                   isLiked: widget.isLiked,
                   likeCount: widget.likeCount,
                   onToggle: widget.onLike!,
+                  compact: true,
                 ),
               const SizedBox(width: 12),
               if (commentId != null)
@@ -607,16 +894,15 @@ class _CommentTileState extends State<_CommentTile> {
           ),
           if (hasChildren) ...[
             const SizedBox(height: 10),
-            // Collapse/expand toggle strip
             InkWell(
               onTap: () => setState(() => _collapsed = !_collapsed),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(999),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withAlpha(180),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: cs.outlineVariant.withAlpha(80)),
+                  color: cs.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -625,7 +911,7 @@ class _CommentTileState extends State<_CommentTile> {
                       turns: _collapsed ? -0.25 : 0,
                       duration: const Duration(milliseconds: 200),
                       child: Icon(Icons.expand_more_rounded,
-                          size: 14, color: cs.primary),
+                          size: 16, color: cs.onPrimaryContainer),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -633,8 +919,8 @@ class _CommentTileState extends State<_CommentTile> {
                           ? '${children.length} respuesta${children.length == 1 ? '' : 's'}'
                           : 'Ocultar respuestas',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: cs.primary,
+                          fontSize: 12,
+                          color: cs.onPrimaryContainer,
                           fontWeight: FontWeight.w600),
                     ),
                   ],
@@ -668,7 +954,6 @@ class _CommentTileState extends State<_CommentTile> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _CommentHeader extends StatelessWidget {
   const _CommentHeader({
     required this.avatar,
@@ -723,7 +1008,6 @@ class _CommentHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ReplyButton extends StatelessWidget {
   const _ReplyButton({
     required this.onTap,
@@ -738,30 +1022,36 @@ class _ReplyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.reply_rounded,
-                size: small ? 14.0 : 16.0,
-                color: cs.onSurfaceVariant),
-            const SizedBox(width: 4),
-            Text(l10n.forumReplyButton,
-                style: TextStyle(
-                    fontSize: small ? 11.0 : 12.0,
-                    color: cs.onSurfaceVariant)),
-          ],
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(999),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: cs.primary.withValues(alpha: 0.14),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: small ? 10 : 12, vertical: small ? 5 : 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.reply_rounded,
+                  size: small ? 14.0 : 17.0,
+                  color: cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(l10n.forumReplyButton,
+                  style: TextStyle(
+                      fontSize: small ? 11.0 : 12.5,
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _LockedChip extends StatelessWidget {
   const _LockedChip({required this.cs, this.small = false});
 
@@ -770,35 +1060,31 @@ class _LockedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Este comentario está bloqueado y no acepta respuestas.'),
-          duration: Duration(seconds: 3),
-        ),
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: small ? 10 : 12, vertical: small ? 5 : 7),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(999),
       ),
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_rounded,
-                size: small ? 13.0 : 15.0,
-                color: cs.onSurfaceVariant.withAlpha(160)),
-            const SizedBox(width: 4),
-            Text('Bloqueado',
-                style: TextStyle(
-                    fontSize: small ? 11.0 : 12.0,
-                    color: cs.onSurfaceVariant.withAlpha(160))),
-          ],
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_rounded,
+              size: small ? 13.0 : 15.0,
+              color: cs.onSurfaceVariant.withAlpha(180)),
+          const SizedBox(width: 6),
+          Text('Bloqueado',
+              style: TextStyle(
+                  fontSize: small ? 11.0 : 12.0,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant.withAlpha(180))),
+        ],
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ChildCommentTile extends StatelessWidget {
   const _ChildCommentTile({
     required this.comment,
@@ -867,6 +1153,7 @@ class _ChildCommentTile extends StatelessWidget {
                           onToggle: onLike!,
                           iconSize: 14,
                           fontSize: 11,
+                          compact: true,
                         ),
                       const SizedBox(width: 10),
                       if (isLocked)
@@ -885,8 +1172,7 @@ class _ChildCommentTile extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-class _ReplyInputBar extends ConsumerWidget {
+class _ReplyInputBar extends ConsumerStatefulWidget {
   const _ReplyInputBar({
     required this.controller,
     required this.focusNode,
@@ -904,97 +1190,174 @@ class _ReplyInputBar extends ConsumerWidget {
   final VoidCallback onCancelReply;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ReplyInputBar> createState() => _ReplyInputBarState();
+}
+
+class _ReplyInputBarState extends ConsumerState<_ReplyInputBar>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Scaffold consumes MediaQuery.viewInsets, so the bar can't rebuild via
+    // the usual MediaQuery dependency when the IME shows/hides. Listen to
+    // raw window metrics instead so the bar repositions both ways.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final controller = widget.controller;
+    final focusNode = widget.focusNode;
+    final sending = widget.sending;
+    final onSend = widget.onSend;
+    final replyTarget = widget.replyTarget;
+    final onCancelReply = widget.onCancelReply;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final tokenAsync = ref.watch(anilistTokenProvider);
     final isLoggedIn = tokenAsync.valueOrNull != null;
-    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
+    // Scaffold consumes MediaQuery.viewInsets when resizing, so read raw
+    // insets from the root View to detect the IME and dock above it.
+    final view = View.of(context);
+    final keyboardInset = view.viewInsets.bottom / view.devicePixelRatio;
+    // Sit above the floating navbar pill from AppShell. The navbar uses
+    // 4dp top pad + content height + max(bottomSafe, 10) bottom pad.
+    final navbarTotal = 4 +
+        kGlassBottomNavContentHeight +
+        (bottomSafe > 0 ? bottomSafe : 10);
+    final bottomPad = keyboardInset > 0 ? 8.0 : navbarTotal + 6;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        border:
-            Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (replyTarget != null)
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 6, 12, bottomPad),
+      child: Material(
+        color: isDark
+            ? cs.surfaceContainerHigh
+            : cs.secondaryContainer,
+        elevation: 3,
+        shadowColor: Colors.black.withAlpha(isDark ? 60 : 30),
+        surfaceTintColor: cs.surfaceTint,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(
+            color: cs.outlineVariant.withAlpha(isDark ? 70 : 40),
+            width: 0.6,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (replyTarget != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 10, 0),
+                child: Row(
+                  children: [
+                    Icon(Icons.reply_rounded, size: 14, color: cs.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.forumReplyingTo(replyTarget!.name),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: cs.primary,
+                            fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: onCancelReply,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(Icons.close_rounded,
+                            size: 16, color: cs.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 8, 0),
+              padding: const EdgeInsets.fromLTRB(8, 6, 6, 6),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Icons.reply_rounded,
-                      size: 14, color: cs.primary),
-                  const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      l10n.forumReplyingTo(replyTarget!.name),
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: cs.primary,
-                          fontWeight: FontWeight.w500),
-                      overflow: TextOverflow.ellipsis,
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      enabled: isLoggedIn && !sending,
+                      maxLines: 4,
+                      minLines: 1,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        hintText: isLoggedIn
+                            ? l10n.writeReplyHint
+                            : l10n.loginRequiredComment,
+                        hintStyle: TextStyle(
+                            fontSize: 14, color: cs.onSurfaceVariant),
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        isDense: true,
+                      ),
+                      style: TextStyle(fontSize: 14, color: cs.onSurface),
                     ),
                   ),
-                  InkWell(
-                    onTap: onCancelReply,
-                    child: Icon(Icons.close_rounded,
-                        size: 16, color: cs.onSurfaceVariant),
-                  ),
+                  const SizedBox(width: 4),
+                  sending
+                      ? const SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : Material(
+                          color: isLoggedIn
+                              ? cs.primary
+                              : cs.surfaceContainerHighest,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: isLoggedIn ? onSend : null,
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Icon(
+                                Icons.send_rounded,
+                                size: 20,
+                                color: isLoggedIn
+                                    ? cs.onPrimary
+                                    : cs.onSurfaceVariant.withAlpha(120),
+                              ),
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, 8, 8, 8 + bottomInset),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enabled: isLoggedIn && !sending,
-                    maxLines: 3,
-                    minLines: 1,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
-                      hintText: isLoggedIn
-                          ? l10n.writeReplyHint
-                          : l10n.loginRequiredComment,
-                      hintStyle:
-                          TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: cs.surfaceContainerHighest,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      isDense: true,
-                    ),
-                    style: TextStyle(fontSize: 13, color: cs.onSurface),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                sending
-                    ? const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        icon: Icon(Icons.send_rounded, color: cs.primary),
-                        onPressed: isLoggedIn ? onSend : null,
-                      ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

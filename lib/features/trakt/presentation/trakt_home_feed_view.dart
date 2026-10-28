@@ -6,9 +6,10 @@ import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
-/// Home feed de pelÃ­culas o series usando datos de Trakt.tv.
 class TraktHomeFeedView extends ConsumerWidget {
   const TraktHomeFeedView({super.key, required this.kind});
 
@@ -116,7 +117,6 @@ class TraktHomeFeedView extends ConsumerWidget {
   }
 }
 
-// â”€â”€â”€ Movies feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MoviesFeed extends StatelessWidget {
   const _MoviesFeed({required this.data, required this.l10n});
@@ -128,7 +128,7 @@ class _MoviesFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
       children: [
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
@@ -194,7 +194,6 @@ class _MoviesFeed extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Shows feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ShowsFeed extends StatelessWidget {
   const _ShowsFeed({required this.data, required this.l10n});
@@ -206,7 +205,7 @@ class _ShowsFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return ListView(
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
       children: [
         if (data.trending.isNotEmpty)
           _ScoreCarouselSection(
@@ -272,9 +271,6 @@ class _ShowsFeed extends StatelessWidget {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// HELPERS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 String? _coverUrl(Map<String, dynamic> item) =>
     (item['coverImage'] as Map?)?['large'] as String?;
@@ -299,7 +295,6 @@ String _formatVotes(int v) {
   return '$v';
 }
 
-// â”€â”€â”€ Section header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
@@ -359,7 +354,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Skeleton helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 Widget _skel(BuildContext ctx,
     {required double w, required double h, double r = 8, Color? color}) {
@@ -374,7 +368,6 @@ Widget _skel(BuildContext ctx,
   );
 }
 
-// â”€â”€â”€ Poster placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder({
@@ -408,7 +401,6 @@ class _PosterPlaceholder extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Score badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.score, this.small = false});
@@ -446,11 +438,7 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SECTION WIDGETS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// â”€â”€â”€ 1. Score Carousel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ScoreCarouselSection extends StatelessWidget {
   const _ScoreCarouselSection({
@@ -562,6 +550,11 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -583,7 +576,6 @@ class _ScoreCarouselCard extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ 2. Ranked List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _RankedListSection extends StatelessWidget {
   const _RankedListSection({
@@ -759,7 +751,6 @@ class _RankedRow extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ 3. Hero Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
@@ -833,6 +824,12 @@ class _HeroSection extends StatelessWidget {
                             right: 4,
                             child: _ScoreBadge(score: score, small: true),
                           ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: LibraryAddBadge(
+                              item: it, kind: kind, size: 26),
+                        ),
                       ],
                     ),
                   );
@@ -882,24 +879,33 @@ class _HeroCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                bottomLeft: Radius.circular(14),
-              ),
-              child: url != null
-                  ? RemoteNetworkImage(
-                      imageUrl: url,
-                      width: 88,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    )
-                  : _PosterPlaceholder(
-                      width: 88,
-                      height: 120,
-                      radius: 0,
-                      isShow: kind == MediaKind.tv,
-                    ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    bottomLeft: Radius.circular(14),
+                  ),
+                  child: url != null
+                      ? RemoteNetworkImage(
+                          imageUrl: url,
+                          width: 88,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        )
+                      : _PosterPlaceholder(
+                          width: 88,
+                          height: 120,
+                          radius: 0,
+                          isShow: kind == MediaKind.tv,
+                        ),
+                ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind, size: 34),
+                ),
+              ],
             ),
             Expanded(
               child: Padding(
@@ -976,7 +982,6 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ 4. Mood Band â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MoodBandSection extends StatelessWidget {
   const _MoodBandSection({
@@ -1036,26 +1041,36 @@ class _MoodBandSection extends StatelessWidget {
                   return GestureDetector(
                     onTap:
                         id != null ? () => ctx.push(_route(kind, id)) : null,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: url != null
-                          ? RemoteNetworkImage(
-                              imageUrl: url,
-                              width: 108,
-                              height: 148,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              width: 108,
-                              height: 148,
-                              color: accent.withValues(alpha: 0.15),
-                              child: Icon(
-                                kind == MediaKind.tv
-                                    ? Icons.tv_rounded
-                                    : Icons.movie_rounded,
-                                color: Colors.white24,
-                              ),
-                            ),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: url != null
+                              ? RemoteNetworkImage(
+                                  imageUrl: url,
+                                  width: 108,
+                                  height: 148,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  width: 108,
+                                  height: 148,
+                                  color: accent.withValues(alpha: 0.15),
+                                  child: Icon(
+                                    kind == MediaKind.tv
+                                        ? Icons.tv_rounded
+                                        : Icons.movie_rounded,
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          right: 6,
+                          child:
+                              LibraryAddBadge(item: it, kind: kind),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -1069,7 +1084,6 @@ class _MoodBandSection extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ 5. Spotlight Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SpotlightRowsSection extends StatelessWidget {
   const _SpotlightRowsSection({
@@ -1218,9 +1232,6 @@ class _SpotlightRow extends StatelessWidget {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SKELETON WIDGETS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class _MovieSkeletons extends StatelessWidget {
   const _MovieSkeletons({required this.l10n});
@@ -1231,7 +1242,7 @@ class _MovieSkeletons extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: const [
@@ -1259,7 +1270,7 @@ class _ShowSkeletons extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 40),
+      padding: EdgeInsets.only(bottom: kGlassBottomNavContentHeight + 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: const [
@@ -1544,7 +1555,6 @@ class _SpotlightRowsSkeleton extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Scroll behavior (suppress stretch on web) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _NoStretchScrollBehavior extends MaterialScrollBehavior {
   const _NoStretchScrollBehavior();
@@ -1558,7 +1568,6 @@ class _NoStretchScrollBehavior extends MaterialScrollBehavior {
       child;
 }
 
-// â”€â”€â”€ String extension â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 extension _StringNullIfEmpty on String {
   String? get nullIfEmpty => isEmpty ? null : this;

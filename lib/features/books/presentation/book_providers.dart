@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/features/books/domain/models/book_edition.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -9,18 +10,15 @@ import 'package:cronicle/features/books/data/datasources/google_books_api_dataso
 
 part 'book_providers.g.dart';
 
-// ---------------------------------------------------------------------------
-// Datasource singleton
-// ---------------------------------------------------------------------------
+const String _booksHomeFeedCacheKey = 'books_home_feed';
+const String _bookTrendingCacheKey = 'books_trending';
+
 
 @Riverpod(keepAlive: true)
 GoogleBooksApiDatasource googleBooksApi(GoogleBooksApiRef ref) {
   return GoogleBooksApiDatasource(ref.watch(dioProvider));
 }
 
-// ---------------------------------------------------------------------------
-// Search
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookSearch(
@@ -32,11 +30,7 @@ Future<List<Map<String, dynamic>>> bookSearch(
   return api.searchBooks(query);
 }
 
-// ---------------------------------------------------------------------------
-// Trending / Discover
-// ---------------------------------------------------------------------------
 
-/// All home feed sections, fetched sequentially to avoid rate-limit 503.
 class BooksHomeFeedData {
   const BooksHomeFeedData({
     required this.trending,
@@ -53,11 +47,31 @@ class BooksHomeFeedData {
   final List<Map<String, dynamic>> scienceFiction;
   final List<Map<String, dynamic>> classics;
   final List<Map<String, dynamic>> mystery;
+
+  Map<String, dynamic> toJson() => {
+        'trending': trending,
+        'love': love,
+        'fantasy': fantasy,
+        'scienceFiction': scienceFiction,
+        'classics': classics,
+        'mystery': mystery,
+      };
+
+  factory BooksHomeFeedData.fromJson(Map<String, dynamic> json) {
+    return BooksHomeFeedData(
+      trending: jsonListAsMaps(json['trending']),
+      love: jsonListAsMaps(json['love']),
+      fantasy: jsonListAsMaps(json['fantasy']),
+      scienceFiction: jsonListAsMaps(json['scienceFiction']),
+      classics: jsonListAsMaps(json['classics']),
+      mystery: jsonListAsMaps(json['mystery']),
+    );
+  }
 }
 
-@Riverpod(keepAlive: true)
-Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
-  final api = ref.watch(googleBooksApiProvider);
+Future<BooksHomeFeedData> _fetchBooksHomeFeed(
+  GoogleBooksApiDatasource api,
+) async {
   const delay = Duration(milliseconds: 350);
 
   Future<List<Map<String, dynamic>>> safe(
@@ -70,7 +84,6 @@ Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
     }
   }
 
-  // Fetch sequentially with delays to avoid 503 rate-limit
   final trending = await safe(() => api.fetchTrending(limit: 20));
   await Future<void>.delayed(delay);
   final love = await safe(() => api.fetchSubject('love', limit: 20));
@@ -94,12 +107,56 @@ Future<BooksHomeFeedData> booksHomeFeed(BooksHomeFeedRef ref) async {
 }
 
 @Riverpod(keepAlive: true)
-Future<List<Map<String, dynamic>>> bookTrending(BookTrendingRef ref) async {
-  try {
+class BooksHomeFeed extends _$BooksHomeFeed {
+  @override
+  Future<BooksHomeFeedData> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_booksHomeFeedCacheKey);
     final api = ref.watch(googleBooksApiProvider);
-    return await api.fetchTrending(limit: 20);
-  } catch (_) {
-    return [];
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchBooksHomeFeed(api);
+          await cache.write(_booksHomeFeedCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {}
+      });
+      return BooksHomeFeedData.fromJson(cached.data);
+    }
+
+    final data = await _fetchBooksHomeFeed(api);
+    await cache.write(_booksHomeFeedCacheKey, data.toJson());
+    return data;
+  }
+}
+
+@Riverpod(keepAlive: true)
+class BookTrending extends _$BookTrending {
+  @override
+  Future<List<Map<String, dynamic>>> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_bookTrendingCacheKey);
+    final api = ref.watch(googleBooksApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final fresh = await api.fetchTrending(limit: 20);
+          await cache.write(_bookTrendingCacheKey, {'items': fresh});
+          state = AsyncData(fresh);
+        } catch (_) {}
+      });
+      return jsonListAsMaps(cached.data['items']);
+    }
+
+    try {
+      final fresh = await api.fetchTrending(limit: 20);
+      await cache.write(_bookTrendingCacheKey, {'items': fresh});
+      return fresh;
+    } catch (_) {
+      return const [];
+    }
   }
 }
 
@@ -116,9 +173,6 @@ Future<List<Map<String, dynamic>>> bookSubject(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Work detail
-// ---------------------------------------------------------------------------
 
 @Riverpod(keepAlive: true)
 Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
@@ -126,9 +180,6 @@ Future<Map<String, dynamic>> bookWork(BookWorkRef ref, String workKey) async {
   return api.fetchWork(workKey);
 }
 
-// ---------------------------------------------------------------------------
-// Favorite books (local, SharedPreferences — same pattern as games / trakt)
-// ---------------------------------------------------------------------------
 
 const _favoriteBooksPrefsKey = 'favorite_books_v1';
 
@@ -182,9 +233,6 @@ class FavoriteBooks extends _$FavoriteBooks {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Subject browse (uses search endpoint for richer data + client-side sorting)
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookSubjectBrowse(
@@ -196,9 +244,6 @@ Future<List<Map<String, dynamic>>> bookSubjectBrowse(
   return api.searchBooksBySubject(subject, maxResults: limit);
 }
 
-// ---------------------------------------------------------------------------
-// Editions for a work
-// ---------------------------------------------------------------------------
 
 @riverpod
 Future<List<Map<String, dynamic>>> bookWorkEditions(

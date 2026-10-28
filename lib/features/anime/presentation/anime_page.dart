@@ -9,6 +9,7 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 
 class AnimePage extends ConsumerStatefulWidget {
   const AnimePage({super.key});
@@ -45,10 +46,7 @@ class _AnimePageState extends ConsumerState<AnimePage> {
       existingEntry: existing,
     );
     if (!mounted || !added) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    showLibrarySnackbar(context, wasEdit: existing != null);
   }
 
   @override

@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cronicle/features/games/data/datasources/igdb_api_datasource.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// IGDB website category `1` = sitio oficial del juego (mostrar “Sitio web”).
 const int igdbWebsiteCategoryOfficial = 1;
 
-/// Resultado de inspeccionar el host/ruta de un enlace (tiendas, redes, etc.).
 enum GameOutboundLinkKind {
   officialWebsite,
   discord,
@@ -39,7 +37,6 @@ enum GameOutboundLinkKind {
   unknown,
 }
 
-/// Detecta tienda o servicio a partir de la URL (prioridad sobre categoría IGDB).
 GameOutboundLinkKind detectGameOutboundLinkKind(String url) {
   final uri = Uri.tryParse(url);
   if (uri == null || uri.host.isEmpty) return GameOutboundLinkKind.unknown;
@@ -178,7 +175,6 @@ Color? _accentForOutboundKind(GameOutboundLinkKind k) {
   };
 }
 
-/// Mapea categoría de [ExternalGame](https://api-docs.igdb.com/#external-game-enums) a [GameOutboundLinkKind].
 GameOutboundLinkKind kindFromIgdbExternalCategory(int? category) {
   if (category == null) return GameOutboundLinkKind.unknown;
   return switch (category) {
@@ -206,7 +202,6 @@ GameOutboundLinkKind kindFromIgdbExternalCategory(int? category) {
   };
 }
 
-/// Mapea categoría de web IGDB a [GameOutboundLinkKind] (cuando la URL no basta).
 GameOutboundLinkKind kindFromIgdbWebsiteCategory(int? category) {
   if (category == null) return GameOutboundLinkKind.unknown;
   return switch (category) {
@@ -225,7 +220,6 @@ GameOutboundLinkKind kindFromIgdbWebsiteCategory(int? category) {
   };
 }
 
-/// Icono / color: URL primero, luego categoría externa, luego categoría de web.
 GameOutboundLinkKind resolveGameOutboundLinkKind({
   required String url,
   bool isIgdbPage = false,
@@ -253,7 +247,6 @@ GameOutboundLinkKind resolveGameOutboundLinkKind({
   return GameOutboundLinkKind.unknown;
 }
 
-/// Texto corto del chip según el tipo resuelto (alineado con iconos).
 String gameDetailOutboundKindLabel(
     GameOutboundLinkKind k, AppLocalizations l10n) {
   return switch (k) {
@@ -289,7 +282,6 @@ String gameDetailOutboundKindLabel(
   };
 }
 
-/// Etiqueta del chip para enlaces de la tabla `websites` de IGDB.
 String gameDetailWebsiteChipLabel(
   int? websiteCategory,
   String resolvedUrl,
@@ -309,7 +301,6 @@ String gameDetailWebsiteChipLabel(
   return igdbWebsiteCategoryLabel(websiteCategory, l10n);
 }
 
-/// Etiqueta del chip para `external_games` (nombre IGDB + URL + categoría).
 String gameDetailExternalGameChipLabel(
   Map<String, dynamic> eg,
   String resolvedUrl,
@@ -337,7 +328,6 @@ String gameDetailExternalGameChipLabel(
   return igdbExternalGameCategoryLabel(cat, l10n);
 }
 
-/// IGDB [WebsiteCategory](https://api-docs.igdb.com/#website-enums) (subset).
 String igdbWebsiteCategoryLabel(int? category, AppLocalizations l10n) {
   return switch (category) {
     1 => l10n.gameDetailWebCatOfficial,
@@ -358,7 +348,6 @@ String igdbWebsiteCategoryLabel(int? category, AppLocalizations l10n) {
   };
 }
 
-/// External game source category (IGDB [ExternalGameCategory](https://api-docs.igdb.com/#external-game-enums)).
 String igdbExternalGameCategoryLabel(int? category, AppLocalizations l10n) {
   final k = kindFromIgdbExternalCategory(category);
   if (k != GameOutboundLinkKind.unknown) {
@@ -388,7 +377,6 @@ int? readTimeToBeatSeconds(Map<String, dynamic>? ttb, String primaryKey, String 
   return null;
 }
 
-/// Steam / other stores when [url] is missing but [uid] is present.
 String? externalStoreLaunchUrl(Map<String, dynamic> eg) {
   final abs = IgdbApiDatasource.absoluteHttpUrl(eg['url'] as String?);
   if (abs != null) return abs;
@@ -406,7 +394,6 @@ String stripSimpleHtml(String s) {
   return s.replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&nbsp;', ' ').trim();
 }
 
-/// Texto corto para chips de enlace (misma idea que nombres cortos en anime).
 String gameDetailLinkChipTitle(String fullLabel, {int maxChars = 18}) {
   final t = fullLabel.trim();
   if (t.length <= maxChars) return t;
@@ -429,7 +416,6 @@ IconData gameDetailLinkIcon({
   return _iconForOutboundKind(kind);
 }
 
-/// Color de acento opcional para chips (como [color] en enlaces de AniList).
 Color? gameDetailLinkAccentColor({
   required String url,
   bool isIgdbPage = false,

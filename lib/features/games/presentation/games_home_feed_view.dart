@@ -10,8 +10,10 @@ import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
 import 'package:cronicle/features/games/presentation/games_review_home_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 String? _formatRelDate(BuildContext ctx, Map<String, dynamic> item) {
   final ts = item['first_release_date'];
@@ -39,7 +41,6 @@ Color _scoreColor(int s) {
   return const Color(0xFF94A3B8);
 }
 
-// ─── Root widget ──────────────────────────────────────────────────────────────
 
 class GamesHomeFeedView extends ConsumerWidget {
   const GamesHomeFeedView({super.key});
@@ -104,7 +105,9 @@ class GamesHomeFeedView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => _onRefresh(ref),
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(
+          bottom: kGlassBottomNavContentHeight + 28,
+        ),
         children: [
           popularAsync.when(
             skipLoadingOnRefresh: true,
@@ -140,7 +143,6 @@ class GamesHomeFeedView extends ConsumerWidget {
   }
 }
 
-// ─── Aside sections (data) ────────────────────────────────────────────────────
 
 class _AsideSections extends StatelessWidget {
   const _AsideSections({required this.aside, required this.l10n});
@@ -245,7 +247,6 @@ class _AsideSections extends StatelessWidget {
   }
 }
 
-// ─── Aside loading skeletons ──────────────────────────────────────────────────
 
 class _AsideSkeletons extends StatelessWidget {
   const _AsideSkeletons({required this.l10n});
@@ -293,11 +294,7 @@ class _AsideSkeletons extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHARED COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Section header ───────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
@@ -347,7 +344,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Skeleton box helper ──────────────────────────────────────────────────────
 
 Widget _skel(BuildContext ctx,
     {required double w, required double h, double r = 8, Color? color}) {
@@ -362,11 +358,7 @@ Widget _skel(BuildContext ctx,
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SECTION WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── 1. Score Carousel ────────────────────────────────────────────────────────
 
 class _ScoreCarouselSection extends StatelessWidget {
   const _ScoreCarouselSection({
@@ -476,6 +468,12 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.game),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -497,7 +495,6 @@ class _ScoreCarouselCard extends StatelessWidget {
   }
 }
 
-// ─── 2. Date Cards (Coming Soon) ──────────────────────────────────────────────
 
 class _DateCardsSection extends StatelessWidget {
   const _DateCardsSection({
@@ -624,6 +621,12 @@ class _DateCard extends StatelessWidget {
                   ],
                 ),
               ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child:
+                    LibraryAddBadge(item: item, kind: MediaKind.game),
+              ),
             ],
           ),
         ),
@@ -632,7 +635,6 @@ class _DateCard extends StatelessWidget {
   }
 }
 
-// ─── 3. Ranked List (Anticipated) ────────────────────────────────────────────
 
 class _RankedListSection extends StatelessWidget {
   const _RankedListSection({
@@ -794,7 +796,6 @@ class _RankedRow extends StatelessWidget {
   }
 }
 
-// ─── 4. Hero Section (Best Rated) ─────────────────────────────────────────────
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
@@ -1001,7 +1002,6 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ─── 5. Mood Band (Horror, Sports) ────────────────────────────────────────────
 
 class _MoodBandSection extends StatelessWidget {
   const _MoodBandSection({
@@ -1091,7 +1091,6 @@ class _MoodBandSection extends StatelessWidget {
   }
 }
 
-// ─── 6. Spotlight Rows (Multiplayer) ─────────────────────────────────────────
 
 class _SpotlightRowsSection extends StatelessWidget {
   const _SpotlightRowsSection({
@@ -1240,7 +1239,6 @@ class _SpotlightRow extends StatelessWidget {
   }
 }
 
-// ─── 7. Reviews Section ───────────────────────────────────────────────────────
 
 class _ReviewsSection extends StatelessWidget {
   const _ReviewsSection({
@@ -1273,9 +1271,6 @@ class _ReviewsSection extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHARED SMALL WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder(
@@ -1337,9 +1332,6 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SKELETON WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 class _ScoreCarouselSkeleton extends StatelessWidget {
   const _ScoreCarouselSkeleton({

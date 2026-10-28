@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -17,6 +18,12 @@ import 'package:cronicle/features/trakt/data/datasources/trakt_api_datasource.da
 import 'package:cronicle/features/trakt/data/datasources/trakt_auth_datasource.dart';
 
 part 'trakt_providers.g.dart';
+
+/// Background refresh throttle for the Trakt session metadata.
+const Duration _traktSessionRefreshWindow = Duration(hours: 12);
+
+const String _traktMoviesHomeCacheKey = 'trakt_movies_home';
+const String _traktShowsHomeCacheKey = 'trakt_shows_home';
 
 @Riverpod(keepAlive: true)
 TraktAuthDatasource traktAuth(TraktAuthRef ref) {
@@ -28,10 +35,10 @@ TraktApiDatasource traktApi(TraktApiRef ref) {
   return TraktApiDatasource(ref.watch(dioProvider));
 }
 
-/// Sesión Trakt (OAuth opcional).
 @Riverpod(keepAlive: true)
 class TraktSession extends _$TraktSession {
   static const _oauthStatePrefsKey = 'trakt_oauth_state';
+  static const _lastRefreshKey = 'trakt_session_last_refresh_ms';
 
   @override
   Future<TraktSessionState> build() async {
@@ -40,12 +47,33 @@ class TraktSession extends _$TraktSession {
     final slug = await auth.getUserSlug();
     final name = await auth.getUserName();
     final avatarUrl = await auth.getUserAvatarUrl();
-    return TraktSessionState(
+    final result = TraktSessionState(
       connected: connected,
       userSlug: slug,
       userName: name,
       userAvatarUrl: avatarUrl,
     );
+    if (connected) {
+      _scheduleBackgroundRefreshIfStale();
+    }
+    return result;
+  }
+
+  void _scheduleBackgroundRefreshIfStale() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final lastMs = prefs.getInt(_lastRefreshKey) ?? 0;
+    final age = DateTime.now()
+        .difference(DateTime.fromMillisecondsSinceEpoch(lastMs));
+    if (age < _traktSessionRefreshWindow) return;
+    Future<void>.microtask(() async {
+      try {
+        await refreshFromNetwork();
+        await prefs.setInt(
+          _lastRefreshKey,
+          DateTime.now().millisecondsSinceEpoch,
+        );
+      } catch (_) {}
+    });
   }
 
   Future<void> refreshFromNetwork() async {
@@ -91,7 +119,6 @@ class TraktSession extends _$TraktSession {
     );
   }
 
-  /// OAuth en navegador seguro (mismo esquema `cronicle://` que Twitch).
   Future<void> connectOAuth() async {
     if (kIsWeb) {
       throw UnsupportedError('web');
@@ -110,8 +137,6 @@ class TraktSession extends _$TraktSession {
     await prefs.setString(_oauthStatePrefsKey, oauthState);
 
     final uri = auth.buildAuthorizeUri(oauthState);
-    // Android: Chrome Custom Tab / Auth Tab no entregan bien cronicle:// ni cierran la pestaña;
-    // abrimos el navegador del sistema y esperamos el deep link en MainActivity (app_links).
     final String result;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       result = await _traktOAuthAndroidExternalBrowser(uri, oauthState);
@@ -216,12 +241,39 @@ class TraktMoviesHomeData {
   });
 
   final List<Map<String, dynamic>> trending;
-  /// `/movies/anticipated` (Trakt no ofrece `/movies/watching`).
   final List<Map<String, dynamic>> anticipated;
   final List<Map<String, dynamic>> popular;
   final List<Map<String, dynamic>> played;
   final List<Map<String, dynamic>> watched;
   final List<Map<String, dynamic>> collected;
+
+  Map<String, dynamic> toJson() => {
+        'trending': trending,
+        'anticipated': anticipated,
+        'popular': popular,
+        'played': played,
+        'watched': watched,
+        'collected': collected,
+      };
+
+  factory TraktMoviesHomeData.fromJson(Map<String, dynamic> json) {
+    return TraktMoviesHomeData(
+      trending: jsonListAsMaps(json['trending']),
+      anticipated: jsonListAsMaps(json['anticipated']),
+      popular: jsonListAsMaps(json['popular']),
+      played: jsonListAsMaps(json['played']),
+      watched: jsonListAsMaps(json['watched']),
+      collected: jsonListAsMaps(json['collected']),
+    );
+  }
+
+  bool get isEmpty =>
+      trending.isEmpty &&
+      anticipated.isEmpty &&
+      popular.isEmpty &&
+      played.isEmpty &&
+      watched.isEmpty &&
+      collected.isEmpty;
 }
 
 class TraktShowsHomeData {
@@ -240,21 +292,37 @@ class TraktShowsHomeData {
   final List<Map<String, dynamic>> anticipated;
   final List<Map<String, dynamic>> watched;
   final List<Map<String, dynamic>> collected;
-}
 
-@riverpod
-Future<TraktMoviesHomeData> traktMoviesHome(TraktMoviesHomeRef ref) async {
-  if (EnvConfig.traktClientId.isEmpty) {
-    return const TraktMoviesHomeData(
-      trending: [],
-      anticipated: [],
-      popular: [],
-      played: [],
-      watched: [],
-      collected: [],
+  Map<String, dynamic> toJson() => {
+        'trending': trending,
+        'watching': watching,
+        'popular': popular,
+        'anticipated': anticipated,
+        'watched': watched,
+        'collected': collected,
+      };
+
+  factory TraktShowsHomeData.fromJson(Map<String, dynamic> json) {
+    return TraktShowsHomeData(
+      trending: jsonListAsMaps(json['trending']),
+      watching: jsonListAsMaps(json['watching']),
+      popular: jsonListAsMaps(json['popular']),
+      anticipated: jsonListAsMaps(json['anticipated']),
+      watched: jsonListAsMaps(json['watched']),
+      collected: jsonListAsMaps(json['collected']),
     );
   }
-  final api = ref.watch(traktApiProvider);
+
+  bool get isEmpty =>
+      trending.isEmpty &&
+      watching.isEmpty &&
+      popular.isEmpty &&
+      anticipated.isEmpty &&
+      watched.isEmpty &&
+      collected.isEmpty;
+}
+
+Future<TraktMoviesHomeData> _fetchTraktMoviesHome(TraktApiDatasource api) async {
   final results = await Future.wait([
     api.moviesTrending(limit: 20),
     api.moviesAnticipated(limit: 18),
@@ -273,19 +341,7 @@ Future<TraktMoviesHomeData> traktMoviesHome(TraktMoviesHomeRef ref) async {
   );
 }
 
-@riverpod
-Future<TraktShowsHomeData> traktShowsHome(TraktShowsHomeRef ref) async {
-  if (EnvConfig.traktClientId.isEmpty) {
-    return const TraktShowsHomeData(
-      trending: [],
-      watching: [],
-      popular: [],
-      anticipated: [],
-      watched: [],
-      collected: [],
-    );
-  }
-  final api = ref.watch(traktApiProvider);
+Future<TraktShowsHomeData> _fetchTraktShowsHome(TraktApiDatasource api) async {
   final results = await Future.wait([
     api.showsTrending(limit: 20),
     api.showsWatching(limit: 18),
@@ -302,6 +358,107 @@ Future<TraktShowsHomeData> traktShowsHome(TraktShowsHomeRef ref) async {
     watched: results[4],
     collected: results[5],
   );
+}
+
+@Riverpod(keepAlive: true)
+class TraktMoviesHome extends _$TraktMoviesHome {
+  @override
+  Future<TraktMoviesHomeData> build() async {
+    if (EnvConfig.traktClientId.isEmpty) {
+      return const TraktMoviesHomeData(
+        trending: [],
+        anticipated: [],
+        popular: [],
+        played: [],
+        watched: [],
+        collected: [],
+      );
+    }
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_traktMoviesHomeCacheKey);
+    final api = ref.watch(traktApiProvider);
+
+    if (cached != null) {
+      // Always background-refresh so discover shows cached data immediately
+      // while fresh data loads.
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchTraktMoviesHome(api);
+          await cache.write(_traktMoviesHomeCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {
+          // Keep cached data on failure.
+        }
+      });
+      return TraktMoviesHomeData.fromJson(cached.data);
+    }
+
+    final data = await _fetchTraktMoviesHome(api);
+    await cache.write(_traktMoviesHomeCacheKey, data.toJson());
+    return data;
+  }
+
+  /// Forces a network refetch ignoring cache freshness.
+  Future<void> refresh() async {
+    final api = ref.read(traktApiProvider);
+    final cache = ref.read(jsonCacheProvider);
+    state = const AsyncValue.loading();
+    try {
+      final data = await _fetchTraktMoviesHome(api);
+      await cache.write(_traktMoviesHomeCacheKey, data.toJson());
+      state = AsyncData(data);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
+@Riverpod(keepAlive: true)
+class TraktShowsHome extends _$TraktShowsHome {
+  @override
+  Future<TraktShowsHomeData> build() async {
+    if (EnvConfig.traktClientId.isEmpty) {
+      return const TraktShowsHomeData(
+        trending: [],
+        watching: [],
+        popular: [],
+        anticipated: [],
+        watched: [],
+        collected: [],
+      );
+    }
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_traktShowsHomeCacheKey);
+    final api = ref.watch(traktApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchTraktShowsHome(api);
+          await cache.write(_traktShowsHomeCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {}
+      });
+      return TraktShowsHomeData.fromJson(cached.data);
+    }
+
+    final data = await _fetchTraktShowsHome(api);
+    await cache.write(_traktShowsHomeCacheKey, data.toJson());
+    return data;
+  }
+
+  Future<void> refresh() async {
+    final api = ref.read(traktApiProvider);
+    final cache = ref.read(jsonCacheProvider);
+    state = const AsyncValue.loading();
+    try {
+      final data = await _fetchTraktShowsHome(api);
+      await cache.write(_traktShowsHomeCacheKey, data.toJson());
+      state = AsyncData(data);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
 }
 
 @riverpod
@@ -368,7 +525,6 @@ Map<String, dynamic> _snapshotTraktTitleForFavorites(Map<String, dynamic> item) 
   };
 }
 
-/// Películas y series Trakt marcadas como favoritas (solo local, SharedPreferences).
 @Riverpod(keepAlive: true)
 class FavoriteTraktTitles extends _$FavoriteTraktTitles {
   @override

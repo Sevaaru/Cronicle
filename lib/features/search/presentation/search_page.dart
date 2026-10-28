@@ -15,6 +15,7 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/app_shell.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
@@ -59,7 +60,6 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   final _searchCtrl = TextEditingController();
   Timer? _searchDebounce;
-  /// Query passed to Anilist/IGDB providers (updated after debounce or submit).
   String _committedSearchQuery = '';
   _SearchFilter _filter = _SearchFilter.all;
 
@@ -89,7 +89,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind kind) async {
+    // Drop focus from the search field so the keyboard does not pop back
+    // open when the bottom sheet closes.
+    FocusManager.instance.primaryFocus?.unfocus();
     final db = ref.read(databaseProvider);
     final externalId = kind == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -97,7 +100,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final existing = await db.getLibraryEntryByKindAndExternalId(
       kind.code, externalId,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -105,11 +108,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       kind: kind,
       existingEntry: existing,
     );
-    if (!mounted || !added) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    if (!mounted) return added;
+    // Defensive: ensure the search field doesn't grab focus after the sheet
+    // dismiss animation completes.
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (!added) return added;
+    showLibrarySnackbar(context, wasEdit: existing != null);
+    return added;
   }
 
   @override
@@ -121,7 +126,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         .where((f) => searchLayout.isVisible(f.name))
         .toList();
 
-    // If current filter was hidden, reset to first visible.
     if (!visibleFilters.contains(_filter)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -170,7 +174,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
           ),
           const SizedBox(height: 8),
-          // Filter chips
           SizedBox(
             height: 38,
             child: ListView.separated(
@@ -258,7 +261,6 @@ class _PopularContent extends ConsumerWidget {
   }
 }
 
-/// Estado vacío en filtro «Todo» sin texto: sin llamadas a APIs de tendencias.
 class _SearchIdleAllPlaceholder extends StatelessWidget {
   const _SearchIdleAllPlaceholder();
 
@@ -308,7 +310,6 @@ class _SearchIdleAllPlaceholder extends StatelessWidget {
   }
 }
 
-/// Resultados por categoría en el filtro «Todo»: vista previa corta + «Ver más» a la pestaña.
 const int _kSearchAllPreviewPerSection = 5;
 
 class _SearchResultsList extends ConsumerWidget {
@@ -321,7 +322,7 @@ class _SearchResultsList extends ConsumerWidget {
 
   final String query;
   final _SearchFilter filter;
-  final Future<void> Function(Map<String, dynamic>, MediaKind) onAdd;
+  final Future<bool> Function(Map<String, dynamic>, MediaKind) onAdd;
   final void Function(_SearchFilter category) onPickCategory;
 
   @override
@@ -453,7 +454,6 @@ class _SearchResultsList extends ConsumerWidget {
   }
 }
 
-/// CTA «Ver más» con aspecto Material 3 (superficie, estado de enfoque, iconos).
 class _SearchShowMoreMaterialCta extends StatelessWidget {
   const _SearchShowMoreMaterialCta({
     required this.label,
@@ -518,7 +518,6 @@ class _ResultSection {
   final _SearchFilter targetFilter;
 }
 
-/// Placeholders grises mientras Open Library / otras APIs responden.
 class _SearchSectionLoadingPlaceholder extends StatelessWidget {
   const _SearchSectionLoadingPlaceholder({required this.title});
 

@@ -7,18 +7,12 @@ String _twitchTokenUrl() => EnvConfig.twitchOAuthTokenUrl;
 
 String _twitchHelixUsersUrl() => EnvConfig.twitchHelixUsersUrl;
 
-/// Tokens para IGDB vía Twitch.
-///
-/// - **App (client_credentials)**: token de aplicación guardado en `igdb_access_token` (comportamiento previo).
-/// - **Usuario (OAuth)**: token de Twitch del usuario; IGDB acepta también Bearer de usuario.
 class IgdbAuthDatasource {
   IgdbAuthDatasource(this._storage, this._dio);
 
   final FlutterSecureStorage _storage;
   final Dio _dio;
 
-  /// Evita lecturas repetidas de [FlutterSecureStorage] y peticiones OAuth duplicadas
-  /// cuando varias llamadas IGDB van en paralelo (p. ej. home de juegos).
   String? _memToken;
   int? _memValidUntilMs;
   Future<String>? _tokenInFlight;
@@ -42,7 +36,6 @@ class IgdbAuthDatasource {
   bool get _hasClientCredentials =>
       EnvConfig.twitchClientId.isNotEmpty && EnvConfig.twitchClientSecret.isNotEmpty;
 
-  /// Hay sesión OAuth de usuario (Twitch) guardada.
   Future<bool> hasUserSession() async {
     final t = await _storage.read(key: _userAccessKey);
     return t != null && t.isNotEmpty;
@@ -50,7 +43,6 @@ class IgdbAuthDatasource {
 
   Future<String?> getUserLogin() => _storage.read(key: _userLoginKey);
 
-  /// Devuelve un token válido para la API IGDB: prioriza OAuth de usuario; si no, client_credentials.
   Future<String> getValidToken() async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final until = _memValidUntilMs;
@@ -62,18 +54,10 @@ class IgdbAuthDatasource {
     });
     final token = await _tokenInFlight!;
     _memToken = token;
-    // TTL conservador en memoria; el token real suele durar mucho más.
     _memValidUntilMs = DateTime.now().millisecondsSinceEpoch + 300_000;
     return token;
   }
 
-  /// Fuerza rotación de token tras un 401 de IGDB.
-  ///
-  /// Estrategia:
-  /// 1) si hay sesión de usuario, intenta refresh OAuth aunque el token no haya
-  ///    expirado localmente (puede estar revocado en servidor);
-  /// 2) si falla, elimina sesión de usuario y cae a token de app;
-  /// 3) en último caso renueva client_credentials.
   Future<String> refreshTokenAfterUnauthorized() async {
     _clearTokenMemory();
     _tokenInFlight = null;
@@ -190,7 +174,6 @@ class IgdbAuthDatasource {
     return token;
   }
 
-  /// Intercambia el `code` del redirect OAuth por tokens de usuario y los guarda.
   Future<void> exchangeAuthorizationCode(String code) async {
     if (!_hasClientCredentials) {
       throw StateError('TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET no configurados');
@@ -268,7 +251,6 @@ class IgdbAuthDatasource {
     await _storage.delete(key: _userLoginKey);
   }
 
-  /// URL de autorización Twitch (response_type=code).
   Uri buildAuthorizeUri(String state) {
     final redirect = EnvConfig.twitchRedirectUri;
     const scope = 'user:read:email';
@@ -284,7 +266,6 @@ class IgdbAuthDatasource {
     );
   }
 
-  /// Borra tokens de app (client_credentials) y de usuario.
   Future<void> deleteToken() async {
     _clearTokenMemory();
     await _storage.delete(key: _appTokenKey);

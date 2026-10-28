@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Mismo tamaño y padding que [ProfileAvatarButton] para alinear la transición perfil ↔ shell.
-/// [left] cercano al margen del cuerpo (16); un poco más a la derecha para aire respecto al borde.
 const double kProfileLeadingCircleSize = 36;
 
 const EdgeInsets kProfileLeadingPadding =
     EdgeInsets.only(left: 18, top: 6, bottom: 6, right: 16);
 
-/// Espacio extra a la derecha del bloque (antes del título) para que el `AppBar` no comprima el icono.
 const double kProfileLeadingTrailingSlotExtra = 12;
 
-/// Ancho total del leading: contenido + reserva; debe coincidir con el `SizedBox` del avatar/cerrar.
 double get kProfileLeadingWidth =>
     kProfileLeadingPadding.left +
     kProfileLeadingCircleSize +
     kProfileLeadingPadding.right +
     kProfileLeadingTrailingSlotExtra;
 
-/// Botón circular con ✕ para cerrar el perfil; misma huella visual que el avatar del AppBar.
 class ProfileLeadingCloseButton extends StatefulWidget {
   const ProfileLeadingCloseButton({super.key});
 

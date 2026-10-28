@@ -4,9 +4,6 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 
 part 'profile_trakt_extras_provider.g.dart';
 
-/// Estadísticas Trakt del perfil (API). Los favoritos de cine/series en la app
-/// viven en [favoriteTraktTitlesProvider] (corazón en detalle), no en la API
-/// `/users/.../favorites` de Trakt.
 class ProfileTraktExtras {
   const ProfileTraktExtras({required this.stats});
 

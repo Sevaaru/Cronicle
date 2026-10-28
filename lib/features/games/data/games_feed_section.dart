@@ -1,4 +1,3 @@
-/// Route segments for `/games/section/:slug` and keys for IGDB home rails.
 abstract final class GamesFeedSection {
   static const popular = 'popular';
   static const anticipated = 'anticipated';
@@ -13,7 +12,6 @@ abstract final class GamesFeedSection {
   static const rpg = 'rpg';
   static const sports = 'sports';
 
-  /// Game carousels (excludes [popular] and review slugs).
   static const gameRailSlugs = <String>[
     anticipated,
     recentlyReleased,

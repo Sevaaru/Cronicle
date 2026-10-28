@@ -25,7 +25,6 @@ class LibraryEntries extends Table {
   IntColumn get totalEpisodes => integer().nullable()();
   TextColumn get notes => text().nullable()();
 
-  // Book-specific tracking fields (only used when kind == MediaKind.book)
   TextColumn get editionKey => text().nullable()();
   TextColumn get isbn => text().nullable()();
   IntColumn get totalPagesFromApi => integer().nullable()();
@@ -33,17 +32,17 @@ class LibraryEntries extends Table {
   IntColumn get userTotalPagesOverride => integer().nullable()();
   IntColumn get userTotalChaptersOverride => integer().nullable()();
   IntColumn get currentChapter => integer().nullable()();
-  /// "pages" | "percentage" | "chapters" — defaults to pages.
   TextColumn get bookTrackingMode => text().nullable()();
 
-  /// Solo anime: `Media.status` de Anilist (p. ej. RELEASING).
   TextColumn get animeMediaStatus => text().nullable()();
 
-  /// Solo anime: episodios ya emitidos (tope si está en emisión); null si no aplica.
   IntColumn get releasedEpisodes => integer().nullable()();
 
-  /// Solo anime: Unix segundos del próximo estreno (`nextAiringEpisode.airingAt`).
   IntColumn get nextEpisodeAirsAt => integer().nullable()();
+
+  /// Steam app ID — set when this entry was added from the Steam library view.
+  /// Null for entries added from other sources (IGDB search, Trakt, etc.).
+  IntColumn get steamAppId => integer().nullable()();
 
   IntColumn get updatedAt =>
       integer().withDefault(Constant(DateTime.now().millisecondsSinceEpoch))();
@@ -60,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,13 +71,11 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(libraryEntries);
           }
           if (from < 3) {
-            // Migrate scores from 0-10 to 0-100 scale.
             await customStatement(
               'UPDATE library_entries SET score = score * 10 WHERE score IS NOT NULL AND score > 0',
             );
           }
           if (from < 4) {
-            // Book tracking columns.
             await customStatement('ALTER TABLE library_entries ADD COLUMN edition_key TEXT');
             await customStatement('ALTER TABLE library_entries ADD COLUMN isbn TEXT');
             await customStatement('ALTER TABLE library_entries ADD COLUMN total_pages_from_api INTEGER');
@@ -97,6 +94,11 @@ class AppDatabase extends _$AppDatabase {
               'ALTER TABLE library_entries ADD COLUMN next_episode_airs_at INTEGER',
             );
           }
+          if (from < 7) {
+            await customStatement(
+              'ALTER TABLE library_entries ADD COLUMN steam_app_id INTEGER',
+            );
+          }
         },
       );
 
@@ -110,7 +112,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  // Key-value helpers
   Future<void> setKeyValue(String key, String? value) async {
     await into(keyValueEntries).insertOnConflictUpdate(
       KeyValueEntriesCompanion.insert(
@@ -127,7 +128,6 @@ class AppDatabase extends _$AppDatabase {
     return row?.value;
   }
 
-  // Library helpers
   Stream<List<LibraryEntry>> watchLibraryByKind(int kindCode, {String? status}) {
     return (select(libraryEntries)
           ..where((t) {
@@ -169,8 +169,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Igual que [upsertLibraryEntry] pero solo sobrescribe si [entry.updatedAt]
-  /// es más reciente que el registro existente.  Si no existe, inserta siempre.
   Future<int> upsertLibraryEntryIfNewer(LibraryEntriesCompanion entry) async {
     final kindVal = entry.kind.value;
     final extId = entry.externalId.value;
@@ -356,7 +354,20 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Actualiza metadatos de emisión Anilist y ajusta progreso si superaba el tope emitido.
+  Future<void> updateLibraryEntryRatingAndNotes({
+    required int entryId,
+    required int? score,
+    required String? notes,
+  }) async {
+    await (update(libraryEntries)..where((t) => t.id.equals(entryId))).write(
+      LibraryEntriesCompanion(
+        score: Value(score),
+        notes: Value(notes),
+        updatedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   Future<void> updateAnimeAiringMetadata({
     required int id,
     required String? animeMediaStatus,
@@ -382,7 +393,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Normaliza todos los status a uppercase para corregir entries guardados con lowercase.
   Future<void> normalizeStatuses() async {
     final all = await select(libraryEntries).get();
     for (final entry in all) {

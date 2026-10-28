@@ -9,7 +9,6 @@ import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Conexión Anilist: en móvil con redirect HTTPS puente, OAuth sin pegar token; si no, flujo PIN.
 Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
   final l10n = AppLocalizations.of(context)!;
   if (kIsWeb) {
@@ -76,7 +75,11 @@ Future<void> showAnilistConnectFlow(BuildContext context, WidgetRef ref) async {
     builder: (ctx) => AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.animation_rounded, color: cs.primary, size: 22),
+          Image.asset(
+            'assets/anilist_icon.png',
+            width: 22,
+            height: 22,
+          ),
           const SizedBox(width: 8),
           Text(l10n.anilistConnectTitle),
         ],

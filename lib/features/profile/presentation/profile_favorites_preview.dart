@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-/// Miniatura para la fila de previsualización del bloque de favoritos en el perfil.
 class ProfileFavPreviewThumb {
   const ProfileFavPreviewThumb({this.imageUrl, required this.fallbackIcon});
 
@@ -9,7 +8,6 @@ class ProfileFavPreviewThumb {
   final IconData fallbackIcon;
 }
 
-/// Chip del número de favoritos: tamaño fijo para que no varíe con las cifras.
 class _FavoritesCountChip extends StatelessWidget {
   const _FavoritesCountChip({required this.count, required this.accent});
 
@@ -53,7 +51,6 @@ class _FavoritesCountChip extends StatelessWidget {
   }
 }
 
-/// Fila tappable: título arriba; debajo contador a la izquierda y tantas miniaturas como quepan en el ancho.
 class ProfileFavoritesPreviewRow extends StatelessWidget {
   const ProfileFavoritesPreviewRow({
     super.key,

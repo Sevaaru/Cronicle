@@ -13,9 +13,9 @@ import 'package:cronicle/features/library/presentation/library_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-/// Pantalla completa para una categoría del home IGDB (`/games/section/:slug`).
 class GamesHomeSectionListPage extends ConsumerWidget {
   const GamesHomeSectionListPage({super.key, required this.slug});
 
@@ -36,7 +36,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     return DateFormat.yMMMd(locale).format(dt);
   }
 
-  Future<void> _addToLibrary(
+  Future<bool> _addToLibrary(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> item,
@@ -46,7 +46,7 @@ class GamesHomeSectionListPage extends ConsumerWidget {
     final existing = await db.getLibraryEntryByKindAndExternalId(
       kind.code, item['id'].toString(),
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -54,11 +54,9 @@ class GamesHomeSectionListPage extends ConsumerWidget {
       kind: kind,
       existingEntry: existing,
     );
-    if (!context.mounted || !added) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    if (!context.mounted || !added) return added;
+    showLibrarySnackbar(context, wasEdit: existing != null);
+    return added;
   }
 
   @override

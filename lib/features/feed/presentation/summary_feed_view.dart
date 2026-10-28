@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -13,10 +14,9 @@ import 'package:cronicle/features/settings/presentation/feed_filter_layout_notif
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 import 'package:cronicle/shared/widgets/remote_network_image.dart';
 
-/// Resumen / Discover tab – shows trending content from all the user's
-/// visible feed categories plus a "random pick" button.
 class SummaryFeedView extends ConsumerWidget {
   const SummaryFeedView({
     super.key,
@@ -26,8 +26,6 @@ class SummaryFeedView extends ConsumerWidget {
 
   final VoidCallback onRefresh;
 
-  /// Called when the user taps "See all" on a section header.
-  /// The string matches the [_FeedFilter] enum name: 'anime', 'manga', etc.
   final ValueChanged<String> onSwitchCategory;
 
   @override
@@ -36,13 +34,10 @@ class SummaryFeedView extends ConsumerWidget {
     final visible =
         ref.watch(feedFilterLayoutProvider).visibleIdSet;
 
-    // Collect sections dynamically based on the user's visible categories.
     final sections = <Widget>[];
 
-    // ── Random pick card (always first) ─────────────────────────────────
     sections.add(_RandomPickCard(visible: visible));
 
-    // ── Anime (hero layout) ─────────────────────────────────────────────
     if (visible.contains('anime')) {
       sections.add(
         _AsyncHeroSection(
@@ -55,7 +50,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Manga (standard poster carousel) ────────────────────────────────
     if (visible.contains('manga')) {
       sections.add(
         _AsyncCarouselSection(
@@ -68,7 +62,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Movies (wide landscape + numbered anticipated) ──────────────────
     if (visible.contains('movie') && EnvConfig.traktClientId.isNotEmpty) {
       sections.add(
         _TraktCarouselSection(
@@ -80,7 +73,6 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── TV Shows (wide landscape + numbered anticipated) ────────────────
     if (visible.contains('tv') && EnvConfig.traktClientId.isNotEmpty) {
       sections.add(
         _TraktCarouselSection(
@@ -92,18 +84,16 @@ class SummaryFeedView extends ConsumerWidget {
       );
     }
 
-    // ── Games (poster carousel + numbered anticipated) ──────────────────
     if (visible.contains('game')) {
       sections.add(
         _GamesCarouselSection(
-          titlePopular: l10n.summaryPopularGames,
+          titlePopular: l10n.gamesHomeBestRated,
           titleAnticipated: l10n.summaryAnticipatedGames,
           onSeeAll: () => onSwitchCategory('game'),
         ),
       );
     }
 
-    // ── Books (poster carousel) ─────────────────────────────────────────
     if (visible.contains('book')) {
       sections.add(
         _AsyncCarouselSection(
@@ -117,13 +107,11 @@ class SummaryFeedView extends ConsumerWidget {
     }
 
     if (sections.length <= 1) {
-      // Only the random card – nothing visible.
       return Center(child: Text(l10n.feedBrowseEmpty));
     }
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Invalidate all summary-relevant providers.
         if (visible.contains('anime')) {
           ref.invalidate(anilistPopularProvider('ANIME'));
         }
@@ -153,9 +141,6 @@ class SummaryFeedView extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// RANDOM PICK CARD
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _RandomPickCard extends ConsumerWidget {
   const _RandomPickCard({required this.visible});
@@ -167,9 +152,6 @@ class _RandomPickCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
 
-    // Warm up all-time / cross-era pools so the random pick isn't biased
-    // toward "newest only". These providers aren't keepAlive on their own,
-    // so watching them here keeps them loaded while Discover is on screen.
     if (visible.contains('anime')) {
       ref.watch(anilistBrowseMediaProvider('ANIME', 'top_rated'));
       ref.watch(anilistBrowseMediaProvider('ANIME', 'popularity'));
@@ -183,7 +165,7 @@ class _RandomPickCard extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: Card(
         elevation: 0,
         color: cs.primaryContainer.withAlpha(60),
@@ -195,11 +177,11 @@ class _RandomPickCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: () => _pickRandom(context, ref),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.shuffle_rounded, color: cs.primary, size: 28),
-                const SizedBox(width: 16),
+                Icon(Icons.shuffle_rounded, color: cs.primary, size: 24),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,9 +215,6 @@ class _RandomPickCard extends ConsumerWidget {
   }
 
   void _pickRandom(BuildContext context, WidgetRef ref) {
-    // Build a pool **per kind**. Each kind aggregates multiple source rails
-    // (popular + trending + anticipated + genre-specific) so the random pick
-    // isn't biased toward "newest" or any single category.
     final perKind = <MediaKind, List<Map<String, dynamic>>>{};
 
     void addAll(MediaKind kind, Iterable<Map<String, dynamic>>? items) {
@@ -249,7 +228,6 @@ class _RandomPickCard extends ConsumerWidget {
     ) =>
         addAll(kind, async.valueOrNull);
 
-    // ── Anime ────────────────────────────────────────────────
     if (visible.contains('anime')) {
       addAsync(MediaKind.anime, ref.read(anilistPopularProvider('ANIME')));
       addAsync(MediaKind.anime,
@@ -258,7 +236,6 @@ class _RandomPickCard extends ConsumerWidget {
           ref.read(anilistBrowseMediaProvider('ANIME', 'popularity')));
     }
 
-    // ── Manga ────────────────────────────────────────────────
     if (visible.contains('manga')) {
       addAsync(MediaKind.manga, ref.read(anilistPopularProvider('MANGA')));
       addAsync(MediaKind.manga,
@@ -267,7 +244,6 @@ class _RandomPickCard extends ConsumerWidget {
           ref.read(anilistBrowseMediaProvider('MANGA', 'popularity')));
     }
 
-    // ── Movies (trending + anticipated + popular) ────────────
     if (visible.contains('movie')) {
       final data = ref.read(traktMoviesHomeProvider).valueOrNull;
       if (data != null) {
@@ -277,7 +253,6 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── TV Shows (trending + anticipated + popular) ──────────
     if (visible.contains('tv')) {
       final data = ref.read(traktShowsHomeProvider).valueOrNull;
       if (data != null) {
@@ -287,10 +262,8 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── Games (popular + every genre rail from the home feed) ─
     if (visible.contains('game')) {
       addAsync(MediaKind.game, ref.read(igdbPopularProvider));
-      // Best rated all-time (80 items, broader than the home rail)
       addAsync(
           MediaKind.game,
           ref.read(igdbGamesSectionListProvider(GamesFeedSection.bestRated)));
@@ -307,7 +280,6 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // ── Books (trending + every subject rail) ────────────────
     if (visible.contains('book')) {
       addAsync(MediaKind.book, ref.read(bookTrendingProvider));
       for (final subject in const [
@@ -321,18 +293,14 @@ class _RandomPickCard extends ConsumerWidget {
       }
     }
 
-    // Drop kinds with empty pools.
     perKind.removeWhere((_, list) => list.isEmpty);
     if (perKind.isEmpty) return;
 
     final rng = Random();
 
-    // 1. Pick a kind uniformly so every configured interest has equal odds.
     final kinds = perKind.keys.toList();
     final kind = kinds[rng.nextInt(kinds.length)];
 
-    // 2. Deduplicate items within that kind by their identifier so the same
-    //    title appearing in multiple rails doesn't get extra weight.
     final seen = <String>{};
     final unique = <Map<String, dynamic>>[];
     for (final item in perKind[kind]!) {
@@ -348,11 +316,7 @@ class _RandomPickCard extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// CAROUSEL SECTIONS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
-/// Hero layout: first item big, rest as small poster cards.
 class _AsyncHeroSection extends ConsumerWidget {
   const _AsyncHeroSection({
     required this.provider,
@@ -388,7 +352,6 @@ class _AsyncHeroSection extends ConsumerWidget {
   }
 }
 
-/// Standard poster carousel that watches an async provider.
 class _AsyncCarouselSection extends ConsumerWidget {
   const _AsyncCarouselSection({
     required this.provider,
@@ -424,7 +387,6 @@ class _AsyncCarouselSection extends ConsumerWidget {
   }
 }
 
-/// Trakt section – wide landscape trending + numbered anticipated.
 class _TraktCarouselSection extends ConsumerWidget {
   const _TraktCarouselSection({
     required this.isMovie,
@@ -451,10 +413,10 @@ class _TraktCarouselSection extends ConsumerWidget {
         data: (data) => Column(
           children: [
             if (data.trending.isNotEmpty)
-              _WideCarouselSection(
+              _PosterCarouselSection(
                 title: titleTrending,
                 icon: icon,
-                items: data.trending.take(10).toList(),
+                items: data.trending.take(12).toList(),
                 kind: kind,
                 onSeeAll: onSeeAll,
               ),
@@ -478,10 +440,10 @@ class _TraktCarouselSection extends ConsumerWidget {
       data: (data) => Column(
         children: [
           if (data.trending.isNotEmpty)
-            _WideCarouselSection(
+            _PosterCarouselSection(
               title: titleTrending,
               icon: icon,
-              items: data.trending.take(10).toList(),
+              items: data.trending.take(12).toList(),
               kind: kind,
               onSeeAll: onSeeAll,
             ),
@@ -499,7 +461,6 @@ class _TraktCarouselSection extends ConsumerWidget {
   }
 }
 
-/// Games section – poster carousel for popular, numbered for anticipated.
 class _GamesCarouselSection extends ConsumerWidget {
   const _GamesCarouselSection({
     required this.titlePopular,
@@ -513,23 +474,26 @@ class _GamesCarouselSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final popular = ref.watch(igdbPopularProvider);
     final homeFeed = ref.watch(igdbGamesHomeFeedProvider);
 
     return Column(
       children: [
-        popular.when(
+        homeFeed.when(
           loading: () => _SectionShimmer(
             title: titlePopular,
             icon: Icons.sports_esports_rounded,
           ),
           error: (_, _) => const SizedBox.shrink(),
-          data: (items) {
-            if (items.isEmpty) return const SizedBox.shrink();
+          data: (data) {
+            // Mirrors IGDB's "Top 100 / Best Games" board
+            // (https://www.igdb.com/top-100/games): high total_rating with a
+            // meaningful rating-count threshold so obscure 100/100 entries
+            // don't dominate.
+            if (data.bestRated.isEmpty) return const SizedBox.shrink();
             return _PosterCarouselSection(
               title: titlePopular,
               icon: Icons.sports_esports_rounded,
-              items: items.take(12).toList(),
+              items: data.bestRated.take(12).toList(),
               kind: MediaKind.game,
               onSeeAll: onSeeAll,
             );
@@ -554,11 +518,8 @@ class _GamesCarouselSection extends ConsumerWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 1 – HERO (big first card + small side cards)
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
-class _HeroSection extends StatelessWidget {
+class _HeroSection extends StatefulWidget {
   const _HeroSection({
     required this.title,
     required this.icon,
@@ -574,7 +535,40 @@ class _HeroSection extends StatelessWidget {
   final VoidCallback onSeeAll;
 
   @override
+  State<_HeroSection> createState() => _HeroSectionState();
+}
+
+class _HeroSectionState extends State<_HeroSection> {
+  // Layout constants for the morphing carousel.
+  static const double _normalW = 110;
+  static const double _normalH = 158;
+  static const double _heroW = 170;
+  static const double _heroH = 200;
+  static const double _gap = 10;
+  // Pitch == width by which the leftmost slot advances when one item shifts
+  // out: regardless of the current morph state, swapping a hero for a normal
+  // changes total width by (heroW - normalW), but a single full slot shift
+  // moves the scroll offset by (normalW + gap). So pitch == normalW + gap
+  // keeps the leftmost item perfectly aligned with the morph progress.
+  static const double _pitch = _normalW + _gap;
+
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final items = widget.items;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 0, 0),
       child: Column(
@@ -582,25 +576,49 @@ class _HeroSection extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _SectionHeader(title: title, icon: icon, onSeeAll: onSeeAll),
+            child: _SectionHeader(
+              title: widget.title,
+              icon: widget.icon,
+              onSeeAll: widget.onSeeAll,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 220,
-            child: ListView.separated(
+            height: _heroH + 38,
+            child: ListView.builder(
+              controller: _controller,
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.only(right: 16),
               itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
               itemBuilder: (_, i) {
-                if (i == 0) {
-                  return _HeroCard(item: items[0], kind: kind);
-                }
-                return _CarouselCard(
-                  item: items[i],
-                  kind: kind,
-                  width: 100,
-                  height: 145,
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, _) {
+                    final offset = _controller.hasClients
+                        ? _controller.offset
+                        : 0.0;
+                    final f = (offset / _pitch).clamp(
+                      0.0,
+                      (items.length - 1).toDouble(),
+                    );
+                    // Triangular peak: item closest to leftmost gets t=1.
+                    final t = max(0.0, 1 - (i - f).abs()).toDouble();
+                    final w = lerpDouble(_normalW, _heroW, t)!;
+                    final h = lerpDouble(_normalH, _heroH, t)!;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        right: i == items.length - 1 ? 0 : _gap,
+                      ),
+                      child: _MorphingHeroCard(
+                        item: items[i],
+                        kind: widget.kind,
+                        width: w,
+                        height: h,
+                        t: t,
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -611,11 +629,21 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.item, required this.kind});
+class _MorphingHeroCard extends StatelessWidget {
+  const _MorphingHeroCard({
+    required this.item,
+    required this.kind,
+    required this.width,
+    required this.height,
+    required this.t,
+  });
 
   final Map<String, dynamic> item;
   final MediaKind kind;
+  final double width;
+  final double height;
+  // t in [0, 1]: 0 == normal carousel card, 1 == hero card.
+  final double t;
 
   @override
   Widget build(BuildContext context) {
@@ -623,44 +651,67 @@ class _HeroCard extends StatelessWidget {
     final url = _coverUrl(item);
     final name = _itemTitle(item);
     final score = _itemScore(item);
-    final id = item['id'] as int?;
+    final radius = lerpDouble(10, 16, t)!;
+    final fontSize = lerpDouble(11, 13, t)!;
+    final maxLines = t > 0.55 ? 1 : 2;
 
     return GestureDetector(
       onTap: () => _navigateToItem(context, kind, item),
       child: SizedBox(
-        width: 155,
+        width: width,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(radius),
                   child: url != null
                       ? RemoteNetworkImage(
                           imageUrl: url,
-                          width: 155,
-                          height: 190,
+                          width: width,
+                          height: height,
                           fit: BoxFit.cover,
+                          // Pin the decode size to the hero (max) size so
+                          // the morphing scroll doesn't re-decode every
+                          // frame and cause a flicker.
+                          memCacheWidth:
+                              (_HeroSectionState._heroW *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
+                          memCacheHeight:
+                              (_HeroSectionState._heroH *
+                                      MediaQuery.devicePixelRatioOf(context))
+                                  .round(),
                         )
-                      : _PosterPlaceholder(width: 155, height: 190),
+                      : _PosterPlaceholder(width: width, height: height),
                 ),
                 if (score != null)
                   Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _ScoreBadge(score: score, large: true),
+                    top: lerpDouble(6, 8, t)!,
+                    right: lerpDouble(6, 8, t)!,
+                    child: _ScoreBadge(score: score, large: t > 0.55),
                   ),
+                Positioned(
+                  bottom: lerpDouble(6, 8, t)!,
+                  right: lerpDouble(6, 8, t)!,
+                  child: LibraryAddBadge(
+                    item: item,
+                    kind: kind,
+                    size: lerpDouble(30, 36, t)!,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
             Text(
               name,
-              maxLines: 1,
+              maxLines: maxLines,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontSize: fontSize,
+                fontWeight: t > 0.55 ? FontWeight.w700 : FontWeight.w600,
+                height: 1.25,
                 color: cs.onSurface,
               ),
             ),
@@ -671,9 +722,6 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 2 – STANDARD POSTER CAROUSEL
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _PosterCarouselSection extends StatelessWidget {
   const _PosterCarouselSection({
@@ -726,154 +774,6 @@ class _PosterCarouselSection extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 3 – WIDE LANDSCAPE CARDS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
-
-class _WideCarouselSection extends StatelessWidget {
-  const _WideCarouselSection({
-    required this.title,
-    required this.icon,
-    required this.items,
-    required this.kind,
-    required this.onSeeAll,
-  });
-
-  final String title;
-  final IconData icon;
-  final List<Map<String, dynamic>> items;
-  final MediaKind kind;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    const cardW = 200.0;
-    const cardH = 120.0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _SectionHeader(title: title, icon: icon, onSeeAll: onSeeAll),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: cardH + 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 16),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => _WideCard(
-                item: items[i],
-                kind: kind,
-                width: cardW,
-                height: cardH,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WideCard extends StatelessWidget {
-  const _WideCard({
-    required this.item,
-    required this.kind,
-    required this.width,
-    required this.height,
-  });
-
-  final Map<String, dynamic> item;
-  final MediaKind kind;
-  final double width;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = _coverUrl(item);
-    final name = _itemTitle(item);
-    final score = _itemScore(item);
-    final id = item['id'] as int?;
-
-    return GestureDetector(
-      onTap: () => _navigateToItem(context, kind, item),
-      child: SizedBox(
-        width: width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: url != null
-                      ? RemoteNetworkImage(
-                          imageUrl: url,
-                          width: width,
-                          height: height,
-                          fit: BoxFit.cover,
-                        )
-                      : _PosterPlaceholder(width: width, height: height),
-                ),
-                // Gradient overlay for readability
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withAlpha(160),
-                          ],
-                          stops: const [0.4, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 8,
-                  left: 10,
-                  right: 10,
-                  child: Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-                if (score != null)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _ScoreBadge(score: score),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// LAYOUT VARIANT 4 – NUMBERED RANK HORIZONTAL LIST
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _NumberedRankSection extends StatelessWidget {
   const _NumberedRankSection({
@@ -952,7 +852,6 @@ class _RankCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Rank number
             SizedBox(
               width: 24,
               child: Text(
@@ -965,7 +864,6 @@ class _RankCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Small poster
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: url != null
@@ -1068,6 +966,11 @@ class _CarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(item: item, kind: kind, size: 30),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -1216,9 +1119,6 @@ class _SectionShimmer extends StatelessWidget {
   }
 }
 
-// ╔═══════════════════════════════════════════════════════════════════════════╗
-// HELPERS
-// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder({required this.width, required this.height});

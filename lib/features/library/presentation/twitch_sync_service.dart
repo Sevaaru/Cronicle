@@ -8,22 +8,13 @@ import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
 enum TwitchSyncDialogResult {
-  /// Usuario pulsó «Ahora no» o cerró sin elegir.
   skipped,
 
-  /// Combinar o sobreescribir completado (con snackbars propios).
   synced,
 
-  /// Error durante la sincronización.
   failed,
 }
 
-/// Importación remota de juegos del usuario.
-///
-/// La API pública `api.igdb.com/v4` solo expone **metadatos** (juegos, portadas, etc.).
-/// La colección personal de **igdb.com** (Jugado, listas, etc.) **no** está disponible
-/// por ese API; por eso hoy devuelve 0. Cuando haya una fuente (Helix, Steam u otra),
-/// implementar aquí los upserts en la tabla local de juegos (`MediaKind.game`).
 Future<int> importTwitchRemoteGamesToLocal({required AppDatabase db}) async {
   return 0;
 }

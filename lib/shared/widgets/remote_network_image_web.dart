@@ -1,4 +1,3 @@
-// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
@@ -14,7 +13,6 @@ String _objectFit(BoxFit fit) => switch (fit) {
       _ => 'contain',
     };
 
-/// En web usa `<img>` nativo vía [HtmlElementView], evitando CORS de CanvasKit/Skwasm.
 class RemoteNetworkImage extends StatefulWidget {
   const RemoteNetworkImage({
     super.key,
@@ -25,6 +23,8 @@ class RemoteNetworkImage extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.placeholder,
     this.error,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   final String imageUrl;
@@ -34,6 +34,11 @@ class RemoteNetworkImage extends StatefulWidget {
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? error;
+
+  /// Ignored on web (browser handles decode sizing). Kept for API parity
+  /// with the io implementation.
+  final int? memCacheWidth;
+  final int? memCacheHeight;
 
   @override
   State<RemoteNetworkImage> createState() => _RemoteNetworkImageState();

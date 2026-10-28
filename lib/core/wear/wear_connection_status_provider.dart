@@ -1,5 +1,3 @@
-// Queries the native side for the current Wear OS pairing/installation status
-// so the settings screen can show whether the watch companion is reachable.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';

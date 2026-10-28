@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Book subjects shown from search browse.
 const kBookBrowseSubjects = <String>[
   'fantasy',
   'romance',

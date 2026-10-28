@@ -36,7 +36,6 @@ Stream<List<LibraryEntry>> libraryFiltered(
   return db.watchLibraryByKind(kind.code, status: status);
 }
 
-/// Default status filter for the library (stored in SharedPreferences).
 @riverpod
 class DefaultLibraryFilter extends _$DefaultLibraryFilter {
   static const _key = 'default_library_filter';

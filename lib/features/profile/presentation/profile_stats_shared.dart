@@ -31,6 +31,7 @@ String libraryEntryStatusLabel(
       },
     'PLANNING' => l10n.statusPlanning,
     'COMPLETED' => l10n.statusCompleted,
+    'PLAYED' => l10n.statusPlayedGame,
     'DROPPED' => l10n.statusDropped,
     'PAUSED' => l10n.statusPaused,
     'REPEATING' => switch (kind) {
@@ -91,7 +92,6 @@ class ProfileStatsBigStat extends StatelessWidget {
   const ProfileStatsBigStat(this.value, this.label, {super.key, this.loose = false});
   final String value;
   final String label;
-  /// More padding and spacing (e.g. first row on Personal stats).
   final bool loose;
 
   @override
@@ -127,7 +127,6 @@ class ProfileStatsBigStat extends StatelessWidget {
   }
 }
 
-/// Panel detallado de estadísticas Trakt (varias categorías + rejilla aireada).
 class ProfileTraktStatsPanel extends StatelessWidget {
   const ProfileTraktStatsPanel({
     super.key,

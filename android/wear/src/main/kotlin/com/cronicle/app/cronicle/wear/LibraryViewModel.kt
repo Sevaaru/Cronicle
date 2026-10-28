@@ -23,10 +23,6 @@ data class LibraryUiState(
     val syncing: Boolean = false,
 )
 
-/**
- * Single ViewModel that owns the in-progress list shown by the watch. Listens to
- * [LibraryUpdateBus] so a snapshot push from the phone instantly refreshes the UI.
- */
 class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     private val client = PhoneSyncClient(app)
     private val _state = MutableStateFlow(LibraryUiState())
@@ -48,7 +44,6 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refresh(initial: Boolean = false) {
-        // Don't cancel an in-flight sync just because the activity resumed; let it finish.
         if (refreshJob?.isActive == true) return
         refreshJob = viewModelScope.launch {
             _state.update { it.copy(syncing = true, error = null, loading = initial) }
@@ -78,8 +73,6 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun complete(item: LibraryItem) {
         viewModelScope.launch {
-            // Optimistically remove from the in-progress list — the next snapshot push
-            // confirms the change.
             _state.update { s ->
                 s.copy(items = s.items.filterNot { it.kind == item.kind && it.externalId == item.externalId })
             }

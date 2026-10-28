@@ -1,4 +1,3 @@
-/// Readable title for Anilist [Media] JSON (english → romaji → native).
 String anilistMediaDisplayTitle(Map<String, dynamic> media) {
   final t = media['title'] as Map<String, dynamic>? ?? {};
   String? pick(String key) {

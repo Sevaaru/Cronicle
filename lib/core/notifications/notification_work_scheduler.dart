@@ -6,7 +6,6 @@ import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/device_notification_prefs.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
 
-/// Registra o cancela la tarea periódica según preferencias.
 class NotificationWorkScheduler {
   NotificationWorkScheduler._();
 
@@ -32,8 +31,6 @@ class NotificationWorkScheduler {
       return;
     }
 
-    // Android aplaza con frecuencia los trabajos de ~1 h; 15 min es el mínimo
-    // fiable de WorkManager y encaja con avisos tipo bandeja de Anilist.
     final isAndroid = defaultTargetPlatform == TargetPlatform.android;
 
     await Workmanager().registerPeriodicTask(

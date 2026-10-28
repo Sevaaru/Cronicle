@@ -19,17 +19,6 @@ import io.flutter.plugin.common.MethodChannel
 import org.json.JSONObject
 import java.io.File
 
-/**
- * Headless foreground service that boots a `FlutterEngine` running the Dart
- * entry-point `wearSyncMain` (see `lib/wear_sync_entry.dart`). The Dart code
- * drains the pending wear-action queue and pushes updates to AniList / Trakt.
- *
- * The service stops itself as soon as Dart calls `cronicle.wear.sync.done`,
- * with a 30s safety timeout to guarantee we never linger.
- *
- * A foreground service is required so Android lets us do network work even when
- * the user has not opened the Cronicle app recently.
- */
 class WearRemoteSyncService : Service() {
 
     private var engine: FlutterEngine? = null
@@ -46,8 +35,6 @@ class WearRemoteSyncService : Service() {
         startForegroundCompat()
 
         if (engine != null) {
-            // Already running; new actions are picked up because Dart re-reads
-            // the queue file. Nothing else to do.
             return START_NOT_STICKY
         }
 
@@ -58,7 +45,6 @@ class WearRemoteSyncService : Service() {
             stopAndShutdown()
         }
 
-        // Hard timeout in case Dart never replies.
         handler.postDelayed(timeoutRunnable, TIMEOUT_MS)
         return START_NOT_STICKY
     }
@@ -149,10 +135,6 @@ class WearRemoteSyncService : Service() {
         private const val NOTIF_ID = 4471
         private const val TIMEOUT_MS = 30_000L
 
-        /**
-         * Appends `(kind, externalId)` to the pending JSONL queue and starts the
-         * foreground service. Safe to call from any thread.
-         */
         fun enqueueAndLaunch(context: Context, kind: Int, externalId: String) {
             try {
                 val docs = File(context.dataDir, "app_flutter")

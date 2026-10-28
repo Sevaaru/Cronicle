@@ -10,7 +10,9 @@ import 'package:cronicle/features/profile/presentation/anilist_profile_follow_ro
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/collapsible_bio_tile.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
@@ -36,12 +38,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
   }
 
   Future<void> _loadAll() async {
-    final graphql = ref.read(anilistGraphqlProvider);
-    final token = await ref.read(anilistTokenProvider.future);
-
     final results = await Future.wait([
-      graphql.fetchUserProfile(widget.userId, token: token),
-      graphql.fetchUserActivity(widget.userId, token: token),
+      ref.read(anilistUserProfileProvider(widget.userId).future),
+      ref.read(anilistUserActivityProvider(widget.userId).future),
     ]);
 
     if (!mounted) return;
@@ -125,7 +124,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Banner 150px; fila avatar en top: 105 con radio 38 + borde 4 → baja hasta ~189px.
     const bannerH = 150.0;
     const avatarRowTop = 105.0;
     const avatarOuter = 84.0; // (38+4)*2
@@ -281,15 +279,10 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
             sliver: SliverList.list(
               children: [
                 if (about != null && about.isNotEmpty) ...[
-                  GlassCard(
-                    child: AnilistMarkdown(about,
-                        style: TextStyle(
-                            fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
-                  ),
+                  CollapsibleBioTile(about: about),
                   const SizedBox(height: 12),
                 ],
 
-                // Stats
                 _SectionHeader(l10n.sectionAnime, Icons.animation_rounded, cs.primary),
                 const SizedBox(height: 8),
                 GlassCard(
@@ -317,7 +310,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ),
 
-                // Favoritos anime
                 if (favAnime.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _SectionHeader(l10n.sectionFavAnime, Icons.favorite_rounded, Colors.red.shade400),
@@ -336,7 +328,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos manga
                 if (favManga.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavManga, Icons.favorite_rounded, Colors.red.shade400),
@@ -355,7 +346,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos personajes
                 if (favCharacters.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavCharacters, Icons.face_rounded, Colors.pinkAccent),
@@ -374,7 +364,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Favoritos staff
                 if (favStaff.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionHeader(l10n.sectionFavStaff, Icons.badge_rounded, Colors.indigoAccent),
@@ -393,7 +382,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
                   ),
                 ],
 
-                // Actividad reciente
                 if (_activity.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _SectionHeader(l10n.sectionRecentActivity, Icons.history_rounded, cs.tertiary),
@@ -667,6 +655,16 @@ class _UserActivityCard extends ConsumerWidget {
                   isLiked: activity['isLiked'] as bool? ?? false,
                   likeCount: activity['likeCount'] as int? ?? 0,
                   onToggle: () => _handleLike(ref, context),
+                  onLongPress:
+                      ((activity['likeCount'] as int? ?? 0) > 0 && actId != null)
+                          ? () => showActivityLikersSheet(
+                                context,
+                                ref,
+                                targetId: actId,
+                                expectedCount: activity['likeCount'] as int? ?? 0,
+                              )
+                          : null,
+                  compact: true,
                 ),
                 const SizedBox(width: 12),
                 if (actId != null)

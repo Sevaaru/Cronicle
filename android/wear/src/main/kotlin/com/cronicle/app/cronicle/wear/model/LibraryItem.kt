@@ -1,12 +1,5 @@
 package com.cronicle.app.cronicle.wear.model
 
-/**
- * Wear-side mirror of the phone's `LibraryEntry` row, restricted to the fields needed by
- * the watch UI. Identity is the natural key `(kind, externalId)`.
- *
- * The phone publishes one [LibraryItem] per row whose `status == "CURRENT"` to the
- * Wearable Data Layer at path `/library/items`.
- */
 data class LibraryItem(
     val id: Long,            // phone-side primary key (used as a fast lookup hint)
     val kind: Int,           // MediaKind.code: 0=anime,1=movie,2=tv,3=game,4=manga,5=book
@@ -23,7 +16,6 @@ data class LibraryItem(
     val bookTrackingMode: String?, // "pages" | "percentage" | "chapters"
     val updatedAt: Long,
 ) {
-    /** Effective progress shown by the +1 button. */
     val effectiveProgress: Int
         get() = when (kind) {
             MediaKind.BOOK -> when (bookTrackingMode) {
@@ -34,7 +26,6 @@ data class LibraryItem(
             else -> progress ?: 0
         }
 
-    /** Effective total. `null` means unknown / unbounded. */
     val effectiveTotal: Int?
         get() = when (kind) {
             MediaKind.BOOK -> when (bookTrackingMode) {
@@ -51,17 +42,12 @@ data class LibraryItem(
             else -> totalEpisodes
         }
 
-    /** True if [effectiveProgress] has reached [effectiveTotal] (so +1 should be disabled). */
     val isAtCap: Boolean
         get() {
             val total = effectiveTotal ?: return false
             return effectiveProgress >= total
         }
 
-    /**
-     * Media types whose +1 affordance makes sense (chaptered/episodic). Movies and games
-     * use the "Complete" action exclusively.
-     */
     val supportsIncrement: Boolean
         get() = when (kind) {
             MediaKind.ANIME, MediaKind.TV, MediaKind.MANGA, MediaKind.BOOK -> true

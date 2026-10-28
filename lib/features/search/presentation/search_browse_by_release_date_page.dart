@@ -40,7 +40,6 @@ List<Map<String, dynamic>> _filterTraktByMonth(
   }).toList();
 }
 
-/// Explorar por año (y opcionalmente mes) de estreno / publicación.
 class SearchBrowseByReleaseDatePage extends ConsumerStatefulWidget {
   const SearchBrowseByReleaseDatePage({super.key, required this.mediaKind});
 
@@ -191,7 +190,6 @@ class _SearchBrowseByReleaseDatePageState
         if (_month == null) return raw;
         return _filterTraktByMonth(raw, _year, _month!);
       case MediaKind.game:
-        // IGDB usa Unix en segundos alineado al calendario UTC; DateTime local desplazaba la ventana.
         final start = DateTime.utc(_year, _month ?? 1, 1);
         final end = _month == null
             ? DateTime.utc(_year, 12, 31, 23, 59, 59)
@@ -227,7 +225,7 @@ class _SearchBrowseByReleaseDatePageState
     }
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
     final db = ref.read(databaseProvider);
     final externalId = k == MediaKind.book
         ? (item['workKey'] as String? ?? item['id'].toString())
@@ -236,7 +234,7 @@ class _SearchBrowseByReleaseDatePageState
       k.code,
       externalId,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -244,11 +242,12 @@ class _SearchBrowseByReleaseDatePageState
       kind: k,
       existingEntry: existing,
     );
-    if (!mounted || !added) return;
+    if (!mounted || !added) return added;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.addedToLibrary)),
     );
+    return added;
   }
 
   @override

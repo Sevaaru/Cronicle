@@ -7,7 +7,6 @@ import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 
 part 'app_defaults_notifier.g.dart';
 
-// ─── Scoring system ─────────────────────────────────────────────────────────
 
 enum ScoringSystem {
   point100('POINT_100'),
@@ -59,7 +58,6 @@ enum ScoringSystem {
     };
   }
 
-  /// Normalise any raw score (stored as 0-100 int in DB) to this system's range.
   double fromStoredScore(int? raw) {
     if (raw == null || raw == 0) return 0;
     final clamped = raw.clamp(0, 100).toDouble();
@@ -72,7 +70,6 @@ enum ScoringSystem {
     };
   }
 
-  /// Convert the user-facing score back to 0-100 int for storage.
   int toStoredScore(double v) {
     if (v == 0) return 0;
     return switch (this) {
@@ -102,7 +99,6 @@ class ScoringSystemSetting extends _$ScoringSystemSetting {
   }
 }
 
-// ─── Anilist advanced scoring ───────────────────────────────────────────────
 
 @riverpod
 class AnilistAdvancedScoringEnabled extends _$AnilistAdvancedScoringEnabled {
@@ -177,14 +173,18 @@ class DefaultStartPage extends _$DefaultStartPage {
 
 @riverpod
 class DefaultFeedTab extends _$DefaultFeedTab {
-  static const _key = 'default_feed_tab';
+  // v2: bumped because the default landing tab changed from 'anime' to
+  // 'summary' (Discover). Renaming the key forces installs that had the
+  // old implicit default to land on Discover; the user can change it
+  // afterwards from settings.
+  static const _key = 'default_feed_tab_v2';
 
   @override
   String build() {
     final prefs = ref.watch(sharedPreferencesProvider);
     final raw = prefs.getString(_key);
-    if (raw == null || raw.isEmpty) return 'anime';
-    if (raw == 'following' || raw == 'all' || raw == 'feed') return 'anime';
+    if (raw == null || raw.isEmpty) return 'summary';
+    if (raw == 'following' || raw == 'all' || raw == 'feed') return 'summary';
     return raw;
   }
 

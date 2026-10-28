@@ -9,8 +9,6 @@ import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-/// Browse books by subject with sort options (score, popularity, name).
-/// Mirrors [MediaGenreTagBrowsePage] for anime/manga.
 class BookSubjectBrowsePage extends ConsumerStatefulWidget {
   const BookSubjectBrowsePage({
     super.key,
@@ -62,21 +60,22 @@ class _BookSubjectBrowsePageState
     return sorted;
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
     final db = ref.read(databaseProvider);
     final workKey = item['workKey'] as String? ?? item['id'].toString();
     final existing = await db.getLibraryEntryByKindAndExternalId(
       MediaKind.book.code,
       workKey,
     );
-    if (!mounted) return;
-    await showAddToLibrarySheet(
+    if (!mounted) return false;
+    final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: MediaKind.book,
       existingEntry: existing,
     );
+    return added;
   }
 
   @override

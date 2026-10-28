@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 
 import 'package:cronicle/core/config/env_config.dart';
 
-/// Reseña de medio / crítico (OpenCritic).
 class OpenCriticCriticReview {
   const OpenCriticCriticReview({
     required this.outletName,
@@ -21,7 +20,6 @@ class OpenCriticCriticReview {
   final String? authorName;
 }
 
-/// Agregado + lista breve para la ficha de juego.
 class OpenCriticGameInsights {
   const OpenCriticGameInsights({
     required this.openCriticGameId,
@@ -44,7 +42,6 @@ class OpenCriticGameInsights {
   final List<OpenCriticCriticReview> reviews;
 }
 
-/// Cliente OpenCritic vía RapidAPI (la API pública `api.opencritic.com` exige clave).
 class OpenCriticApiDatasource {
   OpenCriticApiDatasource(this._dio);
 
@@ -99,7 +96,6 @@ class OpenCriticApiDatasource {
         validateStatus: (s) => s != null && s < 500,
       );
 
-  /// `true` si hay clave compilada (puede seguir fallando por suscripción RapidAPI).
   bool get isConfigured => EnvConfig.openCriticRapidApiKey.isNotEmpty;
 
   Future<dynamic> _get(String path, {Map<String, dynamic>? query}) async {
@@ -113,7 +109,6 @@ class OpenCriticApiDatasource {
     return res.data;
   }
 
-  /// Busca por nombre y devuelve insights + reseñas de aterrizaje (si hay match).
   Future<OpenCriticGameInsights?> fetchInsightsForTitle(String rawName) async {
     if (!isConfigured) return null;
     final q = rawName.trim();

@@ -5,7 +5,6 @@ import 'package:cronicle/features/games/data/games_feed_section.dart';
 import 'package:cronicle/features/games/presentation/games_section_titles.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 
-/// Listado estático de temáticas IGDB (indie, horror, etc.).
 class SearchGamesThemeListPage extends StatelessWidget {
   const SearchGamesThemeListPage({super.key});
 

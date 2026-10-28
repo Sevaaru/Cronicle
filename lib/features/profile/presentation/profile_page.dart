@@ -7,11 +7,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/core/database/database_provider.dart';
 import 'package:cronicle/core/utils/json_int.dart';
+import 'package:cronicle/features/achievements/domain/achievement.dart';
+import 'package:cronicle/features/achievements/presentation/achievements_provider.dart';
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/features/games/presentation/game_providers.dart';
@@ -20,11 +23,13 @@ import 'package:cronicle/features/profile/presentation/profile_favorites_kind.da
 import 'package:cronicle/features/profile/presentation/profile_favorites_preview.dart';
 import 'package:cronicle/features/profile/presentation/profile_stats_shared.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/steam/presentation/steam_providers.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/profile/profile_avatar_provider.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
+import 'package:cronicle/shared/widgets/collapsible_bio_tile.dart';
 import 'package:cronicle/shared/widgets/fullscreen_image_viewer.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 import 'package:cronicle/shared/widgets/profile_leading_circle.dart';
@@ -195,6 +200,13 @@ class _NotLoggedIn extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         const _FavoritesPreviewSection(),
+        const SizedBox(height: 16),
+        _TrophyRoomNavTile(
+          l10n: l10n,
+          colorScheme: cs,
+        ),
+        const SizedBox(height: 12),
+        _SteamNavTile(l10n: l10n, colorScheme: cs),
       ],
     );
   }
@@ -225,6 +237,7 @@ class _FavoritesPreviewSection extends ConsumerWidget {
     final localChars = ref.watch(favoriteAnilistCharactersProvider);
     final localStaff = ref.watch(favoriteAnilistStaffProvider);
 
+    // Mezclamos API + local para que favoritos offline tambien aparezcan.
     final favAnimeMerged = mergeAnilistFavoriteApiNodesWithLocal(
       apiNodes: apiFavAnime,
       localSnapshots: localAnilistFavs,
@@ -450,7 +463,6 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
     final favCharacters = (favs['characters'] as Map?)?['nodes'] as List? ?? [];
     final favStaff = (favs['staff'] as Map?)?['nodes'] as List? ?? [];
 
-    // Misma geometría que [UserProfilePage]: banner 150px + fila avatar (top 105, ~84px alto).
     const bannerH = 150.0;
     const avatarRowTop = 105.0;
     const avatarOuter = 84.0;
@@ -599,14 +611,15 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
           sliver: SliverList.list(
             children: [
               if (about != null && about.isNotEmpty) ...[
-                GlassCard(
-                  child: AnilistMarkdown(about,
-                      style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4)),
-                ),
+                CollapsibleBioTile(about: about),
                 const SizedBox(height: 12),
               ],
 
               _PersonalStatsNavTile(l10n: l10n, colorScheme: cs),
+              const SizedBox(height: 12),
+              _TrophyRoomNavTile(l10n: l10n, colorScheme: cs),
+              const SizedBox(height: 12),
+              _SteamNavTile(l10n: l10n, colorScheme: cs),
               const SizedBox(height: 12),
 
               _FavoritesPreviewSection(
@@ -618,91 +631,95 @@ class _ProfileContentState extends ConsumerState<_ProfileContent> {
 
               const SizedBox(height: 16),
 
-              // Connected accounts
               ProfileStatsSectionHeader(l10n.sectionConnectedAccounts, Icons.link_rounded, cs.tertiary),
               const SizedBox(height: 8),
-              GlassCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
-                    const SizedBox(width: 8),
-                    Text(l10n.anilistTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    const Spacer(),
-                    Text(name,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                  ],
+              _ConnectedAccountTile(
+                title: l10n.anilistTitle,
+                subtitle: name,
+                connected: true,
+                accent: const Color(0xFF02A9FF),
+                icon: Icons.animation_rounded,
+                iconWidget: Image.asset(
+                  'assets/anilist_icon.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 8),
               traktSessionAsync.when(
-                loading: () => GlassCard(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: cs.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(l10n.traktTitle,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 14)),
-                      ],
+                loading: () => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: null,
+                  connected: false,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
+                  loading: true,
+                ),
+                error: (e, st) => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: l10n.profileTraktNotConnected,
+                  connected: false,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
+                  iconWidget: SvgPicture.asset(
+                    'assets/trakt.svg',
+                    width: 42,
+                    height: 42,
+                  ),
+                ),
+                data: (s) => _ConnectedAccountTile(
+                  title: l10n.traktTitle,
+                  subtitle: s.connected
+                      ? (s.userSlug ?? s.userName ?? '')
+                      : l10n.profileTraktNotConnected,
+                  connected: s.connected,
+                  accent: const Color(0xFFED1C24),
+                  icon: Icons.local_movies_rounded,
+                  iconWidget: SvgPicture.asset(
+                    'assets/trakt.svg',
+                    width: 42,
+                    height: 42,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Consumer(
+                builder: (context, ref, _) {
+                  final steamAsync = ref.watch(steamSessionProvider);
+                  return steamAsync.when(
+                    loading: () => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: null,
+                      connected: false,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                      loading: true,
                     ),
-                  ),
-                ),
-                error: (e, st) => GlassCard(
-                  child: Row(
-                    children: [
-                      Icon(Icons.circle_outlined,
-                          color: cs.onSurfaceVariant.withAlpha(100), size: 20),
-                      const SizedBox(width: 8),
-                      Text(l10n.traktTitle,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
-                      const Spacer(),
-                      Text(l10n.profileTraktNotConnected,
-                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-                data: (s) => GlassCard(
-                  child: Row(
-                    children: [
-                      Icon(
-                        s.connected ? Icons.check_circle : Icons.circle_outlined,
-                        color: s.connected
-                            ? Colors.green.shade400
-                            : cs.onSurfaceVariant.withAlpha(100),
-                        size: 20,
+                    error: (_, _) => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: l10n.steamNotConnected,
+                      connected: false,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                    ),
+                    data: (s) => _ConnectedAccountTile(
+                      title: 'Steam',
+                      subtitle: s.connected
+                          ? (s.personaName ?? '')
+                          : l10n.steamNotConnected,
+                      connected: s.connected,
+                      accent: const Color(0xFF66C0F4),
+                      icon: Icons.sports_esports_rounded,
+                      iconWidget: Image.asset(
+                        'assets/steam_icon.png',
+                        width: 42,
+                        height: 42,
+                        fit: BoxFit.cover,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.traktTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: s.connected
-                              ? cs.onSurface
-                              : cs.onSurfaceVariant.withAlpha(120),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        s.connected
-                            ? (s.userSlug ?? s.userName ?? '')
-                            : l10n.profileTraktNotConnected,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -754,7 +771,6 @@ class _ProfileAvatarPreferencesCardState
           return out;
         }
       } catch (_) {
-        // Keep trying with smaller dimensions.
       }
     }
     return best;
@@ -1285,7 +1301,6 @@ class _AvatarCropDialogState extends State<_AvatarCropDialog> {
   }
 }
 
-/// Entrada a estadísticas personales (mismo estilo plano que el resto de `GlassCard` del perfil).
 class _PersonalStatsNavTile extends StatelessWidget {
   const _PersonalStatsNavTile({
     required this.l10n,
@@ -1295,49 +1310,297 @@ class _PersonalStatsNavTile extends StatelessWidget {
   final AppLocalizations l10n;
   final ColorScheme colorScheme;
 
-  static const double _radius = 20;
+  static const double _radius = 22;
 
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
     return Material(
-      color: Colors.transparent,
+      color: cs.surfaceContainerHigh,
       borderRadius: BorderRadius.circular(_radius),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(_radius),
         onTap: () => context.push('/profile/personal-stats'),
-        splashColor: cs.primary.withValues(alpha: 0.12),
+        splashColor: cs.primary.withValues(alpha: 0.14),
         highlightColor: cs.primary.withValues(alpha: 0.06),
-        child: GlassCard(
-          borderRadius: _radius,
-          padding: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Icon(Icons.insights_rounded, color: cs.primary, size: 28),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.profilePersonalStatsTitle,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.profilePersonalStatsSubtitle,
-                        style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.3),
-                      ),
-                    ],
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
-              ],
-            ),
+                child: Icon(
+                  Icons.insights_rounded,
+                  color: cs.onPrimaryContainer,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.profilePersonalStatsTitle,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.profilePersonalStatsSubtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: cs.onSurfaceVariant,
+                  size: 18,
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrophyRoomNavTile extends ConsumerWidget {
+  const _TrophyRoomNavTile({
+    required this.l10n,
+    required this.colorScheme,
+  });
+
+  final AppLocalizations l10n;
+  final ColorScheme colorScheme;
+
+  static const double _radius = 22;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = colorScheme;
+    final isEs = Localizations.localeOf(context).languageCode == 'es';
+    final state = ref.watch(achievementsProvider);
+    final unlocked = state.values.where((s) => s.isUnlocked).length;
+    final total = AchievementCatalog.all.length;
+    final earnedPoints = AchievementCatalog.all.fold<int>(0, (sum, a) {
+      final s = state[a.id];
+      return sum + (s?.isUnlocked == true ? a.tier.points : 0);
+    });
+
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_radius),
+        onTap: () => context.push('/profile/trophies'),
+        splashColor: cs.tertiary.withValues(alpha: 0.14),
+        highlightColor: cs.tertiary.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cs.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.emoji_events_rounded,
+                  color: cs.onTertiaryContainer,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEs ? 'Sala de Trofeos' : 'Trophy Room',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isEs
+                          ? '$unlocked/$total logros · $earnedPoints pts'
+                          : '$unlocked/$total achievements · $earnedPoints pts',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: cs.onSurfaceVariant,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectedAccountTile extends StatelessWidget {
+  const _ConnectedAccountTile({
+    required this.title,
+    required this.subtitle,
+    required this.connected,
+    required this.accent,
+    required this.icon,
+    this.iconWidget,
+    this.loading = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool connected;
+  final Color accent;
+  final IconData icon;
+  final Widget? iconWidget;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: iconWidget != null
+                    ? Colors.transparent
+                    : accent.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: iconWidget ?? Icon(icon, color: accent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14.5,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  if (subtitle != null && subtitle!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (loading)
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: cs.primary,
+                ),
+              )
+            else
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: connected
+                      ? Colors.green.withValues(alpha: 0.18)
+                      : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      connected
+                          ? Icons.check_circle_rounded
+                          : Icons.link_off_rounded,
+                      size: 14,
+                      color: connected
+                          ? Colors.green.shade400
+                          : cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      connected ? 'Linked' : 'Off',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: connected
+                            ? Colors.green.shade400
+                            : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1492,3 +1755,75 @@ Color _kindColor(MediaKind kind, ColorScheme cs) => switch (kind) {
       MediaKind.game => Colors.redAccent,
       MediaKind.book => const Color(0xFFAB47BC),
     };
+
+
+class _SteamNavTile extends ConsumerWidget {
+  const _SteamNavTile({required this.l10n, required this.colorScheme});
+
+  final AppLocalizations l10n;
+  final ColorScheme colorScheme;
+
+  static const double _radius = 22;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = colorScheme;
+    final sessionAsync = ref.watch(steamSessionProvider);
+    final session = sessionAsync.asData?.value;
+    if (session == null || !session.connected) {
+      return const SizedBox.shrink();
+    }
+    final name = session.personaName ?? session.steamId ?? '';
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(_radius),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(_radius),
+        onTap: () => context.push('/profile/steam'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/steam_icon.png',
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.steamProfileSection,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15.5,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      name.isNotEmpty ? name : l10n.steamProfileHint,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

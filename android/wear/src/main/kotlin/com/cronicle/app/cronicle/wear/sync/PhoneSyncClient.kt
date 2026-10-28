@@ -16,10 +16,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Wear-side façade over the Google Play Services Wearable Data Layer. Reads cached
- * snapshots, requests a refresh from the phone, and dispatches user actions.
- */
 class PhoneSyncClient(context: Context) {
 
     private val appContext = context.applicationContext
@@ -27,10 +23,6 @@ class PhoneSyncClient(context: Context) {
     private val messageClient: MessageClient = Wearable.getMessageClient(appContext)
     private val nodeClient: NodeClient = Wearable.getNodeClient(appContext)
 
-    /**
-     * Reads the latest cached library snapshot already pushed by the phone, if any.
-     * Returns an empty list when no snapshot exists (e.g. phone has never connected).
-     */
     suspend fun loadCachedSnapshot(): List<LibraryItem> = withContext(Dispatchers.IO) {
         try {
             val items = dataClient.dataItems.await()
@@ -50,10 +42,6 @@ class PhoneSyncClient(context: Context) {
         }
     }
 
-    /**
-     * Asks the phone to publish a fresh snapshot. Returns true when the message was
-     * delivered to at least one paired node.
-     */
     suspend fun requestSync(): Boolean = withContext(Dispatchers.IO) {
         try {
             val local = try { nodeClient.localNode.await() } catch (t: Throwable) { null }
@@ -77,10 +65,6 @@ class PhoneSyncClient(context: Context) {
         }
     }
 
-    /**
-     * Sends an action ("increment" or "complete") to the phone. The phone applies the
-     * change to the local Drift database and then publishes an updated snapshot.
-     */
     suspend fun sendAction(item: LibraryItem, action: String): Boolean = withContext(Dispatchers.IO) {
         val payload = JSONObject().apply {
             put("action", action)

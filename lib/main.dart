@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cronicle/core/app/cronicle_quick_actions.dart';
 import 'package:cronicle/core/backup/google_drive_backup_scheduler.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/database/app_database.dart';
@@ -13,14 +14,11 @@ import 'package:cronicle/core/notifications/cronicle_local_notifications.dart';
 import 'package:cronicle/core/notifications/notification_background.dart';
 import 'package:cronicle/core/notifications/notification_work_scheduler.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_graphql_datasource.dart';
+import 'package:cronicle/core/storage/fresh_install_guard.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
 import 'package:cronicle/core/utils/pending_token.dart';
 import 'package:cronicle/features/anime/data/datasources/anilist_auth_datasource.dart';
 import 'package:cronicle/cronicle_app.dart';
-// Imported solely so that `wearSyncMain` (the Wear OS background entrypoint)
-// is included in the Dart kernel bundle. Otherwise the `@pragma('vm:entry-point')`
-// has nothing to protect — the file would never be compiled.
-// ignore: unused_import
 import 'package:cronicle/wear_sync_entry.dart';
 
 String? _trimOrNull(String value) {
@@ -28,7 +26,6 @@ String? _trimOrNull(String value) {
   return t.isEmpty ? null : t;
 }
 
-/// Pestaña «Siguiendo»/«Global» → «feed» + ámbito por defecto (una sola vez en disco).
 Future<void> _migrateUnifiedFeedPreferences(SharedPreferences p) async {
   final tab = p.getString('default_feed_tab');
   if (tab == 'following') {
@@ -44,6 +41,10 @@ Future<void> _migrateUnifiedFeedPreferences(SharedPreferences p) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Detect fresh install / cloud-restored install and wipe stale credentials
+  // BEFORE anything reads from secure storage (including the OAuth callback).
+  await ensureFreshInstallCleanup();
 
   await _handleAnilistOAuthCallback();
 
@@ -83,9 +84,10 @@ Future<void> main() async {
     await ensureNotificationWorkmanagerInitialized();
     await NotificationWorkScheduler.applyFromPrefs(prefs);
     await GoogleDriveBackupScheduler.applyFromPrefs(prefs);
+    // Registra los App Shortcuts (Quick Actions) del lanzador. Idempotente.
+    await CronicleQuickActions.init();
   }
 
-  // Normalizar status de entries guardados con lowercase
   try {
     await AppDatabase().normalizeStatuses();
   } catch (_) {}
@@ -113,7 +115,6 @@ Future<void> _handleAnilistOAuthCallback() async {
     if (name != null && name.isNotEmpty) {
       await auth.saveUserName(name);
     }
-    // Persist AniList scoring format so it becomes the app default.
     final opts = viewer?['mediaListOptions'] as Map<String, dynamic>?;
     final fmt = opts?['scoreFormat'] as String?;
     if (fmt != null) {

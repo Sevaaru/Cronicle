@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Layout del widget 2x2. Muestra las entradas en progreso como un
+     pase de diapositivas (AdapterViewFlipper). A diferencia del StackView,
+     NO captura gestos de swipe vertical, por lo que es compatible con los
+     grupos de widgets de Android 16+ donde el swipe cambia entre widgets.
+     La navegación entre tarjetas se hace tocando los botones ◀ ▶. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_library_background"
+    android:padding="6dp">
+
+    <!-- Pase de diapositivas: una tarjeta visible a la vez. -->
+    <AdapterViewFlipper
+        android:id="@+id/widget_small_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:loopViews="true" />
+
+    <!-- Estado vacío (sin entradas en progreso). -->
+    <TextView
+        android:id="@+id/widget_small_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:padding="12dp"
+        android:text="@string/widget_library_empty"
+        android:textColor="@color/widget_on_surface_variant"
+        android:textSize="12sp" />
+
+    <!-- Botón ▶ siguiente (derecha, centrado verticalmente).
+         Navegación infinita: al llegar a la última tarjeta vuelve a la primera. -->
+    <ImageView
+        android:id="@+id/widget_small_next"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
+        android:background="@drawable/widget_nav_bg"
+        android:src="@drawable/widget_ic_chevron_right"
+        android:scaleType="center"
+        android:contentDescription="@string/widget_next_content_desc" />
+
+</FrameLayout>
+

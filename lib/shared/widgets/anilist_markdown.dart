@@ -47,7 +47,6 @@ class _NodesColumn extends StatelessWidget {
           buf.add(_Inline(text: n.label, url: n.url));
         case _Code():
           if (n.text.contains('\n')) {
-            // Block code
             flush();
             widgets.add(Container(
               width: double.infinity,
@@ -63,7 +62,6 @@ class _NodesColumn extends StatelessWidget {
               )),
             ));
           } else {
-            // Inline code
             buf.add(_Inline(text: n.text, code: true));
           }
         case _Break():
@@ -262,7 +260,6 @@ class _SpoilerWidgetState extends State<_SpoilerWidget> {
   }
 }
 
-// --- AST ---
 
 sealed class _Node {}
 class _Text extends _Node { _Text(this.text, {this.bold = false, this.italic = false, this.strike = false}); final String text; final bool bold, italic, strike; }
@@ -293,7 +290,6 @@ List<_Node> _parse(String raw) {
       .replaceAll('&gt;', '>')
       .replaceAll('&quot;', '"')
       .replaceAll('&#39;', "'")
-      // Convert <h1>..<h6> HTML tags to markdown headers
       .replaceAllMapped(RegExp(r'<h([1-6])[^>]*>(.*?)</h\1>', caseSensitive: false, dotAll: true),
           (m) => '${'#' * int.parse(m.group(1)!)} ${m.group(2)}')
       .replaceAllMapped(RegExp(r'<a\s*>(.*?)</a>', dotAll: true), (m) => m.group(1) ?? '')
@@ -302,7 +298,6 @@ List<_Node> _parse(String raw) {
       .replaceAll(RegExp(r'<(?:span|div|font|u)[^>]*>', caseSensitive: false), '')
       .replaceAll(RegExp(r'</(?:span|div|font|u)>', caseSensitive: false), '');
 
-  // Rejoin URLs broken across lines inside img(), youtube(), webm(), ![](), []()
   text = text.replaceAllMapped(
     RegExp(r'(img\d*\(https?://|!\[[^\]]*\]\(https?://|\[[^\]]*\]\(https?://|youtube\(|webm\()([^)]*)\)',
         caseSensitive: false, dotAll: true),
@@ -353,7 +348,6 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    // Code blocks: ``` ... ```
     if (line.trimLeft().startsWith('```')) {
       flushBuf();
       final cl = <String>[];
@@ -367,7 +361,6 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    // Bullet lists: - item, * item, + item
     final bulletRx = RegExp(r'^(\s*)[-*+]\s+(.+)$');
     if (bulletRx.hasMatch(line)) {
       flushBuf();
@@ -381,7 +374,6 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    // Numbered lists: 1. item, 2. item
     final numRx = RegExp(r'^(\s*)(\d+)\.\s+(.+)$');
     if (numRx.hasMatch(line)) {
       flushBuf();
@@ -396,19 +388,16 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    // ~~~ center blocks: handles all variants
     if (line.trimLeft().startsWith('~~~')) {
       flushBuf();
       final afterOpen = line.trimLeft().substring(3);
 
-      // ~~~content~~~ all on one line
       if (afterOpen.trimRight().endsWith('~~~') && afterOpen.trim().length > 3) {
         final content = afterOpen.trimRight();
         nodes.add(_Center(_parse(content.substring(0, content.length - 3))));
         i++; continue;
       }
 
-      // Multi-line: collect until closing ~~~
       final cl = <String>[];
       if (afterOpen.trim().isNotEmpty) cl.add(afterOpen);
       i++;
@@ -427,12 +416,10 @@ List<_Node> _parse(String raw) {
       continue;
     }
 
-    // <center>...</center> or <p align="center">...</p>
     final centerOpenRx = RegExp(r'<(?:center|p\s+align="center")>', caseSensitive: false);
     final centerCloseRx = RegExp(r'</(?:center|p)>', caseSensitive: false);
     if (centerOpenRx.hasMatch(line)) {
       flushBuf();
-      // Single-line center: <center>text</center>
       if (centerCloseRx.hasMatch(line)) {
         final inner = line
             .replaceAll(RegExp(r'</?(?:center|p\s+align="center"|p)>', caseSensitive: false), '');
@@ -465,9 +452,7 @@ void _parseInline(String text, List<_Node> nodes) {
   if (s.isEmpty) return;
 
   final patterns = <(RegExp, String)>[
-    // ~~~content~~~ inline center (must be before strikethrough)
     (RegExp(r'~~~(.+?)~~~'), 'inlineCenter'),
-    // Inline code: `code`
     (RegExp(r'`([^`]+)`'), 'inlineCode'),
     (RegExp(r'img(\d*)\((https?://[^\)]+)\)', caseSensitive: false), 'img'),
     (RegExp(r'!\[([^\]]*)\]\((https?://[^\)]+)\)'), 'mdImg'),
@@ -529,7 +514,6 @@ void _parseInline(String text, List<_Node> nodes) {
 }
 
 void _addPlainText(String raw, List<_Node> nodes) {
-  // Strip remaining HTML tags but keep their inner text
   final cleaned = raw.replaceAll(RegExp(r'<[^>]*>'), '');
   if (cleaned.isEmpty) return;
 

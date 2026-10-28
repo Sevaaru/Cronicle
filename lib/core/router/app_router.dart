@@ -14,6 +14,7 @@ import 'package:cronicle/features/anime/presentation/forum_media_threads_page.da
 import 'package:cronicle/features/anime/presentation/forum_thread_page.dart';
 import 'package:cronicle/features/anime/presentation/review_detail_page.dart';
 import 'package:cronicle/features/auth/presentation/auth_page.dart';
+import 'package:cronicle/features/achievements/presentation/trophy_room_page.dart';
 import 'package:cronicle/features/books/presentation/book_detail_page.dart';
 import 'package:cronicle/features/books/presentation/book_subject_browse_page.dart';
 import 'package:cronicle/features/books/presentation/books_home_feed_view.dart';
@@ -43,7 +44,10 @@ import 'package:cronicle/features/search/presentation/search_browse_by_release_d
 import 'package:cronicle/features/search/presentation/search_page.dart';
 import 'package:cronicle/features/social/presentation/social_page.dart';
 import 'package:cronicle/features/settings/presentation/app_defaults_notifier.dart';
+import 'package:cronicle/features/settings/presentation/layout_customization_pages.dart';
 import 'package:cronicle/features/settings/presentation/settings_page.dart';
+import 'package:cronicle/features/steam/presentation/steam_game_detail_page.dart';
+import 'package:cronicle/features/steam/presentation/steam_library_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_movie_detail_page.dart';
 import 'package:cronicle/features/trakt/presentation/trakt_show_detail_page.dart';
 import 'package:cronicle/features/tv/presentation/tv_page.dart';
@@ -80,10 +84,20 @@ class _InvalidBrowseParamsPage extends StatelessWidget {
   }
 }
 
-/// [Navigator] raíz de [GoRouter]. Usar para [showDialog] antes de que exista
-/// un [BuildContext] bajo el árbol del router (p. ej. desde [MaterialApp]).
 final cronicleRootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
+
+/// Converts a widget deep-link (cronicle://library/{kind}/{externalId}) to
+/// the matching GoRouter path. Kinds mirror [MediaKind]: 0=anime, 1=movie,
+/// 2=tv, 3=game, 4=manga, 5=book.
+String _widgetLibraryRoute(int kind, String externalId) =>
+    switch (kind) {
+      1 => '/trakt-movie/$externalId',
+      2 => '/trakt-show/$externalId',
+      3 => '/game/$externalId',
+      5 => '/book/$externalId',
+      _ => '/media/$externalId?kind=$kind',
+    };
 
 @Riverpod(keepAlive: true)
 GoRouter appRouter(AppRouterRef ref) {
@@ -94,18 +108,45 @@ GoRouter appRouter(AppRouterRef ref) {
     navigatorKey: cronicleRootNavigatorKey,
     initialLocation: onboardingDone ? startPage : '/onboarding',
     redirect: (context, state) {
-      // Android entrega el intent OAuth a MainActivity; el sistema puede
-      // exponerlo como "ruta" y GoRouter no tiene match → GoException.
-      // AppLinks ya maneja el deep link; mantener al usuario en la página actual.
       if (state.uri.scheme == 'cronicle') {
-        final current =
-            GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
-        if (current.isNotEmpty && current != '/') return current;
+        final host = state.uri.host;
+        // Widget / app deep link into a specific library entry.
+        if (host == 'library') {
+          final segs = state.uri.pathSegments;
+          if (segs.length >= 2) {
+            final kind = int.tryParse(segs[0]) ?? -1;
+            final externalId = segs[1];
+            return _widgetLibraryRoute(kind, externalId);
+          }
+          return '/library';
+        }
+        // OAuth callbacks and other cronicle:// URIs: stay on the current
+        // page (warm start) or navigate to the start page (cold start).
+        // Use cronicleRootNavigatorKey to avoid calling GoRouter.of(context)
+        // inside the redirect (which fails during cold start).
+        final ctx = cronicleRootNavigatorKey.currentContext;
+        if (ctx != null) {
+          try {
+            final current = GoRouter.of(ctx)
+                .routerDelegate
+                .currentConfiguration
+                .uri
+                .path;
+            if (current.isNotEmpty && current != '/') return current;
+          } catch (_) {}
+        }
         final done = ref.read(onboardingCompletedProvider);
         return done ? startPage : '/onboarding';
       }
-      // Rutas con barra final no coincidían con los paths registrados.
       final path = state.uri.path;
+      // Defensive: malformed deep links (e.g. an Android intent that lost
+      // its scheme/host) can reach the router as bare `/`, `/?`, or empty.
+      // Send those to the configured start page so the app never lands on
+      // an unknown route.
+      if (path.isEmpty || path == '/' || path == '/?') {
+        final done = ref.read(onboardingCompletedProvider);
+        return done ? startPage : '/onboarding';
+      }
       if (path.length > 1 && path.endsWith('/')) {
         return state.uri.replace(path: path.substring(0, path.length - 1)).toString();
       }
@@ -128,7 +169,6 @@ GoRouter appRouter(AppRouterRef ref) {
           final index =
               ref.read(shellNavTabProvider.notifier).bottomNavIndex(location);
 
-          // No modificar providers durante build; persistir tab principal después del frame.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ref
                 .read(shellNavTabProvider.notifier)
@@ -138,7 +178,6 @@ GoRouter appRouter(AppRouterRef ref) {
           return AppShell(
             currentIndex: index,
             onTabChanged: (i) {
-              // Cierra PopupMenu / overlays del tab anterior (p. ej. filtro biblioteca).
               _shellKey.currentState?.popUntil(
                 (route) => route is! PopupRoute,
               );
@@ -237,6 +276,10 @@ GoRouter appRouter(AppRouterRef ref) {
             builder: (context, state) => const PersonalStatsPage(),
           ),
           GoRoute(
+            path: '/profile/trophies',
+            builder: (context, state) => const TrophyRoomPage(),
+          ),
+          GoRoute(
             path: '/profile/favorites/:kind',
             builder: (context, state) {
               final kind = ProfileFavoritesKind.tryParse(state.pathParameters['kind']);
@@ -247,10 +290,82 @@ GoRouter appRouter(AppRouterRef ref) {
             },
           ),
           GoRoute(
+            path: '/profile/steam',
+            builder: (context, state) => const SteamLibraryPage(),
+          ),
+          GoRoute(
+            path: '/profile/steam/game/:appid',
+            pageBuilder: (context, state) {
+              final id =
+                  int.tryParse(state.pathParameters['appid'] ?? '') ?? 0;
+              final child = id <= 0
+                  ? const _InvalidBrowseParamsPage()
+                  : SteamGameDetailPage(appId: id);
+              final fromToggle =
+                  state.uri.queryParameters['toggle'] == '1';
+              return fromToggle
+                  ? NoTransitionPage(key: state.pageKey, child: child)
+                  : MaterialPage(key: state.pageKey, child: child);
+            },
+          ),
+          GoRoute(
+            path: '/profile/steam/game/:appid/achievements',
+            builder: (context, state) {
+              final id =
+                  int.tryParse(state.pathParameters['appid'] ?? '') ?? 0;
+              if (id <= 0) return const _InvalidBrowseParamsPage();
+              return SteamAchievementsPage(appId: id);
+            },
+          ),
+          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: SettingsPage(),
             ),
+            routes: [
+              // Subpáginas de personalización de layouts. Se registran como
+              // GoRoutes (en vez de Navigator.push imperativo) para que:
+              //  - El botón atrás del sistema cierre la página (lo gestiona
+              //    GoRouter en vez de quedar atrapado en una ruta opaca).
+              //  - Cambiar de pestaña en la navbar inferior reemplace la
+              //    rama actual y cierre estas subpáginas en lugar de
+              //    dejarlas apiladas sobre la nueva pestaña.
+              GoRoute(
+                path: 'feed-filters',
+                builder: (context, state) =>
+                    const FeedFilterLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'library-kinds',
+                builder: (context, state) =>
+                    const LibraryKindLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'search-filters',
+                builder: (context, state) =>
+                    const SearchFilterLayoutEditorPage(),
+              ),
+              GoRoute(
+                path: 'appearance',
+                builder: (context, state) =>
+                    const SettingsAppearancePage(),
+              ),
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) =>
+                    const SettingsNotificationsPage(),
+              ),
+              GoRoute(
+                path: 'accounts',
+                builder: (context, state) =>
+                    const SettingsAccountsPage(),
+              ),
+              GoRoute(
+                path: 'data',
+                builder: (context, state) =>
+                    const SettingsDataPage(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/media/:id',
@@ -379,9 +494,14 @@ GoRouter appRouter(AppRouterRef ref) {
           ),
           GoRoute(
             path: '/game/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final gameId = int.parse(state.pathParameters['id']!);
-              return GameDetailPage(gameId: gameId);
+              final child = GameDetailPage(gameId: gameId);
+              final fromToggle =
+                  state.uri.queryParameters['toggle'] == '1';
+              return fromToggle
+                  ? NoTransitionPage(key: state.pageKey, child: child)
+                  : MaterialPage(key: state.pageKey, child: child);
             },
           ),
           GoRoute(
@@ -465,27 +585,6 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthPage(),
-      ),
-      /// Visor de imagen a pantalla completa (misma pila que GoRouter → atrás del sistema coherente).
-      GoRoute(
-        path: '/full-image',
-        parentNavigatorKey: cronicleRootNavigatorKey,
-        pageBuilder: (context, state) {
-          final url = state.extra as String? ?? '';
-          return CustomTransitionPage<void>(
-            key: state.pageKey,
-            name: state.name,
-            fullscreenDialog: true,
-            opaque: false,
-            barrierDismissible: false,
-            barrierColor: null,
-            transitionDuration: const Duration(milliseconds: 280),
-            transitionsBuilder: (context, animation, _, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            child: FullscreenImagePage(imageUrl: url),
-          );
-        },
       ),
     ],
   );

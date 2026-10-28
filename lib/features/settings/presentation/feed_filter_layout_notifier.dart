@@ -8,7 +8,6 @@ import 'package:cronicle/features/settings/presentation/app_defaults_notifier.da
 
 part 'feed_filter_layout_notifier.g.dart';
 
-/// Orden fijo de ids válidos (coinciden con [Enum.name] de `_FeedFilter` en el feed).
 const feedFilterLayoutDefaultOrder = <String>[
   'anime',
   'manga',
@@ -44,7 +43,6 @@ class FeedFilterLayoutState {
         final vis = m['v'] as bool? ?? true;
         if (id == null) continue;
 
-        // Skip legacy ids that no longer exist.
         if (id == 'following' || id == 'all' || id == 'feed') continue;
 
         if (!valid.contains(id)) continue;
@@ -122,7 +120,12 @@ class FeedFilterLayout extends _$FeedFilterLayout {
     state = next;
     final visible = next.visibleIdSet;
     final def = ref.read(defaultFeedTabProvider);
-    if (!visible.contains(def)) {
+    // 'summary' (Discover) is the synthetic top tab and never appears in
+    // the feed filter layout, so it's always valid and must NOT be
+    // overwritten when categories change. Only fall back to the first
+    // visible category when the saved default is a category that became
+    // hidden.
+    if (def != 'summary' && !visible.contains(def)) {
       await ref.read(defaultFeedTabProvider.notifier).set(next.firstVisibleId);
     }
   }

@@ -3,13 +3,12 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 
+import 'package:cronicle/core/app/global_messenger.dart';
 import 'package:cronicle/core/utils/json_int.dart';
 
-/// Lanzada cuando AniList responde 429 (rate-limit) y se agotaron los reintentos.
 class AnilistRateLimitException implements Exception {
   AnilistRateLimitException({this.retryAfterSeconds});
 
-  /// Segundos sugeridos por la cabecera `retry-after` (si vino).
   final int? retryAfterSeconds;
 
   @override
@@ -17,14 +16,12 @@ class AnilistRateLimitException implements Exception {
       'AnilistRateLimitException(retryAfter=${retryAfterSeconds}s)';
 }
 
-/// Queries the public Anilist GraphQL API.
 class AnilistGraphqlDatasource {
   AnilistGraphqlDatasource(this._dio);
 
   final Dio _dio;
   static const _url = 'https://graphql.anilist.co';
 
-  /// AniList devuelve a veces `message: "validation"` con el detalle en [validation].
   static String formatGraphQLErrors(List<dynamic> errors) {
     final lines = <String>[];
     for (final raw in errors) {
@@ -68,6 +65,7 @@ class AnilistGraphqlDatasource {
   }
 
   List<Map<String, dynamic>> _normalizeThreadChildComments(dynamic raw) {
+    // AniList a veces manda esto como JSON string, asi que lo normalizamos a lista.
     if (raw is List) {
       return raw
           .whereType<Map>()
@@ -103,6 +101,7 @@ class AnilistGraphqlDatasource {
 
     late final Map<String, dynamic> body;
     const maxAttempts = 3;
+    // Reintento corto con backoff para no caernos por 429 temporales.
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         final res = await _dio.post<dynamic>(
@@ -114,9 +113,9 @@ class AnilistGraphqlDatasource {
             validateStatus: (_) => true,
           ),
         );
-        // Retry on 429 Too Many Requests
         if (res.statusCode == 429 && attempt < maxAttempts) {
           final retryAfter = _retryDelaySeconds(res, attempt);
+          notifyAnilistRateLimited(retryAfterSeconds: retryAfter);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -124,7 +123,16 @@ class AnilistGraphqlDatasource {
         if (res.statusCode == 429) {
           final hint = int.tryParse(
               res.headers.value('retry-after') ?? '');
+          notifyAnilistRateLimited(retryAfterSeconds: hint);
           throw AnilistRateLimitException(retryAfterSeconds: hint);
+        }
+        // Proactive heads-up: AniList replies with X-RateLimit-Remaining on
+        // every successful call. When it hits 0 we are about to start eating
+        // 429s, so surface the same friendly notice once.
+        final remaining = int.tryParse(
+            res.headers.value('x-ratelimit-remaining') ?? '');
+        if (remaining != null && remaining <= 0) {
+          notifyAnilistRateLimited();
         }
         if (res.data is Map<String, dynamic>) {
           body = res.data as Map<String, dynamic>;
@@ -132,9 +140,9 @@ class AnilistGraphqlDatasource {
           throw Exception('HTTP ${res.statusCode}');
         }
       } on DioException catch (e) {
-        // Retry on 429 from DioException too
         if (e.response?.statusCode == 429 && attempt < maxAttempts) {
           final retryAfter = _retryDelaySeconds(e.response, attempt);
+          notifyAnilistRateLimited(retryAfterSeconds: retryAfter);
           await Future<void>.delayed(
               Duration(seconds: retryAfter.clamp(1, 60)));
           continue;
@@ -142,6 +150,7 @@ class AnilistGraphqlDatasource {
         if (e.response?.statusCode == 429) {
           final hint = int.tryParse(
               e.response?.headers.value('retry-after') ?? '');
+          notifyAnilistRateLimited(retryAfterSeconds: hint);
           throw AnilistRateLimitException(retryAfterSeconds: hint);
         }
         final data = e.response?.data;
@@ -161,7 +170,6 @@ class AnilistGraphqlDatasource {
     return body;
   }
 
-  /// Recent public anime activity (global feed).
   Future<List<Map<String, dynamic>>> fetchRecentActivity({
     int page = 1,
     int perPage = 25,
@@ -206,17 +214,14 @@ class AnilistGraphqlDatasource {
     return activities.where((a) => a['media'] != null).toList();
   }
 
-  /// Search anime by title.
   Future<List<Map<String, dynamic>>> searchAnime(String search) async {
     return searchMedia(search, type: 'ANIME');
   }
 
-  /// Search manga by title.
   Future<List<Map<String, dynamic>>> searchManga(String search) async {
     return searchMedia(search, type: 'MANGA');
   }
 
-  /// Fetch trending/popular media by type.
   Future<List<Map<String, dynamic>>> fetchPopular({required String type}) async {
     const query = r'''
       query ($type: MediaType) {
@@ -244,7 +249,6 @@ class AnilistGraphqlDatasource {
         [];
   }
 
-  /// Anilist season convention (Winter includes December → next [seasonYear]).
   static ({String season, int seasonYear}) currentMediaSeason() {
     final now = DateTime.now();
     final m = now.month;
@@ -256,9 +260,6 @@ class AnilistGraphqlDatasource {
     return (season: 'FALL', seasonYear: y);
   }
 
-  /// Home browse rails for Anilist: [category] is
-  /// `seasonal`, `trending`, `top_rated`, `upcoming`, `recently_released`,
-  /// `popularity` (POPULARITY_DESC), `start_date` (START_DATE_DESC).
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})> fetchBrowseMedia({
     required String type,
     required String category,
@@ -455,7 +456,6 @@ class AnilistGraphqlDatasource {
     return (items: <Map<String, dynamic>>[], hasNextPage: false);
   }
 
-  /// Rango de fechas de estreno (FuzzyDateInt: YYYYMMDD). Inclusive en ambos extremos.
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
       fetchMediaByReleaseDateRange({
     required String type,
@@ -480,8 +480,6 @@ class AnilistGraphqlDatasource {
             nextAiringEpisode { episode }
     ''';
 
-    // Fechas como literales en el documento: en web, JSON numérico en variables
-    // a veces se tipa como Int y Anilist exige FuzzyDateInt en esas posiciones.
     final query = '''
       query (\$type: MediaType, \$page: Int, \$perPage: Int) {
         Page(page: \$page, perPage: \$perPage) {
@@ -510,9 +508,6 @@ class AnilistGraphqlDatasource {
     return (items: list, hasNextPage: hasNext);
   }
 
-  /// Listado paginado por género y/o etiqueta Anilist ([genre] / [tag] son listas de un elemento).
-  ///
-  /// [sortKey]: `score` | `popularity` | `name` → SCORE_DESC, POPULARITY_DESC, TITLE_ROMAJI.
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
       fetchMediaByGenreTagPage({
     required String type,
@@ -599,7 +594,6 @@ class AnilistGraphqlDatasource {
     return (items: list, hasNextPage: hasNext);
   }
 
-  /// Search Anilist media by type (ANIME or MANGA).
   Future<List<Map<String, dynamic>>> searchMedia(
     String search, {
     required String type,
@@ -633,7 +627,6 @@ class AnilistGraphqlDatasource {
         [];
   }
 
-  /// Metadatos de emisión para varios anime (API pública; no requiere token).
   Future<Map<int, Map<String, dynamic>>> fetchMediaAiringSnapshots(
     List<int> ids,
   ) async {
@@ -673,8 +666,6 @@ class AnilistGraphqlDatasource {
     return out;
   }
 
-  /// Fetch full media details by Anilist ID.
-  /// Pass [token] so `isFavourite` reflects the logged-in viewer.
   Future<Map<String, dynamic>?> fetchMediaDetail(int id, {String? token}) async {
     const query = r'''
       query ($id: Int) {
@@ -781,14 +772,12 @@ class AnilistGraphqlDatasource {
     return data['data']?['Media'] as Map<String, dynamic>?;
   }
 
-  /// Toggle viewer favourite for this anime or manga on Anilist (requires auth).
   Future<void> toggleFavouriteMedia({
     required int mediaId,
     required String mediaType,
     required String token,
   }) async {
     final isAnime = mediaType == 'ANIME';
-    // La API devuelve [Favourites], no User: no existe `id` en ese tipo.
     const mutation = r'''
       mutation ($animeId: Int, $mangaId: Int) {
         ToggleFavourite(animeId: $animeId, mangaId: $mangaId) {
@@ -806,7 +795,6 @@ class AnilistGraphqlDatasource {
     );
   }
 
-  /// Toggle viewer favourite for a character (requires auth).
   Future<void> toggleFavouriteCharacter({
     required int characterId,
     required String token,
@@ -819,7 +807,6 @@ class AnilistGraphqlDatasource {
     await _post(mutation, variables: {'characterId': characterId}, token: token);
   }
 
-  /// Toggle viewer favourite for a staff member (requires auth).
   Future<void> toggleFavouriteStaff({
     required int staffId,
     required String token,
@@ -832,7 +819,6 @@ class AnilistGraphqlDatasource {
     await _post(mutation, variables: {'staffId': staffId}, token: token);
   }
 
-  /// Fetch full character detail with paginated media appearances.
   Future<Map<String, dynamic>?> fetchCharacterDetail(
     int id, {
     String? token,
@@ -886,7 +872,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['Character'] as Map<String, dynamic>?;
   }
 
-  /// Fetch full staff detail with character roles and staff media credits.
   Future<Map<String, dynamic>?> fetchStaffDetail(
     int id, {
     String? token,
@@ -964,7 +949,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['Staff'] as Map<String, dynamic>?;
   }
 
-  /// Paginated characters list for a media (used in "View all").
   Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
       fetchMediaCharacters(
     int mediaId, {
@@ -1013,7 +997,6 @@ class AnilistGraphqlDatasource {
     );
   }
 
-  /// Paginated staff list for a media (used in "View all").
   Future<({List<Map<String, dynamic>> edges, bool hasNextPage, int total})>
       fetchMediaStaff(
     int mediaId, {
@@ -1056,7 +1039,6 @@ class AnilistGraphqlDatasource {
     );
   }
 
-  /// Unread notification count for the authenticated viewer.
   Future<int?> fetchUnreadNotificationCount(String token) async {
     const query = r'''
       query { Viewer { unreadNotificationCount } }
@@ -1065,7 +1047,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['Viewer']?['unreadNotificationCount'] as int?;
   }
 
-  /// Inbox notifications (requires auth). Set [resetNotificationCount] to clear unread on Anilist.
   Future<List<Map<String, dynamic>>> fetchNotifications({
     required String token,
     int page = 1,
@@ -1279,9 +1260,6 @@ class AnilistGraphqlDatasource {
         [];
   }
 
-  /// Recent public activity. Pass null [activityType] for all types.
-  /// If [isFollowing] is true, only shows activity from users the viewer follows.
-  /// [hasNextPage] reflects Anilist pagination (do not infer from filtered length).
   Future<({List<Map<String, dynamic>> items, bool hasNextPage})>
       fetchRecentActivityByType({
     String? activityType,
@@ -1353,7 +1331,6 @@ class AnilistGraphqlDatasource {
     return (items: filtered, hasNextPage: hasNext);
   }
 
-  /// Toggle like on an activity, reply, thread or thread comment. Requires auth token.
   Future<bool> toggleLike(int id, String token, {String type = 'ACTIVITY'}) async {
     const query = r'''
       mutation ($id: Int, $type: LikeableType) {
@@ -1371,7 +1348,62 @@ class AnilistGraphqlDatasource {
     return data['data']?['ToggleLikeV2']?['isLiked'] as bool? ?? false;
   }
 
-  /// Post a text activity to the authenticated user's feed.
+  /// Returns the list of users that liked the given activity. Each entry is a
+  /// `{id: int, name: String, avatar: String?}` map. Works for both
+  /// `ListActivity` and `TextActivity`. `MessageActivity` is also covered
+  /// for completeness even though it is not surfaced in the social feed.
+  Future<List<Map<String, dynamic>>> fetchActivityLikes(
+    int activityId, {
+    String? token,
+  }) async {
+    const query = r'''
+      query ($id: Int!) {
+        Activity(id: $id) {
+          __typename
+          ... on ListActivity { likes { id name avatar { medium } } }
+          ... on TextActivity { likes { id name avatar { medium } } }
+          ... on MessageActivity { likes { id name avatar { medium } } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': activityId}, token: token);
+    final activity = data['data']?['Activity'] as Map<String, dynamic>?;
+    final likes = (activity?['likes'] as List?) ?? const [];
+    return likes
+        .whereType<Map>()
+        .map((e) => <String, dynamic>{
+              'id': e['id'] as int?,
+              'name': e['name'] as String? ?? '',
+              'avatar': (e['avatar'] as Map?)?['medium'] as String?,
+            })
+        .toList();
+  }
+
+  /// Returns the list of users that liked an activity reply.
+  Future<List<Map<String, dynamic>>> fetchActivityReplyLikes(
+    int replyId, {
+    String? token,
+  }) async {
+    const query = r'''
+      query ($id: Int!) {
+        ActivityReply(id: $id) {
+          likes { id name avatar { medium } }
+        }
+      }
+    ''';
+    final data = await _post(query, variables: {'id': replyId}, token: token);
+    final likes =
+        (data['data']?['ActivityReply']?['likes'] as List?) ?? const [];
+    return likes
+        .whereType<Map>()
+        .map((e) => <String, dynamic>{
+              'id': e['id'] as int?,
+              'name': e['name'] as String? ?? '',
+              'avatar': (e['avatar'] as Map?)?['medium'] as String?,
+            })
+        .toList();
+  }
+
   Future<Map<String, dynamic>> saveTextActivity(String text, String token) async {
     const query = r'''
       mutation ($text: String!) {
@@ -1396,7 +1428,6 @@ class AnilistGraphqlDatasource {
     throw Exception('SaveTextActivity returned no data');
   }
 
-  /// Post a reply to an activity.
   Future<Map<String, dynamic>> saveActivityReply(int activityId, String text, String token) async {
     const query = r'''
       mutation ($activityId: Int, $replyText: String) {
@@ -1418,13 +1449,11 @@ class AnilistGraphqlDatasource {
     return data['data']!['SaveActivityReply'] as Map<String, dynamic>;
   }
 
-  /// Fetch replies for an activity (root [activityId] only).
   Future<List<Map<String, dynamic>>> fetchActivityReplies(int activityId, {String? token}) async {
     final bundle = await fetchActivityRepliesPageData(activityId, token: token);
     return (bundle['replies'] as List?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
-  /// Si [ambiguousId] es un [ActivityReply] id, devuelve el `activityId` padre; si no, el mismo id.
   Future<int> resolveRootActivityId(int ambiguousId, {String? token}) async {
     const q = r'''
       query ($id: Int!) {
@@ -1438,15 +1467,10 @@ class AnilistGraphqlDatasource {
       final aid = data['data']?['ActivityReply']?['activityId'] as int?;
       if (aid != null) return aid;
     } catch (_) {
-      // Sin reply con ese id: se asume id de actividad raíz.
     }
     return ambiguousId;
   }
 
-  /// Actividad raíz + respuestas. [ambiguousId] puede ser id de actividad o de reply.
-  ///
-  /// Primero se pide [Activity] + [activityReplies] con ese id (caso típico al abrir desde el feed).
-  /// Si no hay actividad ni respuestas, se intenta resolver como id de [ActivityReply] (p. ej. desde una notificación).
   Future<Map<String, dynamic>> fetchActivityRepliesPageData(
     int ambiguousId, {
     String? token,
@@ -1544,7 +1568,84 @@ class AnilistGraphqlDatasource {
     };
   }
 
-  /// Fetch user media list by type (ANIME or MANGA). Requires token.
+  /// Fetches AniList user list entries that have been updated since
+  /// [sinceEpochSeconds] (UNIX seconds, AniList native format). Pages are
+  /// requested sorted by `UPDATED_TIME_DESC` and iteration stops as soon as
+  /// an entry older than [sinceEpochSeconds] is encountered, so usually only
+  /// 1 page is needed for incremental syncs.
+  ///
+  /// Returns the same shape as [fetchUserMediaList] but the entries also
+  /// expose `progressVolumes`, `notes`, `media.format`, etc.
+  Future<List<Map<String, dynamic>>> fetchUserMediaListUpdatedSince(
+    String token,
+    int userId, {
+    required String type,
+    required int sinceEpochSeconds,
+    int perPage = 50,
+    int maxPages = 20,
+  }) async {
+    const query = r'''
+      query ($userId: Int, $type: MediaType, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { hasNextPage }
+          mediaList(userId: $userId, type: $type, sort: UPDATED_TIME_DESC) {
+            id
+            status
+            score(format: POINT_100)
+            progress
+            progressVolumes
+            notes
+            updatedAt
+            media {
+              id
+              type
+              title { romaji english }
+              coverImage { large }
+              episodes
+              chapters
+              volumes
+              format
+              status
+              nextAiringEpisode { episode }
+            }
+          }
+        }
+      }
+    ''';
+    final out = <Map<String, dynamic>>[];
+    var page = 1;
+    while (page <= maxPages) {
+      final data = await _post(
+        query,
+        variables: {
+          'userId': userId,
+          'type': type,
+          'page': page,
+          'perPage': perPage,
+        },
+        token: token,
+      );
+      final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+      final entries = (pageData?['mediaList'] as List?) ?? const [];
+      var sawOlder = false;
+      for (final raw in entries) {
+        if (raw is! Map) continue;
+        final entry = Map<String, dynamic>.from(raw);
+        final updatedAt = (entry['updatedAt'] as num?)?.toInt() ?? 0;
+        if (updatedAt <= sinceEpochSeconds) {
+          sawOlder = true;
+          break;
+        }
+        out.add(entry);
+      }
+      final hasNext =
+          pageData?['pageInfo']?['hasNextPage'] as bool? ?? false;
+      if (sawOlder || !hasNext || entries.isEmpty) break;
+      page++;
+    }
+    return out;
+  }
+
   Future<List<Map<String, dynamic>>> fetchUserMediaList(
     String token,
     String userName, {
@@ -1596,8 +1697,6 @@ class AnilistGraphqlDatasource {
     return entries;
   }
 
-  /// Entradas en **CURRENT** (viendo/leyendo) con `media.status` y `nextAiringEpisode`
-  /// (para avisos de nuevos capítulos en segundo plano).
   Future<List<Map<String, dynamic>>> fetchCurrentListWithAiringSchedule({
     required String token,
     required String userName,
@@ -1638,7 +1737,66 @@ class AnilistGraphqlDatasource {
     return entries;
   }
 
-  /// Get current authenticated user info.
+  /// Like [fetchCurrentListWithAiringSchedule] but pulls ANIME + MANGA in a
+  /// single GraphQL request using two aliased queries. Halves the number of
+  /// AniList calls required by the background airing-notification sync,
+  /// which is one of the most frequently scheduled background tasks.
+  Future<List<Map<String, dynamic>>> fetchCurrentListsWithAiringSchedule({
+    required String token,
+    required String userName,
+  }) async {
+    const query = r'''
+      query ($userName: String) {
+        anime: MediaListCollection(userName: $userName, type: ANIME, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                id
+                type
+                status
+                title { romaji english native }
+                coverImage { large }
+                nextAiringEpisode { airingAt episode }
+              }
+            }
+          }
+        }
+        manga: MediaListCollection(userName: $userName, type: MANGA, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                id
+                type
+                status
+                title { romaji english native }
+                coverImage { large }
+                nextAiringEpisode { airingAt episode }
+              }
+            }
+          }
+        }
+      }
+    ''';
+    final data = await _post(
+      query,
+      variables: {'userName': userName},
+      token: token,
+    );
+    final entries = <Map<String, dynamic>>[];
+    for (final key in ['anime', 'manga']) {
+      final lists =
+          (data['data']?[key]?['lists'] as List?) ?? const [];
+      for (final list in lists) {
+        for (final entry in (list['entries'] as List? ?? const [])) {
+          entries.add(entry as Map<String, dynamic>);
+        }
+      }
+    }
+    return entries;
+  }
+
   Future<Map<String, dynamic>?> fetchViewer(String token) async {
     const query = r'''
       query {
@@ -1654,7 +1812,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['Viewer'] as Map<String, dynamic>?;
   }
 
-  /// Totales de seguidores y seguidos (una sola petición con dos campos [Page]).
   Future<Map<String, int>> fetchUserFollowCounts(int userId, {String? token}) async {
     const query = r'''
       query ($userId: Int!) {
@@ -1676,7 +1833,6 @@ class AnilistGraphqlDatasource {
     return {'followers': followers, 'following': following};
   }
 
-  /// Lista paginada de seguidores o de cuentas que [userId] sigue.
   Future<({List<Map<String, dynamic>> users, bool hasNextPage, int total})>
       fetchUserFollowListPage(
     int userId, {
@@ -1732,7 +1888,6 @@ class AnilistGraphqlDatasource {
     return (users: users, hasNextPage: hasNextPage, total: total);
   }
 
-  /// Fetch a public user profile by ID, including favourites.
   Future<Map<String, dynamic>?> fetchUserProfile(int userId, {String? token}) async {
     const query = r'''
       query ($id: Int) {
@@ -1794,7 +1949,6 @@ class AnilistGraphqlDatasource {
     return user;
   }
 
-  /// Fetch recent activity of a specific user.
   Future<List<Map<String, dynamic>>> fetchUserActivity(int userId, {String? token}) async {
     const query = r'''
       query ($userId: Int) {
@@ -1847,8 +2001,6 @@ class AnilistGraphqlDatasource {
     return activities.where((a) => a['media'] != null || a['type'] == 'TEXT').toList();
   }
 
-  /// Save (create/update) a media list entry on Anilist.
-  /// [score] expects 0-100 raw format, sent directly as scoreRaw.
   Future<Map<String, dynamic>?> saveMediaListEntry({
     required int mediaId,
     required String token,
@@ -1878,7 +2030,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['SaveMediaListEntry'] as Map<String, dynamic>?;
   }
 
-  /// Fetch a single review by ID.
   Future<Map<String, dynamic>?> fetchReviewById(int reviewId, {String? token}) async {
     const query = r'''
       query ($id: Int) {
@@ -1905,7 +2056,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['Review'] as Map<String, dynamic>?;
   }
 
-  /// Rate a review (UP_VOTE, DOWN_VOTE, NO_VOTE).
   Future<Map<String, dynamic>?> rateReview(int reviewId, String rating, String token) async {
     const query = r'''
       mutation ($reviewId: Int, $rating: ReviewRating) {
@@ -1921,7 +2071,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['RateReview'] as Map<String, dynamic>?;
   }
 
-  /// Find the Anilist MediaList entry ID for a given media.
   Future<int?> findMediaListEntryId(int mediaId, String token) async {
     final viewer = await fetchViewer(token);
     if (viewer == null) return null;
@@ -1947,7 +2096,6 @@ class AnilistGraphqlDatasource {
     }
   }
 
-  /// Delete a media list entry from Anilist by list entry ID.
   Future<void> deleteMediaListEntry(int entryId, String token) async {
     const query = r'''
       mutation ($id: Int) {
@@ -1957,7 +2105,6 @@ class AnilistGraphqlDatasource {
     await _post(query, variables: {'id': entryId}, token: token);
   }
 
-  /// Toggle follow on a user.
   Future<bool> toggleFollow(int userId, String token) async {
     const query = r'''
       mutation ($userId: Int) {
@@ -1971,7 +2118,6 @@ class AnilistGraphqlDatasource {
     return data['data']?['ToggleFollow']?['isFollowing'] as bool? ?? false;
   }
 
-  /// Fetch full user profile with statistics.
   Future<Map<String, dynamic>?> fetchViewerProfile(String token) async {
     const query = r'''
       query {
@@ -2038,7 +2184,6 @@ class AnilistGraphqlDatasource {
     return user;
   }
 
-  /// Post a comment on a forum thread. Requires auth.
   Future<Map<String, dynamic>> saveThreadComment(
       int threadId, String text, String token, {int? parentCommentId}) async {
     const query = r'''
@@ -2059,7 +2204,6 @@ class AnilistGraphqlDatasource {
     throw Exception('SaveThreadComment returned no data');
   }
 
-  /// Forum threads related to a media item.
   Future<List<Map<String, dynamic>>> fetchMediaThreads(int mediaId, {int perPage = 10}) async {
     const query = r'''
       query ($mediaId: Int, $perPage: Int) {
@@ -2076,17 +2220,22 @@ class AnilistGraphqlDatasource {
     return threads?.cast<Map<String, dynamic>>() ?? [];
   }
 
-  /// Full forum thread with comments.
-  Future<Map<String, dynamic>?> fetchForumThread(int threadId, {String? token}) async {
+  Future<Map<String, dynamic>?> fetchForumThread(
+    int threadId, {
+    String? token,
+    int page = 1,
+    int perPage = 25,
+  }) async {
     const query = r'''
-      query ($id: Int, $perPage: Int) {
+      query ($id: Int, $page: Int, $perPage: Int) {
         Thread(id: $id) {
           id title body createdAt updatedAt replyCount viewCount isLiked likeCount
           user { id name avatar { medium } }
           categories { id name }
           mediaCategories { id type title { romaji english } coverImage { large } }
         }
-        Page(perPage: $perPage) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { total perPage currentPage lastPage hasNextPage }
           threadComments(threadId: $id) {
             id comment createdAt isLiked likeCount isLocked
             user { id name avatar { medium } }
@@ -2095,26 +2244,71 @@ class AnilistGraphqlDatasource {
         }
       }
     ''';
-    final data = await _post(query, variables: {'id': threadId, 'perPage': 25}, token: token);
+    final data = await _post(query,
+        variables: {'id': threadId, 'page': page, 'perPage': perPage},
+        token: token);
     final thread = data['data']?['Thread'] as Map<String, dynamic>?;
     if (thread == null) return null;
-    final commentsRaw = (data['data']?['Page']?['threadComments'] as List?)
-        ?.cast<Map<String, dynamic>>() ??
-      [];
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final commentsRaw = (pageData?['threadComments'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
     final comments = commentsRaw
-      .map((c) {
-        final mapped = Map<String, dynamic>.from(c);
-        mapped['childComments'] = _normalizeThreadChildComments(c['childComments']);
-        return mapped;
-      })
-      .toList();
-    return {...thread, 'comments': comments};
+        .map((c) {
+          final mapped = Map<String, dynamic>.from(c);
+          mapped['childComments'] =
+              _normalizeThreadChildComments(c['childComments']);
+          return mapped;
+        })
+        .toList();
+    final pageInfo = pageData?['pageInfo'] as Map<String, dynamic>?;
+    return {
+      ...thread,
+      'comments': comments,
+      'pageInfo': pageInfo,
+    };
   }
 
-  /// Browse forum threads with optional category filter and sort.
-  /// [categoryId]: Anilist forum category (e.g. 1=General, 2=Anime, 3=Manga,
-  /// 5=Release Discussions, 7=Music, 9=Gaming, etc.)
-  /// [sort]: e.g. REPLIED_AT_DESC, CREATED_AT_DESC, IS_STICKY, etc.
+  Future<({List<Map<String, dynamic>> comments, Map<String, dynamic>? pageInfo})>
+      fetchForumThreadCommentsPage(
+    int threadId, {
+    String? token,
+    required int page,
+    int perPage = 25,
+  }) async {
+    const query = r'''
+      query ($id: Int, $page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          pageInfo { total perPage currentPage lastPage hasNextPage }
+          threadComments(threadId: $id) {
+            id comment createdAt isLiked likeCount isLocked
+            user { id name avatar { medium } }
+            childComments
+          }
+        }
+      }
+    ''';
+    final data = await _post(query,
+        variables: {'id': threadId, 'page': page, 'perPage': perPage},
+        token: token);
+    final pageData = data['data']?['Page'] as Map<String, dynamic>?;
+    final commentsRaw = (pageData?['threadComments'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
+        [];
+    final comments = commentsRaw
+        .map((c) {
+          final mapped = Map<String, dynamic>.from(c);
+          mapped['childComments'] =
+              _normalizeThreadChildComments(c['childComments']);
+          return mapped;
+        })
+        .toList();
+    return (
+      comments: comments,
+      pageInfo: pageData?['pageInfo'] as Map<String, dynamic>?,
+    );
+  }
+
   Future<List<Map<String, dynamic>>> fetchForumThreads({
     int? categoryId,
     String sort = 'REPLIED_AT_DESC',
@@ -2143,7 +2337,6 @@ class AnilistGraphqlDatasource {
     return threads?.cast<Map<String, dynamic>>() ?? [];
   }
 
-  /// Search forum threads by query string.
   Future<List<Map<String, dynamic>>> searchForumThreads({
     required String search,
     int? categoryId,
@@ -2173,8 +2366,6 @@ class AnilistGraphqlDatasource {
     return threads?.cast<Map<String, dynamic>>() ?? [];
   }
 
-  /// Fetch all forum feed sections using individual queries.
-  /// Returns a map with keys: 'sticky', 'recent', 'newest', 'releases'.
   Future<Map<String, List<Map<String, dynamic>>>> fetchForumFeed({
     int? categoryId,
   }) async {

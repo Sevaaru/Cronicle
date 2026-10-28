@@ -71,19 +71,20 @@ class _MediaGenreTagBrowsePageState
         .loadMore();
   }
 
-  Future<void> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
+  Future<bool> _addToLibrary(Map<String, dynamic> item, MediaKind k) async {
     final db = ref.read(databaseProvider);
     final existing = await db.getLibraryEntryByKindAndExternalId(
       k.code, item['id'].toString(),
     );
-    if (!mounted) return;
-    await showAddToLibrarySheet(
+    if (!mounted) return false;
+    final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
       item: item,
       kind: k,
       existingEntry: existing,
     );
+    return added;
   }
 
   @override

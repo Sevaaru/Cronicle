@@ -5,8 +5,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/books/presentation/book_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
+import 'package:cronicle/shared/models/media_kind.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
+import 'package:cronicle/shared/widgets/library_add_badge.dart';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 String? _coverUrl(Map<String, dynamic> item) =>
     (item['coverImage'] as Map?)?['large'] as String?;
@@ -27,7 +29,6 @@ void _navigateToBook(BuildContext context, Map<String, dynamic> item) {
   if (workKey != null) context.push('/book/$workKey');
 }
 
-// ─── Book feed slugs ────────────────────────────────────────────────────────
 
 class BookFeedSection {
   BookFeedSection._();
@@ -52,7 +53,6 @@ String booksHomeSectionTitle(AppLocalizations l10n, String slug) => switch (slug
       _ => slug,
     };
 
-/// Full-page home feed for the Books tab (matching games/trakt style).
 class BooksHomeFeedView extends ConsumerWidget {
   const BooksHomeFeedView({super.key});
 
@@ -70,9 +70,10 @@ class BooksHomeFeedView extends ConsumerWidget {
         ref.invalidate(bookSubjectProvider(BookFeedSection.mystery));
       },
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 40),
+        padding: EdgeInsets.only(
+          bottom: kGlassBottomNavContentHeight + 28,
+        ),
         children: [
-          // 1. Trending → Score Carousel
           _AsyncSection(
             asyncValue: ref.watch(bookTrendingProvider),
             skeleton: const _ScoreCarouselSkeleton(
@@ -90,7 +91,6 @@ class BooksHomeFeedView extends ConsumerWidget {
             ),
           ),
 
-          // 2. Popular (Love) → Hero
           _AsyncSection(
             asyncValue: ref.watch(bookSubjectProvider(BookFeedSection.love)),
             skeleton: const _HeroSkeleton(),
@@ -103,7 +103,6 @@ class BooksHomeFeedView extends ConsumerWidget {
             ),
           ),
 
-          // 3. Fantasy → Mood Band
           _AsyncSection(
             asyncValue: ref.watch(bookSubjectProvider(BookFeedSection.fantasy)),
             skeleton: _MoodBandSkeleton(
@@ -120,7 +119,6 @@ class BooksHomeFeedView extends ConsumerWidget {
             ),
           ),
 
-          // 4. Sci-Fi → Score Carousel
           _AsyncSection(
             asyncValue:
                 ref.watch(bookSubjectProvider(BookFeedSection.scienceFiction)),
@@ -139,7 +137,6 @@ class BooksHomeFeedView extends ConsumerWidget {
             ),
           ),
 
-          // 5. Classics → Spotlight Rows
           _AsyncSection(
             asyncValue:
                 ref.watch(bookSubjectProvider(BookFeedSection.classics)),
@@ -153,7 +150,6 @@ class BooksHomeFeedView extends ConsumerWidget {
             ),
           ),
 
-          // 6. Mystery → Ranked List
           _AsyncSection(
             asyncValue:
                 ref.watch(bookSubjectProvider(BookFeedSection.mystery)),
@@ -172,8 +168,6 @@ class BooksHomeFeedView extends ConsumerWidget {
   }
 }
 
-/// Renders a skeleton while [asyncValue] is loading, the built widget when it
-/// has data, and nothing (`SizedBox.shrink`) on error or empty results.
 class _AsyncSection extends StatelessWidget {
   const _AsyncSection({
     required this.asyncValue,
@@ -197,11 +191,7 @@ class _AsyncSection extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHARED COMPONENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Section header ───────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
@@ -251,7 +241,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ─── Score badge ──────────────────────────────────────────────────────────────
 
 class _ScoreBadge extends StatelessWidget {
   const _ScoreBadge({required this.score, this.small = false});
@@ -282,7 +271,6 @@ class _ScoreBadge extends StatelessWidget {
   }
 }
 
-// ─── Poster placeholder ──────────────────────────────────────────────────────
 
 class _PosterPlaceholder extends StatelessWidget {
   const _PosterPlaceholder({
@@ -307,7 +295,6 @@ class _PosterPlaceholder extends StatelessWidget {
   }
 }
 
-// ─── Skeleton helper ─────────────────────────────────────────────────────────
 
 Widget _skel(BuildContext ctx,
     {required double w, required double h, double r = 8}) {
@@ -322,11 +309,7 @@ Widget _skel(BuildContext ctx,
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SECTION WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── 1. Score Carousel ────────────────────────────────────────────────────────
 
 class _ScoreCarouselSection extends StatelessWidget {
   const _ScoreCarouselSection({
@@ -433,6 +416,12 @@ class _ScoreCarouselCard extends StatelessWidget {
                     right: 6,
                     child: _ScoreBadge(score: score, small: true),
                   ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.book),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -463,7 +452,6 @@ class _ScoreCarouselCard extends StatelessWidget {
   }
 }
 
-// ─── 2. Hero Section ─────────────────────────────────────────────────────────
 
 class _HeroSection extends StatelessWidget {
   const _HeroSection({
@@ -528,6 +516,12 @@ class _HeroSection extends StatelessWidget {
                             right: 4,
                             child: _ScoreBadge(score: score, small: true),
                           ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: LibraryAddBadge(
+                              item: it, kind: MediaKind.book, size: 26),
+                        ),
                       ],
                     ),
                   );
@@ -570,19 +564,29 @@ class _HeroCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                bottomLeft: Radius.circular(14),
-              ),
-              child: url != null
-                  ? CachedNetworkImage(
-                      imageUrl: url,
-                      width: 88,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    )
-                  : _PosterPlaceholder(width: 88, height: 120, radius: 0),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(14),
+                    bottomLeft: Radius.circular(14),
+                  ),
+                  child: url != null
+                      ? CachedNetworkImage(
+                          imageUrl: url,
+                          width: 88,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        )
+                      : _PosterPlaceholder(width: 88, height: 120, radius: 0),
+                ),
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: LibraryAddBadge(
+                      item: item, kind: MediaKind.book, size: 34),
+                ),
+              ],
             ),
             Expanded(
               child: Padding(
@@ -670,7 +674,6 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-// ─── 3. Mood Band ────────────────────────────────────────────────────────────
 
 class _MoodBandSection extends StatelessWidget {
   const _MoodBandSection({
@@ -756,7 +759,6 @@ class _MoodBandSection extends StatelessWidget {
   }
 }
 
-// ─── 4. Spotlight Rows ───────────────────────────────────────────────────────
 
 class _SpotlightRowsSection extends StatelessWidget {
   const _SpotlightRowsSection({
@@ -884,7 +886,6 @@ class _SpotlightRow extends StatelessWidget {
   }
 }
 
-// ─── 5. Ranked List ──────────────────────────────────────────────────────────
 
 class _RankedListSection extends StatelessWidget {
   const _RankedListSection({
@@ -1017,9 +1018,6 @@ class _RankedRow extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SKELETON WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 class _ScoreCarouselSkeleton extends StatelessWidget {
   const _ScoreCarouselSkeleton({

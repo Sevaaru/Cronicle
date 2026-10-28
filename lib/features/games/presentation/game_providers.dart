@@ -7,6 +7,7 @@ import 'package:riverpod/riverpod.dart' show AsyncData, Ref;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:cronicle/core/cache/json_cache.dart';
 import 'package:cronicle/core/config/env_config.dart';
 import 'package:cronicle/core/network/dio_provider.dart';
 import 'package:cronicle/core/storage/shared_preferences_provider.dart';
@@ -15,6 +16,9 @@ import 'package:cronicle/features/games/data/datasources/igdb_auth_datasource.da
 import 'package:cronicle/features/games/data/games_feed_section.dart';
 
 part 'game_providers.g.dart';
+
+const String _igdbHomeFeedCacheKey = 'igdb_games_home_feed';
+const String _igdbPopularCacheKey = 'igdb_games_popular';
 
 List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
   final out = <Map<String, dynamic>>[];
@@ -26,7 +30,6 @@ List<Map<String, dynamic>> _normalizeGamesSafe(List<Map<String, dynamic>> raw) {
   return out;
 }
 
-// (pool slicing helpers removed — dedicated genre queries used instead)
 
 List<Map<String, dynamic>> _filterReviewsWithGame(
   List<Map<String, dynamic>> raw,
@@ -97,7 +100,6 @@ List<Map<String, dynamic>> _sortReviewsByScoreDesc(
   return copy;
 }
 
-/// All IGDB home rows except [igdbPopular] (loaded separately for faster first paint).
 class IgdbGamesHomeFeedData {
   const IgdbGamesHomeFeedData({
     required this.anticipated,
@@ -124,6 +126,36 @@ class IgdbGamesHomeFeedData {
   final List<Map<String, dynamic>> multiplayer;
   final List<Map<String, dynamic>> rpg;
   final List<Map<String, dynamic>> sports;
+
+  Map<String, dynamic> toJson() => {
+        'anticipated': anticipated,
+        'recentlyReleased': recentlyReleased,
+        'reviewsRecent': reviewsRecent,
+        'comingSoon': comingSoon,
+        'bestRated': bestRated,
+        'reviewsCritics': reviewsCritics,
+        'indie': indie,
+        'horror': horror,
+        'multiplayer': multiplayer,
+        'rpg': rpg,
+        'sports': sports,
+      };
+
+  factory IgdbGamesHomeFeedData.fromJson(Map<String, dynamic> json) {
+    return IgdbGamesHomeFeedData(
+      anticipated: jsonListAsMaps(json['anticipated']),
+      recentlyReleased: jsonListAsMaps(json['recentlyReleased']),
+      reviewsRecent: jsonListAsMaps(json['reviewsRecent']),
+      comingSoon: jsonListAsMaps(json['comingSoon']),
+      bestRated: jsonListAsMaps(json['bestRated']),
+      reviewsCritics: jsonListAsMaps(json['reviewsCritics']),
+      indie: jsonListAsMaps(json['indie']),
+      horror: jsonListAsMaps(json['horror']),
+      multiplayer: jsonListAsMaps(json['multiplayer']),
+      rpg: jsonListAsMaps(json['rpg']),
+      sports: jsonListAsMaps(json['sports']),
+    );
+  }
 }
 
 @Riverpod(keepAlive: true)
@@ -147,12 +179,31 @@ Future<List<Map<String, dynamic>>> igdbSearch(
   return _normalizeGamesSafe(raw);
 }
 
-/// Popular (PopScore + mismo listado que el carrusel “Popular ahora”).
 @Riverpod(keepAlive: true)
-Future<List<Map<String, dynamic>>> igdbPopular(IgdbPopularRef ref) async {
-  final api = ref.read(igdbApiProvider);
-  final raw = await api.fetchPopularGames(limit: 24);
-  return _normalizeGamesSafe(raw);
+class IgdbPopular extends _$IgdbPopular {
+  @override
+  Future<List<Map<String, dynamic>>> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_igdbPopularCacheKey);
+    final api = ref.read(igdbApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final raw = await api.fetchPopularGames(limit: 24);
+          final norm = _normalizeGamesSafe(raw);
+          await cache.write(_igdbPopularCacheKey, {'items': norm});
+          state = AsyncData(norm);
+        } catch (_) {}
+      });
+      return jsonListAsMaps(cached.data['items']);
+    }
+
+    final raw = await api.fetchPopularGames(limit: 24);
+    final norm = _normalizeGamesSafe(raw);
+    await cache.write(_igdbPopularCacheKey, {'items': norm});
+    return norm;
+  }
 }
 
 @riverpod
@@ -172,16 +223,9 @@ Future<Map<String, dynamic>?> igdbGameDetail(
   return normalized;
 }
 
-/// Aside: un único POST a /multiquery trae los 9 carruseles de juegos (= 1 req
-/// contra el rate-limit de IGDB). Las reseñas van en 2 llamadas adicionales.
-/// Si algún sub-query falla la sección simplemente queda vacía; si el POST
-/// completo falla se propaga el error y la UI muestra el botón "Reintentar".
-@Riverpod(keepAlive: true)
-Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async {
-  final api = ref.read(igdbApiProvider);
-
-  // Ejecutar multiquery y reviews en paralelo. Si multiquery lanza, el provider
-  // lanza también → la UI mostrará _errorBox con el mensaje real.
+Future<IgdbGamesHomeFeedData> _fetchIgdbGamesHomeFeed(
+  IgdbApiDatasource api,
+) async {
   final results = await Future.wait([
     api.fetchHomeFeedGames(),
     _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: 36)),
@@ -210,6 +254,31 @@ Future<IgdbGamesHomeFeedData> igdbGamesHomeFeed(IgdbGamesHomeFeedRef ref) async 
   );
 }
 
+@Riverpod(keepAlive: true)
+class IgdbGamesHomeFeed extends _$IgdbGamesHomeFeed {
+  @override
+  Future<IgdbGamesHomeFeedData> build() async {
+    final cache = ref.read(jsonCacheProvider);
+    final cached = cache.read(_igdbHomeFeedCacheKey);
+    final api = ref.read(igdbApiProvider);
+
+    if (cached != null) {
+      Future<void>.microtask(() async {
+        try {
+          final data = await _fetchIgdbGamesHomeFeed(api);
+          await cache.write(_igdbHomeFeedCacheKey, data.toJson());
+          state = AsyncData(data);
+        } catch (_) {}
+      });
+      return IgdbGamesHomeFeedData.fromJson(cached.data);
+    }
+
+    final data = await _fetchIgdbGamesHomeFeed(api);
+    await cache.write(_igdbHomeFeedCacheKey, data.toJson());
+    return data;
+  }
+}
+
 @riverpod
 Future<Map<String, dynamic>?> igdbReviewById(
   IgdbReviewByIdRef ref,
@@ -219,7 +288,6 @@ Future<Map<String, dynamic>?> igdbReviewById(
   return api.fetchReviewById(reviewId);
 }
 
-/// Listado extendido para `/games/section/:slug`.
 @riverpod
 Future<List<Map<String, dynamic>>> igdbGamesSectionList(
   IgdbGamesSectionListRef ref,
@@ -229,31 +297,89 @@ Future<List<Map<String, dynamic>>> igdbGamesSectionList(
   const reviewLimit = 50;
   final api = ref.read(igdbApiProvider);
 
+  // Fallback: las funciones IGDB por-sección (`fetchGamesMostAnticipated`,
+  // `fetchGamesRecentlyReleased`, `fetchGamesComingSoon`, `fetchGamesBestRated`,
+  // `fetchGamesGenreSpotlight`, …) van a través de `_tryPostGameQueries`, que
+  // se traga los errores y devuelve `[]`. Si la API rechaza esas queries
+  // (p.ej. cambios en filtros como `category`/`hypes`), la pantalla "ver más"
+  // se mostraba vacía aunque el carrusel del home tuviese ítems —ya que el
+  // home se alimenta de un multiquery distinto (`fetchHomeFeedGames`).
+  // Por eso, si la lista por-sección viene vacía, reutilizamos los ítems
+  // que el home ya tiene cacheados para el mismo slug. Para Popular usamos
+  // su propio provider, que tiene además el fallback vía
+  // `popularity_primitives`.
+  Future<List<Map<String, dynamic>>> homeFallback() async {
+    try {
+      if (slug == GamesFeedSection.popular) {
+        return await ref.read(igdbPopularProvider.future);
+      }
+      final aside = await ref.read(igdbGamesHomeFeedProvider.future);
+      return switch (slug) {
+        GamesFeedSection.anticipated => aside.anticipated,
+        GamesFeedSection.recentlyReleased => aside.recentlyReleased,
+        GamesFeedSection.comingSoon => aside.comingSoon,
+        GamesFeedSection.bestRated => aside.bestRated,
+        GamesFeedSection.indie => aside.indie,
+        GamesFeedSection.horror => aside.horror,
+        GamesFeedSection.multiplayer => aside.multiplayer,
+        GamesFeedSection.rpg => aside.rpg,
+        GamesFeedSection.sports => aside.sports,
+        GamesFeedSection.reviewsRecent => aside.reviewsRecent,
+        GamesFeedSection.reviewsCritics => aside.reviewsCritics,
+        _ => const <Map<String, dynamic>>[],
+      };
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> withFallback(
+    Future<List<Map<String, dynamic>>> Function() primary,
+  ) async {
+    try {
+      final list = await primary();
+      if (list.isNotEmpty) return list;
+    } catch (_) {}
+    return homeFallback();
+  }
+
   return switch (slug) {
-    GamesFeedSection.popular =>
-      _normalizeGamesSafe(await api.fetchPopularGames(limit: gameLimit)),
-    GamesFeedSection.anticipated =>
-      _normalizeGamesSafe(await api.fetchGamesMostAnticipated(limit: gameLimit)),
-    GamesFeedSection.recentlyReleased =>
-      _normalizeGamesSafe(await api.fetchGamesRecentlyReleased(limit: gameLimit)),
-    GamesFeedSection.comingSoon =>
-      _normalizeGamesSafe(await api.fetchGamesComingSoon(limit: gameLimit)),
-    GamesFeedSection.bestRated =>
-      _normalizeGamesSafe(await api.fetchGamesBestRated(limit: gameLimit)),
-    GamesFeedSection.indie =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: gameLimit)),
-    GamesFeedSection.horror =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: gameLimit)),
-    GamesFeedSection.multiplayer =>
-      _normalizeGamesSafe(await api.fetchGamesMultiplayerPopular(limit: gameLimit)),
-    GamesFeedSection.rpg =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: gameLimit)),
-    GamesFeedSection.sports =>
-      _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: gameLimit)),
-    GamesFeedSection.reviewsRecent =>
-      _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: reviewLimit)),
-    GamesFeedSection.reviewsCritics =>
-      _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: reviewLimit)),
+    GamesFeedSection.popular => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchPopularGames(limit: gameLimit)),
+      ),
+    GamesFeedSection.anticipated => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesMostAnticipated(limit: gameLimit)),
+      ),
+    GamesFeedSection.recentlyReleased => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesRecentlyReleased(limit: gameLimit)),
+      ),
+    GamesFeedSection.comingSoon => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesComingSoon(limit: gameLimit)),
+      ),
+    GamesFeedSection.bestRated => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesBestRated(limit: gameLimit)),
+      ),
+    GamesFeedSection.indie => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdIndie, limit: gameLimit)),
+      ),
+    GamesFeedSection.horror => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdHorror, limit: gameLimit)),
+      ),
+    GamesFeedSection.multiplayer => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesMultiplayerPopular(limit: gameLimit)),
+      ),
+    GamesFeedSection.rpg => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdRpg, limit: gameLimit)),
+      ),
+    GamesFeedSection.sports => withFallback(
+        () async => _normalizeGamesSafe(await api.fetchGamesGenreSpotlight(IgdbApiDatasource.genreIdSports, limit: gameLimit)),
+      ),
+    GamesFeedSection.reviewsRecent => withFallback(
+        () => _igdbTryReviews(api, () => api.fetchReviewsRecent(limit: reviewLimit)),
+      ),
+    GamesFeedSection.reviewsCritics => withFallback(
+        () => _igdbTryReviews(api, () => api.fetchReviewsHighScore(limit: reviewLimit)),
+      ),
     _ => <Map<String, dynamic>>[],
   };
 }
@@ -287,7 +413,6 @@ Map<String, dynamic> _snapshotGameForFavorites(Map<String, dynamic> game) {
   };
 }
 
-/// Juegos marcados como favoritos (solo local, SharedPreferences).
 @Riverpod(keepAlive: true)
 class FavoriteGames extends _$FavoriteGames {
   @override
@@ -310,9 +435,28 @@ class FavoriteGames extends _$FavoriteGames {
     await prefs.setString(_favoriteGamesPrefsKey, jsonEncode(next));
     state = next;
   }
+
+  Future<void> toggleSteamFavorite(
+      int appId, String name, String coverUrl) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final next = List<Map<String, dynamic>>.from(state);
+    final i = next.indexWhere(
+        (e) => (e['steam_appid'] as num?)?.toInt() == appId);
+    if (i >= 0) {
+      next.removeAt(i);
+    } else {
+      next.add({
+        'id': null,
+        'steam_appid': appId,
+        'title': {'english': name, 'romaji': null},
+        'coverImage': {'large': coverUrl},
+      });
+    }
+    await prefs.setString(_favoriteGamesPrefsKey, jsonEncode(next));
+    state = next;
+  }
 }
 
-/// Estado de la cuenta Twitch vinculada a IGDB (OAuth de usuario).
 class TwitchIgdbAccountState {
   const TwitchIgdbAccountState({
     required this.userConnected,
@@ -336,7 +480,6 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     );
   }
 
-  /// OAuth en navegador seguro; no disponible en web (IGDB no expone CORS ahí).
   Future<void> connectOAuth() async {
     if (kIsWeb) {
       throw UnsupportedError('web');
@@ -386,8 +529,6 @@ class TwitchIgdbAccount extends _$TwitchIgdbAccount {
     await auth.exchangeAuthorizationCode(code);
     await prefs.remove(_oauthStatePrefsKey);
     invalidateIgdbProviders(ref);
-    // No invalidar este mismo provider desde el notifier: puede provocar
-    // rebuild reentrante y "A provider cannot depend on itself".
     final login = await auth.getUserLogin();
     state = AsyncData(
       TwitchIgdbAccountState(userConnected: true, login: login),

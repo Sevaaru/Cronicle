@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cronicle · Steam Login</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      padding: 1.5rem;
+      text-align: center;
+      max-width: 26rem;
+      margin: 2.5rem auto;
+      line-height: 1.45;
+    }
+    button#openApp {
+      font: inherit;
+      cursor: pointer;
+      color: #fff;
+      background: #1b2838;
+      font-weight: 600;
+      margin-top: 1rem;
+      padding: 0.65rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+    }
+    button#openApp:active {
+      opacity: 0.9;
+    }
+    .muted {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <p id="msg">Conectando con Steam…</p>
+  <p id="hint" class="muted">Si se abre la app, puedes cerrar esta pestaña.</p>
+  <button type="button" id="openApp" style="display: none">Abrir Cronicle</button>
+
+  <script>
+    (function () {
+      var msg = document.getElementById('msg');
+      var hint = document.getElementById('hint');
+      var btn = document.getElementById('openApp');
+
+      var url = new URL(window.location.href);
+      var params = url.searchParams;
+
+      // If Steam has not yet redirected here, start the OpenID flow.
+      // Trigger by visiting this page directly (no openid.* params).
+      var hasOpenId = false;
+      params.forEach(function (_v, k) {
+        if (k.indexOf('openid.') === 0) hasOpenId = true;
+      });
+
+      if (!hasOpenId) {
+        // Build Steam OpenID 2.0 authorization URL using this page as return_to.
+        var returnTo = url.origin + url.pathname;
+        var realm = url.origin + '/';
+        var steamUrl = 'https://steamcommunity.com/openid/login'
+          + '?openid.ns=' + encodeURIComponent('http://specs.openid.net/auth/2.0')
+          + '&openid.mode=checkid_setup'
+          + '&openid.return_to=' + encodeURIComponent(returnTo)
+          + '&openid.realm=' + encodeURIComponent(realm)
+          + '&openid.identity=' + encodeURIComponent('http://specs.openid.net/auth/2.0/identifier_select')
+          + '&openid.claimed_id=' + encodeURIComponent('http://specs.openid.net/auth/2.0/identifier_select');
+        msg.textContent = 'Redirigiendo a Steam…';
+        window.location.replace(steamUrl);
+        return;
+      }
+
+      // Parse SteamID64 from openid.claimed_id
+      // Format: https://steamcommunity.com/openid/id/76561198XXXXXXXXX
+      var claimed = params.get('openid.claimed_id') || '';
+      var match = claimed.match(/\/openid\/id\/(\d+)/);
+      var steamId = match ? match[1] : '';
+
+      if (!steamId) {
+        msg.textContent = 'No se pudo obtener el SteamID. Cierra esta pestaña e inténtalo de nuevo.';
+        hint.textContent = '';
+        return;
+      }
+
+      // Dedupe — avoid double-handling on refresh
+      var dedupeKey = 'cronicle_steam_sent';
+      try {
+        if (sessionStorage.getItem(dedupeKey) === steamId) {
+          msg.textContent = 'Esta sesión ya se envió. Abre Cronicle desde el icono de la app.';
+          hint.textContent = '';
+          return;
+        }
+        sessionStorage.setItem(dedupeKey, steamId);
+      } catch (e) {}
+
+      // Forward all openid.* params (so the app can re-verify via check_authentication if needed)
+      var qs = url.search; // includes leading '?'
+
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, url.pathname || '/');
+        }
+      } catch (e2) {}
+
+      var deep = 'cronicle://steam-oauth' + qs;
+      var isAndroid = /Android/i.test(navigator.userAgent || '');
+      var pkg = 'com.cronicle.app.cronicle';
+      var intent =
+        'intent://steam-oauth/' + qs + '#Intent;scheme=cronicle;package=' + pkg + ';end';
+
+      function openCronicle() {
+        if (isAndroid) {
+          window.location.replace(intent);
+        } else {
+          window.location.replace(deep);
+        }
+      }
+
+      setTimeout(openCronicle, 0);
+
+      var fallbackTimer = setTimeout(function () {
+        msg.textContent = 'Si Cronicle no se abrió, pulsa el botón.';
+        hint.textContent = '';
+        btn.style.display = 'inline-block';
+      }, 2000);
+
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        try {
+          clearTimeout(fallbackTimer);
+        } catch (x) {}
+        openCronicle();
+      });
+    })();
+  </script>
+</body>
+</html>

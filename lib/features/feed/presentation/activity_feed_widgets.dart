@@ -14,11 +14,9 @@ import 'package:cronicle/shared/models/feed_activity.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/anilist_markdown.dart';
 import 'package:cronicle/shared/widgets/animated_like_button.dart';
+import 'package:cronicle/shared/widgets/activity_likers_sheet.dart';
 import 'package:cronicle/shared/widgets/glass_card.dart';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 String activityTimeAgo(DateTime dt, AppLocalizations l10n) {
   final diff = DateTime.now().difference(dt);
@@ -29,9 +27,6 @@ String activityTimeAgo(DateTime dt, AppLocalizations l10n) {
   return l10n.timeWeeks((diff.inDays / 7).floor());
 }
 
-// ---------------------------------------------------------------------------
-// Scope enum + scope bar
-// ---------------------------------------------------------------------------
 
 enum FeedActivityScope { following, global }
 
@@ -91,9 +86,6 @@ class FeedActivityScopeBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Following feed guard
-// ---------------------------------------------------------------------------
 
 class FollowingFeedGuard extends ConsumerWidget {
   const FollowingFeedGuard({
@@ -105,11 +97,10 @@ class FollowingFeedGuard extends ConsumerWidget {
     required this.activityTypeApi,
   });
   final Widget feedScopeBar;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
   final AppLocalizations l10n;
 
-  /// Mismo valor que `AnilistSocialFeed` (`null` = todas las actividades).
   final String? activityTypeApi;
 
   @override
@@ -161,8 +152,6 @@ class FollowingFeedGuard extends ConsumerWidget {
             ],
           );
         }
-        // Suscripción al feed solo con sesión resuelta: evita que el primer fetch
-        // de «siguiendo» corra con token aún null y quede en lista vacía.
         final feed = anilistSocialFeedProvider(activityTypeApi, true);
         return ActivityFeedList(
           feedAsync: ref.watch(feed),
@@ -184,9 +173,6 @@ class FollowingFeedGuard extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Feed list
-// ---------------------------------------------------------------------------
 
 class ActivityFeedList extends ConsumerStatefulWidget {
   const ActivityFeedList({
@@ -201,7 +187,7 @@ class ActivityFeedList extends ConsumerStatefulWidget {
   });
 
   final AsyncValue<List<FeedActivity>> feedAsync;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
   final bool Function() hasMore;
   final bool feedIsFollowing;
@@ -241,12 +227,21 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final current = _scrollController.position.pixels;
+    // Disparamos un poco antes del final para que no se note el corte.
     if (current >= maxScroll - 300) {
       widget.onLoadMore();
     }
   }
 
   int get _scopeHeaderLen => widget.feedScopeHeader != null ? 1 : 0;
+
+  void _fireRefresh() {
+    // Sync entry-point used por callbacks que esperan VoidCallback
+    // (botones, ComposeCard.onPosted, etc.). El RefreshIndicator usa
+    // directamente widget.onRefresh para poder esperar la Future y
+    // mantener su spinner mientras tanto.
+    widget.onRefresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -259,8 +254,15 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
       16,
       100,
     );
+    // Cuando hay datos previos y se está refrescando (pull-to-refresh,
+    // refresco programático tras cambiar de scope/filtro, etc.), Riverpod
+    // entrega un AsyncLoading.copyWithPrevious y `.when` continúa
+    // mostrando los datos. Para que el usuario vea que algo está pasando
+    // pintamos una barrita arriba del feed.
+    final isRefreshing =
+        widget.feedAsync.isLoading && widget.feedAsync.hasValue;
 
-    return widget.feedAsync.when(
+    final content = widget.feedAsync.when(
       loading: () {
         if (scopeHeader != null) {
           return LayoutBuilder(
@@ -309,7 +311,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                   const SizedBox(height: 12),
                   Center(
                     child: FilledButton(
-                      onPressed: widget.onRefresh,
+                      onPressed: _fireRefresh,
                       child: Text(widget.l10n.feedRetry),
                     ),
                   ),
@@ -327,7 +329,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
               Text(errorMessage),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: widget.onRefresh,
+                onPressed: _fireRefresh,
                 child: Text(widget.l10n.feedRetry),
               ),
             ],
@@ -343,13 +345,14 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
 
         if (filtered.isEmpty) {
           return RefreshIndicator(
-            onRefresh: () async => widget.onRefresh(),
+            onRefresh: widget.onRefresh,
             child: ListView(
               controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: listPadding,
               children: [
                 ?scopeHeader,
-                ComposeCard(onPosted: widget.onRefresh),
+                ComposeCard(onPosted: _fireRefresh),
                 Padding(
                   padding: const EdgeInsets.only(top: 28),
                   child: Center(
@@ -360,6 +363,14 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 14),
+                Center(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _fireRefresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(widget.l10n.feedRetry),
+                  ),
+                ),
               ],
             ),
           );
@@ -368,7 +379,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
         final totalItems =
             firstCompose + 1 + filtered.length + (hasMore ? 1 : 0);
         return RefreshIndicator(
-          onRefresh: () async => widget.onRefresh(),
+          onRefresh: widget.onRefresh,
           child: ListView.builder(
             controller: _scrollController,
             padding: listPadding,
@@ -380,7 +391,7 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
                 return scopeHeader;
               }
               if (i == firstCompose) {
-                return ComposeCard(onPosted: widget.onRefresh);
+                return ComposeCard(onPosted: _fireRefresh);
               }
               final actIdx = i - firstCompose - 1;
               if (actIdx >= filtered.length) {
@@ -398,12 +409,26 @@ class _ActivityFeedListState extends ConsumerState<ActivityFeedList> {
         );
       },
     );
+
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        if (isRefreshing)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(
+              minHeight: 2,
+              backgroundColor: colorScheme.surfaceContainerHighest
+                  .withAlpha(120),
+            ),
+          ),
+      ],
+    );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Compose card
-// ---------------------------------------------------------------------------
 
 class ComposeCard extends ConsumerStatefulWidget {
   const ComposeCard({super.key, required this.onPosted});
@@ -546,9 +571,6 @@ class _ComposeCardState extends ConsumerState<ComposeCard> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Expandable text
-// ---------------------------------------------------------------------------
 
 class ExpandableText extends StatefulWidget {
   const ExpandableText({super.key, required this.text, this.style});
@@ -583,26 +605,49 @@ class _ExpandableTextState extends State<ExpandableText> {
       );
     }
 
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Use a Stack with a gradient overlay instead of ShaderMask.
+        // ShaderMask saves a layer, allocates a shader and re-blends on
+        // every paint — which is expensive while scrolling. A simple
+        // DecoratedBox painted on top is virtually free and visually
+        // equivalent.
         SizedBox(
           height: 100,
           child: ClipRect(
-            child: ShaderMask(
-              shaderCallback: (rect) => LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.white, Colors.white.withAlpha(0)],
-                stops: const [0.6, 1.0],
-              ).createShader(rect),
-              blendMode: BlendMode.dstIn,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child:
-                    AnilistMarkdown(widget.text, style: widget.style),
-              ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    maxHeight: double.infinity,
+                    child: AnilistMarkdown(widget.text, style: widget.style),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 40,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            cs.surface.withAlpha(0),
+                            cs.surface,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -657,9 +702,6 @@ class _ExpandToggleButton extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Activity card
-// ---------------------------------------------------------------------------
 
 class ActivityCard extends ConsumerWidget {
   const ActivityCard({super.key, required this.activity});
@@ -741,9 +783,13 @@ class ActivityCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(22),
+      ),
       child: Column(
         children: [
           InkWell(
@@ -762,7 +808,7 @@ class ActivityCard extends ConsumerWidget {
                       ? () => context.push('/user/${activity.userId}')
                       : null,
                   child: CircleAvatar(
-                    radius: 16,
+                    radius: 22,
                     backgroundColor:
                         colorScheme.surfaceContainerHighest,
                     backgroundImage: activity.userAvatarUrl != null
@@ -775,14 +821,15 @@ class ActivityCard extends ConsumerWidget {
                                 ? activity.userName[0].toUpperCase()
                                 : '?',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                               color: colorScheme.onSurface,
                             ),
                           )
                         : null,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -797,41 +844,56 @@ class ActivityCard extends ConsumerWidget {
                                   : null,
                               child: Text(
                                 activity.userName,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                  fontSize: 14.5,
+                                  color: colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            activity.isTextActivity
-                                ? Icons.edit_note_rounded
-                                : _sourceIcon(activity.source),
-                            size: 13,
-                            color: activity.isTextActivity
-                                ? colorScheme.onSurfaceVariant
-                                : _sourceColor(
-                                    activity.source, colorScheme),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (activity.isTextActivity
+                                      ? colorScheme.onSurfaceVariant
+                                      : _sourceColor(
+                                          activity.source, colorScheme))
+                                  .withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              activity.isTextActivity
+                                  ? Icons.edit_note_rounded
+                                  : _sourceIcon(activity.source),
+                              size: 13,
+                              color: activity.isTextActivity
+                                  ? colorScheme.onSurfaceVariant
+                                  : _sourceColor(
+                                      activity.source, colorScheme),
+                            ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
                             activityTimeAgo(activity.createdAt, l10n),
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 6),
                       if (activity.isTextActivity)
                         ExpandableText(
                           text: activity.mediaTitle,
                           style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
+                              height: 1.4,
                               color: colorScheme.onSurface),
                         )
                       else
@@ -840,7 +902,8 @@ class ActivityCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           text: TextSpan(
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
+                              height: 1.35,
                               color: colorScheme.onSurface,
                             ),
                             children: [
@@ -863,13 +926,13 @@ class ActivityCard extends ConsumerWidget {
                   ),
                 ),
                 if (activity.mediaPosterUrl != null) ...[
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: CachedNetworkImage(
                       imageUrl: activity.mediaPosterUrl!,
-                      width: 45,
-                      height: 64,
+                      width: 52,
+                      height: 74,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -877,44 +940,80 @@ class ActivityCard extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Row(
             children: [
-              const SizedBox(width: 42),
               AnimatedLikeButton(
                 isLiked: activity.isLiked,
                 likeCount: activity.likeCount,
                 onToggle: () => _handleLike(context, ref),
+                onLongPress: activity.likeCount > 0
+                    ? () {
+                        final actId = int.tryParse(activity.id);
+                        if (actId == null) return;
+                        showActivityLikersSheet(
+                          context,
+                          ref,
+                          targetId: actId,
+                          expectedCount: activity.likeCount,
+                        );
+                      }
+                    : null,
               ),
-              const SizedBox(width: 12),
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
+              const SizedBox(width: 8),
+              _CommentButton(
+                count: activity.replyCount,
                 onTap: () => context
                     .push('/activity/${activity.id}/replies'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.chat_bubble_outline,
-                          size: 15,
-                          color: colorScheme.onSurfaceVariant),
-                      if (activity.replyCount > 0) ...[
-                        const SizedBox(width: 4),
-                        Text('${activity.replyCount}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color:
-                                    colorScheme.onSurfaceVariant)),
-                      ],
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CommentButton extends StatelessWidget {
+  const _CommentButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: cs.primary.withValues(alpha: 0.14),
+        highlightColor: cs.primary.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.mode_comment_outlined,
+                size: 19,
+                color: cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                count > 0 ? '$count' : 'Reply',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

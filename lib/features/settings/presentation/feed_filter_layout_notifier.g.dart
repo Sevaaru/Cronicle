@@ -6,7 +6,7 @@ part of 'feed_filter_layout_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$feedFilterLayoutHash() => r'cfab5d4c89ca111bf35e958cffe623425b3b1740';
+String _$feedFilterLayoutHash() => r'869617e899ac2351f866cb35201db790940ec3d2';
 
 /// See also [FeedFilterLayout].
 @ProviderFor(FeedFilterLayout)

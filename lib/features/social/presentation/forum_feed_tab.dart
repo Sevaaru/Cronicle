@@ -5,9 +5,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:cronicle/features/anime/presentation/anime_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
-import 'package:cronicle/shared/widgets/glass_card.dart';
+import 'package:cronicle/shared/widgets/glass_bottom_nav.dart';
 
-/// Anilist forum category IDs.
 enum _ForumCategory {
   all(null, 'All', Icons.forum_rounded),
   general(7, 'General', Icons.chat_rounded),
@@ -51,7 +50,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
   bool _loading = true;
   String? _error;
 
-  // Search state
   final _searchController = TextEditingController();
   List<Map<String, dynamic>>? _searchResults;
   bool _searching = false;
@@ -169,12 +167,10 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
 
     return Column(
       children: [
-        // Category dropdown + search bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              // Dropdown — 50% width
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.5 - 16,
                 child: _ForumCategoryDropdown(
@@ -183,7 +179,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
                 ),
               ),
               const SizedBox(width: 8),
-              // Search field
               Expanded(
                 child: SizedBox(
                   height: 38,
@@ -227,7 +222,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
           ),
         ),
 
-        // Content — search results or feed sections
         Expanded(
           child: _isSearchActive
               ? _buildSearchResults(cs, l10n)
@@ -278,9 +272,9 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
       );
     }
     return RefreshIndicator(
-      onRefresh: () => _doSearch(_searchController.text.trim()),
+      onRefresh: _loadAll,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
         itemCount: results.length,
         itemBuilder: (_, i) => _ForumThreadTile(thread: results[i], cs: cs),
       ),
@@ -315,9 +309,8 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
     return RefreshIndicator(
       onRefresh: _loadAll,
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.fromLTRB(12, 0, 12, kGlassBottomNavContentHeight + 24),
         children: [
-          // Sticky / Pinned
           if (_stickyThreads != null &&
               _stickyThreads!.isNotEmpty) ...[
             _SectionHeader(
@@ -332,7 +325,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Recently replied
           if (_recentlyReplied != null &&
               _recentlyReplied!.isNotEmpty) ...[
             _SectionHeader(
@@ -346,7 +338,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Newly created
           if (_newlyCreated != null &&
               _newlyCreated!.isNotEmpty) ...[
             _SectionHeader(
@@ -360,7 +351,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
             const SizedBox(height: 16),
           ],
 
-          // Release discussions
           if (_releaseDiscussions != null &&
               _releaseDiscussions!.isNotEmpty) ...[
             _SectionHeader(
@@ -380,7 +370,6 @@ class _ForumFeedTabState extends ConsumerState<ForumFeedTab>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ForumCategoryDropdown extends StatelessWidget {
   const _ForumCategoryDropdown({
     required this.current,
@@ -449,7 +438,6 @@ class _ForumCategoryDropdown extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.icon,
@@ -463,19 +451,34 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: cs.primary),
-        const SizedBox(width: 6),
-        Text(title,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: cs.onPrimaryContainer),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 String _forumTimeAgo(int? ts) {
   if (ts == null) return '';
   final dt = DateTime.fromMillisecondsSinceEpoch(ts * 1000);
@@ -518,96 +521,178 @@ class _ForumThreadTile extends StatelessWidget {
 
     final timeAgo = _forumTimeAgo(repliedAt ?? createdAt);
 
-    return GlassCard(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: id == null ? null : () => context.push('/forum/thread/$id', extra: thread),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: id == null
+              ? null
+              : () => context.push('/forum/thread/$id', extra: thread),
+          splashColor: cs.primary.withValues(alpha: 0.10),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isSticky && pinned)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Icon(Icons.push_pin_rounded,
-                        size: 13, color: cs.primary),
-                  ),
-                if (isLocked)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Icon(Icons.lock_rounded,
-                        size: 13, color: cs.onSurfaceVariant.withAlpha(160)),
-                  ),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                if (avatar != null)
-                  ClipOval(
-                    child: CachedNetworkImage(
-                        imageUrl: avatar,
-                        width: 16,
-                        height: 16,
-                        fit: BoxFit.cover),
-                  ),
-                if (avatar != null) const SizedBox(width: 4),
-                Flexible(
-                  child: Text(userName,
-                      style: TextStyle(
-                          fontSize: 11, color: cs.onSurfaceVariant),
-                      overflow: TextOverflow.ellipsis),
-                ),
-                if (timeAgo.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Text('· $timeAgo',
-                      style: TextStyle(
-                          fontSize: 11, color: cs.onSurfaceVariant)),
-                ],
-                if (categoryName != null) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest.withAlpha(180),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(categoryName,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isSticky && pinned)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8, top: 1),
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.push_pin_rounded,
+                            size: 14, color: cs.primary),
+                      ),
+                    if (isLocked)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8, top: 1),
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.lock_rounded,
+                            size: 14, color: cs.onSurfaceVariant),
+                      ),
+                    Expanded(
+                      child: Text(
+                        title,
                         style: TextStyle(
-                            fontSize: 9, color: cs.onSurfaceVariant)),
-                  ),
-                ],
-                const Spacer(),
-                Icon(Icons.comment_outlined,
-                    size: 13, color: cs.onSurfaceVariant),
-                const SizedBox(width: 3),
-                Text('$replyCount',
-                    style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant)),
-                const SizedBox(width: 8),
-                Icon(Icons.visibility_outlined,
-                    size: 13, color: cs.onSurfaceVariant),
-                const SizedBox(width: 3),
-                Text('$viewCount',
-                    style: TextStyle(
-                        fontSize: 11, color: cs.onSurfaceVariant)),
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          color: cs.onSurface,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (avatar != null)
+                      ClipOval(
+                        child: CachedNetworkImage(
+                            imageUrl: avatar,
+                            width: 22,
+                            height: 22,
+                            fit: BoxFit.cover),
+                      )
+                    else
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.person_rounded,
+                            size: 14, color: cs.onSurfaceVariant),
+                      ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        userName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (timeAgo.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Text('· $timeAgo',
+                          style: TextStyle(
+                              fontSize: 11.5, color: cs.onSurfaceVariant)),
+                    ],
+                    if (categoryName != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cs.secondaryContainer
+                              .withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          categoryName,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    _ForumStatChip(
+                      icon: Icons.mode_comment_outlined,
+                      value: replyCount,
+                      cs: cs,
+                    ),
+                    const SizedBox(width: 6),
+                    _ForumStatChip(
+                      icon: Icons.visibility_outlined,
+                      value: viewCount,
+                      cs: cs,
+                    ),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _ForumStatChip extends StatelessWidget {
+  const _ForumStatChip({
+    required this.icon,
+    required this.value,
+    required this.cs,
+  });
+
+  final IconData icon;
+  final int value;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: cs.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(
+            '$value',
+            style: TextStyle(
+              fontSize: 11,
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

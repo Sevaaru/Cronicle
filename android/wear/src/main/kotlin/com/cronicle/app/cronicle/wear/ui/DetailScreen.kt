@@ -71,8 +71,6 @@ fun DetailScreen(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            // Poster as background — blurred + dark gradient overlay so the foreground
-            // controls remain readable on round watch faces.
             val poster = item.posterUrl
             if (!poster.isNullOrBlank()) {
                 AsyncImage(

@@ -7,9 +7,9 @@ import 'package:cronicle/features/trakt/presentation/trakt_providers.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 import 'package:cronicle/shared/widgets/add_to_library_sheet.dart';
+import 'package:cronicle/shared/widgets/library_snackbar.dart';
 import 'package:cronicle/shared/widgets/browse_result_card.dart';
 
-// ─── Trakt section slugs ────────────────────────────────────────────────────
 
 class TraktFeedSection {
   TraktFeedSection._();
@@ -39,7 +39,6 @@ String traktSectionTitle(AppLocalizations l10n, MediaKind kind, String slug) =>
       _ => slug,
     };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 List<Map<String, dynamic>> _movieSection(TraktMoviesHomeData d, String slug) =>
     switch (slug) {
@@ -63,9 +62,7 @@ List<Map<String, dynamic>> _showSection(TraktShowsHomeData d, String slug) =>
       _ => const [],
     };
 
-// ─── Page ────────────────────────────────────────────────────────────────────
 
-/// Full list page for a Trakt category (`/trakt-section/:kind/:slug`).
 class TraktHomeSectionListPage extends ConsumerWidget {
   const TraktHomeSectionListPage({
     super.key,
@@ -76,7 +73,7 @@ class TraktHomeSectionListPage extends ConsumerWidget {
   final MediaKind kind;
   final String slug;
 
-  Future<void> _addToLibrary(
+  Future<bool> _addToLibrary(
     BuildContext context,
     WidgetRef ref,
     Map<String, dynamic> item,
@@ -87,7 +84,7 @@ class TraktHomeSectionListPage extends ConsumerWidget {
       kind.code,
       id,
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return false;
     final added = await showAddToLibrarySheet(
       context: context,
       ref: ref,
@@ -95,11 +92,9 @@ class TraktHomeSectionListPage extends ConsumerWidget {
       kind: kind,
       existingEntry: existing,
     );
-    if (!context.mounted || !added) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToLibrary)),
-    );
+    if (!context.mounted || !added) return added;
+    showLibrarySnackbar(context, wasEdit: existing != null);
+    return added;
   }
 
   @override

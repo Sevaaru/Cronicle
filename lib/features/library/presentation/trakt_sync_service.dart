@@ -9,7 +9,6 @@ import 'package:cronicle/features/trakt/data/trakt_normalize.dart';
 import 'package:cronicle/l10n/app_localizations.dart';
 import 'package:cronicle/shared/models/media_kind.dart';
 
-/// Convierte un string ISO-8601 de Trakt a millisecondsSinceEpoch, o null.
 int? _traktDateToMs(dynamic raw) {
   if (raw == null) return null;
   if (raw is! String || raw.isEmpty) return null;
@@ -17,7 +16,6 @@ int? _traktDateToMs(dynamic raw) {
   return dt?.millisecondsSinceEpoch;
 }
 
-/// Importa historial visto de Trakt (películas y series, sin anime) a la biblioteca local.
 Future<int> importTraktWatchedToLocal({
   required TraktApiDatasource api,
   required AppDatabase db,
@@ -145,7 +143,6 @@ Future<int> importTraktWatchedToLocal({
   return count;
 }
 
-/// Si hay sesión Trakt activa, descarga historial y hace upsert en [db] (merge silencioso).
 Future<void> mergeTraktLibraryIntoLocalIfSignedIn({
   required TraktApiDatasource api,
   required AppDatabase db,
