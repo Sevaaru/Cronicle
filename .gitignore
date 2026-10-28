@@ -28,5 +28,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /guide/
+/AGENTS.md
 twitch_secrets.json
 dart_defines.local.json
