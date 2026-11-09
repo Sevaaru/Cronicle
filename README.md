@@ -1,121 +1,87 @@
 <div align="center">
 
-# CRONICLE
+# Cronicle
 
-**The all-in-one tracker for everything you watch, read and play.**
-Anime · Manga · Movies · TV · Games · Books — with offline-first storage and a Wear OS companion app.
+One library for the stuff you watch, read and play. Anime, manga, movies, shows, games, books. It keeps your list on the device, so it still works when the network doesn't.
 
-<a>
-    <img src="https://i.imgur.com/I086iiG.png" alt="Cronicle logo" title="Cronicle logo" width="96"/>
-</a>
+<img src="https://i.imgur.com/I086iiG.png" alt="Cronicle logo" width="96"/>
 
-</div>
+[![Download](https://img.shields.io/badge/Download-latest%20release-007ACC?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Sevaaru/Cronicle/releases/latest)
 
-<div align="center">
+**v2.1.11** · build 71
 
-[![Download](https://img.shields.io/badge/⬇️%20Download-latest%20release-007ACC?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Sevaaru/Cronicle/releases/latest)
-
-**Current version:** `v1.1.2` (build 44) — Stable
-**Platforms:** Android phone & tablet · Wear OS companion (paired)
-**Min. Android:** 8.0 (API 26) · **Wear OS:** 3.0+ (API 30)
-**Languages:** Spanish and English.
+Android phone and tablet · Wear OS companion · home screen widget
+Android 8.0+ · Wear OS 3+
+English and Spanish. Dark by default. Light mode is in Settings if you insist.
 
 </div>
 
 ---
 
-##  Screenshots
+## Screenshots
 
-###  Android app
+The library and the trophy room have been redesigned since some of these were taken. They're still useful if you want a look at the app before installing.
+
+### Phone
 
 | Home | Library |
 |---|---|
-| ![Home screenshot](assets/screenshots/android-home.jpg) | ![Library screenshot](assets/screenshots/android-library.jpg) |
+| ![Home](assets/screenshots/android-home.jpg) | ![Library](assets/screenshots/android-library.jpg) |
 
 | Detail | Profile |
 |---|---|
-| ![Detail screenshot](assets/screenshots/android-detail.jpg) | ![Profile screenshot](assets/screenshots/android-profile.jpg) |
+| ![Detail](assets/screenshots/android-detail.jpg) | ![Profile](assets/screenshots/android-profile.jpg) |
 
-###  Wear OS companion
+### Watch
 
 | Library | Detail |
 |---|---|
-| ![Wear library screenshot](assets/screenshots/wear-library.png) | ![Wear detail screenshot](assets/screenshots/wear-detail.png) |
-
-
----
-
-##  Features
-
-###  Track everything in one library
-- Unified offline library backed by Drift (SQLite) — downloaded library elements works fully without an internet connection.
-- Six media kinds: **anime, manga, movies, TV, games, books**.
-- Per-item progress: episode/chapter/page counters, scores, status, dates, custom notes.
-- Custom categories, advanced sorting and filtering, batch editing.
-
-###  Service integrations
-- **AniList** — full OAuth login (PIN or HTTPS bridge with `cronicle://` deep link), library sync, activity feed, notifications inbox, forum threads, characters & staff, custom advanced scoring.
-- **Trakt.tv** — OAuth login, watchlist/history sync for movies & shows, ratings, episode progress, user stats.
-- **IGDB (via Twitch)** — game catalogue, releases, popularity sections and community reviews.
-- **Google Books API** — search, trending, browse by subject, work + edition details with reading-progress tracking.
-
-###  Discover & social
-- **Discover feed** with trending across every category you enable, plus a "Surprise me" button.
-- Filter rail: Anime/Manga, Movies/TV, Games, Books — reorderable from settings.
-- **Social tab** with AniList global / following activity, replies and inline likes.
-- Forum threads with nested comments, reply input and like support.
-
-###  Profile & favourites
-- Unified profile combining AniList header, Trakt session and local data.
-- Favourites grouped by category: anime, manga, movies, TV, games, books, **AniList characters & staff**.
-- Detailed character & staff pages with toggleable favourites, voice actors and appearances.
-- Personal stats page with genre breakdowns, Trakt user stats and favourite carousels.
-
-###  Wear OS companion
-- Native Wear OS app paired by signature with the phone via the Wearable Data Layer.
-- Browse your synced library directly from the watch (Compose for Wear OS).
-- Glanceable **Tile** showing recent library items.
-- Cross-device messaging keeps the watch in sync automatically.
-
-###  Notifications
-- Local notifications for newly-aired episodes/chapters.
-- Optional AniList inbox polling (without resetting the unread counter).
-- Fully configurable per category in Settings, scheduled via Workmanager.
-
-###  UI & customisation
-- Material 3 design with glassmorphism accents.
-- Light & dark themes, dark by default.
-- English & Spanish translations.
-- Customisable bottom-nav, feed filter chips and library type bar.
-
-###  Backup & sync
-- Local JSON backup & restore.
-- Optional Google Drive backup.
-- All sync flows (AniList / Trakt / IGDB) are opt-in and run in the background.
-
-###  Unified search
-- One search bar covering AniList, Trakt, IGDB and Google Books with per-source filters.
+| ![Wear library](assets/screenshots/wear-library.png) | ![Wear detail](assets/screenshots/wear-detail.png) |
 
 ---
 
-##  Installation
+## What you actually get
 
-1. Download the latest **`Cronicle-v1.1.2.apk`** from the [releases page](https://github.com/Sevaaru/Cronicle/releases/latest).
-2. Allow installation from unknown sources if prompted.
-3. (Optional) Install the **`Cronicle-wear-v1.1.2.apk`** on a paired Wear OS watch — both APKs must be signed with the same key, so use the bundle from the same release.
+Your library lives in a local SQLite database (Drift). Progress, scores, status, dates and notes are yours. Sync is optional and only runs for the accounts you connect.
 
----
+Each entry is a card: cover, status, a progress gauge, and buttons to bump progress or edit. Scores use a segmented bar instead of a sad old slider. Anime and manga can show the next air date, how far behind you are, and how many times you've rewatched or reread something. That repeat count syncs back to AniList.
 
-##  Disclaimer
+There's also a trophy room. Do the thing, get the trophy, get a little unlock notice. Not life-changing. Kind of fun.
 
-The developer(s) of this application are not affiliated with any of the content providers integrated (AniList, Trakt, IGDB, Twitch, Google Books). Cronicle hosts **zero content** of its own; it only displays metadata returned by the official APIs after the user authenticates with their own accounts.
+## Accounts
 
----
+Hook up what you use. Leave the rest alone.
 
-##  License
+- **AniList.** Login, library sync, activity, inbox, forums, characters and staff, plus their advanced scoring if you're into that.
+- **Trakt.** Movies and shows: history, watchlist, ratings, episode progress, stats.
+- **Steam.** Import the games you own, open a game, poke at achievements. Steam activity shows up next to AniList in the social feed.
+- **IGDB** (through Twitch) for the game catalog, and **OpenCritic** when a game actually has critic reviews.
+- **Google Books** for search, subjects, editions and reading progress.
+
+Discover is a feed of whatever categories you leave on, with a "surprise me" button for when you don't want to pick. Search hits the same sources from one bar. Favourites, character and staff pages, and a stats screen are all in the profile.
+
+## Phone, watch, widget
+
+- Material 3. You can reorder the bottom nav, the library types and the feed chips.
+- Android shortcuts for the screens you open all the time.
+- Home screen widget: your library, covers cached on disk, light or dark per widget, and a button to log progress without opening the app. It follows the app language.
+- Notifications for new episodes and chapters, plus an optional AniList inbox check that doesn't wipe your unread count.
+- Backup to a local JSON file. Google Drive backup is there too if that build has Google sign-in wired up.
+- Wear OS app, if you want the list on your wrist. It pairs with the phone over the Wearable Data Layer and stays in sync. The watch build is still **v1.1.2**. It has to be signed with the same key as the phone app or they won't talk to each other.
+
+## Install
+
+1. Grab the latest APK from the [releases page](https://github.com/Sevaaru/Cronicle/releases/latest). Current phone build is `v2.1.11`.
+2. Android will complain about installing from this source. That's normal. Allow it.
+3. Watch, if you care: install `Cronicle-wear-v1.1.2.apk` from the same kind of release, signed with the same key.
+
+## Not affiliated, not a pirate site
+
+Cronicle isn't AniList, Trakt, Steam, IGDB, Twitch, OpenCritic or Google. It doesn't host video, books or games. It shows metadata those APIs return after you log in with your own account.
+
+## License
 
 <pre>
 Copyright © 2026 Sevaaru
 Copyright © 2024 Cronicle Open Source Project
 </pre>
-
