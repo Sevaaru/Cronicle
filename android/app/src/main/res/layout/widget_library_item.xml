@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ListView ignores item margins, so the outer frame provides the gap between rows.
+     Poster and action fill the row height; the overlays draw the diagonal edges
+     and round the corners, and are recoloured per theme by LibraryWidgetService. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:id="@+id/widget_item_card"
+        android:layout_width="match_parent"
+        android:layout_height="112dp"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_signal_item_background">
+
+        <!-- Full-height poster with slanted right edge -->
+        <FrameLayout
+            android:layout_width="80dp"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/widget_item_poster"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:background="@drawable/widget_signal_poster_placeholder"
+                android:contentDescription="@string/widget_library_title" />
+
+            <ImageView
+                android:id="@+id/widget_item_poster_slant"
+                android:layout_width="14dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:src="@drawable/widget_signal_slant_end"
+                android:scaleType="fitXY"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:id="@+id/widget_item_round_top_start"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_gravity="top|start"
+                android:src="@drawable/widget_signal_round_top_start"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:id="@+id/widget_item_round_bottom_start"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_gravity="bottom|start"
+                android:src="@drawable/widget_signal_round_bottom_start"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:id="@+id/widget_item_kind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:layout_marginStart="6dp"
+                android:layout_marginTop="6dp"
+                android:paddingStart="6dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:background="@drawable/widget_signal_badge"
+                android:fontFamily="sans-serif-condensed"
+                android:letterSpacing="0.1"
+                android:textColor="@color/widget_signal_red"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:text="—" />
+        </FrameLayout>
+
+        <!-- Index, title + progress block -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_item_index"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-condensed"
+                android:letterSpacing="0.16"
+                android:textColor="@color/widget_signal_red"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:text="01" />
+
+            <TextView
+                android:id="@+id/widget_item_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/widget_signal_text"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/widget_item_progress_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAllCaps="true"
+                android:fontFamily="sans-serif-condensed"
+                android:letterSpacing="0.08"
+                android:textColor="@color/widget_signal_text_dim"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <ProgressBar
+                android:id="@+id/widget_item_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="5dp"
+                android:layout_marginTop="8dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/widget_signal_progress" />
+        </LinearLayout>
+
+        <!-- Full-height +1 / complete action with slanted left edge -->
+        <FrameLayout
+            android:layout_width="60dp"
+            android:layout_height="match_parent">
+
+            <ImageButton
+                android:id="@+id/widget_item_plus"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingStart="10dp"
+                android:background="@drawable/widget_signal_action_background"
+                android:src="@drawable/widget_ic_plus"
+                android:contentDescription="@string/widget_library_increment"
+                android:scaleType="center" />
+
+            <ImageView
+                android:id="@+id/widget_item_action_slant"
+                android:layout_width="14dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:src="@drawable/widget_signal_slant_start"
+                android:scaleType="fitXY"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:id="@+id/widget_item_round_top_end"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_gravity="top|end"
+                android:src="@drawable/widget_signal_round_top_end"
+                android:contentDescription="@null" />
+
+            <ImageView
+                android:id="@+id/widget_item_round_bottom_end"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:layout_gravity="bottom|end"
+                android:src="@drawable/widget_signal_round_bottom_end"
+                android:contentDescription="@null" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

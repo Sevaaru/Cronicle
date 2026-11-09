@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="cronicle_primary">#7DD3FC</color>
+    <color name="cronicle_on_primary">#0E0F13</color>
+    <color name="cronicle_surface">#161821</color>
+    <color name="cronicle_on_surface">#E5E7EB</color>
+</resources>

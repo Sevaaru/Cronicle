@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full-height row action; the ripple is the tap feedback while the list reloads. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#80FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_signal_red" />
+        </shape>
+    </item>
+</ripple>

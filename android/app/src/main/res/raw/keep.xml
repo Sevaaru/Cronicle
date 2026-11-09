@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  These shortcut icons are referenced by string name from Dart via the
+  quick_actions plugin (see lib/core/app/cronicle_quick_actions.dart) and by
+  the Android home-screen widget RemoteViews. Resource shrinking can't see
+  those references, so without this keep file the icons get stripped from
+  the Play Store app bundle even though they survive a local APK install.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="
+        @drawable/ic_shortcut_library,
+        @drawable/ic_shortcut_discover,
+        @drawable/ic_shortcut_explore,
+        @drawable/ic_shortcut_social"
+    tools:shrinkMode="safe" />

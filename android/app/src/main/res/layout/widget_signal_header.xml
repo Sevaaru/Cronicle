@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Signal header: red caret, uppercase title and accent rule. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingBottom="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="2dp">
+
+        <FrameLayout
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:background="@color/widget_signal_red" />
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/widget_library_title"
+            android:textAllCaps="true"
+            android:fontFamily="sans-serif-condensed"
+            android:letterSpacing="0.14"
+            android:textColor="@color/widget_signal_text"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <FrameLayout
+            android:layout_width="32dp"
+            android:layout_height="2dp"
+            android:background="@color/widget_signal_red" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:background="@color/widget_signal_slate" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Theme picker shown when the library widget is placed or reconfigured. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="320dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/widget_signal_background"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <FrameLayout
+            android:layout_width="4dp"
+            android:layout_height="16dp"
+            android:background="@color/widget_signal_red" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/widget_config_title"
+            android:textAllCaps="true"
+            android:fontFamily="sans-serif-condensed"
+            android:letterSpacing="0.14"
+            android:textColor="@color/widget_signal_text"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/widget_config_subtitle"
+        android:textColor="@color/widget_signal_text_dim"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:id="@+id/widget_config_dark"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/widget_config_dark">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_signal_item_background"
+                android:padding="14dp">
+
+                <FrameLayout
+                    android:layout_width="28dp"
+                    android:layout_height="3dp"
+                    android:background="@color/widget_signal_red" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@color/widget_signal_text" />
+
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/widget_signal_text_dim" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/widget_config_dark"
+                    android:textAllCaps="true"
+                    android:fontFamily="sans-serif-condensed"
+                    android:letterSpacing="0.14"
+                    android:textColor="@color/widget_signal_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/widget_config_light"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/widget_config_light">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_signal_item_background_light"
+                android:padding="14dp">
+
+                <FrameLayout
+                    android:layout_width="28dp"
+                    android:layout_height="3dp"
+                    android:background="@color/widget_signal_red" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@color/widget_signal_ink" />
+
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/widget_signal_text_dim_light" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/widget_config_light"
+                    android:textAllCaps="true"
+                    android:fontFamily="sans-serif-condensed"
+                    android:letterSpacing="0.14"
+                    android:textColor="@color/widget_signal_ink"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

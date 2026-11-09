@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cronicle · Anilist OAuth</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      padding: 1.5rem;
+      max-width: 28rem;
+      margin: 1.5rem auto;
+      line-height: 1.45;
+    }
+    #msg { text-align: center; }
+    #desktop { margin-top: 0.75rem; }
+    #tok {
+      width: 100%;
+      margin-top: 0.5rem;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      box-sizing: border-box;
+    }
+    #copy, #openApp {
+      font: inherit;
+      cursor: pointer;
+      margin-top: 0.75rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+    }
+    #copy { background: #37474f; color: #fff; }
+    #openApp {
+      display: none;
+      background: #1565c0;
+      color: #fff;
+      font-weight: 600;
+    }
+    .muted { color: #666; font-size: 0.9rem; margin-top: 0.75rem; }
+  </style>
+</head>
+<body>
+  <p id="msg">Abriendo Cronicle…</p>
+  <div id="desktop" style="display: none">
+    <p>Estás en un ordenador: copia el token y pégalo en Cronicle → Ajustes → Anilist.</p>
+    <label for="tok">Token de acceso</label>
+    <textarea id="tok" readonly rows="4" spellcheck="false"></textarea>
+    <button type="button" id="copy">Copiar al portapapeles</button>
+  </div>
+  <p id="hint" class="muted"></p>
+  <button type="button" id="openApp">Abrir Cronicle</button>
+
+  <script>
+    (function () {
+      var h = window.location.hash;
+      var msg = document.getElementById('msg');
+      var hint = document.getElementById('hint');
+      var desktop = document.getElementById('desktop');
+      var ta = document.getElementById('tok');
+      var copyBtn = document.getElementById('copy');
+      var openBtn = document.getElementById('openApp');
+
+      if (!h || h.length < 2) {
+        msg.textContent =
+          'No se recibió la respuesta de Anilist. Vuelve a autorizar o revisa la Redirect URL en anilist.co/settings/developer.';
+        return;
+      }
+
+      var p = new URLSearchParams(h.slice(1));
+      var token = p.get('access_token');
+      if (!token) {
+        msg.textContent =
+          'No hay access_token en la respuesta. Comprueba que redirect_uri en Anilist coincida exactamente con esta página.';
+        return;
+      }
+
+      var isAndroid = /Android/i.test(navigator.userAgent || '');
+      var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      var mobile = isAndroid || isIOS;
+
+      var q = '?access_token=' + encodeURIComponent(token);
+      var pkg = 'com.cronicle.app.cronicle';
+      var intent =
+        'intent://anilist-oauth/' + q + '#Intent;scheme=cronicle;package=' + pkg + ';end';
+      var deep = 'cronicle://anilist-oauth' + q;
+
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname || '/');
+        }
+      } catch (e1) {}
+
+      if (!mobile) {
+        msg.style.display = 'none';
+        desktop.style.display = 'block';
+        ta.value = token;
+        copyBtn.addEventListener('click', function () {
+          var t = ta.value;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).catch(function () {
+              ta.select();
+              document.execCommand('copy');
+            });
+          } else {
+            ta.select();
+            document.execCommand('copy');
+          }
+        });
+        return;
+      }
+
+      function openCronicle() {
+        if (isAndroid) window.location.replace(intent);
+        else window.location.replace(deep);
+      }
+
+      setTimeout(openCronicle, 0);
+
+      setTimeout(function () {
+        msg.textContent = 'Si Cronicle no se abrió, pulsa el botón.';
+        hint.textContent = '';
+        openBtn.style.display = 'block';
+      }, 2000);
+
+      openBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        openCronicle();
+      });
+    })();
+  </script>
+</body>
+</html>

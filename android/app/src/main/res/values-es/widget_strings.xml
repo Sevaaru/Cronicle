@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_library_title">Cronicle · En progreso</string>
+    <string name="widget_library_description">Tu biblioteca en progreso: anime, series, películas, juegos, manga y libros.</string>
+    <string name="widget_library_description_small">Biblioteca Cronicle — pequeño (2×2): entrada destacada en progreso.</string>
+    <string name="widget_library_description_medium">Biblioteca Cronicle — mediano (4×2): lista de entradas en progreso.</string>
+    <string name="widget_library_description_large">Biblioteca Cronicle — grande (4×4): lista completa en progreso.</string>
+    <string name="widget_library_label_small">Cronicle · Biblioteca (pequeño)</string>
+    <string name="widget_library_label_medium">Cronicle · Biblioteca (mediano)</string>
+    <string name="widget_library_label_large">Cronicle · Biblioteca (grande)</string>
+    <string name="widget_library_empty">No tienes nada en progreso. ¡Añade algo a tu biblioteca!</string>
+    <string name="widget_library_increment">Sumar uno</string>
+    <string name="widget_library_complete">Marcar como terminado</string>
+    <string name="widget_prev_content_desc">Anterior</string>
+    <string name="widget_next_content_desc">Siguiente</string>
+    <string name="widget_config_title">Tema del widget</string>
+    <string name="widget_config_subtitle">Elige cómo se ve el widget. Puedes cambiarlo después desde los ajustes del widget.</string>
+    <string name="widget_config_dark">Oscuro</string>
+    <string name="widget_config_light">Claro</string>
+    <string name="widget_unit_episode">ep</string>
+    <string name="widget_unit_minute">min</string>
+    <string name="widget_unit_hour">h</string>
+    <string name="widget_unit_chapter">cap</string>
+    <string name="widget_unit_page">pág</string>
+    <string name="widget_kind_anime">ANIME</string>
+    <string name="widget_kind_movie">PELI</string>
+    <string name="widget_kind_tv">SERIE</string>
+    <string name="widget_kind_game">JUEGO</string>
+    <string name="widget_kind_manga">MANGA</string>
+    <string name="widget_kind_book">LIBRO</string>
+</resources>

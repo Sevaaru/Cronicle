@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Layout del widget 2x2. Muestra las entradas en progreso como un
+     pase de diapositivas (AdapterViewFlipper). A diferencia del StackView,
+     NO captura gestos de swipe vertical, por lo que es compatible con los
+     grupos de widgets de Android 16+ donde el swipe cambia entre widgets.
+     La navegación entre tarjetas se hace tocando el botón ▶. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_small_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_signal_background"
+    android:padding="6dp">
+
+    <include layout="@layout/widget_signal_grid" />
+
+    <!-- Pase de diapositivas: una tarjeta visible a la vez. -->
+    <AdapterViewFlipper
+        android:id="@+id/widget_small_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inAnimation="@animator/widget_card_in"
+        android:outAnimation="@animator/widget_card_out"
+        android:animateFirstView="false"
+        android:loopViews="true" />
+
+    <!-- Estado vacío (sin entradas en progreso). -->
+    <TextView
+        android:id="@+id/widget_small_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="@string/widget_library_empty"
+        android:fontFamily="sans-serif-condensed"
+        android:letterSpacing="0.06"
+        android:textColor="@color/widget_signal_text_dim"
+        android:textSize="13sp" />
+
+    <!-- Botón ▶ siguiente. Navegación infinita: tras la última vuelve a la primera. -->
+    <ImageView
+        android:id="@+id/widget_small_next"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/widget_signal_nav"
+        android:src="@drawable/widget_ic_chevron_right"
+        android:scaleType="center"
+        android:contentDescription="@string/widget_next_content_desc" />
+
+</FrameLayout>

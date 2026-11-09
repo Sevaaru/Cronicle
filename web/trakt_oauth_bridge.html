@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cronicle · Trakt OAuth</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      padding: 1.5rem;
+      text-align: center;
+      max-width: 26rem;
+      margin: 2.5rem auto;
+      line-height: 1.45;
+    }
+    button#openApp {
+      font: inherit;
+      cursor: pointer;
+      color: #fff;
+      background: #1565c0;
+      font-weight: 600;
+      margin-top: 1rem;
+      padding: 0.65rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+    }
+    button#openApp:active {
+      opacity: 0.9;
+    }
+    .muted {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+  <p id="msg">Abriendo Cronicle…</p>
+  <p id="hint" class="muted">Si se abre la app, puedes cerrar esta pestaña.</p>
+  <button type="button" id="openApp" style="display: none">Abrir Cronicle</button>
+
+  <script>
+    (function () {
+      var q = window.location.search;
+      var msg = document.getElementById('msg');
+      var hint = document.getElementById('hint');
+      var btn = document.getElementById('openApp');
+
+      if (!q || q === '?') {
+        msg.textContent =
+          'Falta code/state en la URL. Comprueba la Redirect URI en Trakt (debe coincidir con esta página, p. ej. la raíz de Netlify con index.html).';
+        hint.textContent = '';
+        return;
+      }
+
+      var params = new URLSearchParams(q);
+      var code = params.get('code') || '';
+      var dedupeKey = 'cronicle_trakt_sent';
+      try {
+        if (code && sessionStorage.getItem(dedupeKey) === code) {
+          msg.textContent =
+            'Esta autorización ya se usó. Cierra esta pestaña y abre Cronicle desde el icono de la app.';
+          hint.textContent = '';
+          return;
+        }
+        if (code) sessionStorage.setItem(dedupeKey, code);
+      } catch (e) {}
+
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname || '/');
+        }
+      } catch (e2) {}
+
+      var deep = 'cronicle://trakt-oauth' + q;
+      var isAndroid = /Android/i.test(navigator.userAgent || '');
+      var pkg = 'com.cronicle.app.cronicle';
+      var intent =
+        'intent://trakt-oauth/' + q + '#Intent;scheme=cronicle;package=' + pkg + ';end';
+
+      function openCronicle() {
+        if (isAndroid) {
+          window.location.replace(intent);
+        } else {
+          window.location.replace(deep);
+        }
+      }
+
+      setTimeout(function () {
+        openCronicle();
+      }, 0);
+
+      var fallbackTimer = setTimeout(function () {
+        msg.textContent = 'Si Cronicle no se abrió, pulsa el botón.';
+        hint.textContent = '';
+        btn.style.display = 'inline-block';
+      }, 2000);
+
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        try {
+          clearTimeout(fallbackTimer);
+        } catch (x) {}
+        openCronicle();
+      });
+    })();
+  </script>
+</body>
+</html>

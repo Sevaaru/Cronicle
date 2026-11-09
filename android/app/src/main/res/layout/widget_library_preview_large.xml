@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Previsualización grande 4x4: cabecera + 3 filas con portada y progreso. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_signal_background">
+
+    <include layout="@layout/widget_signal_grid" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="10dp"
+        android:orientation="vertical">
+
+        <include layout="@layout/widget_signal_header" />
+        <include layout="@layout/widget_library_item" />
+        <include layout="@layout/widget_library_item" />
+        <include layout="@layout/widget_library_item" />
+    </LinearLayout>
+</FrameLayout>

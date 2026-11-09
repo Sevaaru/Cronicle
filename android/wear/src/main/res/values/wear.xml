@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Capability advertised by the Wear OS companion. The phone checks for this
+      via CapabilityClient to know whether the watch has the Cronicle Wear app
+      installed (versus only being paired via the Wear OS / Galaxy Wearable app).
+    -->
+    <string-array name="android_wear_capabilities">
+        <item>cronicle_wear_companion</item>
+    </string-array>
+</resources>

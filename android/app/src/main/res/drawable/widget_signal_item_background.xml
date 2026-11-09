@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Row plate with touch ripple (the whole row opens the entry). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#26FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_signal_surface" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</ripple>

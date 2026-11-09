@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Signal palette shared with lib/shared/widgets/signal_style.dart. -->
+    <color name="widget_signal_ink">#FF0B0B10</color>
+    <color name="widget_signal_surface">#FF15161E</color>
+    <color name="widget_signal_slate">#FF3A3D4E</color>
+    <color name="widget_signal_red">#FFFF3B1F</color>
+    <color name="widget_signal_grid">#1AFF3B1F</color>
+    <color name="widget_signal_edge">#26FFFFFF</color>
+    <color name="widget_signal_track">#663A3D4E</color>
+    <color name="widget_signal_text">#FFF2F2F5</color>
+    <color name="widget_signal_text_dim">#FF9A9CAB</color>
+
+    <!-- Light variant (chosen per widget in LibraryWidgetConfigActivity). -->
+    <color name="widget_signal_paper">#FFF3F2EE</color>
+    <color name="widget_signal_paper_surface">#FFFFFFFF</color>
+    <color name="widget_signal_edge_light">#240B0B10</color>
+    <color name="widget_signal_text_dim_light">#FF5E6070</color>
+</resources>
